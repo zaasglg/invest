@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
+import { useCanModify } from '@/hooks/use-can-modify';
 
 interface ProjectType {
     id: number;
@@ -62,6 +63,7 @@ interface Props {
 }
 
 export default function Show({ project, mainGallery = [] }: Props) {
+    const canModify = useCanModify();
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         : (project.photos_count as any)?.photos_count || 0;
@@ -260,11 +262,13 @@ export default function Show({ project, mainGallery = [] }: Props) {
                         {/* Actions */}
                         <Card className='shadow-none'>
                             <CardContent className="p-4 flex flex-col gap-3">
-                                <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <Activity className="mr-2 h-4 w-4" /> Редактировать проект
-                                    </Button>
-                                </Link>
+                                {canModify && (
+                                    <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <Activity className="mr-2 h-4 w-4" /> Редактировать проект
+                                        </Button>
+                                    </Link>
+                                )}
                                 <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <FileText className="mr-2 h-4 w-4" />

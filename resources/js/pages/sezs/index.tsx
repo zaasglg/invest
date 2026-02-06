@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit } from 'lucide-react';
 import * as sezs from '@/routes/sezs';
+import { useCanModify } from '@/hooks/use-can-modify';
 import {
     Table,
     TableBody,
@@ -34,6 +35,7 @@ interface Props {
 }
 
 export default function Index({ sezs: data }: Props) {
+    const canModify = useCanModify();
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены?')) {
             router.delete(sezs.destroy.url(id));
@@ -55,9 +57,11 @@ export default function Index({ sezs: data }: Props) {
             <div className="flex h-full flex-col p-4 space-y-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">Специальные экономические зоны</h1>
-                    <Button asChild size="sm" className="shadow-none">
-                        <Link href={sezs.create.url()}>Создать новую</Link>
-                    </Button>
+                    {canModify && (
+                        <Button asChild size="sm" className="shadow-none">
+                            <Link href={sezs.create.url()}>Создать новую</Link>
+                        </Button>
+                    )}
                 </div>
 
                 <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
@@ -70,7 +74,7 @@ export default function Index({ sezs: data }: Props) {
                                 <TableHead>Площадь (га)</TableHead>
                                 <TableHead>Инвестиции</TableHead>
                                 <TableHead>Статус</TableHead>
-                                <TableHead className="text-right">Действия</TableHead>
+                                {canModify && <TableHead className="text-right">Действия</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -86,16 +90,18 @@ export default function Index({ sezs: data }: Props) {
                                             {getStatusLabel(sez.status)}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                                            <Link href={sezs.edit.url(sez.id)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors" onClick={() => handleDelete(sez.id)}>
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
+                                    {canModify && (
+                                        <TableCell className="text-right space-x-2">
+                                            <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                                <Link href={sezs.edit.url(sez.id)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors" onClick={() => handleDelete(sez.id)}>
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
                             {data.length === 0 && (

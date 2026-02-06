@@ -39,9 +39,33 @@ class HandleInertiaRequests extends Middleware
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $request->user()?->load('roleModel'),
             ],
+            'canModify' => ! $this->isReadOnlyRole($request->user()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    protected function isReadOnlyRole($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $roleCandidates = array_filter([
+            $user->role,
+            $user->roleModel?->name,
+            $user->roleModel?->display_name,
+        ]);
+
+        foreach ($roleCandidates as $candidate) {
+            $normalized = strtolower(str_replace(' ', '', $candidate));
+
+            if (str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim')) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

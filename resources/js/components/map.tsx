@@ -41,6 +41,25 @@ interface InvestmentProject {
     total_investment?: number | string | null;
 }
 
+interface SectorRow {
+    investment: number;
+    projectCount: number | null;
+    problemCount: number;
+    orgCount: number | null;
+}
+
+interface SectorData {
+    sez: SectorRow;
+    iz: SectorRow;
+    nedro: SectorRow;
+    invest: SectorRow;
+}
+
+interface SectorSummary {
+    total: SectorData;
+    byRegion: Record<number, SectorData>;
+}
+
 type Props = {
     className?: string;
     center?: [number, number];
@@ -56,6 +75,7 @@ type Props = {
     fitBounds?: boolean;
     showPolygons?: boolean;
     activeTab?: string;
+    sectorSummary?: SectorSummary | null;
 };
 
 interface Plot {
@@ -171,7 +191,7 @@ function getLatLng(point: any): { lat: number, lng: number } | null {
     return null;
 }
 
-export default function Map({ className, center = [51.505, -0.09], zoom = 13, regions = [], projects = [], regionStats, fitBounds = false, showPolygons = true, activeTab = 'all' }: Props) {
+export default function Map({ className, center = [51.505, -0.09], zoom = 13, regions = [], projects = [], regionStats, fitBounds = false, showPolygons = true, activeTab = 'all', sectorSummary = null }: Props) {
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
@@ -332,72 +352,77 @@ export default function Map({ className, center = [51.505, -0.09], zoom = 13, re
 
             {/* Active Region Popup */}
             {activeRegion && (
-                <div className="absolute top-4 right-4 w-[320px] z-[400] shadow-2xl rounded-xl bg-white overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300">
-                    <Card className="border-none shadow-none rounded-none font-sans py-0 gap-0">
-                        <CardHeader className="bg-gradient-to-r from-blue-600 to-indigo-700 px-4 py-3 text-white relative flex flex-row items-center justify-between space-y-0">
-                            <CardTitle className="text-base font-bold tracking-tight">
-                                {activeRegion.name}
-                            </CardTitle>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-white hover:bg-white/20 rounded-full"
-                                onClick={() => {
-                                    setActiveRegion(null);
-                                    setPopupPosition(null);
-                                }}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </CardHeader>
-                        <CardContent className="p-0">
-                            {(() => {
-                                const stats = getRegionStats(activeRegion.id);
-                                return (
-                                    <div className="divide-y divide-gray-100 gap-0">
-                                        <div className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors">
-                                            <div className="flex-1 py-1">
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Объем инвестиций</p>
-                                                <p className="text-base font-bold text-gray-900">{formatInvestment(stats.investments)}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors">
-                                            <div className="flex-1 py-1">
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Проектов в ИЗ</p>
-                                                <p className="text-base font-bold text-gray-900">{stats.izProjects}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors">
-                                            <div className="flex-1 py-1">
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Проектов в СЭЗ</p>
-                                                <p className="text-base font-bold text-gray-900">{stats.sezProjects}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="flex items-center px-4 py-2 hover:bg-gray-50 transition-colors">
-                                            <div className="flex-1 py-1">
-                                                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-0.5">Недропользователи</p>
-                                                <p className="text-base font-bold text-gray-900">{stats.subsoilUsers}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })()}
-                        </CardContent>
-                        <CardFooter className="p-3 bg-gray-50/50 border-t border-gray-100">
-                            <Link href={`/regions/${activeRegion.id}`} className="w-full">
+                <>
+                    {/* Arrow pointing to region */}
+                    <div className="absolute top-[60px] right-[340px] z-[399]">
+                        <div className="relative">
+                            <div className="w-0 h-0 border-t-[15px] border-t-transparent border-b-[15px] border-b-transparent border-r-[20px] border-r-[#1d3b6f]"></div>
+                        </div>
+                    </div>
+                    
+                    <div className="absolute top-4 right-4 w-[320px] z-[400] shadow-2xl rounded-xl overflow-hidden animate-in fade-in slide-in-from-right-4 duration-300 bg-white">
+                        <Card className="border-none shadow-none rounded-none font-sans py-0 gap-0">
+                            <CardHeader className="bg-[#1d3b6f] px-4 py-3 text-white relative flex flex-row items-center justify-between space-y-0">
+                                <CardTitle className="text-lg font-bold tracking-tight text-white">
+                                    {activeRegion.name}
+                                </CardTitle>
                                 <Button
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-none h-10 text-sm"
-                                    size="sm"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-6 w-6 text-white hover:bg-white/20 rounded-full"
+                                    onClick={() => {
+                                        setActiveRegion(null);
+                                        setPopupPosition(null);
+                                    }}
                                 >
-                                    Подробнее о районе <ChevronRight className="ml-1 h-3 w-3" />
+                                    <X className="h-4 w-4" />
                                 </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
-                </div>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                {(() => {
+                                    const stats = getRegionStats(activeRegion.id);
+                                    return (
+                                        <div className="space-y-0 bg-white">
+                                            {/* Объем инвестиций */}
+                                            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                                                <p className="text-sm text-gray-600 mb-1">Объем инвестиций:</p>
+                                                <p className="text-xl font-bold text-blue-600">{formatInvestment(stats.investments)}</p>
+                                            </div>
+
+                                            {/* Проектов в ИЗ */}
+                                            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                                                <span className="text-gray-700 text-base">Проектов в ИЗ:</span>
+                                                <span className="text-blue-600 text-xl font-bold">{stats.izProjects}</span>
+                                            </div>
+
+                                            {/* Проектов в СЭЗ */}
+                                            <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100">
+                                                <span className="text-gray-700 text-base">Проектов в СЭЗ:</span>
+                                                <span className="text-blue-600 text-xl font-bold">{stats.sezProjects}</span>
+                                            </div>
+
+                                            {/* Недропользователи */}
+                                            <div className="bg-white px-4 py-3 flex items-center justify-between">
+                                                <span className="text-gray-700 text-base">Недропользователи:</span>
+                                                <span className="text-blue-600 text-xl font-bold">{stats.subsoilUsers}</span>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+                            </CardContent>
+                            <CardFooter className="p-0 bg-blue-800">
+                                <Link href={`/regions/${activeRegion.id}`} className="w-full">
+                                    <Button
+                                        className="w-full bg-[#1d3b6f] hover:bg-blue-900 text-white font-semibold shadow-none h-14 text-base rounded-none border-none flex items-center justify-center gap-2"
+                                        size="sm"
+                                    >
+                                        Подробнее о районе <ChevronRight className="h-5 w-5" />
+                                    </Button>
+                                </Link>
+                            </CardFooter>
+                        </Card>
+                    </div>
+                </>
             )}
 
             {/* Active Plot Popup */}
@@ -470,6 +495,110 @@ export default function Map({ className, center = [51.505, -0.09], zoom = 13, re
                     </Card>
                 </div>
             )}
+
+            {/* Sector Summary Table */}
+            {sectorSummary && (() => {
+                const data =
+                    activeRegion?.id && sectorSummary.byRegion[activeRegion.id]
+                        ? sectorSummary.byRegion[activeRegion.id]
+                        : sectorSummary.total;
+
+                return (
+                    <div className="absolute bottom-4 left-4 right-4 z-[400]">
+                        <div className="overflow-hidden rounded-lg shadow-2xl">
+                            <table className="w-full border-collapse text-sm">
+                                <thead>
+                                    <tr className="bg-[#6b7a8d]">
+                                        <th className="border-r border-white/20 px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-white"></th>
+                                        <th className="border-r border-white/20 px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-white">
+                                            Инвестиция
+                                        </th>
+                                        <th className="border-r border-white/20 px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-white">
+                                            Количество проектов
+                                        </th>
+                                        <th className="border-r border-white/20 px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-white">
+                                            Количество проблемных вопросов
+                                        </th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold uppercase tracking-wider text-white">
+                                            Количество организаций
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                    <tr className="bg-white/90 backdrop-blur-sm">
+                                        <td className="px-6 py-4 text-center text-base font-semibold text-gray-500">
+                                            СЭЗ
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {formatInvestment(data.sez.investment)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.sez.projectCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.sez.problemCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.sez.orgCount ?? '-'}
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white/90 backdrop-blur-sm">
+                                        <td className="px-6 py-4 text-center text-base font-semibold text-gray-500">
+                                            ИЗ
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {formatInvestment(data.iz.investment)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.iz.projectCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.iz.problemCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.iz.orgCount ?? '-'}
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white/90 backdrop-blur-sm">
+                                        <td className="px-6 py-4 text-center text-base font-semibold text-gray-500">
+                                            Недропользование
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {formatInvestment(data.nedro.investment)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.nedro.projectCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.nedro.problemCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.nedro.orgCount ?? '-'}
+                                        </td>
+                                    </tr>
+                                    <tr className="bg-white/90 backdrop-blur-sm">
+                                        <td className="px-6 py-4 text-center text-base font-semibold text-gray-500">
+                                            Turkistan Invest
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {formatInvestment(data.invest.investment)}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.invest.projectCount ?? '-'}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.invest.problemCount}
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-base text-gray-600">
+                                            {data.invest.orgCount ?? '-'}
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                );
+            })()}
         </div>
     );
 }

@@ -26,14 +26,4 @@ export default defineConfig({
         jsx: 'automatic',
     },
 
-    server: {
-        host: '0.0.0.0',
-        port: 5173,
-
-        hmr: {
-            host: 'chief-dinner-respective-collecting.trycloudflare.com',
-            protocol: 'wss',
-            port: 443,
-        },
-    },
 });

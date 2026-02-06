@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle } from 'lucide-react';
 import PhotoLightbox from '@/components/photo-lightbox';
+import { useCanModify } from '@/hooks/use-can-modify';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per photo
 const MAX_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
@@ -47,6 +48,7 @@ interface Props {
 }
 
 export default function Gallery({ project, mainGallery, datedGallery }: Props) {
+    const canModify = useCanModify();
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState('');
     const [description, setDescription] = useState('');
@@ -179,6 +181,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     {/* Upload Form */}
+                    {canModify && (
                     <div className="lg:col-span-1">
                         <Card className="shadow-none sticky top-4">
                             <CardHeader>
@@ -291,9 +294,10 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                             </CardContent>
                         </Card>
                     </div>
+                    )}
 
                     {/* Gallery Display */}
-                    <div className="lg:col-span-3 space-y-8">
+                    <div className={canModify ? 'lg:col-span-3 space-y-8' : 'lg:col-span-4 space-y-8'}>
                         {/* Main Gallery */}
                         <Card className="shadow-none">
                             <CardHeader>
@@ -324,6 +328,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                                                 photos={mainGallery}
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
+                                                canModify={canModify}
                                             />
                                         ))}
                                     </div>
@@ -359,6 +364,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                                                         photos={photos}
                                                         onDelete={handleDelete}
                                                         onOpen={openLightbox}
+                                                        canModify={canModify}
                                                     />
                                                 ))}
                                             </div>
@@ -388,9 +394,10 @@ interface PhotoCardProps {
     photos: ProjectPhoto[];
     onDelete: (id: number) => void;
     onOpen: (photos: ProjectPhoto[], index: number) => void;
+    canModify: boolean;
 }
 
-function PhotoCard({ photo, index, photos, onDelete, onOpen }: PhotoCardProps) {
+function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify }: PhotoCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     return (
@@ -423,17 +430,19 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen }: PhotoCardProps) {
                     >
                         <ImageIcon className="h-4 w-4" />
                     </Button>
-                    <Button
-                        variant="destructive"
-                        size="icon"
-                        onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(photo.id);
-                        }}
-                        className="h-10 w-10"
-                    >
-                        <Trash2 className="h-4 w-4" />
-                    </Button>
+                    {canModify && (
+                        <Button
+                            variant="destructive"
+                            size="icon"
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onDelete(photo.id);
+                            }}
+                            className="h-10 w-10"
+                        >
+                            <Trash2 className="h-4 w-4" />
+                        </Button>
+                    )}
                 </div>
             )}
         </div>

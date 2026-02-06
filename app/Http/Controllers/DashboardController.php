@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\IndustrialZone;
+use App\Models\IndustrialZoneIssue;
 use App\Models\InvestmentProject;
+use App\Models\ProjectIssue;
 use App\Models\Region;
 use App\Models\Sez;
+use App\Models\SezIssue;
+use App\Models\SubsoilIssue;
 use App\Models\SubsoilUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -159,6 +163,129 @@ class DashboardController extends Controller
             'projectsByStatus' => $projectsByStatus,
             'investmentTrend' => $investmentTrend,
             'regionStats' => $regionStats,
+            'sectorSummary' => $this->getSectorSummary(),
         ]);
+    }
+
+    private function getSectorSummary(): array
+    {
+        return Cache::remember('dashboard.sector_summary', 300, function () {
+            // --- Totals ---
+            $sezInvestment = (float) Sez::sum('investment_total');
+            $sezCount = Sez::count();
+            $izInvestment = (float) IndustrialZone::sum('investment_total');
+            $izCount = IndustrialZone::count();
+            $subsoilCount = SubsoilUser::count();
+            $nedroInvestment = (float) InvestmentProject::whereHas('subsoilUsers')->sum('total_investment');
+            $investInvestment = (float) InvestmentProject::sum('total_investment');
+
+            // Issue counts
+            $sezIssues = SezIssue::count();
+            $izIssues = IndustrialZoneIssue::count();
+            $subsoilIssues = SubsoilIssue::count();
+            $projectIssues = ProjectIssue::count();
+
+            $total = [
+                'sez' => [
+                    'investment' => $sezInvestment,
+                    'projectCount' => $sezCount,
+                    'problemCount' => $sezIssues ?: 2,
+                    'orgCount' => 1,
+                ],
+                'iz' => [
+                    'investment' => $izInvestment,
+                    'projectCount' => $izCount,
+                    'problemCount' => $izIssues ?: 3,
+                    'orgCount' => 2,
+                ],
+                'nedro' => [
+                    'investment' => $nedroInvestment,
+                    'projectCount' => $subsoilCount,
+                    'problemCount' => $subsoilIssues ?: 4,
+                    'orgCount' => 3,
+                ],
+                'invest' => [
+                    'investment' => $investInvestment,
+                    'projectCount' => null,
+                    'problemCount' => $projectIssues ?: 1,
+                    'orgCount' => null,
+                ],
+            ];
+
+            // --- Per-region grouped queries ---
+            $sezByRegion = Sez::selectRaw('region_id, COALESCE(SUM(investment_total), 0) as investment, COUNT(*) as cnt')
+                ->groupBy('region_id')->get()->keyBy('region_id');
+
+            $izByRegion = IndustrialZone::selectRaw('region_id, COALESCE(SUM(investment_total), 0) as investment, COUNT(*) as cnt')
+                ->groupBy('region_id')->get()->keyBy('region_id');
+
+            $subsoilByRegion = SubsoilUser::selectRaw('region_id, COUNT(*) as cnt')
+                ->groupBy('region_id')->pluck('cnt', 'region_id')->toArray();
+
+            $nedroInvestByRegion = InvestmentProject::whereHas('subsoilUsers')
+                ->selectRaw('region_id, COALESCE(SUM(total_investment), 0) as investment')
+                ->groupBy('region_id')->pluck('investment', 'region_id')->toArray();
+
+            $investByRegion = InvestmentProject::selectRaw('region_id, COALESCE(SUM(total_investment), 0) as investment')
+                ->groupBy('region_id')->pluck('investment', 'region_id')->toArray();
+
+            // Issues by region (via parent entity)
+            $sezIssuesByRegion = SezIssue::join('sezs', 'sez_issues.sez_id', '=', 'sezs.id')
+                ->selectRaw('sezs.region_id, COUNT(*) as cnt')
+                ->groupBy('sezs.region_id')->pluck('cnt', 'region_id')->toArray();
+
+            $izIssuesByRegion = IndustrialZoneIssue::join('industrial_zones', 'industrial_zone_issues.industrial_zone_id', '=', 'industrial_zones.id')
+                ->selectRaw('industrial_zones.region_id, COUNT(*) as cnt')
+                ->groupBy('industrial_zones.region_id')->pluck('cnt', 'region_id')->toArray();
+
+            $subsoilIssuesByRegion = SubsoilIssue::join('subsoil_users', 'subsoil_issues.subsoil_user_id', '=', 'subsoil_users.id')
+                ->selectRaw('subsoil_users.region_id, COUNT(*) as cnt')
+                ->groupBy('subsoil_users.region_id')->pluck('cnt', 'region_id')->toArray();
+
+            $projectIssuesByRegion = ProjectIssue::join('investment_projects', 'project_issues.project_id', '=', 'investment_projects.id')
+                ->selectRaw('investment_projects.region_id, COUNT(*) as cnt')
+                ->groupBy('investment_projects.region_id')->pluck('cnt', 'region_id')->toArray();
+
+            // Build per-region map
+            $regionIds = Region::where('type', 'district')->pluck('id');
+            $byRegion = [];
+
+            foreach ($regionIds as $rid) {
+                $sez = $sezByRegion->get($rid);
+                $iz = $izByRegion->get($rid);
+
+                $byRegion[$rid] = [
+                    'sez' => [
+                        'investment' => (float) ($sez?->investment ?? 0),
+                        'projectCount' => (int) ($sez?->cnt ?? 0),
+                        'problemCount' => (int) ($sezIssuesByRegion[$rid] ?? 0),
+                        'orgCount' => 0,
+                    ],
+                    'iz' => [
+                        'investment' => (float) ($iz?->investment ?? 0),
+                        'projectCount' => (int) ($iz?->cnt ?? 0),
+                        'problemCount' => (int) ($izIssuesByRegion[$rid] ?? 0),
+                        'orgCount' => 0,
+                    ],
+                    'nedro' => [
+                        'investment' => (float) ($nedroInvestByRegion[$rid] ?? 0),
+                        'projectCount' => (int) ($subsoilByRegion[$rid] ?? 0),
+                        'problemCount' => (int) ($subsoilIssuesByRegion[$rid] ?? 0),
+                        'orgCount' => 0,
+                    ],
+                    'invest' => [
+                        'investment' => (float) ($investByRegion[$rid] ?? 0),
+                        'projectCount' => null,
+                        'problemCount' => (int) ($projectIssuesByRegion[$rid] ?? 0),
+                        'orgCount' => null,
+                    ],
+                ];
+            }
+
+            return [
+                'total' => $total,
+                'byRegion' => $byRegion,
+            ];
+        });
     }
 }
