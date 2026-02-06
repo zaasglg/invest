@@ -1,0 +1,62 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+
+class Region extends Model
+{
+    protected $fillable = [
+        'parent_id',
+        'name',
+        'type',
+        'geometry',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'type' => 'string',
+            'geometry' => 'array',
+        ];
+    }
+
+    // Родительский регион (область для района)
+    public function parent()
+    {
+        return $this->belongsTo(Region::class, 'parent_id');
+    }
+
+    // Дочерние регионы (районы для области)
+    public function children()
+    {
+        return $this->hasMany(Region::class, 'parent_id');
+    }
+
+    // Проверка, является ли регион областью
+    public function isOblast(): bool
+    {
+        return $this->type === 'oblast';
+    }
+
+    // Проверка, является ли регион районом
+    public function isDistrict(): bool
+    {
+        return $this->type === 'district';
+    }
+
+    public function sezs()
+    {
+        return $this->hasMany(Sez::class);
+    }
+
+    public function industrialZones()
+    {
+        return $this->hasMany(IndustrialZone::class);
+    }
+
+    public function subsoilUsers()
+    {
+        return $this->hasMany(SubsoilUser::class);
+    }
+}

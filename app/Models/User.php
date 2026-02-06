@@ -19,9 +19,12 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
-        'name',
+        'full_name',
         'email',
         'password',
+        'role',
+        'region_id',
+        'role_id',
     ];
 
     /**
@@ -48,5 +51,27 @@ class User extends Authenticatable
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
+    }
+
+    public function region()
+    {
+        return $this->belongsTo(Region::class);
+    }
+
+    public function roleModel()
+    {
+        return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    // Проекты, в которых пользователь является исполнителем
+    public function executedProjects()
+    {
+        return $this->hasMany(InvestmentProject::class, 'executor_id');
+    }
+
+    // Проекты, в которых пользователь является вовлеченным лицом
+    public function involvedProjects()
+    {
+        return $this->belongsToMany(InvestmentProject::class, 'investment_project_user');
     }
 }

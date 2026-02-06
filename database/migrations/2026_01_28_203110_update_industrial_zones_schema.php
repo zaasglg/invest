@@ -1,0 +1,38 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::table('industrial_zones', function (Blueprint $table) {
+            $table->decimal('total_area', 10, 2)->nullable();
+            $table->decimal('investment_total', 18, 2)->nullable();
+            $table->json('infrastructure')->nullable();
+            $table->json('location')->nullable();
+            $table->text('description')->nullable();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('industrial_zones', function (Blueprint $table) {
+            $table->dropColumn([
+                'total_area',
+                'investment_total',
+                'infrastructure',
+                'location',
+                'description',
+            ]);
+        });
+    }
+};
