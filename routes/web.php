@@ -69,6 +69,15 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'r
     Route::post('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'store'])->name('subsoil-users.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'update'])->name('subsoil-users.issues.update');
     Route::delete('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'destroy'])->name('subsoil-users.issues.destroy');
+
+    Route::get('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'index'])->name('subsoil-users.documents.index');
+    Route::post('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'store'])->name('subsoil-users.documents.store');
+    Route::delete('documents/{document}', [\App\Http\Controllers\SubsoilDocumentController::class, 'destroy'])->name('subsoil-users.documents.destroy');
+
+    Route::get('gallery', [\App\Http\Controllers\SubsoilPhotoController::class, 'index'])->name('subsoil-users.gallery.index');
+    Route::post('gallery', [\App\Http\Controllers\SubsoilPhotoController::class, 'store'])->name('subsoil-users.gallery.store');
+    Route::put('gallery/{photo}', [\App\Http\Controllers\SubsoilPhotoController::class, 'update'])->name('subsoil-users.gallery.update');
+    Route::delete('gallery/{photo}', [\App\Http\Controllers\SubsoilPhotoController::class, 'destroy'])->name('subsoil-users.gallery.destroy');
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)

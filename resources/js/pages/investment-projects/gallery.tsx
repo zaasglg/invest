@@ -219,7 +219,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >
-                                                Болашақ
+                                                Будущее
                                             </button>
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1">

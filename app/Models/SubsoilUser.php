@@ -11,6 +11,8 @@ class SubsoilUser extends Model
         'bin',
         'region_id',
         'mineral_type',
+        'total_area',
+        'description',
         'license_status',
         'license_start',
         'license_end',
@@ -34,6 +36,16 @@ class SubsoilUser extends Model
     public function issues()
     {
         return $this->hasMany(SubsoilIssue::class);
+    }
+
+    public function photos()
+    {
+        return $this->hasMany(SubsoilPhoto::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(SubsoilDocument::class);
     }
 
     public function investmentProjects()

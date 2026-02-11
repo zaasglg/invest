@@ -46,7 +46,9 @@ class RegionController extends Controller
 
     public function show(Region $region)
     {
-        $region->load(['subsoilUsers.issues', 'parent']);
+        $region->load(['subsoilUsers' => function ($query) {
+            $query->withCount('issues');
+        }, 'subsoilUsers.issues', 'parent']);
         $region->load(['sezs' => function ($query) {
             $query->withCount('issues');
         }, 'sezs.issues']);

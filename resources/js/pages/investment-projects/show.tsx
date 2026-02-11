@@ -228,7 +228,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [] }: P
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Eye className="h-5 w-5 text-gray-500" />
-                                        Болашақтағы көрінісі
+                                        Видение будущего
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">

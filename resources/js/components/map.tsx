@@ -622,7 +622,7 @@ export default function Map({ className, center = [51.505, -0.09], zoom = 13, re
                 })}
 
                 {/* Mock Plots Layer */}
-                {plots
+                {activeTab !== 'subsoil' && plots
                     .filter(plot => {
                         if (!activeEntity) return true;
                         if (activeEntity.type === 'sez') return plot.sezIds.includes(activeEntity.id);

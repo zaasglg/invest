@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+    ChevronLeft,
     ChevronRight,
     ExternalLink,
     Globe,
@@ -83,10 +84,12 @@ interface SubsoilUser {
     id: number;
     name: string;
     mineral_type: string;
+    total_area: number | null;
     license_status: string;
     license_start: string | null;
     license_end: string | null;
     location?: { lat: number, lng: number }[] | null;
+    issues_count?: number;
 }
 
 interface InvestmentProject {
@@ -136,14 +139,27 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const [selectedSezId, setSelectedSezId] = useState<number | null>(null);
     const [selectedIzId, setSelectedIzId] = useState<number | null>(null);
     const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(null);
+    const [selectedSubsoilStatus, setSelectedSubsoilStatus] = useState<string | null>(null);
     const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+
+    // Pagination state
+    const ITEMS_PER_PAGE = 10;
+    const [allPage, setAllPage] = useState(1);
+    const [sezPage, setSezPage] = useState(1);
+    const [izPage, setIzPage] = useState(1);
+    const [subsoilPage, setSubsoilPage] = useState(1);
 
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
         setSelectedSezId(null);
         setSelectedIzId(null);
         setSelectedSubsoilId(null);
+        setSelectedSubsoilStatus(null);
         setSelectedProjectId(null);
+        setAllPage(1);
+        setSezPage(1);
+        setIzPage(1);
+        setSubsoilPage(1);
     };
 
     const handleSelectEntity = (id: number, type: 'sez' | 'iz' | 'subsoil') => {
@@ -156,6 +172,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const handleMapEntitySelect = (id: number | null, type: 'sez' | 'iz' | 'subsoil' | null) => {
         setMapSelectedEntityId(id);
         setMapSelectedEntityType(type);
+        setAllPage(1);
         // Sync sidebar selection with map click
         if (id && type === 'sez') {
             setSelectedSezId(id);
@@ -174,6 +191,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         setSelectedSezId(null);
         setSelectedIzId(null);
         setSelectedSubsoilId(null);
+        setSelectedSubsoilStatus(null);
         setSelectedProjectId(null);
     };
 
@@ -214,6 +232,39 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return projects.filter(p => p.subsoil_users && p.subsoil_users.length > 0);
     }, [projects, selectedSubsoilId]);
 
+    // Filtered subsoil users by status
+    const filteredSubsoilUsers = React.useMemo(() => {
+        if (selectedSubsoilStatus) {
+            return subsoilUsers.filter(su => su.license_status === selectedSubsoilStatus);
+        }
+        return subsoilUsers;
+    }, [subsoilUsers, selectedSubsoilStatus]);
+
+    // Reset pagination when filters change
+    React.useEffect(() => { setSezPage(1); }, [selectedSezId]);
+    React.useEffect(() => { setIzPage(1); }, [selectedIzId]);
+    React.useEffect(() => { setSubsoilPage(1); }, [selectedSubsoilStatus]);
+    React.useEffect(() => { setAllPage(1); }, [mapSelectedEntityId, mapSelectedEntityType]);
+
+    // Subsoil status counts
+    const subsoilStatusCounts = React.useMemo(() => {
+        const counts: Record<string, number> = { active: 0, expired: 0, suspended: 0 };
+        subsoilUsers.forEach(su => {
+            if (counts[su.license_status] !== undefined) {
+                counts[su.license_status]++;
+            }
+        });
+        return counts;
+    }, [subsoilUsers]);
+
+    // Total subsoil area
+    const totalSubsoilArea = React.useMemo(() => {
+        const users = selectedSubsoilStatus
+            ? subsoilUsers.filter(su => su.license_status === selectedSubsoilStatus)
+            : subsoilUsers;
+        return users.reduce((acc, su) => acc + Number(su.total_area || 0), 0);
+    }, [subsoilUsers, selectedSubsoilStatus]);
+
     const formatCurrency = (amount: number) => {
         if (Math.abs(amount) >= 1_000_000) {
             const millions = amount / 1_000_000;
@@ -231,6 +282,70 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return new Intl.NumberFormat('ru-RU', {
             maximumFractionDigits: 2,
         }).format(area);
+    };
+
+    const renderPagination = (totalItems: number, currentPage: number, setPage: (page: number) => void) => {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+        if (totalPages <= 1) return null;
+
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        const endPage = Math.min(totalPages, startPage + maxVisible - 1);
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+        const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+
+        return (
+            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+                <span className="text-xs text-gray-500">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} из {totalItems}
+                </span>
+                <div className="flex items-center gap-1">
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === 1}
+                        onClick={() => setPage(currentPage - 1)}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {startPage > 1 && (
+                        <>
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs" onClick={() => setPage(1)}>1</Button>
+                            {startPage > 2 && <span className="text-xs text-gray-400 px-1">…</span>}
+                        </>
+                    )}
+                    {pages.map((p) => (
+                        <Button
+                            key={p}
+                            variant={p === currentPage ? 'default' : 'ghost'}
+                            size="sm"
+                            className={`h-8 w-8 p-0 text-xs ${p === currentPage ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}`}
+                            onClick={() => setPage(p)}
+                        >
+                            {p}
+                        </Button>
+                    ))}
+                    {endPage < totalPages && (
+                        <>
+                            {endPage < totalPages - 1 && <span className="text-xs text-gray-400 px-1">…</span>}
+                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs" onClick={() => setPage(totalPages)}>{totalPages}</Button>
+                        </>
+                    )}
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setPage(currentPage + 1)}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        );
     };
 
     const getSectorDisplay = (project: InvestmentProject) => {
@@ -428,7 +543,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         projects={projects}
                                         sezs={sezs}
                                         industrialZones={industrialZones}
-                                        subsoilUsers={subsoilUsers}
+                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : subsoilUsers}
                                         selectedEntityId={selectedEntityId ?? mapSelectedEntityId}
                                         selectedEntityType={selectedEntityType ?? mapSelectedEntityType}
                                         selectedProjectId={selectedProjectId}
@@ -536,7 +651,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
                                                         ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
                                                         : projects;
-                                                    return filteredProjects.length > 0 ? filteredProjects.map((project) => (
+                                                    const paginatedAll = filteredProjects.slice((allPage - 1) * ITEMS_PER_PAGE, allPage * ITEMS_PER_PAGE);
+                                                    return paginatedAll.length > 0 ? paginatedAll.map((project) => (
                                                         <TableRow
                                                             key={project.id}
                                                             className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
@@ -575,6 +691,16 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 })()}
                                             </TableBody>
                                         </Table>
+                                        {(() => {
+                                            const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
+                                                ? projects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
+                                                : mapSelectedEntityType === 'iz' && mapSelectedEntityId
+                                                ? projects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
+                                                : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
+                                                ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
+                                                : projects;
+                                            return renderPagination(filteredProjects.length, allPage, setAllPage);
+                                        })()}
                                     </div>
                                 </TabsContent>
 
@@ -602,7 +728,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {sezProjects.length > 0 ? sezProjects.map((project) => (
+                                                {sezProjects.length > 0 ? sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map((project) => (
                                                     <TableRow
                                                         key={project.id}
                                                         className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
@@ -637,6 +763,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 )}
                                             </TableBody>
                                         </Table>
+                                        {renderPagination(sezProjects.length, sezPage, setSezPage)}
                                     </div>
                                 </TabsContent>
 
@@ -664,7 +791,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {izProjects.length > 0 ? izProjects.map((project) => (
+                                                {izProjects.length > 0 ? izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map((project) => (
                                                     <TableRow
                                                         key={project.id}
                                                         className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
@@ -699,18 +826,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 )}
                                             </TableBody>
                                         </Table>
+                                        {renderPagination(izProjects.length, izPage, setIzPage)}
                                     </div>
                                 </TabsContent>
 
                                 <TabsContent value="subsoil" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-xl font-semibold tracking-tight text-gray-900">
-                                            {selectedSubsoilId
-                                                ? `Проекты: ${subsoilUsers.find(s => s.id === selectedSubsoilId)?.name || 'Недропользователь'}`
-                                                : 'Проекты недропользователей'}
+                                            {selectedSubsoilStatus
+                                                ? `Недропользователи: ${licenseStatusMap[selectedSubsoilStatus]?.label || selectedSubsoilStatus}`
+                                                : 'Недропользователи'}
                                         </h2>
-                                        {selectedSubsoilId && (
-                                            <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSubsoilId(null); setSelectedEntityId(null); setSelectedEntityType(null); }}>
+                                        {selectedSubsoilStatus && (
+                                            <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSubsoilStatus(null); }}>
                                                 Сбросить фильтр
                                             </Button>
                                         )}
@@ -719,48 +847,65 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
-                                                    <TableHead>Проект</TableHead>
-                                                    <TableHead>Отрасль</TableHead>
-                                                    <TableHead>Статус</TableHead>
-                                                    <TableHead className="text-right">Инвестиции</TableHead>
+                                                    <TableHead>Наименование</TableHead>
+                                                    <TableHead>Тип минерала</TableHead>
+                                                    <TableHead>Статус лицензии</TableHead>
+                                                    <TableHead className="text-right">Площадь (га)</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {subsoilProjects.length > 0 ? subsoilProjects.map((project) => (
+                                                {filteredSubsoilUsers.length > 0 ? filteredSubsoilUsers.slice((subsoilPage - 1) * ITEMS_PER_PAGE, subsoilPage * ITEMS_PER_PAGE).map((su) => (
                                                     <TableRow
-                                                        key={project.id}
-                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
-                                                        onClick={() => handleProjectSelect(project.id)}
+                                                        key={su.id}
+                                                        className={`cursor-pointer transition-colors ${selectedSubsoilId === su.id ? 'bg-gray-100 border-l-2 border-l-gray-500' : 'hover:bg-gray-50'}`}
+                                                        onClick={() => {
+                                                            const newId = selectedSubsoilId === su.id ? null : su.id;
+                                                            setSelectedSubsoilId(newId);
+                                                            if (newId) {
+                                                                handleSelectEntity(newId, 'subsoil');
+                                                            } else {
+                                                                setSelectedEntityId(null);
+                                                                setSelectedEntityType(null);
+                                                            }
+                                                        }}
                                                     >
                                                         <TableCell className="font-medium text-gray-900 max-w-[250px] py-3">
-                                                            {project.name}
+                                                            <div className="flex items-center gap-2">
+                                                                <Pickaxe className="h-4 w-4 text-gray-400 shrink-0" />
+                                                                <Link
+                                                                    href={`/subsoil-users/${su.id}`}
+                                                                    className="hover:text-blue-600 hover:underline transition-colors"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    {su.name}
+                                                                </Link>
+                                                            </div>
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
-                                                            {getSectorDisplay(project)}
+                                                            {su.mineral_type}
                                                         </TableCell>
                                                         <TableCell className="py-3">
                                                             <Badge
                                                                 variant="outline"
-                                                                className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
+                                                                className={`${licenseStatusMap[su.license_status]?.color || 'bg-gray-100 text-gray-800'} font-medium border-0 px-2 py-0.5 text-xs rounded-md shadow-none`}
                                                             >
-                                                                {getStatusLabel(project.status)}
+                                                                {licenseStatusMap[su.license_status]?.label || su.license_status}
                                                             </Badge>
                                                         </TableCell>
                                                         <TableCell className="text-gray-900 font-semibold text-right text-sm py-3">
-                                                            {project.total_investment
-                                                                ? formatCurrency(Number(project.total_investment))
-                                                                : '—'}
+                                                            {su.total_area ? formatArea(Number(su.total_area)) : '—'}
                                                         </TableCell>
                                                     </TableRow>
                                                 )) : (
                                                     <TableRow>
                                                         <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Нет проектов
+                                                            Нет недропользователей
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
+                                        {renderPagination(filteredSubsoilUsers.length, subsoilPage, setSubsoilPage)}
                                     </div>
                                 </TabsContent>
                             </div>
@@ -1033,19 +1178,21 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="subsoil" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Недропользование</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-gray-900">Показатели недропользования</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                                        <div className="grid grid-cols-3 gap-x-4">
                                             <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{subsoilUsers.length}</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">
+                                                    {selectedSubsoilStatus ? filteredSubsoilUsers.length : subsoilUsers.length}
+                                                </div>
                                                 <div className="text-xs font-medium text-gray-500">Количество проектов</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{[...new Set(subsoilUsers.map(s => s.mineral_type))].length}</div>
-                                                <div className="text-xs font-medium text-gray-500">Типов ископаемых</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(totalSubsoilArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                <div className="text-xs font-medium text-gray-500">Площадь</div>
                                             </div>
-                                            <div className="col-span-2">
+                                            <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.subsoilIssuesCount}</div>
                                                 <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
                                             </div>
@@ -1053,71 +1200,51 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     </CardContent>
                                 </Card>
 
-                                {/* Subsoil Users List */}
+                                {/* Status Filter */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Недропользователи</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-gray-900">Статус лицензии</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        {subsoilUsers.length > 0 ? (
-                                            <div className="divide-y divide-gray-100">
-                                                {subsoilUsers.map((user) => (
-                                                    <div
-                                                        key={user.id}
-                                                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                                                            selectedSubsoilId === user.id
-                                                                ? 'bg-gray-100 border-l-2 border-l-gray-500'
-                                                                : 'hover:bg-gray-50'
-                                                        }`}
-                                                        onClick={() => {
-                                                            const newId = selectedSubsoilId === user.id ? null : user.id;
-                                                            setSelectedSubsoilId(newId);
-                                                            if (newId) {
-                                                                handleSelectEntity(newId, 'subsoil');
-                                                            } else {
-                                                                setSelectedEntityId(null);
-                                                                setSelectedEntityType(null);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <div className="flex flex-col gap-0.5 min-w-0">
-                                                            <div className="flex items-center gap-2">
-                                                                <Pickaxe className="h-4 w-4 text-gray-500 shrink-0" />
-                                                                <span className="text-sm font-medium text-gray-900 truncate">{user.name}</span>
-                                                            </div>
-                                                            <span className="text-[11px] text-gray-400 ml-6">{user.mineral_type}</span>
-                                                        </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
-                                                            <Link
-                                                                href={`/subsoil-users/${user.id}`}
-                                                                className="text-gray-400 hover:text-gray-700 transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                <ExternalLink className="h-3.5 w-3.5" />
-                                                            </Link>
-                                                            <Badge variant="outline" className="text-[10px]">{licenseStatusMap[user.license_status]?.label || user.license_status}</Badge>
-                                                        </div>
-                                                    </div>
-                                                ))}
+                                        <div className="divide-y divide-gray-100">
+                                            <div
+                                                className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                    selectedSubsoilStatus === null
+                                                        ? 'bg-gray-50 border-l-2 border-l-gray-500'
+                                                        : 'hover:bg-gray-50'
+                                                }`}
+                                                onClick={() => setSelectedSubsoilStatus(null)}
+                                            >
+                                                <div className="flex items-center gap-2 min-w-0">
+                                                    <Pickaxe className="h-4 w-4 text-gray-500 shrink-0" />
+                                                    <span className="text-sm font-medium text-gray-900">Все статусы</span>
+                                                </div>
+                                                <Badge variant="secondary" className="text-[10px]">{subsoilUsers.length}</Badge>
                                             </div>
-                                        ) : (
-                                            <p className="p-4 text-center text-sm text-gray-500">Нет недропользователей</p>
-                                        )}
+                                            {[
+                                                { key: 'active', label: 'Активная', color: 'text-green-700', bg: 'bg-green-50', border: 'border-l-green-500', icon: 'bg-green-100' },
+                                                { key: 'expired', label: 'Истекла', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-500', icon: 'bg-red-100' },
+                                                { key: 'suspended', label: 'Приостановлена', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-l-amber-500', icon: 'bg-amber-100' },
+                                            ].map((status) => (
+                                                <div
+                                                    key={status.key}
+                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                        selectedSubsoilStatus === status.key
+                                                            ? `${status.bg} border-l-2 ${status.border}`
+                                                            : 'hover:bg-gray-50'
+                                                    }`}
+                                                    onClick={() => setSelectedSubsoilStatus(selectedSubsoilStatus === status.key ? null : status.key)}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <div className={`w-2.5 h-2.5 rounded-full ${status.icon}`}></div>
+                                                        <span className={`text-sm font-medium ${selectedSubsoilStatus === status.key ? status.color : 'text-gray-700'}`}>{status.label}</span>
+                                                    </div>
+                                                    <Badge variant="secondary" className="text-[10px]">{subsoilStatusCounts[status.key] || 0}</Badge>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </CardContent>
                                 </Card>
-                                {/* <Card className="border-orange-100 bg-gradient-to-br from-orange-50/50 to-white shadow-none">
-                                    <CardContent className="p-6 space-y-4">
-                                        <div>
-                                            <h3 className="font-semibold text-base text-gray-900 mb-2">Право недропользования</h3>
-                                            <p className="text-sm text-gray-600 leading-relaxed">
-                                                Получение лицензий на разведку и добычу общераспространенных полезных ископаемых.
-                                            </p>
-                                        </div>
-                                        <Button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold text-lg h-12 transition-all shadow-none">
-                                            Узнать условия
-                                        </Button>
-                                    </CardContent>
-                                </Card> */}
                             </TabsContent>
 
                         </div>

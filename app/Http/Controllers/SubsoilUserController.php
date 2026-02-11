@@ -34,6 +34,8 @@ class SubsoilUserController extends Controller
             'bin' => 'required|string|max:20',
             'region_id' => 'required|exists:regions,id',
             'mineral_type' => 'required|string|max:255',
+            'total_area' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string|max:5000',
             'license_status' => 'required|in:active,expired,suspended',
             'license_start' => 'nullable|date',
             'license_end' => 'nullable|date|after_or_equal:license_start',
@@ -47,10 +49,19 @@ class SubsoilUserController extends Controller
 
     public function show(SubsoilUser $subsoilUser)
     {
-        $subsoilUser->load(['region', 'issues', 'investmentProjects.region']);
+        $subsoilUser->load(['region', 'issues', 'documents'])
+            ->loadCount('photos');
+
+        $mainGalleryPhotos = $subsoilUser->photos()
+            ->where('photo_type', 'gallery')
+            ->latest()
+            ->get();
+        $renderPhotos = $subsoilUser->photos()->renderPhotos()->latest()->get();
 
         return Inertia::render('subsoil-users/show', [
             'subsoilUser' => $subsoilUser,
+            'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 
@@ -71,6 +82,8 @@ class SubsoilUserController extends Controller
             'bin' => 'required|string|max:20',
             'region_id' => 'required|exists:regions,id',
             'mineral_type' => 'required|string|max:255',
+            'total_area' => 'nullable|numeric|min:0',
+            'description' => 'nullable|string|max:5000',
             'license_status' => 'required|in:active,expired,suspended',
             'license_start' => 'nullable|date',
             'license_end' => 'nullable|date|after_or_equal:license_start',

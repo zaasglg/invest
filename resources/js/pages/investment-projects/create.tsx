@@ -50,23 +50,15 @@ interface IndustrialZone {
     location?: { lat: number; lng: number }[] | null;
 }
 
-interface SubsoilUser {
-    id: number;
-    name: string;
-    region_id: number;
-    location?: { lat: number; lng: number }[] | null;
-}
-
 interface Props {
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
     sezList: Sez[];
     industrialZones: IndustrialZone[];
-    subsoilUsers: SubsoilUser[];
 }
 
-export default function Create({ regions, projectTypes, users, sezList, industrialZones, subsoilUsers }: Props) {
+export default function Create({ regions, projectTypes, users, sezList, industrialZones }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         company_name: '',
@@ -101,11 +93,6 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         return industrialZones.filter(iz => iz.region_id === parseInt(data.region_id));
     }, [industrialZones, data.region_id]);
 
-    const availableSubsoilUsers = useMemo(() => {
-        if (!data.region_id) return [];
-        return subsoilUsers.filter(su => su.region_id === parseInt(data.region_id));
-    }, [subsoilUsers, data.region_id]);
-
     const selectedRegion = useMemo(() => {
         if (!data.region_id) return null;
         return regions.find(r => r.id === parseInt(data.region_id)) || null;
@@ -116,7 +103,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
     }, [selectedRegion]);
 
     const overlayEntities = useMemo(() => {
-        const entities: { id: number; name: string; type: 'sez' | 'iz' | 'subsoil'; location?: { lat: number; lng: number }[] | null }[] = [];
+        const entities: { id: number; name: string; type: 'sez' | 'iz'; location?: { lat: number; lng: number }[] | null }[] = [];
         const currentSectors = data.sector;
         currentSectors.forEach(s => {
             const [type, idStr] = s.split('-');
@@ -127,13 +114,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
             } else if (type === 'industrial_zone') {
                 const iz = industrialZones.find(x => x.id === id);
                 if (iz) entities.push({ id: iz.id, name: iz.name, type: 'iz', location: iz.location });
-            } else if (type === 'subsoil') {
-                const su = subsoilUsers.find(x => x.id === id);
-                if (su) entities.push({ id: su.id, name: su.name, type: 'subsoil', location: su.location });
             }
         });
         return entities;
-    }, [data.sector, sezList, industrialZones, subsoilUsers]);
+    }, [data.sector, sezList, industrialZones]);
 
     const handleExecutorChange = (userId: string, checked: boolean) => {
         const currentIds = data.executor_ids;
@@ -274,7 +258,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     </p>
                                 ) : (
                                     <>
-                                        {availableSez.length === 0 && availableIndustrialZones.length === 0 && availableSubsoilUsers.length === 0 ? (
+                                        {availableSez.length === 0 && availableIndustrialZones.length === 0 ? (
                                             <p className="text-sm text-gray-400 text-center py-2">
                                                 Нет доступных секторов в этом районе
                                             </p>
@@ -316,27 +300,6 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                                     />
                                                                     <Label htmlFor={value} className="font-normal cursor-pointer">
                                                                         {iz.name}
-                                                                    </Label>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                )}
-                                                {availableSubsoilUsers.length > 0 && (
-                                                    <div className="space-y-2">
-                                                        <p className="text-xs font-medium text-gray-500 uppercase">Недропользование</p>
-                                                        {availableSubsoilUsers.map((su) => {
-                                                            const value = `subsoil-${su.id}`;
-                                                            return (
-                                                                <div key={value} className="flex items-center space-x-2">
-                                                                    <Checkbox
-                                                                        id={value}
-                                                                        checked={data.sector.includes(value)}
-                                                                        onCheckedChange={(checked) => handleSectorChange(value, checked as boolean)}
-                                                                        className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
-                                                                    />
-                                                                    <Label htmlFor={value} className="font-normal cursor-pointer">
-                                                                        {su.name}
                                                                     </Label>
                                                                 </div>
                                                             );
