@@ -65,6 +65,7 @@ interface Sez {
     description: string;
     infrastructure?: InfrastructureData | null;
     location?: { lat: number, lng: number }[] | null;
+    issues_count?: number;
 }
 
 interface IndustrialZone {
@@ -76,6 +77,7 @@ interface IndustrialZone {
     description: string;
     infrastructure?: InfrastructureData | null;
     location?: { lat: number, lng: number }[] | null;
+    issues_count?: number;
 }
 interface SubsoilUser {
     id: number;
@@ -813,27 +815,40 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="sez" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Показатели СЭЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-gray-900">
+                                            {selectedSezId
+                                                ? `Показатели: ${sezs.find(s => s.id === selectedSezId)?.name || 'СЭЗ'}`
+                                                : 'Показатели СЭЗ'}
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                                            <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{sezs.length}</div>
-                                                <div className="text-xs font-medium text-gray-500">Количество зон</div>
-                                            </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(totalSezArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Общая площадь</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(totalSezInvestment)}</div>
-                                                <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
-                                            </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.sezIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const selectedSez = selectedSezId ? sezs.find(s => s.id === selectedSezId) : null;
+                                            const displayZones = selectedSez ? 1 : sezs.length;
+                                            const displayArea = selectedSez ? Number(selectedSez.total_area) : totalSezArea;
+                                            const displayInvestment = selectedSez ? Number(selectedSez.investment_total) : totalSezInvestment;
+                                            const displayIssues = selectedSez ? (selectedSez.issues_count ?? 0) : stats.sezIssuesCount;
+                                            return (
+                                                <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                                                    <div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayZones}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Количество зон</div>
+                                                    </div>
+                                                    <div className="pl-4 border-l border-gray-100">
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                        <div className="text-xs font-medium text-gray-500">Общая площадь</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(displayInvestment)}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
+                                                    </div>
+                                                    <div className="pl-4 border-l border-gray-100">
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayIssues}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </CardContent>
                                 </Card>
 
@@ -845,6 +860,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardContent className="p-0">
                                         {sezs.length > 0 ? (
                                             <div className="divide-y divide-gray-100">
+                                                <div
+                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                        selectedSezId === null
+                                                            ? 'bg-violet-50 border-l-2 border-l-violet-500'
+                                                            : 'hover:bg-gray-50'
+                                                    }`}
+                                                    onClick={() => {
+                                                        setSelectedSezId(null);
+                                                        setSelectedEntityId(null);
+                                                        setSelectedEntityType(null);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
+                                                        <span className="text-sm font-medium text-gray-900">Все</span>
+                                                    </div>
+                                                    <Badge variant="secondary" className="text-[10px]">{sezs.length} зон</Badge>
+                                                </div>
                                                 {sezs.map((sez) => (
                                                     <div
                                                         key={sez.id}
@@ -854,14 +887,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 : 'hover:bg-gray-50'
                                                         }`}
                                                         onClick={() => {
-                                                            const newId = selectedSezId === sez.id ? null : sez.id;
-                                                            setSelectedSezId(newId);
-                                                            if (newId) {
-                                                                handleSelectEntity(newId, 'sez');
-                                                            } else {
-                                                                setSelectedEntityId(null);
-                                                                setSelectedEntityType(null);
-                                                            }
+                                                            setSelectedSezId(sez.id);
+                                                            handleSelectEntity(sez.id, 'sez');
                                                         }}
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
@@ -897,27 +924,40 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="iz" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Показатели ИЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-gray-900">
+                                            {selectedIzId
+                                                ? `Показатели: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИЗ'}`
+                                                : 'Показатели ИЗ'}
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                                            <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{izProjects.length}</div>
-                                                <div className="text-xs font-medium text-gray-500">Количество проектов</div>
-                                            </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(totalIzArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Общая площадь</div>
-                                            </div>
-                                            <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(totalIzInvestment)}</div>
-                                                <div className="text-xs font-medium text-gray-500">Инвестиции</div>
-                                            </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.izIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
-                                            </div>
-                                        </div>
+                                        {(() => {
+                                            const selectedIz = selectedIzId ? industrialZones.find(z => z.id === selectedIzId) : null;
+                                            const displayZones = selectedIz ? 1 : industrialZones.length;
+                                            const displayArea = selectedIz ? Number(selectedIz.total_area) : totalIzArea;
+                                            const displayInvestment = selectedIz ? Number(selectedIz.investment_total) : totalIzInvestment;
+                                            const displayIssues = selectedIz ? (selectedIz.issues_count ?? 0) : stats.izIssuesCount;
+                                            return (
+                                                <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                                                    <div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayZones}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Количество зон</div>
+                                                    </div>
+                                                    <div className="pl-4 border-l border-gray-100">
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                        <div className="text-xs font-medium text-gray-500">Общая площадь</div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(displayInvestment)}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
+                                                    </div>
+                                                    <div className="pl-4 border-l border-gray-100">
+                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayIssues}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
                                     </CardContent>
                                 </Card>
 
@@ -929,6 +969,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardContent className="p-0">
                                         {industrialZones.length > 0 ? (
                                             <div className="divide-y divide-gray-100">
+                                                <div
+                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                        selectedIzId === null
+                                                            ? 'bg-amber-50 border-l-2 border-l-amber-500'
+                                                            : 'hover:bg-gray-50'
+                                                    }`}
+                                                    onClick={() => {
+                                                        setSelectedIzId(null);
+                                                        setSelectedEntityId(null);
+                                                        setSelectedEntityType(null);
+                                                    }}
+                                                >
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <Factory className="h-4 w-4 text-amber-500 shrink-0" />
+                                                        <span className="text-sm font-medium text-gray-900">Все</span>
+                                                    </div>
+                                                    <Badge variant="secondary" className="text-[10px]">{industrialZones.length} зон</Badge>
+                                                </div>
                                                 {industrialZones.map((iz) => (
                                                     <div
                                                         key={iz.id}
@@ -938,14 +996,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 : 'hover:bg-gray-50'
                                                         }`}
                                                         onClick={() => {
-                                                            const newId = selectedIzId === iz.id ? null : iz.id;
-                                                            setSelectedIzId(newId);
-                                                            if (newId) {
-                                                                handleSelectEntity(newId, 'iz');
-                                                            } else {
-                                                                setSelectedEntityId(null);
-                                                                setSelectedEntityType(null);
-                                                            }
+                                                            setSelectedIzId(iz.id);
+                                                            handleSelectEntity(iz.id, 'iz');
                                                         }}
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
@@ -987,7 +1039,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                             <div>
                                                 <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{subsoilUsers.length}</div>
-                                                <div className="text-xs font-medium text-gray-500">Количество лицензий</div>
+                                                <div className="text-xs font-medium text-gray-500">Количество проектов</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{[...new Set(subsoilUsers.map(s => s.mineral_type))].length}</div>

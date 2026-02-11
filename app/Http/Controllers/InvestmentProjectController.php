@@ -232,6 +232,9 @@ class InvestmentProjectController extends Controller
         // Get main gallery photos
         $mainGalleryPhotos = $project ? $project->photos()->mainGallery()->latest()->get() : collect();
 
+        // Get render/future photos
+        $renderPhotos = $project ? $project->photos()->renderPhotos()->latest()->get() : collect();
+
         if (!$project) {
             // Demo fallback data
             $project = [
@@ -255,6 +258,7 @@ class InvestmentProjectController extends Controller
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 

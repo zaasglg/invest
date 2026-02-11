@@ -4,7 +4,7 @@ import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
 
@@ -20,7 +20,8 @@ interface Region {
 
 interface User {
     id: number;
-    name: string;
+    name?: string;
+    full_name?: string;
 }
 
 interface Photo {
@@ -55,15 +56,17 @@ interface InvestmentProject {
     documents?: Array<{ id: number; name: string }>;
     issues?: Array<{ id: number; title: string }>;
     photos_count?: { photos_count: number } | number;
+    geometry?: { lat: number; lng: number }[];
     created_at: string;
 }
 
 interface Props {
     project: InvestmentProject;
     mainGallery?: Photo[];
+    renderPhotos?: Photo[];
 }
 
-export default function Show({ project, mainGallery = [] }: Props) {
+export default function Show({ project, mainGallery = [], renderPhotos = [] }: Props) {
     const canModify = useCanModify();
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
@@ -219,6 +222,21 @@ export default function Show({ project, mainGallery = [] }: Props) {
 
                     {/* Sidebar Information */}
                     <div className="space-y-6">
+                        {/* Render Photos Card */}
+                        {renderPhotos.length > 0 && (
+                            <Card className="shadow-none overflow-hidden">
+                                <CardHeader>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Eye className="h-5 w-5 text-gray-500" />
+                                        Болашақтағы көрінісі
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <ProjectGallerySlider photos={renderPhotos} />
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Executors Card */}
                         <Card className='shadow-none'>
                             <CardHeader>
@@ -232,10 +250,10 @@ export default function Show({ project, mainGallery = [] }: Props) {
                                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ответственный</p>
                                     <div className="flex items-center gap-3">
                                         <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
-                                            {project.creator?.name?.slice(0, 2).toUpperCase() || 'NA'}
+                                            {(project.creator?.full_name || project.creator?.name)?.slice(0, 2).toUpperCase() || 'NA'}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">{project.creator?.name || 'Не указан'}</p>
+                                            <p className="text-sm font-medium text-gray-900">{project.creator?.full_name || project.creator?.name || 'Не указан'}</p>
                                             <p className="text-xs text-gray-500">Куратор проекта</p>
                                         </div>
                                     </div>
@@ -249,9 +267,9 @@ export default function Show({ project, mainGallery = [] }: Props) {
                                             {project.executors.map(executor => (
                                                 <div key={executor.id} className="flex items-center gap-3">
                                                     <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
-                                                        {executor.name?.slice(0, 2).toUpperCase() || 'NA'}
+                                                        {(executor.full_name || executor.name)?.slice(0, 2).toUpperCase() || 'NA'}
                                                     </div>
-                                                    <p className="text-sm text-gray-700">{executor.name ?? '—'}</p>
+                                                    <p className="text-sm text-gray-700">{executor.full_name || executor.name || '—'}</p>
                                                 </div>
                                             ))}
                                         </div>

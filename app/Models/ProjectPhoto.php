@@ -9,6 +9,7 @@ class ProjectPhoto extends Model
     protected $fillable = [
         'project_id',
         'file_path',
+        'photo_type',
         'gallery_date',
         'description',
     ];
@@ -28,7 +29,13 @@ class ProjectPhoto extends Model
     // Область видимости для основной галереи
     public function scopeMainGallery($query)
     {
-        return $query->whereNull('gallery_date');
+        return $query->whereNull('gallery_date')->where('photo_type', 'gallery');
+    }
+
+    // Область видимости для рендеров (болашақ суреттер)
+    public function scopeRenderPhotos($query)
+    {
+        return $query->where('photo_type', 'render');
     }
 
     // Область видимости для галереи по дате

@@ -22,6 +22,7 @@ class ProjectPhotoController extends Controller
             });
 
         $datedGalleryPhotos = $investmentProject->photos()
+            ->where('photo_type', 'gallery')
             ->whereNotNull('gallery_date')
             ->latest('gallery_date')
             ->latest()
@@ -36,10 +37,16 @@ class ProjectPhotoController extends Controller
             })
             ->toArray();
 
+        $renderPhotos = $investmentProject->photos()
+            ->renderPhotos()
+            ->latest()
+            ->get();
+
         return Inertia::render('investment-projects/gallery', [
             'project' => $investmentProject->load(['region', 'projectType']),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 
@@ -50,9 +57,11 @@ class ProjectPhotoController extends Controller
             'photos.*' => 'required|image|max:5120', // 5MB per image
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',
+            'photo_type' => 'nullable|string|in:gallery,render',
         ]);
 
         $galleryDate = $validated['gallery_date'] ?? null;
+        $photoType = $validated['photo_type'] ?? 'gallery';
 
         foreach ($validated['photos'] as $photo) {
             $path = $photo->store('project-photos/' . $investmentProject->id, 'public');
@@ -60,6 +69,7 @@ class ProjectPhotoController extends Controller
             ProjectPhoto::create([
                 'project_id' => $investmentProject->id,
                 'file_path' => $path,
+                'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
                 'description' => $validated['description'] ?? null,
             ]);
