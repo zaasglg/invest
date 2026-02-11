@@ -1,8 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit } from 'lucide-react';
 import * as projectTypes from '@/routes/project-types';
+
+import type { PaginatedData } from '@/types';
 import {
     Table,
     TableBody,
@@ -20,7 +23,7 @@ interface ProjectType {
 }
 
 interface Props {
-    types: ProjectType[];
+    types: PaginatedData<ProjectType>;
 }
 
 export default function Index({ types }: Props) {
@@ -52,7 +55,7 @@ export default function Index({ types }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {types.map((type) => (
+                            {types.data.map((type) => (
                                 <TableRow key={type.id}>
                                     <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">#{type.id}</TableCell>
                                     <TableCell>{type.name}</TableCell>
@@ -68,7 +71,7 @@ export default function Index({ types }: Props) {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {types.length === 0 && (
+                            {types.data.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="h-24 text-center text-neutral-500">
                                         Нет данных. Создайте первый тип проекта.
@@ -78,6 +81,8 @@ export default function Index({ types }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={types} />
             </div>
         </AppLayout>
     );

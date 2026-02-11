@@ -54,7 +54,7 @@ export default function Dashboard({ regions, regionStats, sectorSummary }: Props
             <Head title="Статистика" />
             <Map
                 className="h-[calc(100vh-64px)] w-full"
-                center={[43.65, 68.5]}
+                center={[41.5, 68.5]}
                 zoom={7}
                 regions={regions}
                 regionStats={regionStats}

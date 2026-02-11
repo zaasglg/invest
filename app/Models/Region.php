@@ -9,6 +9,7 @@ class Region extends Model
     protected $fillable = [
         'parent_id',
         'name',
+        'area',
         'type',
         'geometry',
     ];
@@ -17,6 +18,7 @@ class Region extends Model
     {
         return [
             'type' => 'string',
+            'area' => 'decimal:2',
             'geometry' => 'array',
         ];
     }

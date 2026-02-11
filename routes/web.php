@@ -33,6 +33,8 @@ Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectCo
     ->middleware(['auth', 'verified', 'role.access']);
 
 Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('passport', [\App\Http\Controllers\InvestmentProjectController::class, 'passport'])->name('investment-projects.passport');
+
     Route::get('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])->name('investment-projects.documents.index');
     Route::post('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])->name('investment-projects.documents.store');
     Route::delete('documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])->name('investment-projects.documents.destroy');
@@ -41,6 +43,32 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
     Route::post('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'store'])->name('investment-projects.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\ProjectPhotoController::class, 'update'])->name('investment-projects.gallery.update');
     Route::delete('gallery/{photo}', [\App\Http\Controllers\ProjectPhotoController::class, 'destroy'])->name('investment-projects.gallery.destroy');
+
+    Route::get('issues', [\App\Http\Controllers\ProjectIssueController::class, 'index'])->name('investment-projects.issues.index');
+    Route::post('issues', [\App\Http\Controllers\ProjectIssueController::class, 'store'])->name('investment-projects.issues.store');
+    Route::put('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'update'])->name('investment-projects.issues.update');
+    Route::delete('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'destroy'])->name('investment-projects.issues.destroy');
+});
+
+Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('issues', [\App\Http\Controllers\SezIssueController::class, 'index'])->name('sezs.issues.index');
+    Route::post('issues', [\App\Http\Controllers\SezIssueController::class, 'store'])->name('sezs.issues.store');
+    Route::put('issues/{issue}', [\App\Http\Controllers\SezIssueController::class, 'update'])->name('sezs.issues.update');
+    Route::delete('issues/{issue}', [\App\Http\Controllers\SezIssueController::class, 'destroy'])->name('sezs.issues.destroy');
+});
+
+Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('issues', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'index'])->name('industrial-zones.issues.index');
+    Route::post('issues', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'store'])->name('industrial-zones.issues.store');
+    Route::put('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'update'])->name('industrial-zones.issues.update');
+    Route::delete('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'destroy'])->name('industrial-zones.issues.destroy');
+});
+
+Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'index'])->name('subsoil-users.issues.index');
+    Route::post('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'store'])->name('subsoil-users.issues.store');
+    Route::put('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'update'])->name('subsoil-users.issues.update');
+    Route::delete('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'destroy'])->name('subsoil-users.issues.destroy');
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)

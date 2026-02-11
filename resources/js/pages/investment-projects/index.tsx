@@ -2,6 +2,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,6 +24,8 @@ import {
 } from '@/components/ui/table';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import { useCanModify } from '@/hooks/use-can-modify';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -89,7 +92,7 @@ interface Filters {
 }
 
 interface Props {
-    projects: InvestmentProject[];
+    projects: PaginatedData<InvestmentProject>;
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -436,14 +439,14 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {projects.length === 0 ? (
+                            {projects.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={10} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                projects.map((project) => (
+                                projects.data.map((project) => (
                                     <TableRow key={project.id}>
                                         <TableCell className="font-medium">
                                             #{project.id}
@@ -496,6 +499,8 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={projects} />
             </div>
         </AppLayout>
     );

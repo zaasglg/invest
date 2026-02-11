@@ -10,7 +10,7 @@ class RoleController extends Controller
 {
     public function index()
     {
-        $roles = Role::withCount('users')->latest()->get();
+        $roles = Role::withCount('users')->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('roles/index', [
             'roles' => $roles,

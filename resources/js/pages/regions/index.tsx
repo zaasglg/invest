@@ -1,8 +1,11 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Trash2, Edit } from 'lucide-react';
 import * as regions from '@/routes/regions';
+
+import type { PaginatedData } from '@/types';
 import {
     Table,
     TableBody,
@@ -21,10 +24,10 @@ interface Region {
 }
 
 interface Props {
-    regions: Region[];
+    regions: PaginatedData<Region>;
 }
 
-export default function Index({ regions: data }: Props) {
+export default function Index({ regions: regionsData }: Props) {
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены?')) {
             router.delete(regions.destroy.url(id));
@@ -53,7 +56,7 @@ export default function Index({ regions: data }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.map((region) => (
+                            {regionsData.data.map((region) => (
                                 <TableRow key={region.id}>
                                     <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">#{region.id}</TableCell>
                                     <TableCell>{region.name}</TableCell>
@@ -69,7 +72,7 @@ export default function Index({ regions: data }: Props) {
                                     </TableCell>
                                 </TableRow>
                             ))}
-                            {data.length === 0 && (
+                            {regionsData.data.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="h-24 text-center text-neutral-500">
                                         Нет данных. Создайте первый регион.
@@ -79,6 +82,8 @@ export default function Index({ regions: data }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={regionsData} />
             </div>
         </AppLayout>
     );

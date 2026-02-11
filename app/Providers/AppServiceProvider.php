@@ -9,6 +9,8 @@ use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\URL;
 
+use function App\Http\Controllers\clearDashboardCache;
+
 class AppServiceProvider extends ServiceProvider
 {
     /**
@@ -25,7 +27,31 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureDashboardCacheInvalidation();
+    }
 
+    /**
+     * Register model event listeners that clear the dashboard cache
+     * whenever relevant data changes.
+     */
+    protected function configureDashboardCacheInvalidation(): void
+    {
+        $models = [
+            \App\Models\Region::class,
+            \App\Models\Sez::class,
+            \App\Models\IndustrialZone::class,
+            \App\Models\InvestmentProject::class,
+            \App\Models\SubsoilUser::class,
+            \App\Models\SezIssue::class,
+            \App\Models\IndustrialZoneIssue::class,
+            \App\Models\SubsoilIssue::class,
+            \App\Models\ProjectIssue::class,
+        ];
+
+        foreach ($models as $model) {
+            $model::saved(fn () => clearDashboardCache());
+            $model::deleted(fn () => clearDashboardCache());
+        }
     }
 
     protected function configureDefaults(): void

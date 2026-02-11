@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -13,6 +14,8 @@ import {
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import * as industrialZonesRoutes from '@/routes/industrial-zones';
 import { useCanModify } from '@/hooks/use-can-modify';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -29,7 +32,7 @@ interface IndustrialZone {
 }
 
 interface Props {
-    industrialZones: IndustrialZone[];
+    industrialZones: PaginatedData<IndustrialZone>;
 }
 
 export default function Index({ industrialZones }: Props) {
@@ -82,14 +85,14 @@ export default function Index({ industrialZones }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {industrialZones.length === 0 ? (
+                            {industrialZones.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                industrialZones.map((zone) => (
+                                industrialZones.data.map((zone) => (
                                     <TableRow key={zone.id}>
                                         <TableCell className="font-medium">{zone.name}</TableCell>
                                         <TableCell>{zone.region.name}</TableCell>
@@ -124,6 +127,8 @@ export default function Index({ industrialZones }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={industrialZones} />
             </div>
         </AppLayout>
     );

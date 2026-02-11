@@ -11,7 +11,7 @@ class IndustrialZoneController extends Controller
 {
     public function index()
     {
-        $industrialZones = IndustrialZone::with('region')->latest()->get();
+        $industrialZones = IndustrialZone::with('region')->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('industrial-zones/index', [
             'industrialZones' => $industrialZones,
@@ -43,6 +43,15 @@ class IndustrialZoneController extends Controller
         IndustrialZone::create($validated);
 
         return redirect()->route('industrial-zones.index')->with('success', 'ИЗ создана.');
+    }
+
+    public function show(IndustrialZone $industrialZone)
+    {
+        $industrialZone->load(['region', 'issues', 'investmentProjects.region']);
+
+        return Inertia::render('industrial-zones/show', [
+            'industrialZone' => $industrialZone,
+        ]);
     }
 
     public function edit(IndustrialZone $industrialZone)

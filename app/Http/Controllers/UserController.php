@@ -15,7 +15,8 @@ class UserController extends Controller
     {
         $users = User::with(['region', 'roleModel'])
             ->latest()
-            ->get();
+            ->paginate(15)
+            ->withQueryString();
 
         return Inertia::render('users/index', [
             'users' => $users,

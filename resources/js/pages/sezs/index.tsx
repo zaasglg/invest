@@ -1,10 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit } from 'lucide-react';
 import * as sezs from '@/routes/sezs';
 import { useCanModify } from '@/hooks/use-can-modify';
+
+import type { PaginatedData } from '@/types';
 import {
     Table,
     TableBody,
@@ -31,10 +34,10 @@ interface Sez {
 }
 
 interface Props {
-    sezs: Sez[];
+    sezs: PaginatedData<Sez>;
 }
 
-export default function Index({ sezs: data }: Props) {
+export default function Index({ sezs: sezsData }: Props) {
     const canModify = useCanModify();
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены?')) {
@@ -78,7 +81,7 @@ export default function Index({ sezs: data }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {data.map((sez) => (
+                            {sezsData.data.map((sez) => (
                                 <TableRow key={sez.id}>
                                     <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">#{sez.id}</TableCell>
                                     <TableCell className="font-medium">{sez.name}</TableCell>
@@ -104,7 +107,7 @@ export default function Index({ sezs: data }: Props) {
                                     )}
                                 </TableRow>
                             ))}
-                            {data.length === 0 && (
+                            {sezsData.data.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={7} className="h-24 text-center text-neutral-500">
                                         Нет данных. Создайте первую СЭЗ.
@@ -114,6 +117,8 @@ export default function Index({ sezs: data }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={sezsData} />
             </div>
         </AppLayout>
     );

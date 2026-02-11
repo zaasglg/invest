@@ -23,6 +23,7 @@ interface Region {
     name: string;
     type: string;
     parent_id: number | null;
+    geometry?: { lat: number; lng: number }[] | null;
 }
 
 interface ProjectType {
@@ -39,18 +40,21 @@ interface Sez {
     id: number;
     name: string;
     region_id: number;
+    location?: { lat: number; lng: number }[] | null;
 }
 
 interface IndustrialZone {
     id: number;
     name: string;
     region_id: number;
+    location?: { lat: number; lng: number }[] | null;
 }
 
 interface SubsoilUser {
     id: number;
     name: string;
     region_id: number;
+    location?: { lat: number; lng: number }[] | null;
 }
 
 interface InvestmentProject {
@@ -125,6 +129,35 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
         if (!data.region_id) return [];
         return subsoilUsers.filter(su => su.region_id === parseInt(data.region_id));
     }, [subsoilUsers, data.region_id]);
+
+    const selectedRegion = useMemo(() => {
+        if (!data.region_id) return null;
+        return regions.find(r => r.id === parseInt(data.region_id)) || null;
+    }, [regions, data.region_id]);
+
+    const regionBoundary = useMemo(() => {
+        return selectedRegion?.geometry || undefined;
+    }, [selectedRegion]);
+
+    const overlayEntities = useMemo(() => {
+        const entities: { id: number; name: string; type: 'sez' | 'iz' | 'subsoil'; location?: { lat: number; lng: number }[] | null }[] = [];
+        const currentSectors = Array.isArray(data.sector) ? data.sector : [];
+        currentSectors.forEach(s => {
+            const [type, idStr] = s.split('-');
+            const id = parseInt(idStr);
+            if (type === 'sez') {
+                const sez = sezList.find(x => x.id === id);
+                if (sez) entities.push({ id: sez.id, name: sez.name, type: 'sez', location: sez.location });
+            } else if (type === 'industrial_zone') {
+                const iz = industrialZones.find(x => x.id === id);
+                if (iz) entities.push({ id: iz.id, name: iz.name, type: 'iz', location: iz.location });
+            } else if (type === 'subsoil') {
+                const su = subsoilUsers.find(x => x.id === id);
+                if (su) entities.push({ id: su.id, name: su.name, type: 'subsoil', location: su.location });
+            }
+        });
+        return entities;
+    }, [data.sector, sezList, industrialZones, subsoilUsers]);
 
     const handleExecutorChange = (userId: string, checked: boolean) => {
         const currentIds = data.executor_ids;
@@ -455,6 +488,8 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
                             className="w-full"
+                            regionBoundary={regionBoundary}
+                            overlayEntities={overlayEntities}
                         />
                         {/*
                             // @ts-ignore */}

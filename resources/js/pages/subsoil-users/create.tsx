@@ -19,6 +19,7 @@ interface Region {
     name: string;
     type: string;
     parent_id: number | null;
+    geometry: { lat: number, lng: number }[] | null;
 }
 
 interface Props {
@@ -45,6 +46,11 @@ export default function Create({ regions }: Props) {
         if (!selectedOblastId) return [];
         return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
     }, [regions, selectedOblastId]);
+    
+    const selectedDistrict = useMemo(() => {
+        if (!data.region_id) return null;
+        return regions.find(r => r.id.toString() === data.region_id);
+    }, [regions, data.region_id]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -202,6 +208,7 @@ export default function Create({ regions }: Props) {
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
+                            regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
                         {/* 

@@ -10,7 +10,9 @@ use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use ZipArchive;
 
 class InvestmentProjectController extends Controller
 {
@@ -122,7 +124,7 @@ class InvestmentProjectController extends Controller
             $projectsQuery->whereDate('end_date', '<=', $filters['end_date_to']);
         }
 
-        $projects = $projectsQuery->latest()->get();
+        $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
@@ -141,9 +143,9 @@ class InvestmentProjectController extends Controller
         $regions = Region::all();
         $projectTypes = ProjectType::all();
         $users = User::all();
-        $sezList = Sez::select('id', 'name', 'region_id')->get();
-        $industrialZones = IndustrialZone::select('id', 'name', 'region_id')->get();
-        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id')->get();
+        $sezList = Sez::select('id', 'name', 'region_id', 'location')->get();
+        $industrialZones = IndustrialZone::select('id', 'name', 'region_id', 'location')->get();
+        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id', 'location')->get();
 
         return Inertia::render('investment-projects/create', [
             'regions' => $regions,
@@ -219,6 +221,7 @@ class InvestmentProjectController extends Controller
             'creator',
             'executors',
             'documents',
+            'issues',
             'sezs',
             'industrialZones',
             'subsoilUsers',
@@ -261,9 +264,9 @@ class InvestmentProjectController extends Controller
         $regions = Region::all();
         $projectTypes = ProjectType::all();
         $users = User::all();
-        $sezList = Sez::select('id', 'name', 'region_id')->get();
-        $industrialZones = IndustrialZone::select('id', 'name', 'region_id')->get();
-        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id')->get();
+        $sezList = Sez::select('id', 'name', 'region_id', 'location')->get();
+        $industrialZones = IndustrialZone::select('id', 'name', 'region_id', 'location')->get();
+        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id', 'location')->get();
 
         // Формируем массив sector на основе many-to-many связей
         $sector = [];
@@ -361,6 +364,67 @@ class InvestmentProjectController extends Controller
         }
         
         return ['type' => null, 'id' => null];
+    }
+
+    public function passport(InvestmentProject $investmentProject)
+    {
+        $investmentProject->load([
+            'region',
+            'projectType',
+            'creator',
+            'executors',
+            'documents',
+            'photos',
+            'sezs',
+            'industrialZones',
+            'subsoilUsers',
+        ]);
+
+        $zip = new ZipArchive();
+        $zipFileName = 'passport_' . $investmentProject->id . '_' . time() . '.zip';
+        $zipPath = storage_path('app/private/' . $zipFileName);
+
+        if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'Не удалось создать архив.');
+        }
+
+        // Add documents
+        foreach ($investmentProject->documents as $document) {
+            $filePath = Storage::disk('public')->path($document->file_path);
+            if (file_exists($filePath)) {
+                $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
+                $docName = $document->name;
+                if ($extension && !str_ends_with(mb_strtolower($docName), '.' . mb_strtolower($extension))) {
+                    $docName .= '.' . $extension;
+                }
+                $zip->addFile($filePath, 'Документы/' . $docName);
+            }
+        }
+
+        // Add photos
+        foreach ($investmentProject->photos as $index => $photo) {
+            $filePath = Storage::disk('public')->path($photo->file_path);
+            if (file_exists($filePath)) {
+                $extension = pathinfo($photo->file_path, PATHINFO_EXTENSION) ?: 'jpg';
+                $photoName = ($index + 1) . '.' . $extension;
+                if ($photo->description) {
+                    $photoName = ($index + 1) . '_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description) . '.' . $extension;
+                }
+                $zip->addFile($filePath, 'Фото/' . $photoName);
+            }
+        }
+
+        if ($zip->count() === 0) {
+            $zip->close();
+            @unlink($zipPath);
+            abort(404, 'Нет файлов для скачивания.');
+        }
+
+        $zip->close();
+
+        $downloadName = 'Паспорт_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $investmentProject->name) . '.zip';
+
+        return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
     }
 
     public function destroy(InvestmentProject $investmentProject)

@@ -19,6 +19,14 @@ class CheckRoleAccess
     ];
 
     /**
+     * Routes that are allowed for restricted roles even if the resource
+     * is generally blocked. Use full route names (e.g. 'regions.show').
+     */
+    protected array $allowedForRestricted = [
+        'regions.show',
+    ];
+
+    /**
      * Route action suffixes that modify data (create/store/edit/update/destroy).
      */
     protected array $writeSuffixes = [
@@ -77,6 +85,12 @@ class CheckRoleAccess
         $routeName = $request->route()?->getName();
 
         if (! $routeName) {
+            return false;
+        }
+
+        // If this specific route is explicitly allowed for restricted roles,
+        // do not treat it as blocked even if its resource is in the blocked list.
+        if (in_array($routeName, $this->allowedForRestricted, true)) {
             return false;
         }
 

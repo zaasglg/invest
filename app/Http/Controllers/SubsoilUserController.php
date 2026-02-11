@@ -11,7 +11,7 @@ class SubsoilUserController extends Controller
 {
     public function index()
     {
-        $subsoilUsers = SubsoilUser::with('region')->latest()->get();
+        $subsoilUsers = SubsoilUser::with('region')->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('subsoil-users/index', [
             'subsoilUsers' => $subsoilUsers,
@@ -43,6 +43,15 @@ class SubsoilUserController extends Controller
         SubsoilUser::create($validated);
 
         return redirect()->route('subsoil-users.index')->with('success', 'Недропользователь создан.');
+    }
+
+    public function show(SubsoilUser $subsoilUser)
+    {
+        $subsoilUser->load(['region', 'issues', 'investmentProjects.region']);
+
+        return Inertia::render('subsoil-users/show', [
+            'subsoilUser' => $subsoilUser,
+        ]);
     }
 
     public function edit(SubsoilUser $subsoilUser)

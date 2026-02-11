@@ -1,5 +1,6 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import {
     Table,
@@ -12,6 +13,8 @@ import {
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import * as rolesRoutes from '@/routes/roles';
 
+import type { PaginatedData } from '@/types';
+
 interface Role {
     id: number;
     name: string;
@@ -21,7 +24,7 @@ interface Role {
 }
 
 interface Props {
-    roles: Role[];
+    roles: PaginatedData<Role>;
 }
 
 export default function Index({ roles }: Props) {
@@ -68,14 +71,14 @@ export default function Index({ roles }: Props) {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {roles.length === 0 ? (
+                            {roles.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                roles.map((role) => (
+                                roles.data.map((role) => (
                                     <TableRow key={role.id}>
                                         <TableCell className="font-medium">
                                             #{role.id}
@@ -107,6 +110,8 @@ export default function Index({ roles }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={roles} />
             </div>
         </AppLayout>
     );

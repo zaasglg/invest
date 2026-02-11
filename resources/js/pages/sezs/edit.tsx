@@ -14,12 +14,18 @@ import {
 import { FormEventHandler, useState, useMemo } from 'react';
 import * as sezs from '@/routes/sezs';
 import LocationPicker from '@/components/location-picker';
+import InfrastructureForm, {
+    getEmptyInfrastructure,
+} from '@/components/infrastructure-form';
+
+import type { InfrastructureData } from '@/components/infrastructure-form';
 
 interface Region {
     id: number;
     name: string;
     type: string;
     parent_id: number | null;
+    geometry: { lat: number, lng: number }[] | null;
 }
 
 interface Sez {
@@ -30,7 +36,8 @@ interface Sez {
     investment_total: string | null;
     status: string;
     description: string | null;
-    location?: { lat: number, lng: number }[];
+    location?: { lat: number; lng: number }[];
+    infrastructure?: InfrastructureData | null;
 }
 
 interface Props {
@@ -47,6 +54,7 @@ export default function Edit({ sez, regions }: Props) {
         status: sez.status || 'developing',
         description: sez.description || '',
         location: sez.location || [],
+        infrastructure: (sez.infrastructure || getEmptyInfrastructure()) as InfrastructureData,
     });
 
     const initialRegion = regions.find(r => r.id === sez.region_id);
@@ -62,6 +70,11 @@ export default function Edit({ sez, regions }: Props) {
         if (!selectedOblastId) return [];
         return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
     }, [regions, selectedOblastId]);
+
+    const selectedDistrict = useMemo(() => {
+        if (!data.region_id) return null;
+        return regions.find(r => r.id.toString() === data.region_id);
+    }, [regions, data.region_id]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -201,11 +214,17 @@ export default function Edit({ sez, regions }: Props) {
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
 
+                    <InfrastructureForm
+                        value={data.infrastructure}
+                        onChange={(val) => setData('infrastructure', val)}
+                    />
+
                     <div className="flex flex-col gap-2">
                         <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
+                            regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
                         {/* 
