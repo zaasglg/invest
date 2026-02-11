@@ -1,9 +1,36 @@
 # Stage 1: Build Frontend Assets
 FROM node:20-alpine AS frontend
+
+# Install PHP and Composer for Wayfinder
+RUN apk add --no-cache \
+    php \
+    php-ctype \
+    php-curl \
+    php-dom \
+    php-fileinfo \
+    php-mbstring \
+    php-openssl \
+    php-phar \
+    php-session \
+    php-tokenizer \
+    php-xml \
+    php-pdo \
+    composer
+
 WORKDIR /app
+
+# Copy Composer files and install dependencies (needed for artisan)
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-scripts --prefer-dist --ignore-platform-reqs
+
 COPY package.json package-lock.json ./
 RUN npm ci
 COPY . .
+
+# Setup environment for build
+RUN cp .env.example .env && \
+    php artisan key:generate
+
 RUN npm run build
 
 # Stage 2: Serve Application
