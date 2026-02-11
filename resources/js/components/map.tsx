@@ -126,6 +126,7 @@ interface RegionIconPoint {
     position: [number, number];
     region: Region;
     index: number;
+    iconSize: number;
 }
 
 const REGION_ICON_SVGS: Record<string, string> = {
@@ -154,6 +155,10 @@ const REGION_VIBRANT_COLORS = [
     '#d946ef',
     '#ec4899',
 ];
+
+const MIN_REGION_ICON_SIZE = 11;
+const MAX_REGION_ICON_SIZE = 22;
+const DEFAULT_REGION_ICON_SIZE = 16;
 
 type Props = {
     className?: string;
@@ -310,7 +315,50 @@ function cx(...classes: Array<string | false | null | undefined>) {
     return classes.filter(Boolean).join(' ');
 }
 
-function getRegionDemoIcon(region: Region, index: number) {
+function getRegionAreaScore(
+    points: Array<{ lat: number; lng: number }>,
+): number {
+    if (points.length < 3) {
+        return 0;
+    }
+
+    let areaScore = 0;
+
+    for (let i = 0; i < points.length; i++) {
+        const next = (i + 1) % points.length;
+        const current = points[i];
+        const nextPoint = points[next];
+
+        areaScore += current.lng * nextPoint.lat - nextPoint.lng * current.lat;
+    }
+
+    return Math.abs(areaScore) / 2;
+}
+
+function getRegionIconSizeByArea(
+    areaScore: number,
+    minAreaScore: number,
+    maxAreaScore: number,
+): number {
+    const spread = maxAreaScore - minAreaScore;
+
+    if (spread <= 1e-12) {
+        return DEFAULT_REGION_ICON_SIZE;
+    }
+
+    const normalized = Math.min(
+        Math.max((areaScore - minAreaScore) / spread, 0),
+        1,
+    );
+    const eased = Math.sqrt(normalized);
+
+    return Math.round(
+        MIN_REGION_ICON_SIZE +
+            eased * (MAX_REGION_ICON_SIZE - MIN_REGION_ICON_SIZE),
+    );
+}
+
+function getRegionDemoIcon(region: Region, index: number, iconSize: number) {
     const fallbackIconKey =
         REGION_ICON_KEYS.length > 0
             ? REGION_ICON_KEYS[index % REGION_ICON_KEYS.length]
@@ -325,12 +373,14 @@ function getRegionDemoIcon(region: Region, index: number) {
         : REGION_ICON_SVGS[iconKey];
     const iconColor = getRegionColor(region, index);
     const iconShadow = hexToRgba(iconColor, 0.34);
+    const glyphSize = Math.max(Math.round(iconSize * 0.82), 9);
+    const anchor = Math.round(iconSize / 2);
 
     return L.divIcon({
         className: 'region-demo-marker',
-        html: `<span class="region-demo-marker__icon-wrap" style="--region-icon-color:${iconColor};--region-icon-shadow:${iconShadow};">${iconMarkup}</span>`,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17],
+        html: `<span class="region-demo-marker__icon-wrap" style="--region-icon-color:${iconColor};--region-icon-shadow:${iconShadow};--region-icon-size:${iconSize}px;--region-icon-glyph-size:${glyphSize}px;">${iconMarkup}</span>`,
+        iconSize: [iconSize, iconSize],
+        iconAnchor: [anchor, anchor],
     });
 }
 
@@ -521,7 +571,7 @@ export default function Map({
             return [];
         }
 
-        return regions
+        const iconCandidates = regions
             .map((region, index) => {
                 const points =
                     region.geometry
@@ -536,6 +586,7 @@ export default function Map({
                 }
 
                 const center = getRegionIconCenter(points);
+                const areaScore = getRegionAreaScore(points);
 
                 return {
                     id: region.id,
@@ -543,9 +594,37 @@ export default function Map({
                     position: center,
                     region,
                     index,
+                    areaScore,
                 };
             })
-            .filter((item): item is RegionIconPoint => item !== null);
+            .filter(
+                (
+                    item,
+                ): item is Omit<RegionIconPoint, 'iconSize'> & {
+                    areaScore: number;
+                } => item !== null,
+            );
+
+        if (iconCandidates.length === 0) {
+            return [];
+        }
+
+        const areaScores = iconCandidates.map((item) => item.areaScore);
+        const minAreaScore = Math.min(...areaScores);
+        const maxAreaScore = Math.max(...areaScores);
+
+        return iconCandidates.map((item) => ({
+            id: item.id,
+            name: item.name,
+            position: item.position,
+            region: item.region,
+            index: item.index,
+            iconSize: getRegionIconSizeByArea(
+                item.areaScore,
+                minAreaScore,
+                maxAreaScore,
+            ),
+        }));
     }, [regions, showRegionIconsDemo]);
 
     // Handle external entity selection from table
@@ -914,6 +993,7 @@ export default function Map({
                             icon={getRegionDemoIcon(
                                 regionPoint.region,
                                 regionPoint.index,
+                                regionPoint.iconSize,
                             )}
                             eventHandlers={{
                                 click: () => {

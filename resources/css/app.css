@@ -248,8 +248,8 @@
 }
 
 .region-demo-marker__icon-wrap {
-    width: 34px;
-    height: 34px;
+    width: var(--region-icon-size, 24px);
+    height: var(--region-icon-size, 24px);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -260,8 +260,8 @@
 }
 
 .region-demo-marker__icon-wrap svg {
-    width: 30px;
-    height: 30px;
+    width: var(--region-icon-glyph-size, 20px);
+    height: var(--region-icon-glyph-size, 20px);
     display: block;
     filter: drop-shadow(
         0 4px 10px var(--region-icon-shadow, rgb(30 64 175 / 0.3))
@@ -269,8 +269,8 @@
 }
 
 .region-demo-marker__icon-image {
-    width: 30px;
-    height: 30px;
+    width: var(--region-icon-glyph-size, 20px);
+    height: var(--region-icon-glyph-size, 20px);
     object-fit: contain;
     display: block;
     filter: drop-shadow(
