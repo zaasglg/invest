@@ -136,9 +136,9 @@ class DashboardController extends Controller
             return $months;
         });
 
-        $regions = Cache::remember('dashboard.regions', 3600, function () {
+        $regions = Cache::remember('dashboard.regions.v2', 3600, function () {
             return Region::where('type', 'district')
-                ->select('id', 'name', 'geometry')
+                ->select('id', 'name', 'color', 'icon', 'geometry')
                 ->get();
         });
 

@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\Region;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class RegionController extends Controller
@@ -31,6 +33,8 @@ class RegionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions',
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'parent_id' => 'nullable|exists:regions,id',
@@ -39,7 +43,16 @@ class RegionController extends Controller
             'geometry.*.lng' => 'required|numeric',
         ]);
 
+        if ($request->hasFile('icon_file')) {
+            $validated['icon'] = $request->file('icon_file')->store('region-icons', 'public');
+        } else {
+            $validated['icon'] = 'factory';
+        }
+
+        unset($validated['icon_file']);
+
         Region::create($validated);
+        $this->clearDashboardRegionCache();
 
         return redirect()->route('regions.index')->with('success', 'Регион создан.');
     }
@@ -113,6 +126,8 @@ class RegionController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions,name,' . $region->id,
+            'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'parent_id' => 'nullable|exists:regions,id',
@@ -121,15 +136,37 @@ class RegionController extends Controller
             'geometry.*.lng' => 'required|numeric',
         ]);
 
+        if ($request->hasFile('icon_file')) {
+            if ($region->icon && str_contains($region->icon, '/')) {
+                Storage::disk('public')->delete($region->icon);
+            }
+
+            $validated['icon'] = $request->file('icon_file')->store('region-icons', 'public');
+        }
+
+        unset($validated['icon_file']);
+
         $region->update($validated);
+        $this->clearDashboardRegionCache();
 
         return redirect()->route('regions.index')->with('success', 'Регион обновлен.');
     }
 
     public function destroy(Region $region)
     {
+        if ($region->icon && str_contains($region->icon, '/')) {
+            Storage::disk('public')->delete($region->icon);
+        }
+
         $region->delete();
+        $this->clearDashboardRegionCache();
 
         return redirect()->back()->with('success', 'Регион удален.');
+    }
+
+    private function clearDashboardRegionCache(): void
+    {
+        Cache::forget('dashboard.regions');
+        Cache::forget('dashboard.regions.v2');
     }
 }

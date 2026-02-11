@@ -26,10 +26,12 @@ interface Props {
 export default function Create({ parents }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
+        color: '#3B82F6',
+        icon_file: null as File | null,
         area: '',
         type: 'district',
         parent_id: '',
-        geometry: [] as { lat: number, lng: number }[],
+        geometry: [] as { lat: number; lng: number }[],
     });
 
     const submit: FormEventHandler = (e) => {
@@ -38,23 +40,32 @@ export default function Create({ parents }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'Регионы', href: regions.index.url() },
-            { title: 'Создание', href: '#' }
-        ]}>
+        <AppLayout
+            breadcrumbs={[
+                { title: 'Регионы', href: regions.index.url() },
+                { title: 'Создание', href: '#' },
+            ]}
+        >
             <Head title="Создание региона" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Новый регион</h1>
+            <div className="flex h-full max-w-2xl flex-col p-4">
+                <h1 className="mb-6 font-serif text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                    Новый регион
+                </h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="type" className="text-neutral-500 font-normal">Тип региона</Label>
+                        <Label
+                            htmlFor="type"
+                            className="font-normal text-neutral-500"
+                        >
+                            Тип региона
+                        </Label>
                         <Select
                             value={data.type}
                             onValueChange={(value) => setData('type', value)}
                         >
-                            <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                            <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
                                 <SelectValue placeholder="Выберите тип" />
                             </SelectTrigger>
                             <SelectContent>
@@ -62,46 +73,144 @@ export default function Create({ parents }: Props) {
                                 <SelectItem value="district">Район</SelectItem>
                             </SelectContent>
                         </Select>
-                        {errors.type && <span className="text-sm text-red-500">{errors.type}</span>}
+                        {errors.type && (
+                            <span className="text-sm text-red-500">
+                                {errors.type}
+                            </span>
+                        )}
                     </div>
 
                     {data.type === 'district' && (
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="parent_id" className="text-neutral-500 font-normal">Родительский регион (Область)</Label>
+                            <Label
+                                htmlFor="parent_id"
+                                className="font-normal text-neutral-500"
+                            >
+                                Родительский регион (Область)
+                            </Label>
                             <Select
                                 value={data.parent_id}
-                                onValueChange={(value) => setData('parent_id', value)}
+                                onValueChange={(value) =>
+                                    setData('parent_id', value)
+                                }
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
                                     <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {parents.map((parent) => (
-                                        <SelectItem key={parent.id} value={parent.id.toString()}>
+                                        <SelectItem
+                                            key={parent.id}
+                                            value={parent.id.toString()}
+                                        >
                                             {parent.name}
                                         </SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
-                            {errors.parent_id && <span className="text-sm text-red-500">{errors.parent_id}</span>}
+                            {errors.parent_id && (
+                                <span className="text-sm text-red-500">
+                                    {errors.parent_id}
+                                </span>
+                            )}
                         </div>
                     )}
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-neutral-500 font-normal">Наименование</Label>
+                        <Label
+                            htmlFor="name"
+                            className="font-normal text-neutral-500"
+                        >
+                            Наименование
+                        </Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="h-10 border-neutral-200 bg-transparent shadow-none focus:border-neutral-900 focus-visible:ring-0"
                             placeholder="Например: Сауран"
                             autoFocus
                         />
-                        {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
+                        {errors.name && (
+                            <span className="text-sm text-red-500">
+                                {errors.name}
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="area" className="text-neutral-500 font-normal">Аумағы (га)</Label>
+                        <Label
+                            htmlFor="color"
+                            className="font-normal text-neutral-500"
+                        >
+                            Цвет региона
+                        </Label>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                id="color"
+                                type="color"
+                                value={data.color}
+                                onChange={(e) =>
+                                    setData(
+                                        'color',
+                                        e.target.value.toUpperCase(),
+                                    )
+                                }
+                                className="h-10 w-14 cursor-pointer rounded-md border-neutral-200 bg-transparent p-1 shadow-none"
+                            />
+                            <Input
+                                value={data.color}
+                                onChange={(e) =>
+                                    setData('color', e.target.value)
+                                }
+                                className="h-10 border-neutral-200 bg-transparent font-mono uppercase shadow-none focus:border-neutral-900 focus-visible:ring-0"
+                                placeholder="#3B82F6"
+                            />
+                        </div>
+                        {errors.color && (
+                            <span className="text-sm text-red-500">
+                                {errors.color}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label
+                            htmlFor="icon_file"
+                            className="font-normal text-neutral-500"
+                        >
+                            Загрузить свою иконку (PNG, JPG, WEBP, SVG)
+                        </Label>
+                        <Input
+                            id="icon_file"
+                            type="file"
+                            accept=".png,.jpg,.jpeg,.webp,.svg,image/*"
+                            onChange={(e) =>
+                                setData(
+                                    'icon_file',
+                                    e.target.files?.[0] ?? null,
+                                )
+                            }
+                            className="h-10 border-neutral-200 bg-transparent shadow-none file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-neutral-200 focus:border-neutral-900 focus-visible:ring-0"
+                        />
+                        <p className="text-xs text-neutral-500">
+                            Если файл не загружен, будет использована
+                            стандартная иконка.
+                        </p>
+                        {errors.icon_file && (
+                            <span className="text-sm text-red-500">
+                                {errors.icon_file}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label
+                            htmlFor="area"
+                            className="font-normal text-neutral-500"
+                        >
+                            Аумағы (га)
+                        </Label>
                         <Input
                             id="area"
                             type="number"
@@ -109,14 +218,20 @@ export default function Create({ parents }: Props) {
                             min="0"
                             value={data.area}
                             onChange={(e) => setData('area', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="h-10 border-neutral-200 bg-transparent shadow-none focus:border-neutral-900 focus-visible:ring-0"
                             placeholder="Например: 120.50"
                         />
-                        {errors.area && <span className="text-sm text-red-500">{errors.area}</span>}
+                        {errors.area && (
+                            <span className="text-sm text-red-500">
+                                {errors.area}
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="font-normal text-neutral-500">
+                            Геолокация (полигон)
+                        </Label>
                         <LocationPicker
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
@@ -124,14 +239,21 @@ export default function Create({ parents }: Props) {
                         />
                         {/* 
                             // @ts-ignore */}
-                        {errors.geometry && <span className="text-sm text-red-500">{errors.geometry}</span>}
+                        {errors.geometry && (
+                            <span className="text-sm text-red-500">
+                                {errors.geometry}
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="shadow-none">
                             Сохранить
                         </Button>
-                        <Link href={regions.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link
+                            href={regions.index.url()}
+                            className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline"
+                        >
                             Отмена
                         </Link>
                     </div>

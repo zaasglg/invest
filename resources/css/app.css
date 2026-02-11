@@ -14,14 +14,15 @@
     overflow: hidden;
     border-radius: 1rem;
     /* More rounded */
-    box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    box-shadow:
+        0 20px 25px -5px rgb(0 0 0 / 0.1),
+        0 8px 10px -6px rgb(0 0 0 / 0.1);
 }
 
 .leaflet-popup-content {
     margin: 0 !important;
     width: 280px !important;
 }
-
 
 .leaflet-popup-tip {
     background: white;
@@ -141,7 +142,6 @@
     --sidebar-ring: oklch(0.35 0.15 260);
 }
 
-
 @layer base {
     * {
         @apply border-border;
@@ -151,9 +151,163 @@
         @apply bg-background text-foreground;
     }
 }
-/* Interactive Map 3D Effect */
-path.active-region-3d {
-    filter: drop-shadow(0px 10px 10px rgba(0, 0, 0, 0.5));
-    stroke-width: 4px; /* Make stroke bolder */
-    transition: all 0.3s ease;
+/* Invest map atmosphere */
+.invest-map-shell {
+    isolation: isolate;
+}
+
+.invest-map .leaflet-container {
+    background: linear-gradient(145deg, #dbe7f4 0%, #edf2f9 38%, #dde6f3 100%);
+}
+
+.invest-map .leaflet-tile-pane {
+    filter: saturate(0.95) contrast(1.02);
+    transition:
+        filter 0.45s ease,
+        opacity 0.45s ease;
+}
+
+.invest-map--focused .leaflet-tile-pane {
+    filter: saturate(0.72) contrast(1.02) brightness(0.9);
+}
+
+.invest-map-atmosphere {
+    background:
+        radial-gradient(
+            circle at 14% 16%,
+            rgba(59, 130, 246, 0.18),
+            transparent 42%
+        ),
+        radial-gradient(
+            circle at 84% 78%,
+            rgba(14, 116, 144, 0.14),
+            transparent 46%
+        ),
+        linear-gradient(to top, rgba(15, 23, 42, 0.2), transparent 38%);
+    opacity: 0.2;
+    mix-blend-mode: soft-light;
+    transition: opacity 0.45s ease;
+    animation: mapAtmosphereDrift 14s ease-in-out infinite;
+}
+
+.invest-map-atmosphere--focused {
+    opacity: 0.36;
+}
+
+.invest-map .leaflet-overlay-pane svg {
+    overflow: visible;
+}
+
+.invest-map .leaflet-overlay-pane path {
+    transition:
+        fill-opacity 0.32s ease,
+        stroke-opacity 0.32s ease,
+        stroke-width 0.32s ease;
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-muted {
+    stroke-opacity: 0.55;
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus {
+    stroke-opacity: 1;
+    animation: mapFocusPulse 2.4s ease-in-out infinite;
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus--region {
+    filter: drop-shadow(0 0 14px rgba(59, 130, 246, 0.55));
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus--sez {
+    filter: drop-shadow(0 0 13px rgba(139, 92, 246, 0.55));
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus--iz {
+    filter: drop-shadow(0 0 13px rgba(245, 158, 11, 0.55));
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus--subsoil {
+    filter: drop-shadow(0 0 11px rgba(75, 85, 99, 0.5));
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-focus--project {
+    filter: drop-shadow(0 0 12px rgba(37, 99, 235, 0.48));
+}
+
+.invest-map .leaflet-overlay-pane path.map-live-halo {
+    fill-opacity: 0 !important;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    pointer-events: none;
+    animation: mapHaloPulse 2.8s ease-in-out infinite;
+}
+
+.region-demo-marker {
+    background: transparent;
+    border: 0;
+}
+
+.region-demo-marker__icon-wrap {
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--region-icon-color, rgb(30 64 175));
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease;
+}
+
+.region-demo-marker__icon-wrap svg {
+    width: 30px;
+    height: 30px;
+    display: block;
+    filter: drop-shadow(
+        0 4px 10px var(--region-icon-shadow, rgb(30 64 175 / 0.3))
+    );
+}
+
+.region-demo-marker__icon-image {
+    width: 30px;
+    height: 30px;
+    object-fit: contain;
+    display: block;
+    filter: drop-shadow(
+        0 4px 10px var(--region-icon-shadow, rgb(30 64 175 / 0.3))
+    );
+}
+
+.region-demo-marker:hover .region-demo-marker__icon-wrap {
+    transform: translateY(-1px) scale(1.04);
+}
+
+@keyframes mapFocusPulse {
+    0%,
+    100% {
+        stroke-opacity: 0.95;
+    }
+    50% {
+        stroke-opacity: 1;
+    }
+}
+
+@keyframes mapHaloPulse {
+    0%,
+    100% {
+        stroke-opacity: 0.42;
+    }
+    50% {
+        stroke-opacity: 0.12;
+    }
+}
+
+@keyframes mapAtmosphereDrift {
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) scale(1);
+    }
+    50% {
+        transform: translate3d(0.5%, -0.8%, 0) scale(1.02);
+    }
 }
