@@ -1,7 +1,6 @@
 .git
 .gitignore
 .env
-.env.example
 node_modules
 vendor
 npm-debug.log
