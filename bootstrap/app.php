@@ -26,8 +26,6 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role.access' => CheckRoleAccess::class,
         ]);
-
-        $middleware->trustProxies(at: '*');
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
