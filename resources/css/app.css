@@ -242,6 +242,13 @@
     animation: mapHaloPulse 2.8s ease-in-out infinite;
 }
 
+.invest-map .leaflet-overlay-pane path.map-outside-clouds {
+    pointer-events: none;
+    stroke-opacity: 0 !important;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 0 18px rgba(226, 236, 255, 0.5));
+}
+
 .region-demo-marker {
     background: transparent;
     border: 0;

@@ -181,6 +181,7 @@ type Props = {
     fitBounds?: boolean;
     showPolygons?: boolean;
     showRegionIconsDemo?: boolean;
+    showOutsideRegionClouds?: boolean;
     activeTab?: string;
     sectorSummary?: SectorSummary | null;
     onEntitySelect?: (
@@ -354,7 +355,7 @@ function getRegionIconSizeByArea(
 
     return Math.round(
         MIN_REGION_ICON_SIZE +
-        eased * (MAX_REGION_ICON_SIZE - MIN_REGION_ICON_SIZE),
+            eased * (MAX_REGION_ICON_SIZE - MIN_REGION_ICON_SIZE),
     );
 }
 
@@ -551,6 +552,7 @@ export default function Map({
     fitBounds = false,
     showPolygons = true,
     showRegionIconsDemo = false,
+    showOutsideRegionClouds = false,
     activeTab = 'all',
     sectorSummary = null,
     onEntitySelect,
@@ -566,6 +568,41 @@ export default function Map({
     const [activePlot, setActivePlot] = useState<Plot | null>(null);
     const [activeEntity, setActiveEntity] = useState<ActiveEntity | null>(null);
     const hasSelection = Boolean(activeRegion || activePlot || activeEntity);
+    const outsideCloudMaskPositions = useMemo<
+        [number, number][][] | null
+    >(() => {
+        if (!showOutsideRegionClouds || !showPolygons) {
+            return null;
+        }
+
+        const regionPolygons = regions
+            .map((region) =>
+                (
+                    region.geometry
+                        ?.map((point) => getLatLng(point))
+                        .filter(
+                            (point): point is { lat: number; lng: number } =>
+                                point !== null,
+                        ) ?? []
+                ).map((point) => [point.lat, point.lng] as [number, number]),
+            )
+            .filter(
+                (polygon): polygon is [number, number][] => polygon.length >= 3,
+            );
+
+        if (regionPolygons.length === 0) {
+            return null;
+        }
+
+        const worldRing: [number, number][] = [
+            [-85, -180],
+            [-85, 180],
+            [85, 180],
+            [85, -180],
+        ];
+
+        return [worldRing, ...regionPolygons];
+    }, [regions, showOutsideRegionClouds, showPolygons]);
     const regionIconPoints = useMemo<RegionIconPoint[]>(() => {
         if (!showRegionIconsDemo) {
             return [];
@@ -750,7 +787,7 @@ export default function Map({
 
                 const status: 'free' | 'occupied' =
                     project.status &&
-                        ['launched', 'implementation'].includes(project.status)
+                    ['launched', 'implementation'].includes(project.status)
                         ? 'occupied'
                         : 'free';
 
@@ -855,6 +892,21 @@ export default function Map({
                     url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
                 />
 
+                {outsideCloudMaskPositions && (
+                    <Polygon
+                        positions={outsideCloudMaskPositions}
+                        interactive={false}
+                        pathOptions={{
+                            color: 'transparent',
+                            fillColor: '#f3f7ff',
+                            fillOpacity: hasSelection ? 0.36 : 0.3,
+                            fillRule: 'evenodd',
+                            weight: 0,
+                            className: 'map-outside-clouds',
+                        }}
+                    />
+                )}
+
                 {/* Region polygons */}
                 {showPolygons &&
                     regions.map((region, regionIndex) => {
@@ -937,35 +989,35 @@ export default function Map({
                                         weight: isActive
                                             ? 4
                                             : isHovered
-                                                ? 2.4
-                                                : hasSelection
-                                                    ? 1.2
-                                                    : 1.1,
+                                              ? 2.4
+                                              : hasSelection
+                                                ? 1.2
+                                                : 1.1,
                                         opacity: 1,
                                         color: isActive
                                             ? '#1d4ed8'
                                             : isHovered
-                                                ? '#64748b'
-                                                : hasSelection
-                                                    ? '#cbd5e1'
-                                                    : '#1d3b6f',
+                                              ? '#64748b'
+                                              : hasSelection
+                                                ? '#cbd5e1'
+                                                : '#1d3b6f',
                                         dashArray:
                                             isActive || isHovered
                                                 ? ''
                                                 : hasSelection
-                                                    ? '2, 5'
-                                                    : '3',
+                                                  ? '2, 5'
+                                                  : '3',
                                         fillOpacity: isActive
                                             ? 0.7
                                             : isHovered
-                                                ? 0.64
-                                                : hasSelection
-                                                    ? 0.42
-                                                    : 0.56,
+                                              ? 0.64
+                                              : hasSelection
+                                                ? 0.42
+                                                : 0.56,
                                         className: cx(
                                             'cursor-pointer map-region-polygon',
                                             isActive &&
-                                            'map-live-focus map-live-focus--region',
+                                                'map-live-focus map-live-focus--region',
                                             shouldMute && 'map-live-muted',
                                         ),
                                     }}
@@ -1051,23 +1103,23 @@ export default function Map({
                                         fillOpacity: isSelected
                                             ? 0.45
                                             : shouldMute
-                                                ? 0.14
-                                                : 0.5,
+                                              ? 0.14
+                                              : 0.5,
                                         weight: isSelected ? 3 : 2,
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                                ? 0.45
-                                                : 0.95,
+                                              ? 0.45
+                                              : 0.95,
                                         dashArray: isSelected
                                             ? ''
                                             : shouldMute
-                                                ? '2, 6'
-                                                : undefined,
+                                              ? '2, 6'
+                                              : undefined,
                                         className: cx(
                                             'map-entity-polygon map-entity-polygon--sez',
                                             isSelected &&
-                                            'map-live-focus map-live-focus--sez',
+                                                'map-live-focus map-live-focus--sez',
                                             shouldMute && 'map-live-muted',
                                         ),
                                     }}
@@ -1137,23 +1189,23 @@ export default function Map({
                                         fillOpacity: isSelected
                                             ? 0.45
                                             : shouldMute
-                                                ? 0.14
-                                                : 0.5,
+                                              ? 0.14
+                                              : 0.5,
                                         weight: isSelected ? 3 : 2,
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                                ? 0.45
-                                                : 0.95,
+                                              ? 0.45
+                                              : 0.95,
                                         dashArray: isSelected
                                             ? ''
                                             : shouldMute
-                                                ? '2, 6'
-                                                : undefined,
+                                              ? '2, 6'
+                                              : undefined,
                                         className: cx(
                                             'map-entity-polygon map-entity-polygon--iz',
                                             isSelected &&
-                                            'map-live-focus map-live-focus--iz',
+                                                'map-live-focus map-live-focus--iz',
                                             shouldMute && 'map-live-muted',
                                         ),
                                     }}
@@ -1223,23 +1275,23 @@ export default function Map({
                                         fillOpacity: isSelected
                                             ? 0.4
                                             : shouldMute
-                                                ? 0.14
-                                                : 0.5,
+                                              ? 0.14
+                                              : 0.5,
                                         weight: isSelected ? 3 : 2,
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                                ? 0.45
-                                                : 0.95,
+                                              ? 0.45
+                                              : 0.95,
                                         dashArray: isSelected
                                             ? ''
                                             : shouldMute
-                                                ? '2, 6'
-                                                : undefined,
+                                              ? '2, 6'
+                                              : undefined,
                                         className: cx(
                                             'map-entity-polygon map-entity-polygon--subsoil',
                                             isSelected &&
-                                            'map-live-focus map-live-focus--subsoil',
+                                                'map-live-focus map-live-focus--subsoil',
                                             shouldMute && 'map-live-muted',
                                         ),
                                     }}
@@ -1306,28 +1358,28 @@ export default function Map({
                                         weight: isSelected
                                             ? 4
                                             : shouldMute
-                                                ? 2
-                                                : 3,
+                                              ? 2
+                                              : 3,
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                                ? 0.45
-                                                : 0.95,
+                                              ? 0.45
+                                              : 0.95,
                                         dashArray: isSelected
                                             ? ''
                                             : shouldMute
-                                                ? '4, 6'
-                                                : undefined,
+                                              ? '4, 6'
+                                              : undefined,
                                         fillOpacity: isSelected
                                             ? 0.36
                                             : shouldMute
-                                                ? 0.07
-                                                : 0.15,
+                                              ? 0.07
+                                              : 0.15,
                                         fillColor: statusColors.fillColor,
                                         className: cx(
                                             'map-project-polygon',
                                             isSelected &&
-                                            'map-live-focus map-live-focus--project',
+                                                'map-live-focus map-live-focus--project',
                                             shouldMute && 'map-live-muted',
                                         ),
                                     }}
@@ -1484,32 +1536,33 @@ export default function Map({
                                             Статус
                                         </p>
                                         <span
-                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${activePlot.statusRaw === 'plan'
+                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                                activePlot.statusRaw === 'plan'
                                                     ? 'bg-blue-100 text-blue-800'
                                                     : activePlot.statusRaw ===
                                                         'implementation'
-                                                        ? 'bg-amber-100 text-amber-800'
+                                                      ? 'bg-amber-100 text-amber-800'
+                                                      : activePlot.statusRaw ===
+                                                          'launched'
+                                                        ? 'bg-green-100 text-green-800'
                                                         : activePlot.statusRaw ===
-                                                            'launched'
-                                                            ? 'bg-green-100 text-green-800'
-                                                            : activePlot.statusRaw ===
-                                                                'suspended'
-                                                                ? 'bg-yellow-100 text-yellow-800'
-                                                                : 'bg-gray-100 text-gray-800'
-                                                }`}
+                                                            'suspended'
+                                                          ? 'bg-yellow-100 text-yellow-800'
+                                                          : 'bg-gray-100 text-gray-800'
+                                            }`}
                                         >
                                             {activePlot.statusRaw === 'plan'
                                                 ? 'Планирование'
                                                 : activePlot.statusRaw ===
                                                     'implementation'
-                                                    ? 'Реализация'
+                                                  ? 'Реализация'
+                                                  : activePlot.statusRaw ===
+                                                      'launched'
+                                                    ? 'Запущен'
                                                     : activePlot.statusRaw ===
-                                                        'launched'
-                                                        ? 'Запущен'
-                                                        : activePlot.statusRaw ===
-                                                            'suspended'
-                                                            ? 'Приостановлен'
-                                                            : activePlot.statusRaw}
+                                                        'suspended'
+                                                      ? 'Приостановлен'
+                                                      : activePlot.statusRaw}
                                         </span>
                                     </div>
                                 )}
@@ -1546,25 +1599,25 @@ export default function Map({
                                 {/* Сроки */}
                                 {(activePlot.startDate ||
                                     activePlot.endDate) && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                                Сроки
-                                            </p>
-                                            <p className="text-sm font-medium text-gray-900">
-                                                {activePlot.startDate
-                                                    ? new Date(
-                                                        activePlot.startDate,
-                                                    ).toLocaleDateString('ru-RU')
-                                                    : '—'}
-                                                {' — '}
-                                                {activePlot.endDate
-                                                    ? new Date(
-                                                        activePlot.endDate,
-                                                    ).toLocaleDateString('ru-RU')
-                                                    : '—'}
-                                            </p>
-                                        </div>
-                                    )}
+                                    <div className="flex items-center justify-between px-4 py-2.5">
+                                        <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                                            Сроки
+                                        </p>
+                                        <p className="text-sm font-medium text-gray-900">
+                                            {activePlot.startDate
+                                                ? new Date(
+                                                      activePlot.startDate,
+                                                  ).toLocaleDateString('ru-RU')
+                                                : '—'}
+                                            {' — '}
+                                            {activePlot.endDate
+                                                ? new Date(
+                                                      activePlot.endDate,
+                                                  ).toLocaleDateString('ru-RU')
+                                                : '—'}
+                                        </p>
+                                    </div>
+                                )}
 
                                 {/* Исполнители */}
                                 {activePlot.executorNames &&
@@ -1595,45 +1648,45 @@ export default function Map({
                                         activePlot.izNames.length > 0) ||
                                     (activePlot.subsoilNames &&
                                         activePlot.subsoilNames.length >
-                                        0)) && (
-                                        <div className="px-4 py-2.5">
-                                            <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                                Секторы
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {activePlot.sezNames?.map(
-                                                    (name, i) => (
-                                                        <span
-                                                            key={`sez-${i}`}
-                                                            className="inline-flex items-center rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
-                                                        >
-                                                            СЭЗ: {name}
-                                                        </span>
-                                                    ),
-                                                )}
-                                                {activePlot.izNames?.map(
-                                                    (name, i) => (
-                                                        <span
-                                                            key={`iz-${i}`}
-                                                            className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
-                                                        >
-                                                            ИЗ: {name}
-                                                        </span>
-                                                    ),
-                                                )}
-                                                {activePlot.subsoilNames?.map(
-                                                    (name, i) => (
-                                                        <span
-                                                            key={`su-${i}`}
-                                                            className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-800"
-                                                        >
-                                                            Недропользование: {name}
-                                                        </span>
-                                                    ),
-                                                )}
-                                            </div>
+                                            0)) && (
+                                    <div className="px-4 py-2.5">
+                                        <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
+                                            Секторы
+                                        </p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {activePlot.sezNames?.map(
+                                                (name, i) => (
+                                                    <span
+                                                        key={`sez-${i}`}
+                                                        className="inline-flex items-center rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                                                    >
+                                                        СЭЗ: {name}
+                                                    </span>
+                                                ),
+                                            )}
+                                            {activePlot.izNames?.map(
+                                                (name, i) => (
+                                                    <span
+                                                        key={`iz-${i}`}
+                                                        className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                                    >
+                                                        ИЗ: {name}
+                                                    </span>
+                                                ),
+                                            )}
+                                            {activePlot.subsoilNames?.map(
+                                                (name, i) => (
+                                                    <span
+                                                        key={`su-${i}`}
+                                                        className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-800"
+                                                    >
+                                                        Недропользование: {name}
+                                                    </span>
+                                                ),
+                                            )}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
                                 {/* Описание */}
                                 {activePlot.description && (
@@ -1667,7 +1720,7 @@ export default function Map({
                 (() => {
                     const data =
                         activeRegion?.id &&
-                            sectorSummary.byRegion[activeRegion.id]
+                        sectorSummary.byRegion[activeRegion.id]
                             ? sectorSummary.byRegion[activeRegion.id]
                             : sectorSummary.total;
 

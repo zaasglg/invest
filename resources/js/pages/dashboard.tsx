@@ -65,6 +65,7 @@ export default function Dashboard({
                 regionStats={regionStats}
                 sectorSummary={sectorSummary}
                 showRegionIconsDemo
+                showOutsideRegionClouds
             />
         </AppLayout>
     );
