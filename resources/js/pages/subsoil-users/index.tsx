@@ -1,9 +1,13 @@
 import { Head, Link, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Trash2, Edit } from 'lucide-react';
 import * as subsoilUsersRoutes from '@/routes/subsoil-users';
+import { useCanModify } from '@/hooks/use-can-modify';
+
+import type { PaginatedData } from '@/types';
 import {
     Table,
     TableBody,
@@ -32,7 +36,7 @@ interface SubsoilUser {
 }
 
 interface Props {
-    subsoilUsers: SubsoilUser[];
+    subsoilUsers: PaginatedData<SubsoilUser>;
 }
 
 const getStatusLabel = (status: SubsoilUser['license_status']) => {
@@ -53,6 +57,7 @@ const formatDate = (value: string | null) => {
 };
 
 export default function Index({ subsoilUsers }: Props) {
+    const canModify = useCanModify();
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены?')) {
             router.delete(subsoilUsersRoutes.destroy.url(id));
@@ -66,9 +71,11 @@ export default function Index({ subsoilUsers }: Props) {
             <div className="flex h-full flex-col p-4 space-y-4">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">Недропользование</h1>
-                    <Button asChild size="sm" className="shadow-none">
-                        <Link href={subsoilUsersRoutes.create.url()}>Создать нового</Link>
-                    </Button>
+                    {canModify && (
+                        <Button asChild size="sm" className="shadow-none">
+                            <Link href={subsoilUsersRoutes.create.url()}>Создать нового</Link>
+                        </Button>
+                    )}
                 </div>
 
                 <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
@@ -82,11 +89,11 @@ export default function Index({ subsoilUsers }: Props) {
                                 <TableHead>Минерал</TableHead>
                                 <TableHead>Лицензия</TableHead>
                                 <TableHead>Период</TableHead>
-                                <TableHead className="text-right">Действия</TableHead>
+                                {canModify && <TableHead className="text-right">Действия</TableHead>}
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {subsoilUsers.map((user) => (
+                            {subsoilUsers.data.map((user) => (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">#{user.id}</TableCell>
                                     <TableCell className="font-medium">{user.name}</TableCell>
@@ -101,24 +108,26 @@ export default function Index({ subsoilUsers }: Props) {
                                     <TableCell>
                                         {formatDate(user.license_start)} — {formatDate(user.license_end)}
                                     </TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors">
-                                            <Link href={subsoilUsersRoutes.edit.url(user.id)}>
-                                                <Edit className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors"
-                                            onClick={() => handleDelete(user.id)}
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
+                                    {canModify && (
+                                        <TableCell className="text-right space-x-2">
+                                            <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                                <Link href={subsoilUsersRoutes.edit.url(user.id)}>
+                                                    <Edit className="h-4 w-4" />
+                                                </Link>
+                                            </Button>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon"
+                                                className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors"
+                                                onClick={() => handleDelete(user.id)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))}
-                            {subsoilUsers.length === 0 && (
+                            {subsoilUsers.data.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={8} className="h-24 text-center text-neutral-500">
                                         Нет данных. Создайте первого недропользователя.
@@ -128,6 +137,8 @@ export default function Index({ subsoilUsers }: Props) {
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={subsoilUsers} />
             </div>
         </AppLayout>
     );

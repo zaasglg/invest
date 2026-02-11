@@ -2,6 +2,7 @@ import { Head, Link, router, useForm } from '@inertiajs/react';
 import { useMemo, useState, type FormEvent } from 'react';
 import { ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,9 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
+import { useCanModify } from '@/hooks/use-can-modify';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -88,7 +92,7 @@ interface Filters {
 }
 
 interface Props {
-    projects: InvestmentProject[];
+    projects: PaginatedData<InvestmentProject>;
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -99,6 +103,7 @@ interface Props {
 }
 
 export default function Index({ projects, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
+    const canModify = useCanModify();
     const { data, setData, get, reset } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -202,12 +207,14 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                     <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
                         Инвестиционные проекты
                     </h1>
-                    <Link href={investmentProjectsRoutes.create.url()}>
-                        <Button className="shadow-none">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Создать проект
-                        </Button>
-                    </Link>
+                    {canModify && (
+                        <Link href={investmentProjectsRoutes.create.url()}>
+                            <Button className="shadow-none">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Создать проект
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
@@ -432,14 +439,14 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {projects.length === 0 ? (
+                            {projects.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={10} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
-                                projects.map((project) => (
+                                projects.data.map((project) => (
                                     <TableRow key={project.id}>
                                         <TableCell className="font-medium">
                                             #{project.id}
@@ -467,19 +474,23 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                                         <Eye className="h-4 w-4 text-blue-600" />
                                                     </Button>
                                                 </Link>
-                                                <Link href={investmentProjectsRoutes.edit.url(project.id)}>
-                                                    <Button variant="ghost" size="icon" title="Редактировать">
-                                                        <Pencil className="h-4 w-4" />
-                                                    </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => handleDelete(project.id)}
-                                                    title="Удалить"
-                                                >
-                                                    <Trash2 className="h-4 w-4 text-red-500" />
-                                                </Button>
+                                                {canModify && (
+                                                    <>
+                                                        <Link href={investmentProjectsRoutes.edit.url(project.id)}>
+                                                            <Button variant="ghost" size="icon" title="Редактировать">
+                                                                <Pencil className="h-4 w-4" />
+                                                            </Button>
+                                                        </Link>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleDelete(project.id)}
+                                                            title="Удалить"
+                                                        >
+                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>
@@ -488,6 +499,8 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         </TableBody>
                     </Table>
                 </div>
+
+                <Pagination paginator={projects} />
             </div>
         </AppLayout>
     );

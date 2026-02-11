@@ -87,14 +87,12 @@ export const headerNavItems: NavItem[] = [
 const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     akim: new Set([
         'Регионы',
-        'Инвест. проекты',
         'Типы проектов',
         'Роли',
         'Пользователи',
     ]),
     zamakim: new Set([
         'Регионы',
-        'Инвест. проекты',
         'Типы проектов',
         'Роли',
         'Пользователи',

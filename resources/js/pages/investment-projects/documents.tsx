@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { ArrowLeft, Upload, FileText, Trash2, Download } from 'lucide-react';
+import { useCanModify } from '@/hooks/use-can-modify';
 
 interface ProjectType {
     id: number;
@@ -38,6 +39,7 @@ interface Props {
 }
 
 export default function Documents({ project, documents }: Props) {
+    const canModify = useCanModify();
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
     const [documentType, setDocumentType] = useState('');
@@ -133,6 +135,7 @@ export default function Documents({ project, documents }: Props) {
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Upload Form */}
+                    {canModify && (
                     <div className="lg:col-span-1">
                         <Card className="shadow-none">
                             <CardHeader>
@@ -212,9 +215,10 @@ export default function Documents({ project, documents }: Props) {
                             </CardContent>
                         </Card>
                     </div>
+                    )}
 
                     {/* Documents List */}
-                    <div className="lg:col-span-2">
+                    <div className={canModify ? 'lg:col-span-2' : 'lg:col-span-3'}>
                         <Card className="shadow-none">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
@@ -260,14 +264,16 @@ export default function Documents({ project, documents }: Props) {
                                                     >
                                                         <Download className="h-4 w-4" />
                                                     </a>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        onClick={() => handleDelete(document.id)}
-                                                        className="text-gray-500 hover:text-red-600 hover:bg-red-50"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
+                                                    {canModify && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() => handleDelete(document.id)}
+                                                            className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}

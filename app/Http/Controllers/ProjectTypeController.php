@@ -10,7 +10,7 @@ class ProjectTypeController extends Controller
 {
     public function index()
     {
-        $types = ProjectType::latest()->get();
+        $types = ProjectType::latest()->paginate(15)->withQueryString();
 
         return Inertia::render('project-types/index', [
             'types' => $types,

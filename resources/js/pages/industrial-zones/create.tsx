@@ -14,12 +14,18 @@ import {
 import { FormEventHandler, useState, useMemo } from 'react';
 import * as industrialZones from '@/routes/industrial-zones';
 import LocationPicker from '@/components/location-picker';
+import InfrastructureForm, {
+    getEmptyInfrastructure,
+} from '@/components/infrastructure-form';
+
+import type { InfrastructureData } from '@/components/infrastructure-form';
 
 interface Region {
     id: number;
     name: string;
     type: string;
     parent_id: number | null;
+    geometry: { lat: number, lng: number }[] | null;
 }
 
 interface Props {
@@ -34,7 +40,8 @@ export default function Create({ regions }: Props) {
         investment_total: '',
         status: 'developing',
         description: '',
-        location: [] as { lat: number, lng: number }[],
+        location: [] as { lat: number; lng: number }[],
+        infrastructure: getEmptyInfrastructure() as InfrastructureData,
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>('');
@@ -45,6 +52,11 @@ export default function Create({ regions }: Props) {
         if (!selectedOblastId) return [];
         return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
     }, [regions, selectedOblastId]);
+    
+    const selectedDistrict = useMemo(() => {
+        if (!data.region_id) return null;
+        return regions.find(r => r.id.toString() === data.region_id);
+    }, [regions, data.region_id]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -184,11 +196,17 @@ export default function Create({ regions }: Props) {
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
 
+                    <InfrastructureForm
+                        value={data.infrastructure}
+                        onChange={(val) => setData('infrastructure', val)}
+                    />
+
                     <div className="flex flex-col gap-2">
                         <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
+                            regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
                         {/* 

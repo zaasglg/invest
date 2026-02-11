@@ -17,6 +17,7 @@ import LocationPicker from '@/components/location-picker';
 interface Region {
     id: number;
     name: string;
+    area: number | null;
     type: string;
     parent_id: number | null;
     geometry?: { lat: number, lng: number }[];
@@ -27,12 +28,43 @@ interface Props {
     parents: Region[];
 }
 
+// Normalize corrupted geometry where lat/lng might be arrays instead of numbers
+function normalizeGeometry(geometry?: { lat: any; lng: any }[]): { lat: number; lng: number }[] {
+    if (!geometry || !Array.isArray(geometry)) return [];
+    const result: { lat: number; lng: number }[] = [];
+    for (const point of geometry) {
+        if (!point) continue;
+        let lat = point.lat;
+        let lng = point.lng;
+        // If lat or lng are arrays (corrupted data), flatten into separate points
+        if (Array.isArray(lat) && Array.isArray(lng) && lat.length === lng.length) {
+            for (let i = 0; i < lat.length; i++) {
+                const pLat = Number(lng[i]); // lat/lng are swapped in corrupted data
+                const pLng = Number(lat[i]);
+                if (!isNaN(pLat) && !isNaN(pLng)) {
+                    result.push({ lat: pLat, lng: pLng });
+                }
+            }
+        } else {
+            if (Array.isArray(lat)) lat = lat[0];
+            if (Array.isArray(lng)) lng = lng[0];
+            const nLat = Number(lat);
+            const nLng = Number(lng);
+            if (!isNaN(nLat) && !isNaN(nLng)) {
+                result.push({ lat: nLat, lng: nLng });
+            }
+        }
+    }
+    return result;
+}
+
 export default function Edit({ region, parents }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         name: region.name,
+        area: region.area !== null && region.area !== undefined ? String(region.area) : '',
         type: region.type || 'district',
         parent_id: region.parent_id ? region.parent_id.toString() : '',
-        geometry: region.geometry || [] as { lat: number, lng: number }[],
+        geometry: normalizeGeometry(region.geometry),
     });
 
     const submit: FormEventHandler = (e) => {
@@ -104,6 +136,21 @@ export default function Edit({ region, parents }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
+                        <Label htmlFor="area" className="text-neutral-500 font-normal">Аумағы (га)</Label>
+                        <Input
+                            id="area"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={data.area}
+                            onChange={(e) => setData('area', e.target.value)}
+                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            placeholder="Например: 120.50"
+                        />
+                        {errors.area && <span className="text-sm text-red-500">{errors.area}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
                         <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.geometry}
@@ -112,7 +159,11 @@ export default function Edit({ region, parents }: Props) {
                         />
                         {/* 
                             // @ts-ignore */}
-                        {errors.geometry && <span className="text-sm text-red-500">{errors.geometry}</span>}
+                        {(errors.geometry || Object.keys(errors).some(k => k.startsWith('geometry'))) && (
+                            <span className="text-sm text-red-500">
+                                {errors.geometry || 'Геолокация деректерінде қате бар. Нүктелерді қайта салыңыз.'}
+                            </span>
+                        )}
                     </div>
 
                     <div className="flex items-center gap-4">

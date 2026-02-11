@@ -11,7 +11,7 @@ class SezController extends Controller
 {
     public function index()
     {
-        $sezs = Sez::with('region')->latest()->get();
+        $sezs = Sez::with('region')->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('sezs/index', [
             'sezs' => $sezs,
@@ -43,6 +43,15 @@ class SezController extends Controller
         Sez::create($validated);
 
         return redirect()->route('sezs.index')->with('success', 'СЭЗ создана.');
+    }
+
+    public function show(Sez $sez)
+    {
+        $sez->load(['region', 'issues', 'investmentProjects.region']);
+
+        return Inertia::render('sezs/show', [
+            'sez' => $sez,
+        ]);
     }
 
     public function edit(Sez $sez)

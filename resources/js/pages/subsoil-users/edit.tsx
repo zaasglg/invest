@@ -19,6 +19,7 @@ interface Region {
     name: string;
     type: string;
     parent_id: number | null;
+    geometry: { lat: number, lng: number }[] | null;
 }
 
 interface SubsoilUser {
@@ -63,6 +64,11 @@ export default function Edit({ subsoilUser, regions }: Props) {
         if (!selectedOblastId) return [];
         return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
     }, [regions, selectedOblastId]);
+    
+    const selectedDistrict = useMemo(() => {
+        if (!data.region_id) return null;
+        return regions.find(r => r.id.toString() === data.region_id);
+    }, [regions, data.region_id]);
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -171,7 +177,7 @@ export default function Edit({ subsoilUser, regions }: Props) {
                             <Label htmlFor="license_status" className="text-neutral-500 font-normal">Статус лицензии</Label>
                             <Select
                                 value={data.license_status}
-                                onValueChange={(value) => setData('license_status', value)}
+                                onValueChange={(value) => setData('license_status', value as 'active' | 'expired' | 'suspended')}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите статус" />
@@ -217,6 +223,7 @@ export default function Edit({ subsoilUser, regions }: Props) {
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
+                            regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
                         {/* 

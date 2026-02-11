@@ -26,6 +26,7 @@ interface Props {
 export default function Create({ parents }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         name: '',
+        area: '',
         type: 'district',
         parent_id: '',
         geometry: [] as { lat: number, lng: number }[],
@@ -97,6 +98,21 @@ export default function Create({ parents }: Props) {
                             autoFocus
                         />
                         {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="area" className="text-neutral-500 font-normal">Аумағы (га)</Label>
+                        <Input
+                            id="area"
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={data.area}
+                            onChange={(e) => setData('area', e.target.value)}
+                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            placeholder="Например: 120.50"
+                        />
+                        {errors.area && <span className="text-sm text-red-500">{errors.area}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">

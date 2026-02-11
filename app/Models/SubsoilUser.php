@@ -31,6 +31,11 @@ class SubsoilUser extends Model
         return $this->belongsTo(Region::class);
     }
 
+    public function issues()
+    {
+        return $this->hasMany(SubsoilIssue::class);
+    }
+
     public function investmentProjects()
     {
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_subsoil_user');

@@ -4,8 +4,9 @@ import { Head, Link } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
+import { useCanModify } from '@/hooks/use-can-modify';
 
 interface ProjectType {
     id: number;
@@ -52,6 +53,7 @@ interface InvestmentProject {
     creator?: User;
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
+    issues?: Array<{ id: number; title: string }>;
     photos_count?: { photos_count: number } | number;
     created_at: string;
 }
@@ -62,6 +64,7 @@ interface Props {
 }
 
 export default function Show({ project, mainGallery = [] }: Props) {
+    const canModify = useCanModify();
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         : (project.photos_count as any)?.photos_count || 0;
@@ -246,9 +249,9 @@ export default function Show({ project, mainGallery = [] }: Props) {
                                             {project.executors.map(executor => (
                                                 <div key={executor.id} className="flex items-center gap-3">
                                                     <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
-                                                        {executor.name.slice(0, 2).toUpperCase()}
+                                                        {executor.name?.slice(0, 2).toUpperCase() || 'NA'}
                                                     </div>
-                                                    <p className="text-sm text-gray-700">{executor.name}</p>
+                                                    <p className="text-sm text-gray-700">{executor.name ?? '—'}</p>
                                                 </div>
                                             ))}
                                         </div>
@@ -260,11 +263,13 @@ export default function Show({ project, mainGallery = [] }: Props) {
                         {/* Actions */}
                         <Card className='shadow-none'>
                             <CardContent className="p-4 flex flex-col gap-3">
-                                <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <Activity className="mr-2 h-4 w-4" /> Редактировать проект
-                                    </Button>
-                                </Link>
+                                {canModify && (
+                                    <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <Activity className="mr-2 h-4 w-4" /> Редактировать проект
+                                        </Button>
+                                    </Link>
+                                )}
                                 <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <FileText className="mr-2 h-4 w-4" />
@@ -287,9 +292,26 @@ export default function Show({ project, mainGallery = [] }: Props) {
                                         )}
                                     </Button>
                                 </Link>
-                                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                                    Скачать паспорт проекта
-                                </Button>
+                                <Link href={`/investment-projects/${project.id}/issues`} className="w-full">
+                                    <Button variant="outline" className="w-full justify-start">
+                                        <AlertTriangle className="mr-2 h-4 w-4" />
+                                        Проблемные вопросы
+                                        {project.issues && project.issues.length > 0 && (
+                                            <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs">
+                                                {project.issues.length}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </Link>
+                                <a
+                                    href={`/investment-projects/${project.id}/passport`}
+                                    className="w-full"
+                                >
+                                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                                        <Download className="mr-2 h-4 w-4" />
+                                        Скачать паспорт проекта
+                                    </Button>
+                                </a>
                             </CardContent>
                         </Card>
                     </div>

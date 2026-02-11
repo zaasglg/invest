@@ -10,6 +10,25 @@ interface Region {
     geometry: { lat: number, lng: number }[] | null;
 }
 
+interface SectorRow {
+    investment: number;
+    projectCount: number | null;
+    problemCount: number;
+    orgCount: number | null;
+}
+
+interface SectorData {
+    sez: SectorRow;
+    iz: SectorRow;
+    nedro: SectorRow;
+    invest: SectorRow;
+}
+
+interface SectorSummary {
+    total: SectorData;
+    byRegion: Record<number, SectorData>;
+}
+
 interface Props {
     regions: Region[];
     regionStats: {
@@ -18,6 +37,7 @@ interface Props {
         sezProjects: Record<number, number>;
         subsoilUsers: Record<number, number>;
     };
+    sectorSummary: SectorSummary;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -27,17 +47,18 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Dashboard({ regions, regionStats }: Props) {
+export default function Dashboard({ regions, regionStats, sectorSummary }: Props) {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Статистика" />
             <Map
-                className="h-[100vh] w-full"
-                center={[43.65, 68.5]}
+                className="h-[calc(100vh-64px)] w-full"
+                center={[41.5, 68.5]}
                 zoom={7}
                 regions={regions}
                 regionStats={regionStats}
+                sectorSummary={sectorSummary}
             />
         </AppLayout>
     );
