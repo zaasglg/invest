@@ -15,25 +15,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Inertia\Inertia;
 
-/**
- * Clear all dashboard caches.
- */
-function clearDashboardCache(): void
-{
-    $keys = [
-        'dashboard.stats',
-        'dashboard.investments_by_sector',
-        'dashboard.projects_by_status',
-        'dashboard.investment_trend',
-        'dashboard.regions',
-        'dashboard.region_stats',
-        'dashboard.sector_summary',
-    ];
-    foreach ($keys as $key) {
-        Cache::forget($key);
-    }
-}
-
 class DashboardController extends Controller
 {
     /**

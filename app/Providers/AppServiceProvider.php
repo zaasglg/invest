@@ -2,14 +2,13 @@
 
 namespace App\Providers;
 
+use App\Support\DashboardCache;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Support\Facades\URL;
-
-use function App\Http\Controllers\clearDashboardCache;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -49,8 +48,8 @@ class AppServiceProvider extends ServiceProvider
         ];
 
         foreach ($models as $model) {
-            $model::saved(fn () => clearDashboardCache());
-            $model::deleted(fn () => clearDashboardCache());
+            $model::saved(fn () => DashboardCache::clear());
+            $model::deleted(fn () => DashboardCache::clear());
         }
     }
 
