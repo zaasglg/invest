@@ -32,6 +32,8 @@ export default function Create({ regions }: Props) {
         bin: '',
         region_id: '',
         mineral_type: '',
+        total_area: '',
+        description: '',
         license_status: 'active',
         license_start: '',
         license_end: '',
@@ -157,6 +159,35 @@ export default function Create({ regions }: Props) {
                             />
                             {errors.mineral_type && <span className="text-sm text-red-500">{errors.mineral_type}</span>}
                         </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="total_area" className="text-neutral-500 font-normal">Площадь (га)</Label>
+                            <Input
+                                id="total_area"
+                                type="number"
+                                step="0.01"
+                                value={data.total_area}
+                                onChange={(e) => setData('total_area', e.target.value)}
+                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                placeholder="0.00"
+                            />
+                            {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="description" className="text-neutral-500 font-normal">Описание</Label>
+                        <textarea
+                            id="description"
+                            value={data.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                            className="min-h-[100px] w-full resize-none rounded-md border border-neutral-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-neutral-900 focus:outline-none focus-visible:ring-0"
+                            placeholder="Описание деятельности недропользователя"
+                        />
+                        {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="license_status" className="text-neutral-500 font-normal">Статус лицензии</Label>

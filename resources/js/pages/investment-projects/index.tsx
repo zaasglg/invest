@@ -328,7 +328,6 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                         <SelectContent>
                                             <SelectItem value="sez">СЭЗ</SelectItem>
                                             <SelectItem value="industrial_zone">ИЗ</SelectItem>
-                                            <SelectItem value="subsoil">Недропользование</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>

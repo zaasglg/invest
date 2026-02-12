@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle, Eye } from 'lucide-react';
 import PhotoLightbox from '@/components/photo-lightbox';
 import { useCanModify } from '@/hooks/use-can-modify';
 
@@ -45,13 +45,15 @@ interface Props {
     project: InvestmentProject;
     mainGallery: ProjectPhoto[];
     datedGallery: DatedGallery;
+    renderPhotos?: ProjectPhoto[];
 }
 
-export default function Gallery({ project, mainGallery, datedGallery }: Props) {
+export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [] }: Props) {
     const canModify = useCanModify();
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState('');
     const [description, setDescription] = useState('');
+    const [photoType, setPhotoType] = useState<'gallery' | 'render'>('gallery');
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [uploadError, setUploadError] = useState<string>('');
@@ -103,6 +105,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
         setPreviewUrls([]);
         setGalleryDate('');
         setDescription('');
+        setPhotoType('gallery');
         setUploadError('');
     };
 
@@ -123,6 +126,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
         if (description) {
             formData.append('description', description);
         }
+        formData.append('photo_type', photoType);
 
         router.post(`/investment-projects/${project.id}/gallery`, formData, {
             onSuccess: () => {
@@ -192,6 +196,39 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleUpload} className="space-y-4">
+                                    <div>
+                                        <Label className="block mb-2">Тип фото</Label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={() => setPhotoType('gallery')}
+                                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                                                    photoType === 'gallery'
+                                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
+                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                Галерея
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={() => setPhotoType('render')}
+                                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
+                                                    photoType === 'render'
+                                                        ? 'bg-purple-50 border-purple-200 text-purple-700'
+                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                                                }`}
+                                            >
+                                                Будущее
+                                            </button>
+                                        </div>
+                                        <p className="text-xs text-gray-500 mt-1">
+                                            {photoType === 'render'
+                                                ? 'Проекттің болашақтағы көрінісі (рендер)'
+                                                : 'Қазіргі күйдегі фотосуреттер'}
+                                        </p>
+                                    </div>
+
                                     <div>
                                         <Label htmlFor="photos" className="block mb-2">Фотографии</Label>
                                         <div className="relative">
@@ -264,6 +301,7 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                                             value={galleryDate}
                                             onChange={(e) => setGalleryDate(e.target.value)}
                                             className="w-full"
+                                            disabled={photoType === 'render'}
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
                                             {galleryDate
@@ -335,6 +373,36 @@ export default function Gallery({ project, mainGallery, datedGallery }: Props) {
                                 )}
                             </CardContent>
                         </Card>
+
+                        {/* Render Photos */}
+                        {renderPhotos.length > 0 && (
+                            <Card className="shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="text-lg flex items-center gap-2">
+                                        <Eye className="h-5 w-5 text-purple-500" />
+                                        Болашақтағы көрінісі
+                                        <span className="text-sm font-normal text-gray-500 ml-2">
+                                            ({renderPhotos.length})
+                                        </span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                        {renderPhotos.map((photo, index) => (
+                                            <PhotoCard
+                                                key={photo.id}
+                                                photo={photo}
+                                                index={index}
+                                                photos={renderPhotos}
+                                                onDelete={handleDelete}
+                                                onOpen={openLightbox}
+                                                canModify={canModify}
+                                            />
+                                        ))}
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        )}
 
                         {/* Dated Galleries */}
                         {Object.keys(sortedDatedGallery).length > 0 && (

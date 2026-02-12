@@ -229,8 +229,11 @@ class InvestmentProjectController extends Controller
             ->withCount('photos')
             ->find($id);
 
-        // Get main gallery photos
-        $mainGalleryPhotos = $project ? $project->photos()->mainGallery()->latest()->get() : collect();
+        // Get main gallery photos (all gallery-type, regardless of gallery_date)
+        $mainGalleryPhotos = $project ? $project->photos()->where('photo_type', 'gallery')->latest()->get() : collect();
+
+        // Get render/future photos
+        $renderPhotos = $project ? $project->photos()->renderPhotos()->latest()->get() : collect();
 
         if (!$project) {
             // Demo fallback data
@@ -255,6 +258,7 @@ class InvestmentProjectController extends Controller
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 

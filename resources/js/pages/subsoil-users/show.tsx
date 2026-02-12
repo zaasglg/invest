@@ -10,23 +10,17 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
-import {
     ArrowLeft,
-    Building2,
     MapPin,
     Activity,
     FileText,
-    Layers,
     AlertTriangle,
     Calendar,
+    ImageIcon,
+    Layers,
+    Eye,
 } from 'lucide-react';
+import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
 
 interface Region {
@@ -41,13 +35,10 @@ interface Issue {
     status?: string;
 }
 
-interface InvestmentProject {
+interface Photo {
     id: number;
-    name: string;
-    company_name?: string;
-    total_investment?: number;
-    status: string;
-    region?: Region;
+    file_path: string;
+    description?: string | null;
 }
 
 interface SubsoilUser {
@@ -57,20 +48,33 @@ interface SubsoilUser {
     region_id: number;
     region?: Region;
     mineral_type?: string;
+    total_area?: number;
+    description?: string;
     license_status?: 'active' | 'expired' | 'suspended';
     license_start?: string;
     license_end?: string;
     issues?: Issue[];
-    investment_projects?: InvestmentProject[];
+    documents?: Array<{ id: number; name: string }>;
+    photos_count?: number;
     created_at: string;
 }
 
 interface Props {
     subsoilUser: SubsoilUser;
+    mainGallery?: Photo[];
+    renderPhotos?: Photo[];
 }
 
-export default function Show({ subsoilUser }: Props) {
+export default function Show({
+    subsoilUser,
+    mainGallery = [],
+    renderPhotos = [],
+}: Props) {
     const canModify = useCanModify();
+    const photosCount =
+        typeof subsoilUser.photos_count === 'number'
+            ? subsoilUser.photos_count
+            : 0;
 
     const licenseStatusMap: Record<
         string,
@@ -90,55 +94,6 @@ export default function Show({ subsoilUser }: Props) {
         },
     };
 
-    const severityMap: Record<string, { label: string; color: string }> = {
-        low: { label: 'Низкая', color: 'bg-blue-100 text-blue-800' },
-        medium: { label: 'Средняя', color: 'bg-amber-100 text-amber-800' },
-        high: { label: 'Высокая', color: 'bg-red-100 text-red-800' },
-    };
-
-    const issueStatusMap: Record<string, { label: string; color: string }> = {
-        open: { label: 'Открыт', color: 'bg-red-100 text-red-800' },
-        in_progress: {
-            label: 'В работе',
-            color: 'bg-amber-100 text-amber-800',
-        },
-        resolved: {
-            label: 'Решён',
-            color: 'bg-green-100 text-green-800',
-        },
-    };
-
-    const projectStatusMap: Record<string, { label: string; color: string }> =
-        {
-            plan: {
-                label: 'Планирование',
-                color: 'bg-blue-100 text-blue-800',
-            },
-            implementation: {
-                label: 'Реализация',
-                color: 'bg-amber-100 text-amber-800',
-            },
-            launched: {
-                label: 'Запущен',
-                color: 'bg-green-100 text-green-800',
-            },
-            suspended: {
-                label: 'Приостановлен',
-                color: 'bg-yellow-100 text-yellow-800',
-            },
-        };
-
-    const formatCurrency = (amount: number) => {
-        if (amount >= 1_000_000_000) {
-            return `${(amount / 1_000_000_000).toFixed(1)} млрд тг`;
-        }
-        if (amount >= 1_000_000) {
-            return `${(amount / 1_000_000).toFixed(1)} млн тг`;
-        }
-        return `${amount.toLocaleString('ru-RU')} тг`;
-    };
-
-    const projects = subsoilUser.investment_projects ?? [];
     const issues = subsoilUser.issues ?? [];
 
     return (
@@ -153,7 +108,7 @@ export default function Show({ subsoilUser }: Props) {
         >
             <Head title={subsoilUser.name} />
 
-            <div className="flex h-full flex-1 flex-col gap-8 p-6 w-full">
+            <div className="flex h-full w-full flex-1 flex-col gap-8 p-6">
                 {/* Header */}
                 <div className="flex items-start justify-between">
                     <div>
@@ -184,8 +139,9 @@ export default function Show({ subsoilUser }: Props) {
                             <Badge
                                 className={`${licenseStatusMap[subsoilUser.license_status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
                             >
-                                {licenseStatusMap[subsoilUser.license_status]
-                                    ?.label || subsoilUser.license_status}
+                                {licenseStatusMap[
+                                    subsoilUser.license_status
+                                ]?.label || subsoilUser.license_status}
                             </Badge>
                         )}
                         <span className="text-xs text-gray-400">
@@ -200,7 +156,27 @@ export default function Show({ subsoilUser }: Props) {
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}
                     <div className="space-y-6 lg:col-span-2">
-                        {/* Details */}
+                        {/* Gallery */}
+                        <Card className="shadow-none">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <ImageIcon className="h-5 w-5 text-gray-500" />
+                                    Фотографии
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <ProjectGallerySlider
+                                    photos={mainGallery}
+                                />
+                                {subsoilUser.description && (
+                                    <p className="mt-4 whitespace-pre-wrap leading-relaxed text-gray-700">
+                                        {subsoilUser.description}
+                                    </p>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Information */}
                         <Card className="shadow-none">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -233,9 +209,25 @@ export default function Show({ subsoilUser }: Props) {
                                                 : 'Не указан'}
                                         </p>
                                     </div>
+                                    {subsoilUser.total_area != null &&
+                                        Number(subsoilUser.total_area) > 0 && (
+                                            <div>
+                                                <p className="mb-1 text-sm font-medium text-gray-500">
+                                                    Площадь участка
+                                                </p>
+                                                <p className="text-xl font-bold text-blue-600">
+                                                    {Number(
+                                                        subsoilUser.total_area,
+                                                    ).toLocaleString(
+                                                        'ru-RU',
+                                                    )}{' '}
+                                                    га
+                                                </p>
+                                            </div>
+                                        )}
                                     {(subsoilUser.license_start ||
                                         subsoilUser.license_end) && (
-                                        <div className="sm:col-span-2">
+                                        <div>
                                             <p className="mb-1 text-sm font-medium text-gray-500">
                                                 Срок лицензии
                                             </p>
@@ -260,90 +252,27 @@ export default function Show({ subsoilUser }: Props) {
                                 </div>
                             </CardContent>
                         </Card>
-
-                        {/* Investment Projects */}
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Building2 className="h-5 w-5 text-gray-500" />
-                                    Инвестиционные проекты
-                                    {projects.length > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-2"
-                                        >
-                                            {projects.length}
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {projects.length > 0 ? (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>
-                                                    Название
-                                                </TableHead>
-                                                <TableHead>
-                                                    Компания
-                                                </TableHead>
-                                                <TableHead>
-                                                    Инвестиции
-                                                </TableHead>
-                                                <TableHead>Статус</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {projects.map((project) => (
-                                                <TableRow
-                                                    key={project.id}
-                                                    className="cursor-pointer hover:bg-gray-100"
-                                                    onClick={() =>
-                                                        (window.location.href = `/investment-projects/${project.id}`)
-                                                    }
-                                                >
-                                                    <TableCell className="font-medium text-gray-900">
-                                                        {project.name}
-                                                    </TableCell>
-                                                    <TableCell className="text-gray-600">
-                                                        {project.company_name ||
-                                                            '—'}
-                                                    </TableCell>
-                                                    <TableCell className="text-gray-600">
-                                                        {project.total_investment
-                                                            ? formatCurrency(
-                                                                  Number(
-                                                                      project.total_investment,
-                                                                  ),
-                                                              )
-                                                            : '—'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            className={`${projectStatusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} border-0`}
-                                                        >
-                                                            {projectStatusMap[
-                                                                project.status
-                                                            ]?.label ||
-                                                                project.status}
-                                                        </Badge>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <p className="py-4 text-center text-sm text-gray-500">
-                                        Нет привязанных проектов
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
                     </div>
 
                     {/* Sidebar */}
                     <div className="space-y-6">
+                        {/* Render Photos */}
+                        {renderPhotos.length > 0 && (
+                            <Card className="overflow-hidden shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Eye className="h-5 w-5 text-gray-500" />
+                                        Видение будущего
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <ProjectGallerySlider
+                                        photos={renderPhotos}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Actions */}
                         <Card className="shadow-none">
                             <CardContent className="flex flex-col gap-3 p-4">
@@ -362,6 +291,62 @@ export default function Show({ subsoilUser }: Props) {
                                     </Link>
                                 )}
                                 <Link
+                                    href={`/subsoil-users/${subsoilUser.id}/documents`}
+                                    className="w-full"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                    >
+                                        <FileText className="mr-2 h-4 w-4" />
+                                        Документы
+                                        {subsoilUser.documents &&
+                                            subsoilUser.documents.length >
+                                                0 && (
+                                                <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                    {
+                                                        subsoilUser.documents
+                                                            .length
+                                                    }
+                                                </span>
+                                            )}
+                                    </Button>
+                                </Link>
+                                <Link
+                                    href={`/subsoil-users/${subsoilUser.id}/gallery`}
+                                    className="w-full"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                    >
+                                        <ImageIcon className="mr-2 h-4 w-4" />
+                                        Галерея
+                                        {photosCount > 0 && (
+                                            <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                {photosCount}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </Link>
+                                <Link
+                                    href={`/subsoil-users/${subsoilUser.id}/issues`}
+                                    className="w-full"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                    >
+                                        <AlertTriangle className="mr-2 h-4 w-4" />
+                                        Проблемные вопросы
+                                        {issues.length > 0 && (
+                                            <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
+                                                {issues.length}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </Link>
+                                <Link
                                     href={`/regions/${subsoilUser.region_id}`}
                                     className="w-full"
                                 >
@@ -373,87 +358,6 @@ export default function Show({ subsoilUser }: Props) {
                                         Перейти к району
                                     </Button>
                                 </Link>
-                                <Link
-                                    href={`/subsoil-users/${subsoilUser.id}/issues`}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                    >
-                                        <AlertTriangle className="mr-2 h-4 w-4" />{' '}
-                                        Управление вопросами
-                                        {issues.length > 0 && (
-                                            <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
-                                                {issues.length}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
-                            </CardContent>
-                        </Card>
-
-                        {/* Issues */}
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <AlertTriangle className="h-5 w-5 text-gray-500" />
-                                    Проблемные вопросы
-                                    {issues.length > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-2"
-                                        >
-                                            {issues.length}
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {issues.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {issues.map((issue) => (
-                                            <div
-                                                key={issue.id}
-                                                className="rounded-lg border p-3"
-                                            >
-                                                <div className="mb-1 flex items-center justify-between">
-                                                    <p className="text-sm font-semibold text-gray-900">
-                                                        {issue.description ||
-                                                            'Без описания'}
-                                                    </p>
-                                                    <div className="flex gap-1">
-                                                        {issue.severity && (
-                                                            <Badge
-                                                                className={`${severityMap[issue.severity]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
-                                                            >
-                                                                {severityMap[
-                                                                    issue
-                                                                        .severity
-                                                                ]?.label ||
-                                                                    issue.severity}
-                                                            </Badge>
-                                                        )}
-                                                        {issue.status && (
-                                                            <Badge
-                                                                className={`${issueStatusMap[issue.status]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
-                                                            >
-                                                                {issueStatusMap[
-                                                                    issue.status
-                                                                ]?.label ||
-                                                                    issue.status}
-                                                            </Badge>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="py-2 text-center text-sm text-gray-500">
-                                        Нет проблемных вопросов
-                                    </p>
-                                )}
                             </CardContent>
                         </Card>
                     </div>

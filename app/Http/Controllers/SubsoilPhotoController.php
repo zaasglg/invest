@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InvestmentProject;
-use App\Models\ProjectPhoto;
+use App\Models\SubsoilPhoto;
+use App\Models\SubsoilUser;
 use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
-class ProjectPhotoController extends Controller
+class SubsoilPhotoController extends Controller
 {
-    public function index(InvestmentProject $investmentProject)
+    public function index(SubsoilUser $subsoilUser)
     {
-        $mainGalleryPhotos = $investmentProject->photos()
+        $mainGalleryPhotos = $subsoilUser->photos()
             ->mainGallery()
             ->latest()
             ->get()
@@ -21,7 +21,7 @@ class ProjectPhotoController extends Controller
                 return $photo;
             });
 
-        $datedGalleryPhotos = $investmentProject->photos()
+        $datedGalleryPhotos = $subsoilUser->photos()
             ->where('photo_type', 'gallery')
             ->whereNotNull('gallery_date')
             ->latest('gallery_date')
@@ -37,24 +37,24 @@ class ProjectPhotoController extends Controller
             })
             ->toArray();
 
-        $renderPhotos = $investmentProject->photos()
+        $renderPhotos = $subsoilUser->photos()
             ->renderPhotos()
             ->latest()
             ->get();
 
-        return Inertia::render('investment-projects/gallery', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+        return Inertia::render('subsoil-users/gallery', [
+            'subsoilUser' => $subsoilUser->load('region'),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);
     }
 
-    public function store(Request $request, InvestmentProject $investmentProject)
+    public function store(Request $request, SubsoilUser $subsoilUser)
     {
         $validated = $request->validate([
             'photos' => 'required|array|min:1',
-            'photos.*' => 'required|image|max:5120', // 5MB per image
+            'photos.*' => 'required|image|max:5120',
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',
             'photo_type' => 'nullable|string|in:gallery,render',
@@ -64,10 +64,10 @@ class ProjectPhotoController extends Controller
         $photoType = $validated['photo_type'] ?? 'gallery';
 
         foreach ($validated['photos'] as $photo) {
-            $path = $photo->store('project-photos/' . $investmentProject->id, 'public');
+            $path = $photo->store('subsoil-photos/' . $subsoilUser->id, 'public');
 
-            ProjectPhoto::create([
-                'project_id' => $investmentProject->id,
+            SubsoilPhoto::create([
+                'subsoil_user_id' => $subsoilUser->id,
                 'file_path' => $path,
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
@@ -78,7 +78,7 @@ class ProjectPhotoController extends Controller
         return redirect()->back()->with('success', 'Фотографии загружены.');
     }
 
-    public function update(Request $request, ProjectPhoto $photo)
+    public function update(Request $request, SubsoilPhoto $photo)
     {
         $validated = $request->validate([
             'gallery_date' => 'nullable|date',
@@ -90,18 +90,15 @@ class ProjectPhotoController extends Controller
         return redirect()->back()->with('success', 'Фото обновлено.');
     }
 
-    public function destroy(Request $request, InvestmentProject $investmentProject, $photo)
+    public function destroy(SubsoilUser $subsoilUser, $photo)
     {
-        // Find the photo by ID
-        $photoModel = ProjectPhoto::where('project_id', $investmentProject->id)
+        $photoModel = SubsoilPhoto::where('subsoil_user_id', $subsoilUser->id)
             ->findOrFail($photo);
 
-        // Delete file from storage
         if (Storage::disk('public')->exists($photoModel->file_path)) {
             Storage::disk('public')->delete($photoModel->file_path);
         }
 
-        // Delete photo record
         $photoModel->delete();
 
         return redirect()->back()->with('success', 'Фото удалено.');

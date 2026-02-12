@@ -28,6 +28,8 @@ interface SubsoilUser {
     bin: string;
     region_id: number;
     mineral_type: string;
+    total_area: number | string | null;
+    description?: string | null;
     license_status: 'active' | 'expired' | 'suspended';
     license_start: string | null;
     license_end: string | null;
@@ -45,6 +47,8 @@ export default function Edit({ subsoilUser, regions }: Props) {
         bin: subsoilUser.bin || '',
         region_id: subsoilUser.region_id?.toString() || '',
         mineral_type: subsoilUser.mineral_type || '',
+        total_area: subsoilUser.total_area?.toString() || '',
+        description: subsoilUser.description || '',
         license_status: subsoilUser.license_status || 'active',
         license_start: subsoilUser.license_start || '',
         license_end: subsoilUser.license_end || '',
@@ -172,6 +176,35 @@ export default function Edit({ subsoilUser, regions }: Props) {
                             />
                             {errors.mineral_type && <span className="text-sm text-red-500">{errors.mineral_type}</span>}
                         </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="total_area" className="text-neutral-500 font-normal">Площадь (га)</Label>
+                            <Input
+                                id="total_area"
+                                type="number"
+                                step="0.01"
+                                value={data.total_area}
+                                onChange={(e) => setData('total_area', e.target.value)}
+                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                placeholder="0.00"
+                            />
+                            {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="description" className="text-neutral-500 font-normal">Описание</Label>
+                        <textarea
+                            id="description"
+                            value={data.description}
+                            onChange={(e) => setData('description', e.target.value)}
+                            className="min-h-[100px] w-full resize-none rounded-md border border-neutral-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-neutral-900 focus:outline-none focus-visible:ring-0"
+                            placeholder="Описание деятельности недропользователя"
+                        />
+                        {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="license_status" className="text-neutral-500 font-normal">Статус лицензии</Label>

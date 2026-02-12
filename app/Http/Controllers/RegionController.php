@@ -59,7 +59,15 @@ class RegionController extends Controller
 
     public function show(Region $region)
     {
-        $region->load(['sezs.issues', 'industrialZones.issues', 'subsoilUsers.issues', 'parent']);
+        $region->load(['subsoilUsers' => function ($query) {
+            $query->withCount('issues');
+        }, 'subsoilUsers.issues', 'parent']);
+        $region->load(['sezs' => function ($query) {
+            $query->withCount('issues');
+        }, 'sezs.issues']);
+        $region->load(['industrialZones' => function ($query) {
+            $query->withCount('issues');
+        }, 'industrialZones.issues']);
         $projects = InvestmentProject::with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
             ->latest()
