@@ -7,7 +7,9 @@ import type { BreadcrumbItem } from '@/types';
 interface Region {
     id: number;
     name: string;
-    geometry: { lat: number, lng: number }[] | null;
+    color?: string | null;
+    icon?: string | null;
+    geometry: { lat: number; lng: number }[] | null;
 }
 
 interface SectorRow {
@@ -47,8 +49,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Dashboard({ regions, regionStats, sectorSummary }: Props) {
-
+export default function Dashboard({
+    regions,
+    regionStats,
+    sectorSummary,
+}: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Статистика" />
@@ -59,6 +64,8 @@ export default function Dashboard({ regions, regionStats, sectorSummary }: Props
                 regions={regions}
                 regionStats={regionStats}
                 sectorSummary={sectorSummary}
+                showRegionIconsDemo
+                showOutsideRegionClouds
             />
         </AppLayout>
     );
