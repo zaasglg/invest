@@ -34,7 +34,7 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions',
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'parent_id' => 'nullable|exists:regions,id',
@@ -59,15 +59,25 @@ class RegionController extends Controller
 
     public function show(Region $region)
     {
-        $region->load(['subsoilUsers' => function ($query) {
-            $query->withCount('issues');
-        }, 'subsoilUsers.issues', 'parent']);
-        $region->load(['sezs' => function ($query) {
-            $query->withCount('issues');
-        }, 'sezs.issues']);
-        $region->load(['industrialZones' => function ($query) {
-            $query->withCount('issues');
-        }, 'industrialZones.issues']);
+        $region->load([
+            'subsoilUsers' => function ($query) {
+                $query->withCount('issues');
+            },
+            'subsoilUsers.issues',
+            'parent'
+        ]);
+        $region->load([
+            'sezs' => function ($query) {
+                $query->withCount('issues');
+            },
+            'sezs.issues'
+        ]);
+        $region->load([
+            'industrialZones' => function ($query) {
+                $query->withCount('issues');
+            },
+            'industrialZones.issues'
+        ]);
         $projects = InvestmentProject::with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
             ->latest()
@@ -135,7 +145,7 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions,name,' . $region->id,
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg|max:2048',
+            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'parent_id' => 'nullable|exists:regions,id',
