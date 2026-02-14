@@ -1,11 +1,13 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Photo {
     id: number;
     file_path: string;
     description?: string | null;
+    gallery_date?: string | null;
+    created_at?: string | null;
 }
 
 interface ProjectGallerySliderProps {
@@ -82,11 +84,21 @@ export default function ProjectGallerySlider({ photos }: ProjectGallerySliderPro
                         alt={currentPhoto.description || 'Фото проекта'}
                         className="w-full h-full object-cover transition-opacity duration-300"
                     />
-                    {currentPhoto.description && (
-                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
-                            <p className="text-white text-sm">{currentPhoto.description}</p>
+
+                    {/* Date & description overlay */}
+                    <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                        <div className="flex items-end justify-between gap-4">
+                            <p className="text-white text-sm truncate">
+                                {currentPhoto.description || ''}
+                            </p>
+                            {(currentPhoto.gallery_date || currentPhoto.created_at) && (
+                                <span className="inline-flex items-center gap-1.5 shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
+                                    <Calendar className="h-3 w-3" />
+                                    {new Date(currentPhoto.gallery_date || currentPhoto.created_at!).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                </span>
+                            )}
                         </div>
-                    )}
+                    </div>
 
                     {/* Open lightbox button */}
                     <button

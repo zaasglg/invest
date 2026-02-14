@@ -202,6 +202,7 @@ export default function Create({ regions }: Props) {
                                     <SelectItem value="active">Активна</SelectItem>
                                     <SelectItem value="expired">Истекла</SelectItem>
                                     <SelectItem value="suspended">Приостановлена</SelectItem>
+                                    <SelectItem value="illegal">Нелегально</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.license_status && <span className="text-sm text-red-500">{errors.license_status}</span>}

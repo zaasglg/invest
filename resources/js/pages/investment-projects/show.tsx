@@ -28,6 +28,8 @@ interface Photo {
     id: number;
     file_path: string;
     description?: string | null;
+    gallery_date?: string | null;
+    created_at?: string | null;
 }
 
 interface SectorEntity {
@@ -131,92 +133,104 @@ export default function Show({ project, mainGallery = [], renderPhotos = [] }: P
         >
             <Head title={project.name} />
 
-            <div className="flex h-full flex-1 flex-col gap-8 p-6 w-full">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div>
-                        <Link href="/investment-projects" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-4 transition-colors">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Назад к списку
-                        </Link>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">{project.name}</h1>
-                        <div className="flex items-center gap-3 mt-2 text-gray-500">
-                            {project.company_name && (
-                                <span className="flex items-center text-sm">
-                                    <Building2 className="h-4 w-4 mr-1.5" /> {project.company_name}
-                                </span>
-                            )}
-                            <span className="flex items-center text-sm">
-                                <MapPin className="h-4 w-4 mr-1.5" /> {project.region?.name || 'Нет региона'}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <Badge className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} px-3 py-1 text-sm font-medium border-0`}>
-                            {statusMap[project.status]?.label || project.status}
-                        </Badge>
-                        <span className="text-xs text-gray-400">
-                            ID: {project.id} | Создан: {new Date(project.created_at).toLocaleDateString()}
-                        </span>
-                    </div>
-                </div>
+            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
+                {/* Back link */}
+                <Link href="/investment-projects" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Назад к списку
+                </Link>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Description */}
-                        <Card className='shadow-none'>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <FileText className="h-5 w-5 text-gray-500" />
-                                    Описание проекта
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <ProjectGallerySlider photos={mainGallery} />
-                                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                    {project.description || "Описание отсутствует."}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        {/* Project Banner + Info */}
+                        <Card className="overflow-hidden shadow-none py-0">
+                            {/* Banner Header */}
+                            <div className="bg-gray-900 px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-white">
+                                        <Activity className="h-5 w-5" />
+                                        <h1 className="text-xl font-bold">
+                                            Проект № {project.id} - {project.name}
+                                        </h1>
+                                    </div>
+                                    <Badge className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} px-3 py-1 text-sm font-medium border-0`}>
+                                        {statusMap[project.status]?.label || project.status}
+                                    </Badge>
+                                </div>
+                            </div>
 
-                        {/* Project Details Grid */}
-                        <Card className='shadow-none'>
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Activity className="h-5 w-5 text-gray-500" />
-                                    Детали реализации
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-500 mb-1">Отрасль / Сектор</p>
-                                        <p className="text-base font-semibold text-gray-900">{project.project_type?.name || 'Не указан'}</p>
-                                        <p className="text-sm text-gray-500 mt-1">
-                                            {sectorDetails.length > 0
-                                                ? sectorDetails.join(' • ')
-                                                : 'Не указан'}
-                                        </p>
+                            {/* Photo + Info Cards */}
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                                    {/* Photo */}
+                                    <div className="overflow-hidden rounded-lg md:col-span-2">
+                                        <ProjectGallerySlider photos={mainGallery} />
                                     </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-500 mb-1">Сумма инвестиций</p>
-                                        <p className="text-xl font-bold text-blue-600">
-                                            {project.total_investment ? formatCurrency(project.total_investment) : 'Не указана'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-sm font-medium text-gray-500 mb-1">Даты реализации</p>
-                                        <div className="flex items-center gap-2 text-gray-900">
-                                            <Calendar className="h-4 w-4 text-gray-400" />
-                                            <span>
-                                                {project.start_date ? new Date(project.start_date).toLocaleDateString() : '...'}
+
+                                    {/* Info Cards */}
+                                    <div className="md:col-span-3 grid grid-cols-2 gap-3">
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <MapPin className="h-3.5 w-3.5" /> Район
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {project.region?.name || 'Не указан'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <FileText className="h-3.5 w-3.5" /> Тип проекта
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {project.project_type?.name || 'Не указан'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Building2 className="h-3.5 w-3.5" /> Сумма инвестиций
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {project.total_investment
+                                                    ? formatCurrency(project.total_investment)
+                                                    : 'Не указана'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Calendar className="h-3.5 w-3.5" /> Даты реализации
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {project.start_date
+                                                    ? new Date(project.start_date).toLocaleDateString()
+                                                    : '...'}
                                                 {' — '}
-                                                {project.end_date ? new Date(project.end_date).toLocaleDateString() : '...'}
-                                            </span>
+                                                {project.end_date
+                                                    ? new Date(project.end_date).toLocaleDateString()
+                                                    : '...'}
+                                            </p>
+                                        </div>
+                                        <div className="col-span-2 rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Users className="h-3.5 w-3.5" /> Куратор
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {project.creator?.full_name || project.creator?.name || 'Не указан'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </CardContent>
+
+                            {/* Company & Description */}
+                            <div className="border-t border-gray-200 px-6 py-5">
+                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                    <Building2 className="h-5 w-5 text-gray-500" />
+                                    {project.company_name || 'Компания не указана'}
+                                </h2>
+                                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                    {project.description || 'Описание отсутствует.'}
+                                </p>
+                            </div>
                         </Card>
                     </div>
 

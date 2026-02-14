@@ -28,7 +28,7 @@ interface SubsoilUser {
     bin: string;
     region: Region;
     mineral_type: string;
-    license_status: 'active' | 'expired' | 'suspended';
+    license_status: 'active' | 'expired' | 'suspended' | 'illegal';
     license_start: string | null;
     license_end: string | null;
     created_at: string;
@@ -42,12 +42,14 @@ interface Props {
 const getStatusLabel = (status: SubsoilUser['license_status']) => {
     if (status === 'active') return 'Активна';
     if (status === 'expired') return 'Истекла';
+    if (status === 'illegal') return 'Нелегально';
     return 'Приостановлена';
 };
 
 const getStatusColor = (status: SubsoilUser['license_status']) => {
     if (status === 'active') return 'bg-green-100 text-green-800';
     if (status === 'expired') return 'bg-gray-100 text-gray-800';
+    if (status === 'illegal') return 'bg-red-600 text-white';
     return 'bg-amber-100 text-amber-800';
 };
 

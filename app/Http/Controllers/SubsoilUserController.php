@@ -5,7 +5,9 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\SubsoilUser;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use ZipArchive;
 
 class SubsoilUserController extends Controller
 {
@@ -36,7 +38,7 @@ class SubsoilUserController extends Controller
             'mineral_type' => 'required|string|max:255',
             'total_area' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:5000',
-            'license_status' => 'required|in:active,expired,suspended',
+            'license_status' => 'required|in:active,expired,suspended,illegal',
             'license_start' => 'nullable|date',
             'license_end' => 'nullable|date|after_or_equal:license_start',
             'location' => 'nullable|array',
@@ -84,7 +86,7 @@ class SubsoilUserController extends Controller
             'mineral_type' => 'required|string|max:255',
             'total_area' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:5000',
-            'license_status' => 'required|in:active,expired,suspended',
+            'license_status' => 'required|in:active,expired,suspended,illegal',
             'license_start' => 'nullable|date',
             'license_end' => 'nullable|date|after_or_equal:license_start',
             'location' => 'nullable|array',
@@ -93,6 +95,57 @@ class SubsoilUserController extends Controller
         $subsoilUser->update($validated);
 
         return redirect()->route('subsoil-users.index')->with('success', 'Недропользователь обновлен.');
+    }
+
+    public function passport(SubsoilUser $subsoilUser)
+    {
+        $subsoilUser->load(['region', 'documents', 'photos', 'issues']);
+
+        $zip = new ZipArchive();
+        $zipFileName = 'subsoil_passport_' . $subsoilUser->id . '_' . time() . '.zip';
+        $path = storage_path('app/private/' . $zipFileName);
+
+        if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
+            abort(500, 'Не удалось создать архив.');
+        }
+
+        // Add documents
+        foreach ($subsoilUser->documents as $document) {
+            $filePath = Storage::disk('public')->path($document->file_path);
+            if (file_exists($filePath)) {
+                $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
+                $docName = $document->name;
+                if ($extension && !str_ends_with(mb_strtolower($docName), '.' . mb_strtolower($extension))) {
+                    $docName .= '.' . $extension;
+                }
+                $zip->addFile($filePath, 'Документы/' . $docName);
+            }
+        }
+
+        // Add photos
+        foreach ($subsoilUser->photos as $index => $photo) {
+            $filePath = Storage::disk('public')->path($photo->file_path);
+            if (file_exists($filePath)) {
+                $extension = pathinfo($photo->file_path, PATHINFO_EXTENSION) ?: 'jpg';
+                $photoName = ($index + 1) . '.' . $extension;
+                if ($photo->description) {
+                   $photoName = ($index + 1) . '_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description) . '.' . $extension;
+                }
+                $zip->addFile($filePath, 'Фото/' . $photoName);
+            }
+        }
+
+        if ($zip->count() === 0) {
+            $zip->close();
+            @unlink($path);
+            abort(404, 'Нет файлов для скачивания.');
+        }
+
+        $zip->close();
+
+        $downloadName = 'Паспорт_Недропользователь_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name) . '.zip';
+
+        return response()->download($path, $downloadName)->deleteFileAfterSend(true);
     }
 
     public function destroy(SubsoilUser $subsoilUser)
