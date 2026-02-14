@@ -6,9 +6,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class Region extends Model
 {
+    public const ICON_OPTIONS = [
+        'factory' => 'Завод',
+        'plant' => 'Промышленный комплекс',
+        'energy' => 'Энергетика',
+        'house' => 'Инфраструктура',
+        'office' => 'Здание',
+        'lab' => 'Лаборатория',
+    ];
+
     protected $fillable = [
         'parent_id',
         'name',
+        'color',
+        'icon',
         'area',
         'type',
         'geometry',
@@ -18,6 +29,8 @@ class Region extends Model
     {
         return [
             'type' => 'string',
+            'color' => 'string',
+            'icon' => 'string',
             'area' => 'decimal:2',
             'geometry' => 'array',
         ];
