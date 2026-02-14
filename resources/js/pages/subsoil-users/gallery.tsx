@@ -42,6 +42,7 @@ interface SubsoilPhoto {
     file_path: string;
     gallery_date: string | null;
     description: string | null;
+    created_at: string;
 }
 
 interface DatedGallery {
@@ -592,6 +593,15 @@ function PhotoCard({
 }: PhotoCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
+    const formatDateTime = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('ru-RU', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric',
+        });
+    };
+
     return (
         <div
             className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-gray-100"
@@ -604,6 +614,16 @@ function PhotoCard({
                 alt={photo.description || 'Фото'}
                 className="h-full w-full object-cover"
             />
+            {/* Date badge */}
+            {(photo.gallery_date || photo.created_at) && (
+                <div className="absolute top-2 left-2 z-10">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                        <Calendar className="h-2.5 w-2.5" />
+                        {formatDateTime(photo.gallery_date || photo.created_at!)}
+                    </span>
+                </div>
+            )}
+            {/* Description overlay */}
             {photo.description && (
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
                     <p className="truncate text-xs text-white">

@@ -390,8 +390,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     const licenseStatusMap: Record<string, { label: string; color?: string }> = {
         active: { label: 'Активная', color: 'bg-green-100 text-green-800' },
-        expired: { label: 'Истекла', color: 'bg-red-100 text-red-800' },
+        expired: { label: 'Истекла', color: 'bg-gray-100 text-gray-800' },
         suspended: { label: 'Приостановлена', color: 'bg-amber-100 text-amber-800' },
+        illegal: { label: 'Нелегально', color: 'bg-red-600 text-white' },
     };
 
     const renderInfrastructureCard = (title: string, data?: InfrastructureData | null) => {
@@ -1223,8 +1224,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             </div>
                                             {[
                                                 { key: 'active', label: 'Активная', color: 'text-green-700', bg: 'bg-green-50', border: 'border-l-green-500', icon: 'bg-green-100' },
-                                                { key: 'expired', label: 'Истекла', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-500', icon: 'bg-red-100' },
+                                                { key: 'expired', label: 'Истекла', color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-l-gray-500', icon: 'bg-gray-300' },
                                                 { key: 'suspended', label: 'Приостановлена', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-l-amber-500', icon: 'bg-amber-100' },
+                                                { key: 'illegal', label: 'Нелегально', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-600', icon: 'bg-red-600' },
                                             ].map((status) => (
                                                 <div
                                                     key={status.key}

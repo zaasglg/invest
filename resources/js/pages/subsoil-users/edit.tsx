@@ -30,7 +30,7 @@ interface SubsoilUser {
     mineral_type: string;
     total_area: number | string | null;
     description?: string | null;
-    license_status: 'active' | 'expired' | 'suspended';
+    license_status: 'active' | 'expired' | 'suspended' | 'illegal';
     license_start: string | null;
     license_end: string | null;
     location?: { lat: number, lng: number }[];
@@ -210,7 +210,7 @@ export default function Edit({ subsoilUser, regions }: Props) {
                             <Label htmlFor="license_status" className="text-neutral-500 font-normal">Статус лицензии</Label>
                             <Select
                                 value={data.license_status}
-                                onValueChange={(value) => setData('license_status', value as 'active' | 'expired' | 'suspended')}
+                                onValueChange={(value) => setData('license_status', value as 'active' | 'expired' | 'suspended' | 'illegal')}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите статус" />
@@ -219,6 +219,7 @@ export default function Edit({ subsoilUser, regions }: Props) {
                                     <SelectItem value="active">Активна</SelectItem>
                                     <SelectItem value="expired">Истекла</SelectItem>
                                     <SelectItem value="suspended">Приостановлена</SelectItem>
+                                    <SelectItem value="illegal">Нелегально</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.license_status && <span className="text-sm text-red-500">{errors.license_status}</span>}
