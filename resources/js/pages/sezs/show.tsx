@@ -33,6 +33,8 @@ import {
     Zap,
 } from 'lucide-react';
 import { useCanModify } from '@/hooks/use-can-modify';
+import { PaginatedData } from '@/types';
+import Pagination from '@/components/pagination';
 
 interface Region {
     id: number;
@@ -90,9 +92,10 @@ interface Sez {
 
 interface Props {
     sez: Sez;
+    investmentProjects: PaginatedData<InvestmentProject>;
 }
 
-export default function Show({ sez }: Props) {
+export default function Show({ sez, investmentProjects }: Props) {
     const canModify = useCanModify();
 
     const statusMap: Record<string, { label: string; color: string }> = {
@@ -154,7 +157,7 @@ export default function Show({ sez }: Props) {
         return `${amount.toLocaleString('ru-RU')} тг`;
     };
 
-    const projects = sez.investment_projects ?? [];
+    const projects = investmentProjects.data ?? [];
     const issues = sez.issues ?? [];
 
     return (
@@ -311,12 +314,12 @@ export default function Show({ sez }: Props) {
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <Building2 className="h-5 w-5 text-gray-500" />
                                     Инвестиционные проекты
-                                    {projects.length > 0 && (
+                                    {investmentProjects.total > 0 && (
                                         <Badge
                                             variant="secondary"
                                             className="ml-2"
                                         >
-                                            {projects.length}
+                                            {investmentProjects.total}
                                         </Badge>
                                     )}
                                 </CardTitle>
@@ -383,6 +386,11 @@ export default function Show({ sez }: Props) {
                                     </p>
                                 )}
                             </CardContent>
+                            {projects.length > 0 && (
+                                <div className="border-t">
+                                    <Pagination paginator={investmentProjects} />
+                                </div>
+                            )}
                         </Card>
                     </div>
 

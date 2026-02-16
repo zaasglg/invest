@@ -165,8 +165,6 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const handleSelectEntity = (id: number, type: 'sez' | 'iz' | 'subsoil') => {
         setSelectedEntityId(id);
         setSelectedEntityType(type);
-        // Scroll to map
-        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
     const handleMapEntitySelect = (id: number | null, type: 'sez' | 'iz' | 'subsoil' | null) => {
@@ -205,8 +203,6 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
             setSelectedEntityType(null);
             setMapSelectedEntityId(null);
             setMapSelectedEntityType(null);
-            // Scroll to map
-            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
     };
 
