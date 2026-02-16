@@ -516,7 +516,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Район:</span>
                                 <span className="text-blue-600 flex items-center cursor-pointer hover:underline">
-                                    Туркестанский район <ChevronRight className="h-4 w-4" />
+                                    <Link href="/dashboard">Туркестанский район</Link> <ChevronRight className="h-4 w-4" />
                                 </span>
                             </div>
                         </div>
