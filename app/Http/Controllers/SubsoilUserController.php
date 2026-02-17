@@ -13,7 +13,14 @@ class SubsoilUserController extends Controller
 {
     public function index()
     {
-        $subsoilUsers = SubsoilUser::with('region')->latest()->paginate(15)->withQueryString();
+        $query = SubsoilUser::with('region');
+
+        $user = auth()->user();
+        if ($user && $user->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        }
+
+        $subsoilUsers = $query->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('subsoil-users/index', [
             'subsoilUsers' => $subsoilUsers,
@@ -22,19 +29,36 @@ class SubsoilUserController extends Controller
 
     public function create()
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('subsoil-users/create', [
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'bin' => 'required|string|max:20',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только добавить Недропользователь в свой район.');
+                    }
+                },
+            ],
             'mineral_type' => 'required|string|max:255',
             'total_area' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:5000',
@@ -69,20 +93,37 @@ class SubsoilUserController extends Controller
 
     public function edit(SubsoilUser $subsoilUser)
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('subsoil-users/edit', [
             'subsoilUser' => $subsoilUser->load('region'),
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function update(Request $request, SubsoilUser $subsoilUser)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'bin' => 'required|string|max:20',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только изменить Недропользователь в своем районе.');
+                    }
+                },
+            ],
             'mineral_type' => 'required|string|max:255',
             'total_area' => 'nullable|numeric|min:0',
             'description' => 'nullable|string|max:5000',

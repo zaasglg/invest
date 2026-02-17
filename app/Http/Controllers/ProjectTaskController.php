@@ -13,10 +13,32 @@ class ProjectTaskController extends Controller
 {
     public function store(Request $request, InvestmentProject $investmentProject)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'assigned_to' => 'required|exists:users,id',
+            'assigned_to' => [
+                'required',
+                'exists:users,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped) {
+                        $assignedUser = User::find($value);
+                        if (!$assignedUser) return;
+                        
+                        $isRegional = $assignedUser->isRegionalManagement();
+                        $isSameRegion = $assignedUser->region_id === $user->region_id;
+                        
+                        // Can assign to:
+                        // 1. Users in same region
+                        // 2. Regional management
+                        if (!($isSameRegion || $isRegional)) {
+                            $fail('Вы можете только поручить своему району или областному управлению.');
+                        }
+                    }
+                },
+            ],
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
         ]);
@@ -32,7 +54,7 @@ class ProjectTaskController extends Controller
                 'user_id' => $validated['assigned_to'],
                 'task_id' => $task->id,
                 'type' => 'task_assigned',
-                'message' => "Сізге жаңа тапсырма берілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
+                'message' => "Вам дали новое задание: \"{$task->title}\" (Проект: {$investmentProject->name})",
             ]);
         }
 

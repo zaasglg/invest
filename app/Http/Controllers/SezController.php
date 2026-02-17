@@ -11,7 +11,14 @@ class SezController extends Controller
 {
     public function index()
     {
-        $sezs = Sez::with('region')->latest()->paginate(15)->withQueryString();
+        $query = Sez::with('region');
+
+        $user = auth()->user();
+        if ($user && $user->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        }
+
+        $sezs = $query->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('sezs/index', [
             'sezs' => $sezs,
@@ -20,18 +27,35 @@ class SezController extends Controller
 
     public function create()
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('sezs/create', [
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только добавить СЭЗ в свой район.');
+                    }
+                },
+            ],
             'total_area' => 'nullable|numeric|min:0',
             'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
@@ -63,19 +87,36 @@ class SezController extends Controller
 
     public function edit(Sez $sez)
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('sezs/edit', [
             'sez' => $sez->load('region'),
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function update(Request $request, Sez $sez)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только изменить СЭЗ в своем районе.');
+                    }
+                },
+            ],
             'total_area' => 'nullable|numeric|min:0',
             'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',

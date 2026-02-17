@@ -29,6 +29,14 @@ class CheckRoleAccess
     ];
 
     /**
+     * Routes completely blocked for ispolnitel and baskarma.
+     * (regions.index — listing all regions)
+     */
+    protected array $limitedBlockedRoutes = [
+        'regions',
+    ];
+
+    /**
      * Routes that are allowed for restricted roles even if the resource
      * is generally blocked. Use full route names (e.g. 'regions.show').
      */
@@ -71,11 +79,43 @@ class CheckRoleAccess
             }
         }
 
-        // Limited roles (ispolnitel/baskarma): blocked from admin-only sections
+        // Limited roles (ispolnitel/baskarma): blocked from admin-only sections + regions
         if ($this->isLimitedRole($roleName)) {
             if ($this->isMatchingRoute($request, $this->adminOnlyRoutes)) {
                 abort(403, 'У вас нет доступа к этому разделу.');
             }
+
+            $routeName = $request->route()?->getName();
+
+            // Ispolnitel: completely blocked from all region routes
+            if ($roleName === 'ispolnitel') {
+                if ($routeName && str_starts_with($routeName, 'regions.')) {
+                    abort(403, 'Вам не разрешено входить в районную секцию.');
+                }
+            }
+
+            // Baskarma: read-only on SEZ, IZ, Subsoil, Projects, Regions.
+            // Can view/enter but cannot create, edit, or delete.
+            if ($roleName === 'baskarma') {
+                // Block regions listing but allow show
+                if ($routeName === 'regions.index' || $routeName === 'regions.create'
+                    || $routeName === 'regions.store' || $routeName === 'regions.edit'
+                    || $routeName === 'regions.update' || $routeName === 'regions.destroy') {
+                    abort(403, 'У вас нет доступа к этому разделу.');
+                }
+
+                // Block write actions on SEZ, IZ, Subsoil, Projects
+                if ($this->isWriteAction($request)) {
+                    $baskarmaReadOnly = ['sezs', 'industrial-zones', 'subsoil-users', 'investment-projects'];
+                    if ($this->isMatchingRoute($request, $baskarmaReadOnly)) {
+                        abort(403, 'У вас нет прав на изменение данных.');
+                    }
+                }
+            }
+
+            // District-scoping: ispolnitel and district baskarma can only access
+            // their own region's SEZ/IZ/Subsoil resources
+            $this->enforceDistrictScope($request, $user);
         }
 
         return $next($request);
@@ -154,5 +194,55 @@ class CheckRoleAccess
 
         // Also block non-GET/HEAD methods as a safety net
         return ! $request->isMethodSafe();
+    }
+
+    /**
+     * Enforce district-scoping for ispolnitel and district baskarma.
+     * They can only access SEZ/IZ/Subsoil/Regions belonging to their region.
+     * Oblast baskarma can access all.
+     */
+    protected function enforceDistrictScope(Request $request, $user): void
+    {
+        if (! $user->isDistrictScoped()) {
+            return;
+        }
+
+        $routeName = $request->route()?->getName();
+
+        if (! $routeName) {
+            return;
+        }
+
+        // Check SEZ routes
+        if (str_starts_with($routeName, 'sezs.')) {
+            $sez = $request->route('sez');
+            if ($sez && is_object($sez) && $sez->region_id !== $user->region_id) {
+                abort(403, 'Вам не разрешено входить в этот СЭЗ.');
+            }
+        }
+
+        // Check Industrial Zone routes
+        if (str_starts_with($routeName, 'industrial-zones.')) {
+            $iz = $request->route('industrialZone') ?? $request->route('industrial_zone');
+            if ($iz && is_object($iz) && $iz->region_id !== $user->region_id) {
+                abort(403, 'Вам не разрешено входить в этот ИЗ.');
+            }
+        }
+
+        // Check Subsoil User routes
+        if (str_starts_with($routeName, 'subsoil-users.')) {
+            $su = $request->route('subsoilUser') ?? $request->route('subsoil_user');
+            if ($su && is_object($su) && $su->region_id !== $user->region_id) {
+                abort(403, 'Вам не разрешено входить в этот Недропользователь.');
+            }
+        }
+
+        // Check Region show — district-scoped users can only view their own region
+        if ($routeName === 'regions.show') {
+            $region = $request->route('region');
+            if ($region && is_object($region) && $region->id !== $user->region_id) {
+                abort(403, 'Вам не разрешено входить в этот район.');
+            }
+        }
     }
 }

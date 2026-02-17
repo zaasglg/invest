@@ -11,7 +11,14 @@ class IndustrialZoneController extends Controller
 {
     public function index()
     {
-        $industrialZones = IndustrialZone::with('region')->latest()->paginate(15)->withQueryString();
+        $query = IndustrialZone::with('region');
+
+        $user = auth()->user();
+        if ($user && $user->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        }
+
+        $industrialZones = $query->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('industrial-zones/index', [
             'industrialZones' => $industrialZones,
@@ -20,18 +27,35 @@ class IndustrialZoneController extends Controller
 
     public function create()
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('industrial-zones/create', [
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только добавить ИЗ в свой район.');
+                    }
+                },
+            ],
             'total_area' => 'nullable|numeric|min:0',
             'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
@@ -56,19 +80,36 @@ class IndustrialZoneController extends Controller
 
     public function edit(IndustrialZone $industrialZone)
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('industrial-zones/edit', [
             'industrialZone' => $industrialZone->load('region'),
-            'regions' => $regions,
+            'regions' => $regionsQuery->get(),
         ]);
     }
 
     public function update(Request $request, IndustrialZone $industrialZone)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете только изменить ИЗ в своем районе.');
+                    }
+                },
+            ],
             'total_area' => 'nullable|numeric|min:0',
             'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
