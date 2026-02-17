@@ -78,8 +78,12 @@ class ProjectPhotoController extends Controller
         return redirect()->back()->with('success', 'Фотографии загружены.');
     }
 
-    public function update(Request $request, ProjectPhoto $photo)
+    public function update(Request $request, InvestmentProject $investmentProject, ProjectPhoto $photo)
     {
+        if ($photo->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
         $validated = $request->validate([
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',
