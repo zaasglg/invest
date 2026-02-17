@@ -47,10 +47,17 @@ class SezController extends Controller
 
     public function show(Sez $sez)
     {
-        $sez->load(['region', 'issues', 'investmentProjects.region']);
+        $sez->load(['region', 'issues']);
+
+        $investmentProjects = $sez->investmentProjects()
+            ->with('region')
+            ->latest()
+            ->paginate(10)
+            ->withQueryString();
 
         return Inertia::render('sezs/show', [
             'sez' => $sez,
+            'investmentProjects' => $investmentProjects,
         ]);
     }
 

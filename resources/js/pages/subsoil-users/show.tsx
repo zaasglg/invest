@@ -176,6 +176,15 @@ export default function Show({
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <FileText className="h-3.5 w-3.5" />{' '}
+                                                БИН
+                                            </p>
+                                            <p className="text-sm font-bold text-gray-900">
+                                                {subsoilUser.bin || 'Не указан'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Layers className="h-3.5 w-3.5" />{' '}
                                                 Полезное ископаемое
                                             </p>
@@ -214,7 +223,7 @@ export default function Show({
                                                     : 'Не указана'}
                                             </p>
                                         </div>
-                                        <div className="col-span-2 rounded-lg border border-gray-200 p-4">
+                                        <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Calendar className="h-3.5 w-3.5" />{' '}
                                                 Срок лицензии

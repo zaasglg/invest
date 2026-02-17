@@ -166,98 +166,77 @@ export default function Show({ industrialZone }: Props) {
         >
             <Head title={industrialZone.name} />
 
-            <div className="flex h-full flex-1 flex-col gap-8 p-6 w-full">
-                {/* Header */}
-                <div className="flex items-start justify-between">
-                    <div>
-                        <Link
-                            href={`/regions/${industrialZone.region_id}`}
-                            className="mb-4 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
-                        >
-                            <ArrowLeft className="mr-1 h-4 w-4" /> Назад к
-                            списку
-                        </Link>
-                        <h1 className="text-3xl font-bold tracking-tight text-gray-900">
-                            {industrialZone.name}
-                        </h1>
-                        <div className="mt-2 flex items-center gap-3 text-gray-500">
-                            <span className="flex items-center text-sm">
-                                <MapPin className="mr-1.5 h-4 w-4" />{' '}
-                                {industrialZone.region?.name || 'Нет региона'}
-                            </span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                        <Badge
-                            className={`${statusMap[industrialZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
-                        >
-                            {statusMap[industrialZone.status]?.label ||
-                                industrialZone.status}
-                        </Badge>
-                        <span className="text-xs text-gray-400">
-                            ID: {industrialZone.id} | Создан:{' '}
-                            {new Date(
-                                industrialZone.created_at,
-                            ).toLocaleDateString()}
-                        </span>
-                    </div>
-                </div>
+            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
+                {/* Back link */}
+                <Link
+                    href={`/regions/${industrialZone.region_id}`}
+                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                >
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Назад к списку
+                </Link>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}
                     <div className="space-y-6 lg:col-span-2">
-                        {/* Description */}
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <FileText className="h-5 w-5 text-gray-500" />
-                                    Описание
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
-                                    {industrialZone.description ||
-                                        'Описание отсутствует.'}
-                                </p>
-                            </CardContent>
-                        </Card>
+                        {/* Banner + Info + Description */}
+                        <Card className="overflow-hidden shadow-none py-0">
+                            {/* Banner Header */}
+                            <div className="bg-gray-900 px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-white">
+                                        <Layers className="h-5 w-5" />
+                                        <h1 className="text-xl font-bold">
+                                            {industrialZone.name}
+                                        </h1>
+                                    </div>
+                                    <Badge
+                                        className={`${statusMap[industrialZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
+                                    >
+                                        {statusMap[industrialZone.status]?.label || industrialZone.status}
+                                    </Badge>
+                                </div>
+                            </div>
 
-                        {/* Details */}
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Activity className="h-5 w-5 text-gray-500" />
-                                    Детали
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-                                    <div>
-                                        <p className="mb-1 text-sm font-medium text-gray-500">
-                                            Площадь
+                            {/* Info Cards */}
+                            <CardContent className="p-6">
+                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                            <MapPin className="h-3.5 w-3.5" /> Район
                                         </p>
-                                        <p className="text-xl font-bold text-gray-900">
-                                            {industrialZone.total_area
-                                                ? `${industrialZone.total_area} га`
-                                                : 'Не указана'}
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {industrialZone.region?.name || 'Не указан'}
                                         </p>
                                     </div>
-                                    <div>
-                                        <p className="mb-1 text-sm font-medium text-gray-500">
-                                            Объем инвестиций
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                            <Activity className="h-3.5 w-3.5" /> Статус
                                         </p>
-                                        <p className="text-xl font-bold text-amber-600">
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {statusMap[industrialZone.status]?.label || industrialZone.status}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                            <MapPin className="h-3.5 w-3.5" /> Площадь
+                                        </p>
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {industrialZone.total_area ? `${industrialZone.total_area} га` : 'Не указана'}
+                                        </p>
+                                    </div>
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                            <Building2 className="h-3.5 w-3.5" /> Объем инвестиций
+                                        </p>
+                                        <p className="text-sm font-bold text-gray-900">
                                             {industrialZone.investment_total
-                                                ? formatCurrency(
-                                                      Number(
-                                                          industrialZone.investment_total,
-                                                      ),
-                                                  )
+                                                ? formatCurrency(Number(industrialZone.investment_total))
                                                 : 'Не указан'}
                                         </p>
                                     </div>
                                 </div>
 
+                                {/* Infrastructure */}
                                 {industrialZone.infrastructure && (() => {
                                     const infraItems = [
                                         { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: industrialZone.infrastructure.electricity },
@@ -280,7 +259,7 @@ export default function Show({ industrialZone }: Props) {
                                                     const active = item.val?.available;
                                                     const detail = item.val?.capacity || item.val?.type || item.val?.distance || '';
                                                     return (
-                                                        <div key={item.key} className="flex items-center justify-between p-3 hover:bg-gray-50/50 transition-colors">
+                                                        <div key={item.key} className="flex items-center justify-between p-3 transition-colors hover:bg-gray-50/50">
                                                             <div className="flex items-center gap-3">
                                                                 <div className="rounded-md bg-gray-50 p-2 text-gray-500">
                                                                     <item.icon className="h-4 w-4" />
@@ -306,6 +285,17 @@ export default function Show({ industrialZone }: Props) {
                                     );
                                 })()}
                             </CardContent>
+
+                            {/* Description */}
+                            <div className="border-t border-gray-200 px-6 py-5">
+                                {/* <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                    <FileText className="h-5 w-5 text-gray-500" />
+                                    {industrialZone.name}
+                                </h2> */}
+                                <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
+                                    {industrialZone.description || 'Описание отсутствует.'}
+                                </p>
+                            </div>
                         </Card>
 
                         {/* Investment Projects */}
