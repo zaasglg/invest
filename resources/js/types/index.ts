@@ -10,5 +10,6 @@ export type SharedData = {
     auth: Auth;
     canModify: boolean;
     sidebarOpen: boolean;
+    unreadNotificationsCount: number;
     [key: string]: unknown;
 };

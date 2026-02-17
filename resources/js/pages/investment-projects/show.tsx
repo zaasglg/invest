@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
+import type { SharedData } from '@/types';
 
 interface ProjectType {
     id: number;
@@ -57,19 +67,75 @@ interface InvestmentProject {
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
     issues?: Array<{ id: number; title: string }>;
+    tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
     created_at: string;
+}
+
+interface CompletionFile {
+    id: number;
+    file_path: string;
+    file_name: string;
+    type: 'document' | 'photo';
+}
+
+interface TaskCompletionItem {
+    id: number;
+    task_id: number;
+    submitted_by: number;
+    comment?: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewer_comment?: string;
+    reviewed_by?: number;
+    reviewed_at?: string;
+    created_at: string;
+    submitter?: { id: number; full_name?: string };
+    reviewer?: { id: number; full_name?: string };
+    files: CompletionFile[];
+}
+
+interface ProjectTaskItem {
+    id: number;
+    title: string;
+    description?: string;
+    assigned_to: number;
+    assignee?: {
+        id: number;
+        full_name?: string;
+        name?: string;
+        baskarma_type?: string | null;
+        position?: string | null;
+        role_model?: { id: number; display_name?: string };
+    };
+    start_date?: string;
+    due_date?: string;
+    status: 'new' | 'in_progress' | 'done' | 'rejected';
+    completions?: TaskCompletionItem[];
+    created_at: string;
+}
+
+interface UserOption {
+    id: number;
+    full_name?: string;
+    role_model?: { id: number; name?: string; display_name?: string };
+    baskarma_type?: string | null;
+    region_id?: number | null;
+    position?: string | null;
 }
 
 interface Props {
     project: InvestmentProject;
     mainGallery?: Photo[];
     renderPhotos?: Photo[];
+    users?: UserOption[];
 }
 
-export default function Show({ project, mainGallery = [], renderPhotos = [] }: Props) {
+export default function Show({ project, mainGallery = [], renderPhotos = [], users = [] }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
+    const currentUserId = auth.user?.id;
+    const isBaskarma = (auth.user?.role_model?.name || '').toLowerCase() === 'baskarma';
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         : (project.photos_count as any)?.photos_count || 0;
@@ -122,6 +188,208 @@ export default function Show({ project, mainGallery = [], renderPhotos = [] }: P
             currency: 'KZT',
             maximumFractionDigits: 0,
         }).format(amount);
+    };
+
+    // Roadmap state
+    const [showTaskModal, setShowTaskModal] = useState(false);
+    const [taskTitle, setTaskTitle] = useState('');
+    const [taskDescription, setTaskDescription] = useState('');
+    const [taskStartDate, setTaskStartDate] = useState('');
+    const [taskDueDate, setTaskDueDate] = useState('');
+    const [taskAssignedTo, setTaskAssignedTo] = useState<number | null>(null);
+    const [userSearch, setUserSearch] = useState('');
+    const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+    const [taskFilter, setTaskFilter] = useState('all');
+
+    const tasks = project.tasks || [];
+
+    const filteredTasks = tasks.filter((task) => {
+        if (taskFilter === 'all') return true;
+        return task.status === taskFilter;
+    });
+
+    // Dot color based on deadline: green=done, red=overdue, amber=pending
+    const getTaskDotColor = (task: ProjectTaskItem): string => {
+        if (task.status === 'done') return 'bg-green-500';
+        if (task.due_date) {
+            const now = new Date();
+            now.setHours(0, 0, 0, 0);
+            const due = new Date(task.due_date);
+            due.setHours(0, 0, 0, 0);
+            if (due < now) return 'bg-red-500'; // overdue
+        }
+        return 'bg-amber-500'; // not yet due, still pending
+    };
+
+    const taskStatusMap: Record<string, { label: string; dotColor: string }> = {
+        new: { label: 'Жаңа', dotColor: 'bg-amber-500' },
+        in_progress: { label: 'Орындалуда', dotColor: 'bg-amber-500' },
+        done: { label: 'Орындалды', dotColor: 'bg-green-500' },
+        rejected: { label: 'Қабылданбады', dotColor: 'bg-red-500' },
+    };
+
+    // Only show baskarma role users in task assignment
+    // Oblast baskarma → available for all projects
+    // District baskarma → only for projects in their district
+    const baskarmaUsers = users.filter((u) => {
+        const roleName = (u.role_model?.name || '').toLowerCase();
+        if (roleName !== 'baskarma') return false;
+        // Oblast baskarma can be assigned to any project
+        if (u.baskarma_type === 'oblast') return true;
+        // District baskarma can only be assigned to their own district's projects
+        if (u.baskarma_type === 'district' && u.region_id) {
+            return u.region_id === project.region_id;
+        }
+        return true;
+    });
+
+    const filteredUsers = baskarmaUsers.filter((u) => {
+        if (!userSearch.trim()) return true;
+        const name = (u.full_name || '').toLowerCase();
+        const role = (u.role_model?.display_name || '').toLowerCase();
+        const q = userSearch.toLowerCase();
+        return name.includes(q) || role.includes(q);
+    });
+
+    const handleTaskSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!taskTitle || !taskAssignedTo) return;
+        setIsSubmittingTask(true);
+
+        router.post(
+            `/investment-projects/${project.id}/tasks`,
+            {
+                title: taskTitle,
+                description: taskDescription || null,
+                start_date: taskStartDate || null,
+                due_date: taskDueDate || null,
+                assigned_to: taskAssignedTo,
+            },
+            {
+                onSuccess: () => {
+                    setTaskTitle('');
+                    setTaskDescription('');
+                    setTaskStartDate('');
+                    setTaskDueDate('');
+                    setTaskAssignedTo(null);
+                    setUserSearch('');
+                    setIsSubmittingTask(false);
+                    setShowTaskModal(false);
+                },
+                onError: () => setIsSubmittingTask(false),
+            },
+        );
+    };
+
+    const handleTaskStatusToggle = (task: ProjectTaskItem) => {
+        const nextStatus = task.status === 'done' ? 'new' : 'done';
+        router.put(`/investment-projects/${project.id}/tasks/${task.id}`, {
+            status: nextStatus,
+        });
+    };
+
+    const handleTaskDelete = (taskId: number) => {
+        if (confirm('Осы этапты өшіргіңіз келе ме?')) {
+            router.delete(
+                `/investment-projects/${project.id}/tasks/${taskId}`,
+            );
+        }
+    };
+
+    const selectedUser = users.find((u) => u.id === taskAssignedTo);
+
+    // Completion submission state (for baskarma)
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [completionTaskId, setCompletionTaskId] = useState<number | null>(null);
+    const [completionComment, setCompletionComment] = useState('');
+    const [completionDocuments, setCompletionDocuments] = useState<File[]>([]);
+    const [completionPhotos, setCompletionPhotos] = useState<File[]>([]);
+    const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
+    const completionDocRef = useRef<HTMLInputElement>(null);
+    const completionPhotoRef = useRef<HTMLInputElement>(null);
+
+    // Review modal state (for исполнитель)
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewCompletion, setReviewCompletion] = useState<TaskCompletionItem | null>(null);
+    const [reviewTask, setReviewTask] = useState<ProjectTaskItem | null>(null);
+    const [reviewComment, setReviewComment] = useState('');
+    const [isReviewing, setIsReviewing] = useState(false);
+
+    const handleOpenCompletionModal = (taskId: number) => {
+        setCompletionTaskId(taskId);
+        setCompletionComment('');
+        setCompletionDocuments([]);
+        setCompletionPhotos([]);
+        setShowCompletionModal(true);
+    };
+
+    const handleCompletionDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setCompletionDocuments(Array.from(e.target.files));
+        }
+    };
+
+    const handleCompletionPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            setCompletionPhotos(Array.from(e.target.files));
+        }
+    };
+
+    const handleCompletionSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!completionTaskId) return;
+        setIsSubmittingCompletion(true);
+
+        const formData = new FormData();
+        if (completionComment) formData.append('comment', completionComment);
+        completionDocuments.forEach((file) => formData.append('documents[]', file));
+        completionPhotos.forEach((file) => formData.append('photos[]', file));
+
+        router.post(
+            `/investment-projects/${project.id}/tasks/${completionTaskId}/completions`,
+            formData,
+            {
+                forceFormData: true,
+                onSuccess: () => {
+                    setShowCompletionModal(false);
+                    setCompletionTaskId(null);
+                    setCompletionComment('');
+                    setCompletionDocuments([]);
+                    setCompletionPhotos([]);
+                    setIsSubmittingCompletion(false);
+                },
+                onError: () => setIsSubmittingCompletion(false),
+            },
+        );
+    };
+
+    const handleOpenReview = (task: ProjectTaskItem, completion: TaskCompletionItem) => {
+        setReviewTask(task);
+        setReviewCompletion(completion);
+        setReviewComment('');
+        setShowReviewModal(true);
+    };
+
+    const handleReview = (status: 'approved' | 'rejected') => {
+        if (!reviewCompletion || !reviewTask) return;
+        setIsReviewing(true);
+        router.put(
+            `/investment-projects/${project.id}/tasks/${reviewTask.id}/completions/${reviewCompletion.id}/review`,
+            {
+                status,
+                reviewer_comment: reviewComment || null,
+            },
+            {
+                onSuccess: () => {
+                    setShowReviewModal(false);
+                    setReviewCompletion(null);
+                    setReviewTask(null);
+                    setReviewComment('');
+                    setIsReviewing(false);
+                },
+                onError: () => setIsReviewing(false),
+            },
+        );
     };
 
     return (
@@ -237,6 +505,184 @@ export default function Show({ project, mainGallery = [], renderPhotos = [] }: P
                                     {project.description || 'Описание отсутствует.'}
                                 </p>
                             </div>
+                        </Card>
+
+                        {/* Roadmap / Дорожная карта */}
+                        <Card className="shadow-none overflow-hidden py-0">
+                            <div className="bg-gray-900 px-6 py-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-white">
+                                        <Flag className="h-5 w-5" />
+                                        <h2 className="text-lg font-bold">
+                                            Дорожная карта
+                                        </h2>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Select
+                                            value={taskFilter}
+                                            onValueChange={setTaskFilter}
+                                        >
+                                            <SelectTrigger className="h-9 w-[160px] border-white/30 bg-white/20 text-white text-sm focus:ring-white/50 [&>svg]:text-white">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">
+                                                    Все этапы
+                                                </SelectItem>
+                                                <SelectItem value="new">
+                                                    Новый
+                                                </SelectItem>
+                                                <SelectItem value="in_progress">
+                                                    Исполняется
+                                                </SelectItem>
+                                                <SelectItem value="done">
+                                                    Выполнено
+                                                </SelectItem>
+                                                <SelectItem value="rejected">
+                                                    Отклонено
+                                                </SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                        {canModify && !isBaskarma && (
+                                            <Button
+                                                size="icon"
+                                                className="h-9 w-9 bg-white/20 hover:bg-white/30 text-white border border-white/30"
+                                                onClick={() =>
+                                                    setShowTaskModal(true)
+                                                }
+                                            >
+                                                <Plus className="h-5 w-5" />
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            <CardContent className="p-0">
+                                {filteredTasks.length === 0 ? (
+                                    <div className="py-12 text-center">
+                                        <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                                        <p className="text-gray-500">
+                                            Нет этапов
+                                        </p>
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Нажмите +, чтобы добавить новый этап
+                                        </p>
+                                    </div>
+                                ) : (
+                                    <div className="divide-y divide-gray-100">
+                                        {filteredTasks.map((task) => {
+                                            const isAssignedToMe = task.assigned_to === currentUserId;
+                                            const pendingCompletion = task.completions?.find(c => c.status === 'pending');
+                                            const latestCompletion = task.completions?.length
+                                                ? task.completions[task.completions.length - 1]
+                                                : null;
+
+                                            return (
+                                            <div
+                                                key={task.id}
+                                                className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
+                                            >
+                                                <div
+                                                    className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
+                                                />
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-semibold text-gray-900">
+                                                        {task.title}:
+                                                    </p>
+                                                    <p className="text-sm text-gray-500">
+                                                        {task.due_date
+                                                            ? new Date(
+                                                                  task.due_date,
+                                                              ).toLocaleDateString(
+                                                                  'kk-KZ',
+                                                                  {
+                                                                      day: 'numeric',
+                                                                      month: 'long',
+                                                                      year: 'numeric',
+                                                                  },
+                                                              )
+                                                            : 'Мерзімі белгіленбеген'}
+                                                        {task.assignee && (
+                                                            <>
+                                                                {' | '}
+                                                                {task.assignee.baskarma_type === 'oblast'
+                                                                    ? 'Облыстық:'
+                                                                    : task.assignee.baskarma_type === 'district'
+                                                                      ? 'Аудандық:'
+                                                                      : ''}
+                                                                {' '}
+                                                                {task.assignee.full_name || task.assignee.name || '—'}
+                                                                {task.assignee.position && ` — ${task.assignee.position}`}
+                                                            </>
+                                                        )}
+                                                    </p>
+                                                    {/* Status badge for completion */}
+                                                    {latestCompletion && (
+                                                        <div>
+                                                            <Badge className={`mt-1 text-xs border-0 ${
+                                                                latestCompletion.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                latestCompletion.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                                {latestCompletion.status === 'approved' ? 'Принято' :
+                                                                 latestCompletion.status === 'rejected' ? 'Отклонено' :
+                                                                 'На проверке'}
+                                                            </Badge>
+                                                            {latestCompletion.status === 'rejected' && latestCompletion.reviewer_comment && (
+                                                                <p className="mt-1 text-xs text-red-600">
+                                                                    <span className="font-semibold">Потому что:</span> {latestCompletion.reviewer_comment}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    {/* Baskarma: submit completion (when task is new or rejected) */}
+                                                    {/* Baskarma: submit completion (when task is new or rejected) */}
+                                                    {isBaskarma && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                                                            onClick={() => handleOpenCompletionModal(task.id)}
+                                                        >
+                                                            <Upload className="mr-1 h-3.5 w-3.5" />
+                                                            Отправить
+                                                        </Button>
+                                                    )}
+                                                    {/* Исполнитель: review pending completion */}
+                                                    {canModify && !isBaskarma && pendingCompletion && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                            onClick={() => handleOpenReview(task, pendingCompletion)}
+                                                        >
+                                                            <Eye className="mr-1 h-3.5 w-3.5" />
+                                                            Проверить
+                                                        </Button>
+                                                    )}
+                                                    {canModify && !isBaskarma && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() =>
+                                                                handleTaskDelete(
+                                                                    task.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </CardContent>
                         </Card>
                     </div>
 
@@ -354,6 +800,424 @@ export default function Show({ project, mainGallery = [], renderPhotos = [] }: P
                         </Card>
                     </div>
                 </div>
+
+                {/* Task Modal */}
+                {showTaskModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between rounded-t-xl bg-gray-900 px-6 py-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                    <Flag className="h-5 w-5" />
+                                    Добавить этап к проекту
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowTaskModal(false)}
+                                    className="text-white/80 hover:text-white transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <form
+                                onSubmit={handleTaskSubmit}
+                                className="p-6 space-y-5"
+                            >
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        Название темы (модуля)
+                                    </Label>
+                                    <Input
+                                        value={taskTitle}
+                                        onChange={(e) =>
+                                            setTaskTitle(e.target.value)
+                                        }
+                                        placeholder="Тема"
+                                        className="mt-1.5"
+                                        required
+                                    />
+                                </div>
+
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        Описание
+                                    </Label>
+                                    <textarea
+                                        value={taskDescription}
+                                        onChange={(e) =>
+                                            setTaskDescription(e.target.value)
+                                        }
+                                        placeholder="Описание"
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        rows={3}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label className="text-sm font-semibold text-gray-900">
+                                            Дата начала
+                                        </Label>
+                                        <Input
+                                            type="date"
+                                            value={taskStartDate}
+                                            onChange={(e) =>
+                                                setTaskStartDate(
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="mt-1.5"
+                                        />
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-semibold text-gray-900">
+                                            Дата окончания
+                                        </Label>
+                                        <Input
+                                            type="date"
+                                            value={taskDueDate}
+                                            onChange={(e) =>
+                                                setTaskDueDate(e.target.value)
+                                            }
+                                            className="mt-1.5"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        Назначить ответственного
+                                    </Label>
+                                    <div className="relative mt-1.5">
+                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                        <Input
+                                            value={userSearch}
+                                            onChange={(e) =>
+                                                setUserSearch(e.target.value)
+                                            }
+                                            placeholder="Поиск"
+                                            className="pl-9"
+                                        />
+                                    </div>
+                                    <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200">
+                                        {filteredUsers.length === 0 ? (
+                                            <p className="px-4 py-3 text-sm text-gray-400">
+                                               Пользователи не найдены
+                                            </p>
+                                        ) : (
+                                            filteredUsers.map((u, idx) => (
+                                                <div
+                                                    key={u.id}
+                                                    className={`flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer ${
+                                                        taskAssignedTo ===
+                                                        u.id
+                                                            ? 'bg-cyan-50'
+                                                            : ''
+                                                    } ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                                                    onClick={() =>
+                                                        setTaskAssignedTo(
+                                                            u.id,
+                                                        )
+                                                    }
+                                                >
+                                                    <span className="text-gray-700">
+                                                        <span className="mr-2 text-gray-400">
+                                                            {idx + 1}
+                                                        </span>
+                                                        {u.full_name || '—'}
+                                                        {u.role_model
+                                                            ?.display_name &&
+                                                            ` - ${u.role_model.display_name}`}
+                                                    </span>
+                                                    {taskAssignedTo ===
+                                                        u.id && (
+                                                        <span className="rounded-md bg-cyan-500 px-3 py-1 text-xs font-medium text-white">
+                                                            Таңдау
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            ))
+                                        )}
+                                    </div>
+                                    {selectedUser && (
+                                        <p className="mt-2 text-sm text-cyan-600">
+                                            Таңдалды:{' '}
+                                            <span className="font-medium">
+                                                {selectedUser.full_name}
+                                            </span>
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <Button
+                                        type="submit"
+                                        className="bg-emerald-500 hover:bg-emerald-600"
+                                        disabled={
+                                            !taskTitle ||
+                                            !taskAssignedTo ||
+                                            isSubmittingTask
+                                        }
+                                    >
+                                        {isSubmittingTask
+                                            ? 'Сақталуда...'
+                                            : 'Сохранить'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="border-gray-600 bg-gray-600 text-white hover:bg-gray-700 hover:text-white"
+                                        onClick={() =>
+                                            setShowTaskModal(false)
+                                        }
+                                    >
+                                        Отмена
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Completion Submission Modal (for baskarma) */}
+                {showCompletionModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between rounded-t-xl bg-gray-900 px-6 py-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                    <Upload className="h-5 w-5" />
+                                    Подтвердите выполнение задачи!
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowCompletionModal(false)}
+                                    className="text-white/80 hover:text-white transition-colors"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <form onSubmit={handleCompletionSubmit} className="p-6 space-y-5">
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        <FileText className="mr-1 inline h-4 w-4" />
+                                        Документы (файлы)
+                                    </Label>
+                                    <input
+                                        ref={completionDocRef}
+                                        type="file"
+                                        multiple
+                                        onChange={handleCompletionDocChange}
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-700 hover:file:bg-cyan-100"
+                                    />
+                                    {completionDocuments.length > 0 && (
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {completionDocuments.length} документ выбран
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        <ImageIcon className="mr-1 inline h-4 w-4" />
+                                        Изображения
+                                    </Label>
+                                    <input
+                                        ref={completionPhotoRef}
+                                        type="file"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={handleCompletionPhotoChange}
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-emerald-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
+                                    />
+                                    {completionPhotos.length > 0 && (
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {completionPhotos.length} изображение выбрано
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div>
+                                    <Label className="text-sm font-semibold text-gray-900">
+                                        Комментарий
+                                    </Label>
+                                    <textarea
+                                        value={completionComment}
+                                        onChange={(e) => setCompletionComment(e.target.value)}
+                                        placeholder="Введите комментарий..."
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        rows={4}
+                                    />
+                                </div>
+
+                                <div className="flex justify-center gap-3 pt-2">
+                                    <Button
+                                        type="submit"
+                                        className="bg-emerald-500 hover:bg-emerald-600 px-8"
+                                        disabled={isSubmittingCompletion}
+                                    >
+                                        {isSubmittingCompletion ? 'Отправка...' : 'Да'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        className="bg-red-500 hover:bg-red-600 px-8"
+                                        onClick={() => setShowCompletionModal(false)}
+                                    >
+                                        Нет
+                                    </Button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Review Completion Modal (for исполнитель) */}
+                {showReviewModal && reviewCompletion && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between bg-gray-900 px-6 py-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                    <Eye className="h-5 w-5" />
+                                    Проверить задание
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        setShowReviewModal(false);
+                                        setReviewCompletion(null);
+                                        setReviewTask(null);
+                                    }}
+                                    className="text-white/80 transition-colors hover:text-white"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+
+                            <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
+                                {/* Task info */}
+                                {reviewTask && (
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                            Тапсырма
+                                        </p>
+                                        <p className="mt-1 font-semibold text-gray-900">
+                                            {reviewTask.title}
+                                        </p>
+                                        {reviewTask.description && (
+                                            <p className="mt-1 text-sm text-gray-600">
+                                                {reviewTask.description}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                {/* Who submitted */}
+                                <div className="rounded-lg border border-gray-200 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        Отправил
+                                    </p>
+                                    <p className="mt-1 font-medium text-gray-900">
+                                        {reviewCompletion.submitter?.full_name || '—'}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {new Date(reviewCompletion.created_at).toLocaleString('kk-KZ')}
+                                    </p>
+                                </div>
+
+                                {/* Comment */}
+                                {reviewCompletion.comment && (
+                                    <div className="rounded-lg border border-gray-200 p-4">
+                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                            Комментарий
+                                        </p>
+                                        <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                                            {reviewCompletion.comment}
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Files */}
+                                {reviewCompletion.files && reviewCompletion.files.length > 0 && (
+                                    <div>
+                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                            Файлы
+                                        </p>
+                                        <div className="space-y-2">
+                                            {reviewCompletion.files.map((file) => (
+                                                <div
+                                                    key={file.id}
+                                                    className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
+                                                >
+                                                    {file.type === 'photo' ? (
+                                                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                                                            <img
+                                                                src={`/storage/${file.file_path}`}
+                                                                alt={file.file_name}
+                                                                className="h-full w-full object-cover"
+                                                            />
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                                                            <FileText className="h-5 w-5 text-gray-500" />
+                                                        </div>
+                                                    )}
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="truncate text-sm font-medium text-gray-900">
+                                                            {file.file_name}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400">
+                                                            {file.type === 'photo' ? 'Изображение' : 'Документ'}
+                                                        </p>
+                                                    </div>
+                                                    <a
+                                                        href={`/storage/${file.file_path}`}
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="text-blue-600 hover:text-blue-800"
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                    </a>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Review form */}
+                                <div className="space-y-4 border-t border-gray-200 pt-4">
+                                    <div>
+                                        <label className="text-sm font-semibold text-gray-900">
+                                            Комментарий
+                                        </label>
+                                        <textarea
+                                            value={reviewComment}
+                                            onChange={(e) => setReviewComment(e.target.value)}
+                                            placeholder="Комментарий жазыңыз..."
+                                            className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                            rows={3}
+                                        />
+                                    </div>
+                                    <div className="flex justify-center gap-3">
+                                        <Button
+                                            onClick={() => handleReview('approved')}
+                                            className="bg-emerald-500 hover:bg-emerald-600 px-8"
+                                            disabled={isReviewing}
+                                        >
+                                            <CheckCircle2 className="mr-2 h-4 w-4" />
+                                            Да
+                                        </Button>
+                                        <Button
+                                            onClick={() => handleReview('rejected')}
+                                            className="bg-red-500 hover:bg-red-600 px-8"
+                                            disabled={isReviewing}
+                                        >
+                                            <XCircle className="mr-2 h-4 w-4" />
+                                            Нет
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </AppLayout>
     );

@@ -1,4 +1,5 @@
 import {
+    Award,
     Briefcase,
     Factory,
     Folder,
@@ -62,6 +63,11 @@ export const projectNavItems: NavItem[] = [
         href: projectTypes.index.url(),
         icon: Tags,
     },
+    {
+        title: 'Рейтинг',
+        href: '/baskarma-rating',
+        icon: Award,
+    },
 ];
 
 export const adminNavItems: NavItem[] = [
@@ -97,6 +103,16 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Роли',
         'Пользователи',
     ]),
+    ispolnitel: new Set([
+        'Типы проектов',
+        'Роли',
+        'Пользователи',
+    ]),
+    baskarma: new Set([
+        'Типы проектов',
+        'Роли',
+        'Пользователи',
+    ]),
 };
 
 const normalizeRoleKey = (value: string) => value.toLowerCase().replace(/\s+/g, '');
@@ -115,6 +131,15 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
     const normalizedCandidates = roleCandidates.map((candidate) =>
         normalizeRoleKey(candidate),
     );
+
+    // Check exact role names first
+    if (normalizedCandidates.some((value) => value === 'ispolnitel')) {
+        return 'ispolnitel';
+    }
+
+    if (normalizedCandidates.some((value) => value === 'baskarma')) {
+        return 'baskarma';
+    }
 
     if (normalizedCandidates.some((value) => value.includes('zamakim'))) {
         return 'zamakim';

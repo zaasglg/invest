@@ -9,10 +9,20 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckRoleAccess
 {
     /**
-     * Routes that akim/zamakim roles are NOT allowed to access at all.
+     * Routes that read-only roles (akim/zamakim) are NOT allowed to access.
      */
-    protected array $blockedRouteNames = [
+    protected array $readOnlyBlockedRoutes = [
         'regions',
+        'project-types',
+        'roles',
+        'users',
+    ];
+
+    /**
+     * Routes that only superadmin can access.
+     * Ispolnitel and baskarma are blocked from these as well.
+     */
+    protected array $adminOnlyRoutes = [
         'project-types',
         'roles',
         'users',
@@ -44,43 +54,68 @@ class CheckRoleAccess
     {
         $user = $request->user();
 
-        if (! $user || ! $this->isRestrictedRole($user)) {
+        if (! $user) {
             return $next($request);
         }
 
-        // Fully blocked sections
-        if ($this->isBlockedRoute($request)) {
-            abort(403, 'У вас нет доступа к этому разделу.');
+        $roleName = $this->getRoleName($user);
+
+        // Read-only roles (akim/zamakim): blocked sections + no writes
+        if ($this->isReadOnlyRole($roleName)) {
+            if ($this->isMatchingRoute($request, $this->readOnlyBlockedRoutes)) {
+                abort(403, 'У вас нет доступа к этому разделу.');
+            }
+
+            if ($this->isWriteAction($request)) {
+                abort(403, 'У вас нет прав на изменение данных.');
+            }
         }
 
-        // Read-only: block any write action (create/store/edit/update/destroy)
-        if ($this->isWriteAction($request)) {
-            abort(403, 'У вас нет прав на изменение данных.');
+        // Limited roles (ispolnitel/baskarma): blocked from admin-only sections
+        if ($this->isLimitedRole($roleName)) {
+            if ($this->isMatchingRoute($request, $this->adminOnlyRoutes)) {
+                abort(403, 'У вас нет доступа к этому разделу.');
+            }
         }
 
         return $next($request);
     }
 
-    protected function isRestrictedRole($user): bool
+    /**
+     * Get the normalized role name from the user's role model.
+     */
+    protected function getRoleName($user): ?string
     {
-        $roleCandidates = array_filter([
-            $user->role,
-            $user->roleModel?->name,
-            $user->roleModel?->display_name,
-        ]);
-
-        foreach ($roleCandidates as $candidate) {
-            $normalized = strtolower(str_replace(' ', '', $candidate));
-
-            if (str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim')) {
-                return true;
-            }
-        }
-
-        return false;
+        return $user->roleModel?->name;
     }
 
-    protected function isBlockedRoute(Request $request): bool
+    /**
+     * Akim / zamakim — read-only, blocked from several sections.
+     */
+    protected function isReadOnlyRole(?string $roleName): bool
+    {
+        if (! $roleName) {
+            return false;
+        }
+
+        $normalized = strtolower(str_replace(' ', '', $roleName));
+
+        return str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim');
+    }
+
+    /**
+     * Ispolnitel / baskarma — can write to projects but blocked from admin sections.
+     */
+    protected function isLimitedRole(?string $roleName): bool
+    {
+        if (! $roleName) {
+            return false;
+        }
+
+        return in_array($roleName, ['ispolnitel', 'baskarma'], true);
+    }
+
+    protected function isMatchingRoute(Request $request, array $blockedList): bool
     {
         $routeName = $request->route()?->getName();
 
@@ -94,7 +129,7 @@ class CheckRoleAccess
             return false;
         }
 
-        foreach ($this->blockedRouteNames as $blocked) {
+        foreach ($blockedList as $blocked) {
             if ($routeName === $blocked || str_starts_with($routeName, $blocked . '.')) {
                 return true;
             }
