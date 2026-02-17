@@ -36,15 +36,19 @@ class ProjectDocumentController extends Controller
                 'project_id' => $investmentProject->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
-                'type' => $validated['type'] ?? $file->getClientOriginalExtension(),
+                'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
             ]);
         }
 
         return redirect()->back()->with('success', 'Документ загружен.');
     }
 
-    public function destroy(ProjectDocument $document)
+    public function destroy(InvestmentProject $investmentProject, ProjectDocument $document)
     {
+        if ($document->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
         // Delete file from storage
         if (Storage::disk('public')->exists($document->file_path)) {
             Storage::disk('public')->delete($document->file_path);

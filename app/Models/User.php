@@ -25,6 +25,8 @@ class User extends Authenticatable
         'role',
         'region_id',
         'role_id',
+        'baskarma_type',
+        'position',
     ];
 
     /**

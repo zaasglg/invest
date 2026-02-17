@@ -78,8 +78,12 @@ class SubsoilPhotoController extends Controller
         return redirect()->back()->with('success', 'Фотографии загружены.');
     }
 
-    public function update(Request $request, SubsoilPhoto $photo)
+    public function update(Request $request, SubsoilUser $subsoilUser, SubsoilPhoto $photo)
     {
+        if ($photo->subsoil_user_id !== $subsoilUser->id) {
+            abort(404);
+        }
+
         $validated = $request->validate([
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',

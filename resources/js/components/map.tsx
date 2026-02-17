@@ -931,8 +931,8 @@ export default function Map({
                                     positions={positions}
                                     pathOptions={{
                                         color: '#1d4ed8',
-                                        fillColor: regionColor,
-                                        fillOpacity: 0.58,
+                                        fillColor: 'transparent',
+                                        fillOpacity: 0,
                                         weight: 2,
                                         dashArray: '6, 4',
                                     }}

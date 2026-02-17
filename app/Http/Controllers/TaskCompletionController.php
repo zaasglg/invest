@@ -1,0 +1,164 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\InvestmentProject;
+use App\Models\ProjectTask;
+use App\Models\TaskCompletion;
+use App\Models\TaskCompletionFile;
+use App\Models\TaskNotification;
+use App\Models\User;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+
+class TaskCompletionController extends Controller
+{
+    /**
+     * Басқарма submits a task completion (with files and comment).
+     */
+    public function store(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
+    {
+        if ($task->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        $request->validate([
+            'comment' => 'nullable|string|max:2000',
+            'documents' => 'nullable|array|max:10',
+            'documents.*' => 'file|max:20480',
+            'photos' => 'nullable|array|max:10',
+            'photos.*' => 'image|max:20480',
+        ]);
+
+        $completion = TaskCompletion::create([
+            'task_id' => $task->id,
+            'submitted_by' => Auth::id(),
+            'comment' => $request->input('comment'),
+            'status' => 'pending',
+        ]);
+
+        // Save uploaded documents
+        if ($request->hasFile('documents')) {
+            foreach ($request->file('documents') as $file) {
+                $path = $file->store('task-completions', 'public');
+                TaskCompletionFile::create([
+                    'completion_id' => $completion->id,
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'type' => 'document',
+                ]);
+            }
+        }
+
+        // Save uploaded photos
+        if ($request->hasFile('photos')) {
+            foreach ($request->file('photos') as $file) {
+                $path = $file->store('task-completions', 'public');
+                TaskCompletionFile::create([
+                    'completion_id' => $completion->id,
+                    'file_path' => $path,
+                    'file_name' => $file->getClientOriginalName(),
+                    'type' => 'photo',
+                ]);
+            }
+        }
+
+        // Update task status to in_progress
+        $task->update(['status' => 'in_progress']);
+
+        // Collect all исполнитель user IDs to notify
+        $notifyUserIds = collect();
+
+        // Project creator and executor
+        if ($investmentProject->created_by) {
+            $notifyUserIds->push($investmentProject->created_by);
+        }
+        if ($investmentProject->executor_id) {
+            $notifyUserIds->push($investmentProject->executor_id);
+        }
+        // Executors from the pivot table
+        $executorIds = $investmentProject->executors()->pluck('users.id');
+        $notifyUserIds = $notifyUserIds->merge($executorIds);
+
+        // All users with ispolnitel role (role_id = 5)
+        $ispolnitelIds = User::where('role_id', 5)->pluck('id');
+        $notifyUserIds = $notifyUserIds->merge($ispolnitelIds);
+
+        // Remove current user (baskarma who submitted) and deduplicate
+        $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
+
+        $submitterName = Auth::user()->full_name ?? 'Басқарма';
+        $docCount = count($request->file('documents', []));
+        $photoCount = count($request->file('photos', []));
+        $fileInfo = [];
+        if ($docCount > 0) $fileInfo[] = "{$docCount} құжат";
+        if ($photoCount > 0) $fileInfo[] = "{$photoCount} сурет";
+        $fileStr = count($fileInfo) > 0 ? ' (' . implode(', ', $fileInfo) . ')' : '';
+
+        foreach ($notifyUserIds as $userId) {
+            TaskNotification::create([
+                'user_id' => $userId,
+                'task_id' => $task->id,
+                'completion_id' => $completion->id,
+                'type' => 'completion_submitted',
+                'message' => "{$submitterName} тапсырманы орындап жіберді: \"{$task->title}\"{$fileStr}. Тексеріңіз.",
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Тапсырма орындалғаны жіберілді.');
+    }
+
+    /**
+     * Исполнитель reviews a completion: approve or reject.
+     */
+    public function review(Request $request, InvestmentProject $investmentProject, ProjectTask $task, TaskCompletion $completion)
+    {
+        if ($task->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        if ($completion->task_id !== $task->id) {
+            abort(404);
+        }
+
+        $request->validate([
+            'status' => 'required|in:approved,rejected',
+            'reviewer_comment' => 'nullable|string|max:2000',
+        ]);
+
+        $completion->update([
+            'status' => $request->input('status'),
+            'reviewer_comment' => $request->input('reviewer_comment'),
+            'reviewed_by' => Auth::id(),
+            'reviewed_at' => now(),
+        ]);
+
+        $reviewerName = Auth::user()->full_name ?? 'Исполнитель';
+
+        if ($request->input('status') === 'approved') {
+            $task->update(['status' => 'done']);
+            $notificationType = 'completion_approved';
+            $message = "{$reviewerName} тапсырманы қабылдады: \"{$task->title}\".";
+        } else {
+            $task->update(['status' => 'rejected']);
+            $notificationType = 'completion_rejected';
+            $reviewerComment = $request->input('reviewer_comment');
+            $commentStr = $reviewerComment ? " Себебі: {$reviewerComment}" : '';
+            $message = "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\". Қайта орындаңыз.{$commentStr}";
+        }
+
+        // Notify the baskarma who submitted the completion
+        if ($completion->submitted_by !== Auth::id()) {
+            TaskNotification::create([
+                'user_id' => $completion->submitted_by,
+                'task_id' => $task->id,
+                'completion_id' => $completion->id,
+                'type' => $notificationType,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
+    }
+}

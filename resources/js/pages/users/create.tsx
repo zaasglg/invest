@@ -39,6 +39,8 @@ export default function Create({ regions, roles }: Props) {
         password_confirmation: '',
         role_id: 'none',
         region_id: '',
+        baskarma_type: '',
+        position: '',
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>('');
@@ -49,6 +51,15 @@ export default function Create({ regions, roles }: Props) {
         if (!selectedOblastId) return [];
         return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
     }, [regions, selectedOblastId]);
+
+    const selectedRole = useMemo(() => {
+        const rid = parseInt(data.role_id);
+        return roles.find(r => r.id === rid);
+    }, [data.role_id, roles]);
+
+    const isBaskarma = selectedRole?.name === 'baskarma';
+    const isIspolnitel = selectedRole?.name === 'ispolnitel';
+    const showRegionSelects = isIspolnitel || (isBaskarma && data.baskarma_type === 'district');
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -124,7 +135,16 @@ export default function Create({ regions, roles }: Props) {
                         <Label htmlFor="role_id" className="text-neutral-500 font-normal">Роль</Label>
                         <Select
                             value={data.role_id}
-                            onValueChange={(value) => setData('role_id', value)}
+                            onValueChange={(value) => {
+                                setData(prev => ({
+                                    ...prev,
+                                    role_id: value,
+                                    baskarma_type: '',
+                                    position: '',
+                                    region_id: '',
+                                }));
+                                setSelectedOblastId('');
+                            }}
                         >
                             <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                 <SelectValue placeholder="Выберите роль" />
@@ -141,9 +161,54 @@ export default function Create({ regions, roles }: Props) {
                         {errors.role_id && <span className="text-sm text-red-500">{errors.role_id}</span>}
                     </div>
 
+                    {/* Басқарма type selection */}
+                    {isBaskarma && (
+                        <div className="flex flex-col gap-2">
+                            <Label className="text-neutral-500 font-normal">Басқарма түрі</Label>
+                            <Select
+                                value={data.baskarma_type}
+                                onValueChange={(value) => {
+                                    setData(prev => ({
+                                        ...prev,
+                                        baskarma_type: value,
+                                        region_id: '',
+                                        position: '',
+                                    }));
+                                    setSelectedOblastId('');
+                                }}
+                            >
+                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                    <SelectValue placeholder="Басқарма түрін таңдаңыз" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="oblast">Облыстық басқарма</SelectItem>
+                                    <SelectItem value="district">Аудандық басқарма</SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors.baskarma_type && <span className="text-sm text-red-500">{errors.baskarma_type}</span>}
+                        </div>
+                    )}
+
+                    {/* Position field for baskarma */}
+                    {isBaskarma && data.baskarma_type && (
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="position" className="text-neutral-500 font-normal">Лауазымы</Label>
+                            <Input
+                                id="position"
+                                value={data.position}
+                                onChange={(e) => setData('position', e.target.value)}
+                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                placeholder="Мысалы: Басқарма басшысы"
+                            />
+                            {errors.position && <span className="text-sm text-red-500">{errors.position}</span>}
+                        </div>
+                    )}
+
+                    {/* Oblast + District selects — shown for ispolnitel and district baskarma */}
+                    {showRegionSelects && (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Облыс</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -152,7 +217,7 @@ export default function Create({ regions, roles }: Props) {
                                 }}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
-                                    <SelectValue placeholder="Выберите область" />
+                                    <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {oblasts.map((oblast) => (
@@ -165,14 +230,14 @@ export default function Create({ regions, roles }: Props) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Аудан / Қала</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
-                                    <SelectValue placeholder="Выберите район" />
+                                    <SelectValue placeholder="Ауданды таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {districts.map((district) => (
@@ -182,7 +247,7 @@ export default function Create({ regions, roles }: Props) {
                                     ))}
                                     {selectedOblastId && districts.length === 0 && (
                                         <SelectItem value="none" disabled>
-                                            Нет доступных районов
+                                            Аудандар жоқ
                                         </SelectItem>
                                     )}
                                 </SelectContent>
@@ -190,6 +255,7 @@ export default function Create({ regions, roles }: Props) {
                             {errors.region_id && <span className="text-sm text-red-500">{errors.region_id}</span>}
                         </div>
                     </div>
+                    )}
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="shadow-none">

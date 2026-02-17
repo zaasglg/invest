@@ -36,15 +36,19 @@ class SubsoilDocumentController extends Controller
                 'subsoil_user_id' => $subsoilUser->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
-                'type' => $validated['type'] ?? $file->getClientOriginalExtension(),
+                'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
             ]);
         }
 
         return redirect()->back()->with('success', 'Документ загружен.');
     }
 
-    public function destroy(SubsoilDocument $document)
+    public function destroy(SubsoilUser $subsoilUser, SubsoilDocument $document)
     {
+        if ($document->subsoil_user_id !== $subsoilUser->id) {
+            abort(404);
+        }
+
         if (Storage::disk('public')->exists($document->file_path)) {
             Storage::disk('public')->delete($document->file_path);
         }

@@ -44,6 +44,17 @@ class InvestmentProjectController extends Controller
             'subsoilUsers',
         ]);
 
+        // Region-scope: ispolnitel and district baskarma see only their district's projects
+        $user = $request->user();
+        if ($user && $user->region_id) {
+            $roleName = $user->roleModel?->name;
+            $isDistrictScoped = $roleName === 'ispolnitel'
+                || ($roleName === 'baskarma' && $user->baskarma_type === 'district');
+            if ($isDistrictScoped) {
+                $projectsQuery->where('region_id', $user->region_id);
+            }
+        }
+
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $projectsQuery->where(function ($query) use ($search) {
@@ -222,12 +233,21 @@ class InvestmentProjectController extends Controller
             'executors',
             'documents',
             'issues',
+            'tasks.assignee.roleModel',
+            'tasks.completions.submitter',
+            'tasks.completions.reviewer',
+            'tasks.completions.files',
             'sezs',
             'industrialZones',
             'subsoilUsers',
         ])
             ->withCount('photos')
             ->find($id);
+
+        // Region-scope check: district-scoped users can only view their district's projects
+        if ($project) {
+            $this->authorizeDistrictAccess($project);
+        }
 
         // Get main gallery photos (all gallery-type, regardless of gallery_date)
         $mainGalleryPhotos = $project ? $project->photos()->where('photo_type', 'gallery')->latest()->get() : collect();
@@ -259,11 +279,17 @@ class InvestmentProjectController extends Controller
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
+            'users' => User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
+                ->with('roleModel:id,name,display_name')
+                ->orderBy('full_name')
+                ->get(),
         ]);
     }
 
     public function edit(InvestmentProject $investmentProject)
     {
+        $this->authorizeDistrictAccess($investmentProject);
+
         $investmentProject->load(['sezs', 'industrialZones', 'subsoilUsers']);
         $regions = Region::all();
         $projectTypes = ProjectType::all();
@@ -309,6 +335,8 @@ class InvestmentProjectController extends Controller
 
     public function update(Request $request, InvestmentProject $investmentProject)
     {
+        $this->authorizeDistrictAccess($investmentProject);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
@@ -433,8 +461,30 @@ class InvestmentProjectController extends Controller
 
     public function destroy(InvestmentProject $investmentProject)
     {
+        $this->authorizeDistrictAccess($investmentProject);
+
         $investmentProject->delete();
 
         return redirect()->back()->with('success', 'Проект удален.');
+    }
+
+    /**
+     * Abort 403 if a district-scoped user tries to access a project outside their district.
+     */
+    protected function authorizeDistrictAccess(InvestmentProject $project): void
+    {
+        $user = request()->user();
+
+        if (! $user || ! $user->region_id) {
+            return;
+        }
+
+        $roleName = $user->roleModel?->name;
+        $isDistrictScoped = $roleName === 'ispolnitel'
+            || ($roleName === 'baskarma' && $user->baskarma_type === 'district');
+
+        if ($isDistrictScoped && $project->region_id !== $user->region_id) {
+            abort(403, 'Сізге бұл жобаға кіруге рұқсат жоқ.');
+        }
     }
 }

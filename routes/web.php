@@ -48,6 +48,13 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
     Route::post('issues', [\App\Http\Controllers\ProjectIssueController::class, 'store'])->name('investment-projects.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'update'])->name('investment-projects.issues.update');
     Route::delete('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'destroy'])->name('investment-projects.issues.destroy');
+
+    Route::post('tasks', [\App\Http\Controllers\ProjectTaskController::class, 'store'])->name('investment-projects.tasks.store');
+    Route::put('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'update'])->name('investment-projects.tasks.update');
+    Route::delete('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'destroy'])->name('investment-projects.tasks.destroy');
+
+    Route::post('tasks/{task}/completions', [\App\Http\Controllers\TaskCompletionController::class, 'store'])->name('investment-projects.tasks.completions.store');
+    Route::put('tasks/{task}/completions/{completion}/review', [\App\Http\Controllers\TaskCompletionController::class, 'review'])->name('investment-projects.tasks.completions.review');
 });
 
 Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
@@ -87,5 +94,20 @@ Route::resource('roles', \App\Http\Controllers\RoleController::class)
 
 Route::resource('users', \App\Http\Controllers\UserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
+
+Route::get('baskarma-rating', [\App\Http\Controllers\BaskarmaRatingController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('baskarma-rating');
+
+Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingController::class, 'show'])
+    ->middleware(['auth', 'verified'])
+    ->name('baskarma-rating.show');
+
+Route::middleware(['auth', 'verified'])->group(function () {
+    Route::get('notifications', [\App\Http\Controllers\TaskNotificationController::class, 'index'])->name('notifications.index');
+    Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
+    Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
+    Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+});
 
 require __DIR__ . '/settings.php';

@@ -42,6 +42,8 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'role_id' => 'nullable|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
+            'baskarma_type' => 'nullable|in:oblast,district',
+            'position' => 'nullable|string|max:255',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -50,6 +52,13 @@ class UserController extends Controller
 
         if (isset($validated['region_id']) && $validated['region_id'] === 'none') {
             $validated['region_id'] = null;
+        }
+
+        // Clear baskarma fields if not baskarma role
+        $role = $validated['role_id'] ? Role::find($validated['role_id']) : null;
+        if (!$role || $role->name !== 'baskarma') {
+            $validated['baskarma_type'] = null;
+            $validated['position'] = null;
         }
 
         $validated['password'] = Hash::make($validated['password']);
@@ -79,6 +88,8 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'role_id' => 'nullable|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
+            'baskarma_type' => 'nullable|in:oblast,district',
+            'position' => 'nullable|string|max:255',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -87,6 +98,13 @@ class UserController extends Controller
 
         if (isset($validated['region_id']) && $validated['region_id'] === 'none') {
             $validated['region_id'] = null;
+        }
+
+        // Clear baskarma fields if not baskarma role
+        $role = $validated['role_id'] ? Role::find($validated['role_id']) : null;
+        if (!$role || $role->name !== 'baskarma') {
+            $validated['baskarma_type'] = null;
+            $validated['position'] = null;
         }
 
         if (! empty($validated['password'])) {
