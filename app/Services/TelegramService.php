@@ -72,7 +72,7 @@ class TelegramService
 
         return "{$emoji} <b>Сообщение</b>\n\n"
             . $message . "\n\n"
-            . "🔗 <a href=\"{$notificationsUrl}\">Сайтқа өтіңіз</a>";
+            . "🔗 <a href=\"{$notificationsUrl}\">Перейти на сайт</a>";
     }
 
     /**
