@@ -86,22 +86,22 @@ export default function NotificationsIndex({ notifications }: Props) {
         { label: string; icon: React.ElementType; color: string }
     > = {
         task_assigned: {
-            label: 'Жаңа тапсырма',
+            label: 'Новое задание',
             icon: Flag,
             color: 'bg-blue-100 text-blue-700',
         },
         completion_submitted: {
-            label: 'Орындалғаны жіберілді',
+            label: 'Выполнение отправлено',
             icon: Clock,
             color: 'bg-amber-100 text-amber-700',
         },
         completion_approved: {
-            label: 'Қабылданды',
+            label: 'Принято',
             icon: CheckCircle2,
             color: 'bg-green-100 text-green-700',
         },
         completion_rejected: {
-            label: 'Қабылданбады',
+            label: 'Отклонено',
             icon: XCircle,
             color: 'bg-red-100 text-red-700',
         },
@@ -170,7 +170,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                         </h1>
                         {unreadCount > 0 && (
                             <Badge className="bg-red-500 text-white">
-                                {unreadCount} жаңа
+                                {unreadCount} новых
                             </Badge>
                         )}
                     </div>
@@ -181,7 +181,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                             onClick={handleMarkAllRead}
                         >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Барлығын оқылды деп белгілеу
+                            Отметить всё как прочитанное
                         </Button>
                     )}
                 </div>
@@ -191,7 +191,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                         <CardContent className="py-16 text-center">
                             <Bell className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                             <p className="text-gray-500">
-                                Уведомления жоқ
+                                Нет уведомлений
                             </p>
                         </CardContent>
                     </Card>
@@ -260,7 +260,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                             </p>
                                             {notification.task?.project && (
                                                 <p className="mt-1 text-xs text-gray-500">
-                                                    Жоба:{' '}
+                                                    Проект:{' '}
                                                     {
                                                         notification.task
                                                             .project.name
@@ -278,7 +278,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                 'completion_submitted' && (
                                                 <div className="flex items-center gap-1 text-xs text-gray-400">
                                                     <Eye className="h-4 w-4" />
-                                                    Тексеру
+                                                    Проверить
                                                 </div>
                                             )}
                                     </CardContent>
@@ -320,7 +320,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                             <div className="flex items-center justify-between bg-gray-900 px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Eye className="h-5 w-5" />
-                                    Тапсырманы тексеру
+                                    Проверка задания
                                 </h3>
                                 <button
                                     type="button"
@@ -339,7 +339,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {viewTask && (
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Тапсырма
+                                            Задание
                                         </p>
                                         <p className="mt-1 font-semibold text-gray-900">
                                             {viewTask.title}
@@ -355,7 +355,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {/* Who submitted */}
                                 <div className="rounded-lg border border-gray-200 p-4">
                                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                        Жіберген
+                                        Отправил
                                     </p>
                                     <p className="mt-1 font-medium text-gray-900">
                                         {viewCompletion.submitter
@@ -384,9 +384,9 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {viewCompletion.files &&
                                     viewCompletion.files.length > 0 && (
                                         <div>
-                                            <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                                Файлдар
-                                            </p>
+                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                                    Файлы
+                                                </p>
                                             <div className="space-y-2">
                                                 {viewCompletion.files.map(
                                                     (file) => (
@@ -419,8 +419,8 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                                 <p className="text-xs text-gray-400">
                                                                     {file.type ===
                                                                     'photo'
-                                                                        ? 'Сурет'
-                                                                        : 'Құжат'}
+                                                                        ? 'Фото'
+                                                                        : 'Документ'}
                                                                 </p>
                                                             </div>
                                                             <a
@@ -447,7 +447,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {viewCompletion.status !== 'pending' && (
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Нәтиже
+                                            Результат
                                         </p>
                                         <Badge
                                             className={`mt-1 ${
@@ -459,8 +459,8 @@ export default function NotificationsIndex({ notifications }: Props) {
                                         >
                                             {viewCompletion.status ===
                                             'approved'
-                                                ? 'Қабылданды'
-                                                : 'Қабылданбады'}
+                                                ? 'Принято'
+                                                : 'Отклонено'}
                                         </Badge>
                                         {viewCompletion.reviewer_comment && (
                                             <p className="mt-2 text-sm text-gray-600">
@@ -484,7 +484,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                             }}
                                         >
                                             <Flag className="mr-2 h-4 w-4" />
-                                            Жобаға өту
+                                            Перейти к проекту
                                         </Button>
                                     </div>
                                 )}
@@ -503,7 +503,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Комментарий жазыңыз..."
+                                                placeholder="Введите комментарий..."
                                                 className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                                 rows={3}
                                             />
@@ -519,7 +519,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                 disabled={isReviewing}
                                             >
                                                 <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                Иә
+                                                Да
                                             </Button>
                                             <Button
                                                 onClick={() =>
