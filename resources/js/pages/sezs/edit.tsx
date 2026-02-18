@@ -43,9 +43,10 @@ interface Sez {
 interface Props {
     sez: Sez;
     regions: Region[];
+    isDistrictScoped?: boolean;
 }
 
-export default function Edit({ sez, regions }: Props) {
+export default function Edit({ sez, regions, isDistrictScoped }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         name: sez.name || '',
         region_id: sez.region_id?.toString() || '',
@@ -114,6 +115,7 @@ export default function Edit({ sez, regions }: Props) {
                                     setSelectedOblastId(value);
                                     setData('region_id', '');
                                 }}
+                                disabled={isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
@@ -133,7 +135,7 @@ export default function Edit({ sez, regions }: Props) {
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
-                                disabled={!selectedOblastId}
+                                disabled={!selectedOblastId || isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />

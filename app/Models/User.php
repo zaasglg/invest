@@ -27,6 +27,7 @@ class User extends Authenticatable
         'role_id',
         'baskarma_type',
         'position',
+        'telegram_chat_id',
     ];
 
     /**

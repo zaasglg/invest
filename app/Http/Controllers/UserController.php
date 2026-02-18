@@ -44,6 +44,7 @@ class UserController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
+            'telegram_chat_id' => 'nullable|string|max:50',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -90,6 +91,7 @@ class UserController extends Controller
             'region_id' => 'nullable|exists:regions,id',
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
+            'telegram_chat_id' => 'nullable|string|max:50',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {

@@ -32,11 +32,18 @@ class IndustrialZoneController extends Controller
 
         $regionsQuery = Region::query();
         if ($isDistrictScoped) {
-            $regionsQuery->where('id', $user->region_id);
+            $userRegion = Region::find($user->region_id);
+            $regionIds = [$user->region_id];
+            if ($userRegion && $userRegion->parent_id) {
+                $regionIds[] = $userRegion->parent_id;
+            }
+            $regionsQuery->whereIn('id', $regionIds);
         }
 
         return Inertia::render('industrial-zones/create', [
             'regions' => $regionsQuery->get(),
+            'isDistrictScoped' => $isDistrictScoped,
+            'userRegionId' => $isDistrictScoped ? $user->region_id : null,
         ]);
     }
 
@@ -85,12 +92,18 @@ class IndustrialZoneController extends Controller
 
         $regionsQuery = Region::query();
         if ($isDistrictScoped) {
-            $regionsQuery->where('id', $user->region_id);
+            $userRegion = Region::find($user->region_id);
+            $regionIds = [$user->region_id];
+            if ($userRegion && $userRegion->parent_id) {
+                $regionIds[] = $userRegion->parent_id;
+            }
+            $regionsQuery->whereIn('id', $regionIds);
         }
 
         return Inertia::render('industrial-zones/edit', [
             'industrialZone' => $industrialZone->load('region'),
             'regions' => $regionsQuery->get(),
+            'isDistrictScoped' => $isDistrictScoped,
         ]);
     }
 

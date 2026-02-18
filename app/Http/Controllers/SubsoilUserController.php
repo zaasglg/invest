@@ -34,11 +34,18 @@ class SubsoilUserController extends Controller
 
         $regionsQuery = Region::query();
         if ($isDistrictScoped) {
-            $regionsQuery->where('id', $user->region_id);
+            $userRegion = Region::find($user->region_id);
+            $regionIds = [$user->region_id];
+            if ($userRegion && $userRegion->parent_id) {
+                $regionIds[] = $userRegion->parent_id;
+            }
+            $regionsQuery->whereIn('id', $regionIds);
         }
 
         return Inertia::render('subsoil-users/create', [
             'regions' => $regionsQuery->get(),
+            'isDistrictScoped' => $isDistrictScoped,
+            'userRegionId' => $isDistrictScoped ? $user->region_id : null,
         ]);
     }
 
@@ -98,12 +105,18 @@ class SubsoilUserController extends Controller
 
         $regionsQuery = Region::query();
         if ($isDistrictScoped) {
-            $regionsQuery->where('id', $user->region_id);
+            $userRegion = Region::find($user->region_id);
+            $regionIds = [$user->region_id];
+            if ($userRegion && $userRegion->parent_id) {
+                $regionIds[] = $userRegion->parent_id;
+            }
+            $regionsQuery->whereIn('id', $regionIds);
         }
 
         return Inertia::render('subsoil-users/edit', [
             'subsoilUser' => $subsoilUser->load('region'),
             'regions' => $regionsQuery->get(),
+            'isDistrictScoped' => $isDistrictScoped,
         ]);
     }
 

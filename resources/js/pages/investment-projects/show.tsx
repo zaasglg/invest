@@ -208,6 +208,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         return task.status === taskFilter;
     });
 
+    // Ensure tasks are displayed in creation order (oldest first).
+    // Some backends return newest-first; normalize here to show earliest-added first.
+    const displayedTasks = filteredTasks.slice().sort((a, b) => {
+        const ta = new Date(a.created_at).getTime();
+        const tb = new Date(b.created_at).getTime();
+        return ta - tb;
+    });
+
     // Dot color based on deadline: green=done, red=overdue, amber=pending
     const getTaskDotColor = (task: ProjectTaskItem): string => {
         if (task.status === 'done') return 'bg-green-500';
@@ -570,7 +578,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-gray-100">
-                                        {filteredTasks.map((task) => {
+                                        {displayedTasks.map((task) => {
                                             const isAssignedToMe = task.assigned_to === currentUserId;
                                             const pendingCompletion = task.completions?.find(c => c.status === 'pending');
                                             const latestCompletion = task.completions?.length
