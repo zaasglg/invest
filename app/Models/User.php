@@ -76,4 +76,40 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_user');
     }
+
+    /**
+     * Determine if the user is scoped to their district.
+     * This applies to 'ispolnitel' and 'district baskarma'.
+     */
+    public function isDistrictScoped(): bool
+    {
+        if (! $this->region_id) {
+            return false;
+        }
+
+        // We need to load roleModel if not already loaded, or use specific check
+        // Assuming roleModel is the relation
+        $roleName = $this->roleModel?->name;
+
+        // Executor is always district scoped if they have a region
+        if ($roleName === 'ispolnitel') {
+            return true;
+        }
+
+        // District Baskarma is district scoped
+        if ($roleName === 'baskarma' && $this->baskarma_type === 'district') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine if the user is Regional Management.
+     * Regional Management can see everything.
+     */
+    public function isRegionalManagement(): bool
+    {
+        return $this->roleModel?->name === 'baskarma' && $this->baskarma_type === 'oblast';
+    }
 }

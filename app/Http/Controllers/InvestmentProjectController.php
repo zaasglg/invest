@@ -46,13 +46,8 @@ class InvestmentProjectController extends Controller
 
         // Region-scope: ispolnitel and district baskarma see only their district's projects
         $user = $request->user();
-        if ($user && $user->region_id) {
-            $roleName = $user->roleModel?->name;
-            $isDistrictScoped = $roleName === 'ispolnitel'
-                || ($roleName === 'baskarma' && $user->baskarma_type === 'district');
-            if ($isDistrictScoped) {
-                $projectsQuery->where('region_id', $user->region_id);
-            }
+        if ($user && $user->isDistrictScoped()) {
+            $projectsQuery->where('region_id', $user->region_id);
         }
 
         if (!empty($filters['search'])) {
@@ -151,15 +146,32 @@ class InvestmentProjectController extends Controller
 
     public function create()
     {
-        $regions = Region::all();
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
+        $regionsQuery = Region::query();
+        $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
+        $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
+        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
+
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+            $sezQuery->where('region_id', $user->region_id);
+            $izQuery->where('region_id', $user->region_id);
+            $subsoilQuery->where('region_id', $user->region_id);
+        }
+
+        $regions = $regionsQuery->get();
         $projectTypes = ProjectType::all();
         $users = User::all();
-        $sezList = Sez::select('id', 'name', 'region_id', 'location')->get();
-        $industrialZones = IndustrialZone::select('id', 'name', 'region_id', 'location')->get();
-        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id', 'location')->get();
+        $sezList = $sezQuery->get();
+        $industrialZones = $izQuery->get();
+        $subsoilUsers = $subsoilQuery->get();
 
         return Inertia::render('investment-projects/create', [
             'regions' => $regions,
+            'isDistrictScoped' => $isDistrictScoped,
+            'userRegionId' => $isDistrictScoped ? $user->region_id : null,
             'projectTypes' => $projectTypes,
             'users' => $users,
             'sezList' => $sezList,
@@ -170,14 +182,48 @@ class InvestmentProjectController extends Controller
 
     public function store(Request $request)
     {
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Вы можете добавить проект только в свой район.');
+                    }
+                },
+            ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => 'required|array',
-            'sector.*' => 'string',
+            'sector' => ['required', 'array'],
+            'sector.*' => [
+                'string',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if (!$isDistrictScoped) return;
+
+                    $parsed = $this->parseSector($value);
+                    $type = $parsed['type'];
+                    $id = $parsed['id'];
+
+                    if ($type === 'sez') {
+                        if (!Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("СЭЗ ({$id}) не находится в вашем районе.");
+                        }
+                    } elseif ($type === 'industrial_zone') {
+                        if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Индустриальный район ({$id}) не находится в вашем районе.");
+                        }
+                    } elseif ($type === 'subsoil') {
+                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
+                        }
+                    }
+                }
+            ],
             'total_investment' => 'nullable|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
@@ -275,14 +321,33 @@ class InvestmentProjectController extends Controller
             ];
         }
 
+        // Logic for assignable users for tasks
+        // District scoped users can assign to:
+        // 1. Users in their own region
+        // 2. Regional management users
+        $user = request()->user();
+        $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
+            ->with('roleModel:id,name,display_name')
+            ->orderBy('full_name');
+
+        if ($user && $user->isDistrictScoped()) {
+            $assignableUsersQuery->where(function ($query) use ($user) {
+                // Users in same region
+                $query->where('region_id', $user->region_id)
+                    // Or regional management
+                    ->orWhere(function ($q) {
+                         $q->whereHas('roleModel', function ($roleQuery) {
+                             $roleQuery->where('name', 'baskarma');
+                         })->where('baskarma_type', 'oblast');
+                    });
+            });
+        }
+
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
-            'users' => User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
-                ->with('roleModel:id,name,display_name')
-                ->orderBy('full_name')
-                ->get(),
+            'users' => $assignableUsersQuery->get(),
         ]);
     }
 
@@ -290,13 +355,29 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $investmentProject->load(['sezs', 'industrialZones', 'subsoilUsers']);
-        $regions = Region::all();
+
+        $regionsQuery = Region::query();
+        $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
+        $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
+        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
+
+        if ($isDistrictScoped) {
+            $regionsQuery->where('id', $user->region_id);
+            $sezQuery->where('region_id', $user->region_id);
+            $izQuery->where('region_id', $user->region_id);
+            $subsoilQuery->where('region_id', $user->region_id);
+        }
+
+        $regions = $regionsQuery->get();
         $projectTypes = ProjectType::all();
         $users = User::all();
-        $sezList = Sez::select('id', 'name', 'region_id', 'location')->get();
-        $industrialZones = IndustrialZone::select('id', 'name', 'region_id', 'location')->get();
-        $subsoilUsers = SubsoilUser::select('id', 'name', 'region_id', 'location')->get();
+        $sezList = $sezQuery->get();
+        $industrialZones = $izQuery->get();
+        $subsoilUsers = $subsoilQuery->get();
 
         // Формируем массив sector на основе many-to-many связей
         $sector = [];
@@ -325,6 +406,8 @@ class InvestmentProjectController extends Controller
         return Inertia::render('investment-projects/edit', [
             'project' => $projectData,
             'regions' => $regions,
+            'isDistrictScoped' => $isDistrictScoped,
+            'userRegionId' => $isDistrictScoped ? $user->region_id : null,
             'projectTypes' => $projectTypes,
             'users' => $users,
             'sezList' => $sezList,
@@ -337,14 +420,48 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
+        $user = auth()->user();
+        $isDistrictScoped = $user && $user->isDistrictScoped();
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'region_id' => 'required|exists:regions,id',
+            'region_id' => [
+                'required',
+                'exists:regions,id',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                        $fail('Изменить проект можно только в своем районе.');
+                    }
+                },
+            ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => 'required|array',
-            'sector.*' => 'string',
+            'sector' => ['required', 'array'],
+            'sector.*' => [
+                'string',
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
+                    if (!$isDistrictScoped) return;
+
+                    $parsed = $this->parseSector($value);
+                    $type = $parsed['type'];
+                    $id = $parsed['id'];
+
+                    if ($type === 'sez') {
+                        if (!Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("СЭЗ ({$id}) не находится в вашем районе.");
+                        }
+                    } elseif ($type === 'industrial_zone') {
+                        if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Индустриальный район ({$id}) не находится в вашем районе.");
+                        }
+                    } elseif ($type === 'subsoil') {
+                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
+                        }
+                    }
+                }
+            ],
             'total_investment' => 'nullable|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
@@ -475,16 +592,13 @@ class InvestmentProjectController extends Controller
     {
         $user = request()->user();
 
-        if (! $user || ! $user->region_id) {
+        if (! $user) {
             return;
         }
 
-        $roleName = $user->roleModel?->name;
-        $isDistrictScoped = $roleName === 'ispolnitel'
-            || ($roleName === 'baskarma' && $user->baskarma_type === 'district');
-
-        if ($isDistrictScoped && $project->region_id !== $user->region_id) {
-            abort(403, 'Сізге бұл жобаға кіруге рұқсат жоқ.');
+        // Use the helper method
+        if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
+            abort(403, 'Вам не разрешено участвовать в этом проекте.');
         }
     }
 }

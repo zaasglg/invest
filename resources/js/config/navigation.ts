@@ -104,11 +104,13 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Пользователи',
     ]),
     ispolnitel: new Set([
+        'Регионы',
         'Типы проектов',
         'Роли',
         'Пользователи',
     ]),
     baskarma: new Set([
+        'Регионы',
         'Типы проектов',
         'Роли',
         'Пользователи',
