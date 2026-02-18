@@ -56,14 +56,28 @@ interface Props {
     users: User[];
     sezList: Sez[];
     industrialZones: IndustrialZone[];
+    isDistrictScoped?: boolean;
+    userRegionId?: number | null;
 }
 
-export default function Create({ regions, projectTypes, users, sezList, industrialZones }: Props) {
+export default function Create({ regions, projectTypes, users, sezList, industrialZones, isDistrictScoped, userRegionId }: Props) {
+    // Find user's district and its parent oblast for pre-selection
+    const userDistrict = useMemo(() => {
+        if (!userRegionId) return null;
+        return regions.find((r) => r.id === userRegionId) || null;
+    }, [regions, userRegionId]);
+
+    const userOblastId = useMemo(() => {
+        if (!userDistrict) return '';
+        if (userDistrict.parent_id) return userDistrict.parent_id.toString();
+        return '';
+    }, [userDistrict]);
+
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         company_name: '',
         description: '',
-        region_id: '',
+        region_id: userRegionId ? userRegionId.toString() : '',
         project_type_id: '',
         sector: [] as string[],
         total_investment: '',
@@ -74,7 +88,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         geometry: [] as { lat: number, lng: number }[],
     });
 
-    const [selectedOblastId, setSelectedOblastId] = useState<string>('');
+    const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
 
     const oblasts = useMemo(() => regions.filter(r => r.type === 'oblast'), [regions]);
 
@@ -187,6 +201,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     setSelectedOblastId(value);
                                     setData('region_id', '');
                                 }}
+                                disabled={isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
@@ -206,7 +221,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
-                                disabled={!selectedOblastId}
+                                disabled={!selectedOblastId || isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />

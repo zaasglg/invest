@@ -155,7 +155,13 @@ class InvestmentProjectController extends Controller
         $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
-            $regionsQuery->where('id', $user->region_id);
+            // Include user's district and its parent oblast
+            $userRegion = Region::find($user->region_id);
+            $regionIds = [$user->region_id];
+            if ($userRegion && $userRegion->parent_id) {
+                $regionIds[] = $userRegion->parent_id;
+            }
+            $regionsQuery->whereIn('id', $regionIds);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
             $subsoilQuery->where('region_id', $user->region_id);

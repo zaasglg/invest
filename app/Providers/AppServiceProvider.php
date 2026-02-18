@@ -27,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureDashboardCacheInvalidation();
+
+        \App\Models\TaskNotification::observe(\App\Observers\TaskNotificationObserver::class);
     }
 
     /**

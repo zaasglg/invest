@@ -42,6 +42,7 @@ class CheckRoleAccess
      */
     protected array $allowedForRestricted = [
         'regions.show',
+        'investment-projects.tasks.completions.store',
     ];
 
     /**
@@ -87,10 +88,11 @@ class CheckRoleAccess
 
             $routeName = $request->route()?->getName();
 
-            // Ispolnitel: completely blocked from all region routes
+            // Ispolnitel: blocked from regions list & write routes,
+            // but allowed to view their own district (regions.show)
             if ($roleName === 'ispolnitel') {
-                if ($routeName && str_starts_with($routeName, 'regions.')) {
-                    abort(403, 'Вам не разрешено входить в районную секцию.');
+                if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
+                    abort(403, 'У вас нет доступа к этому разделу.');
                 }
             }
 

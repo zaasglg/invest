@@ -41,6 +41,7 @@ export default function Create({ regions, roles }: Props) {
         region_id: '',
         baskarma_type: '',
         position: '',
+        telegram_chat_id: '',
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>('');
@@ -204,7 +205,6 @@ export default function Create({ regions, roles }: Props) {
                         </div>
                     )}
 
-                    {/* Oblast + District selects — shown for ispolnitel and district baskarma */}
                     {showRegionSelects && (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
@@ -256,6 +256,22 @@ export default function Create({ regions, roles }: Props) {
                         </div>
                     </div>
                     )}
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="telegram_chat_id" className="text-neutral-500 font-normal">
+                            Telegram Chat ID
+                            <span className="text-xs ml-2 text-neutral-400">(міндетті емес)</span>
+                        </Label>
+                        <Input
+                            id="telegram_chat_id"
+                            value={data.telegram_chat_id}
+                            onChange={(e) => setData('telegram_chat_id', e.target.value)}
+                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            placeholder="Мысалы: 123456789"
+                        />
+                        {errors.telegram_chat_id && <span className="text-sm text-red-500">{errors.telegram_chat_id}</span>}
+                        <p className="text-xs text-neutral-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы керек</p>
+                    </div>
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="shadow-none">

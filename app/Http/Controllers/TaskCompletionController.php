@@ -92,8 +92,8 @@ class TaskCompletionController extends Controller
         $docCount = count($request->file('documents', []));
         $photoCount = count($request->file('photos', []));
         $fileInfo = [];
-        if ($docCount > 0) $fileInfo[] = "{$docCount} құжат";
-        if ($photoCount > 0) $fileInfo[] = "{$photoCount} сурет";
+        if ($docCount > 0) $fileInfo[] = "{$docCount} документ";
+        if ($photoCount > 0) $fileInfo[] = "{$photoCount} фото";
         $fileStr = count($fileInfo) > 0 ? ' (' . implode(', ', $fileInfo) . ')' : '';
 
         foreach ($notifyUserIds as $userId) {
@@ -102,11 +102,11 @@ class TaskCompletionController extends Controller
                 'task_id' => $task->id,
                 'completion_id' => $completion->id,
                 'type' => 'completion_submitted',
-                'message' => "{$submitterName} тапсырманы орындап жіберді: \"{$task->title}\"{$fileStr}. Тексеріңіз.",
+                'message' => "{$submitterName} выполнил задание: \"{$task->title}\"{$fileStr}. Проверить.",
             ]);
         }
 
-        return redirect()->back()->with('success', 'Тапсырма орындалғаны жіберілді.');
+        return redirect()->back()->with('success', 'Задание выполнено и отправлено.');
     }
 
     /**
@@ -139,13 +139,13 @@ class TaskCompletionController extends Controller
         if ($request->input('status') === 'approved') {
             $task->update(['status' => 'done']);
             $notificationType = 'completion_approved';
-            $message = "{$reviewerName} тапсырманы қабылдады: \"{$task->title}\".";
+            $message = "{$reviewerName} принял задание: \"{$task->title}\".";
         } else {
             $task->update(['status' => 'rejected']);
             $notificationType = 'completion_rejected';
             $reviewerComment = $request->input('reviewer_comment');
-            $commentStr = $reviewerComment ? " Себебі: {$reviewerComment}" : '';
-            $message = "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\". Қайта орындаңыз.{$commentStr}";
+            $commentStr = $reviewerComment ? " Причина: {$reviewerComment}" : '';
+            $message = "{$reviewerName} отклонил задание: \"{$task->title}\". Повторите выполнение.{$commentStr}";
         }
 
         // Notify the baskarma who submitted the completion
@@ -159,6 +159,6 @@ class TaskCompletionController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
+        return redirect()->back()->with('success', 'Результат проверки сохранен.');
     }
 }

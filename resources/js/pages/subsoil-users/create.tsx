@@ -24,13 +24,25 @@ interface Region {
 
 interface Props {
     regions: Region[];
+    isDistrictScoped?: boolean;
+    userRegionId?: number | null;
 }
 
-export default function Create({ regions }: Props) {
+export default function Create({ regions, isDistrictScoped, userRegionId }: Props) {
+    const userDistrict = useMemo(() => {
+        if (!userRegionId) return null;
+        return regions.find((r) => r.id === userRegionId) || null;
+    }, [regions, userRegionId]);
+
+    const userOblastId = useMemo(() => {
+        if (!userDistrict?.parent_id) return '';
+        return userDistrict.parent_id.toString();
+    }, [userDistrict]);
+
     const { data, setData, post, processing, errors } = useForm({
         name: '',
         bin: '',
-        region_id: '',
+        region_id: userRegionId ? userRegionId.toString() : '',
         mineral_type: '',
         total_area: '',
         description: '',
@@ -40,7 +52,7 @@ export default function Create({ regions }: Props) {
         location: [] as { lat: number, lng: number }[],
     });
 
-    const [selectedOblastId, setSelectedOblastId] = useState<string>('');
+    const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
 
     const oblasts = useMemo(() => regions.filter(r => r.type === 'oblast'), [regions]);
 
@@ -106,6 +118,7 @@ export default function Create({ regions }: Props) {
                                     setSelectedOblastId(value);
                                     setData('region_id', '');
                                 }}
+                                disabled={isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
@@ -125,7 +138,7 @@ export default function Create({ regions }: Props) {
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
-                                disabled={!selectedOblastId}
+                                disabled={!selectedOblastId || isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />
