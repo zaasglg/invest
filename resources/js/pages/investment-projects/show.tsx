@@ -702,9 +702,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             <>
                                                                 {' | '}
                                                                 {task.assignee.baskarma_type === 'oblast'
-                                                                    ? 'Облыстық:'
+                                                                    ? 'Областной:'
                                                                     : task.assignee.baskarma_type === 'district'
-                                                                      ? 'Аудандық:'
+                                                                      ? 'Районная:'
                                                                       : ''}
                                                                 {' '}
                                                                 {task.assignee.full_name || task.assignee.name || '—'}
@@ -1004,25 +1004,29 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <div
                                                     key={u.id}
                                                     className={`flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer ${
-                                                        taskAssignedTo ===
-                                                        u.id
+                                                        taskAssignedTo === u.id
                                                             ? 'bg-cyan-50'
                                                             : ''
-                                                    } ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                                                    } ${
+                                                        idx > 0
+                                                            ? 'border-t border-gray-100'
+                                                            : ''
+                                                    }`}
                                                     onClick={() =>
-                                                        setTaskAssignedTo(
-                                                            u.id,
-                                                        )
+                                                        setTaskAssignedTo(u.id)
                                                     }
                                                 >
                                                     <span className="text-gray-700">
                                                         <span className="mr-2 text-gray-400">
                                                             {idx + 1}
                                                         </span>
-                                                        {u.full_name || '—'}
-                                                        {u.role_model
-                                                            ?.display_name &&
-                                                            ` - ${u.role_model.display_name}`}
+                                                        {u.baskarma_type ===
+                                                        'oblast'
+                                                            ? 'Областной'
+                                                            : 'Районная'}
+                                                        : {u.full_name || '—'}
+                                                        {u.position &&
+                                                            ` — ${u.position}`}
                                                     </span>
                                                     {taskAssignedTo ===
                                                         u.id && (
