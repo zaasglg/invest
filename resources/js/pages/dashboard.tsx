@@ -59,7 +59,7 @@ export default function Dashboard({
             <Head title="Статистика" />
             <Map
                 className="h-[calc(100vh-64px)] w-full"
-                center={[41.5, 68.5]}
+                center={[43.1, 68.5]}
                 zoom={7}
                 regions={regions}
                 regionStats={regionStats}

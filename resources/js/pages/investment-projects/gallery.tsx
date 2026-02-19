@@ -52,7 +52,7 @@ interface Props {
 export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [] }: Props) {
     const canModify = useCanModify();
     const [photos, setPhotos] = useState<FileList | null>(null);
-    const [galleryDate, setGalleryDate] = useState('');
+    const [galleryDate, setGalleryDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
     const [photoType, setPhotoType] = useState<'gallery' | 'render'>('gallery');
     const [isUploading, setIsUploading] = useState(false);
@@ -307,7 +307,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                         <p className="text-xs text-gray-500 mt-1">
                                             {galleryDate
                                                 ? 'Фото будут добавлены к этой дате'
-                                                : 'Оставьте пустым для основной галереи'}
+                                                : 'Автоматически установится сегодняшняя дата'}
                                         </p>
                                     </div>
 
@@ -337,7 +337,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
 
                     {/* Gallery Display */}
                     <div className={canModify ? 'lg:col-span-3 space-y-8' : 'lg:col-span-4 space-y-8'}>
-                        {/* Main Gallery */}
+                        {/* Main Gallery (only for legacy photos without dates) */}
+                        {mainGallery.length > 0 && (
                         <Card className="shadow-none">
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
@@ -374,6 +375,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                 )}
                             </CardContent>
                         </Card>
+                        )}
 
                         {/* Render Photos */}
                         {renderPhotos.length > 0 && (
@@ -406,7 +408,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                         )}
 
                         {/* Dated Galleries */}
-                        {Object.keys(sortedDatedGallery).length > 0 && (
+                        {Object.keys(sortedDatedGallery).length > 0 ? (
                             <div className="space-y-8">
                                 <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
                                     <Calendar className="h-5 w-5" />
@@ -441,7 +443,19 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                     </Card>
                                 ))}
                             </div>
-                        )}
+                        ) : mainGallery.length === 0 && renderPhotos.length === 0 ? (
+                            <Card className="shadow-none">
+                                <CardContent className="py-12">
+                                    <div className="text-center">
+                                        <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                                        <p className="text-gray-500">Нет фотографий</p>
+                                        <p className="text-sm text-gray-400 mt-1">
+                                            Загрузите фотографии через форму слева
+                                        </p>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        ) : null}
                     </div>
                 </div>
 

@@ -20,7 +20,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 
-import { ChevronRight, X, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2 } from 'lucide-react';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -184,6 +184,7 @@ type Props = {
     showOutsideRegionClouds?: boolean;
     activeTab?: string;
     sectorSummary?: SectorSummary | null;
+    interactive?: boolean;
     onEntitySelect?: (
         id: number | null,
         type: 'sez' | 'iz' | 'subsoil' | null,
@@ -555,12 +556,14 @@ export default function Map({
     showOutsideRegionClouds = false,
     activeTab = 'all',
     sectorSummary = null,
+    interactive = false,
     onEntitySelect,
     onProjectSelect,
 }: Props) {
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
+    const [isTableCollapsed, setIsTableCollapsed] = useState(false);
     const [popupPosition, setPopupPosition] = useState<[number, number] | null>(
         null,
     );
@@ -866,11 +869,11 @@ export default function Map({
             <MapContainer
                 center={center}
                 zoom={zoom}
-                scrollWheelZoom={false}
-                dragging={false}
-                zoomControl={false}
-                doubleClickZoom={false}
-                touchZoom={false}
+                scrollWheelZoom={interactive}
+                dragging={interactive}
+                zoomControl={interactive}
+                doubleClickZoom={interactive}
+                touchZoom={interactive}
                 className={cx(
                     'invest-map z-0 h-full w-full rounded-xl',
                     hasSelection && 'invest-map--focused',
@@ -1743,7 +1746,17 @@ export default function Map({
                     return (
                         <div className="absolute inset-x-5 bottom-4 z-[400] sm:inset-x-8 lg:inset-x-10">
                             <div className="mx-auto w-full max-w-[1360px] overflow-hidden rounded-[2px] border border-slate-300/70 bg-white/65 shadow-lg backdrop-blur-sm">
-                                <div className="custom-scrollbar overflow-x-auto">
+                                <button
+                                    onClick={() => setIsTableCollapsed(!isTableCollapsed)}
+                                    className="flex w-full items-center justify-center gap-1.5 border-b border-slate-300/40 bg-slate-100/80 px-4 py-1.5 text-xs font-medium text-[#4e6882] transition-colors hover:bg-slate-200/80"
+                                >
+                                    {isTableCollapsed ? (
+                                        <><ChevronUp className="h-3.5 w-3.5" /> Показать таблицу</>
+                                    ) : (
+                                        <><ChevronDown className="h-3.5 w-3.5" /> Свернуть таблицу</>
+                                    )}
+                                </button>
+                                {!isTableCollapsed && <div className="custom-scrollbar overflow-x-auto">
                                     <table className="w-full min-w-[780px] border-collapse text-left text-sm">
                                         <thead className="border-b border-slate-300/60 bg-slate-100/70">
                                             <tr className="text-[13px] font-semibold text-[#4e6882]">
@@ -1797,7 +1810,7 @@ export default function Map({
                                             ))}
                                         </tbody>
                                     </table>
-                                </div>
+                                </div>}
                             </div>
                         </div>
                     );

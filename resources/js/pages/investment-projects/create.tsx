@@ -34,6 +34,10 @@ interface ProjectType {
 interface User {
     id: number;
     full_name: string;
+    region_id: number | null;
+    baskarma_type: string | null;
+    position: string | null;
+    role_model?: { id: number; name: string; display_name: string } | null;
 }
 
 interface Sez {
@@ -132,6 +136,17 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         });
         return entities;
     }, [data.sector, sezList, industrialZones]);
+
+    const districtUsers = useMemo(() => {
+        if (!data.region_id) return [];
+        const regionId = parseInt(data.region_id);
+        return users.filter((u) => u.region_id === regionId);
+    }, [users, data.region_id]);
+
+    const oblastUsers = useMemo(() => {
+        if (!selectedOblastId) return [];
+        return users.filter((u) => u.baskarma_type === 'oblast');
+    }, [users, selectedOblastId]);
 
     const handleExecutorChange = (userId: string, checked: boolean) => {
         const currentIds = data.executor_ids;
@@ -393,20 +408,67 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="flex flex-col gap-2">
                         <Label className="text-neutral-500 font-normal">Исполнители</Label>
-                        <div className="border border-neutral-200 rounded-md p-4 space-y-3 max-h-48 overflow-y-auto">
-                            {users.map((user) => (
-                                <div key={user.id} className="flex items-center space-x-2">
-                                    <Checkbox
-                                        id={`user-${user.id}`}
-                                        checked={data.executor_ids.includes(user.id.toString())}
-                                        onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                        className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
-                                    />
-                                    <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
-                                        {user.full_name}
-                                    </Label>
-                                </div>
-                            ))}
+                        <div className="border border-neutral-200 rounded-md p-4 max-h-64 overflow-y-auto">
+                            {!selectedOblastId ? (
+                                <p className="text-sm text-neutral-400">
+                                    Выберите область для отображения исполнителей
+                                </p>
+                            ) : (
+                                <>
+                                    {data.region_id && (
+                                        <div className="mb-3">
+                                            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Аудан басқармасы</p>
+                                            {districtUsers.length === 0 ? (
+                                                <p className="text-sm text-neutral-400 ml-1">Аудандық басқарма жоқ</p>
+                                            ) : (
+                                                <div className="space-y-2">
+                                                    {districtUsers.map((user) => (
+                                                        <div key={user.id} className="flex items-center space-x-2">
+                                                            <Checkbox
+                                                                id={`user-${user.id}`}
+                                                                checked={data.executor_ids.includes(user.id.toString())}
+                                                                onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
+                                                                className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                            />
+                                                            <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
+                                                                <span>{user.full_name}</span>
+                                                                {user.position && (
+                                                                    <span className="text-neutral-400"> — {user.position}</span>
+                                                                )}
+                                                            </Label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                    <div className={data.region_id ? 'border-t border-neutral-200 pt-3' : ''}>
+                                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Облыс басқармасы</p>
+                                        {oblastUsers.length === 0 ? (
+                                            <p className="text-sm text-neutral-400 ml-1">Облыстық басқарма жоқ</p>
+                                        ) : (
+                                            <div className="space-y-2">
+                                                {oblastUsers.map((user) => (
+                                                    <div key={user.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`user-${user.id}`}
+                                                            checked={data.executor_ids.includes(user.id.toString())}
+                                                            onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
+                                                            className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                        />
+                                                        <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
+                                                            <span>{user.full_name}</span>
+                                                            {user.position && (
+                                                                <span className="text-neutral-400"> — {user.position}</span>
+                                                            )}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                </>
+                            )}
                         </div>
                         {/* 
                             // @ts-ignore */}
