@@ -67,12 +67,24 @@ class TelegramService
             default => '🔔',
         };
 
-        $siteUrl = config('app.url', '');
-        $notificationsUrl = rtrim($siteUrl, '/') . '/notifications';
+        // Try config app.url first, then env APP_URL as a fallback.
+        $siteUrl = config('app.url', '') ?: env('APP_URL', '');
+
+        // Ensure the URL has a scheme (Telegram needs absolute URLs in href).
+        if ($siteUrl !== '' && !preg_match('#^https?://#i', $siteUrl)) {
+            $siteUrl = 'https://' . ltrim($siteUrl, '/');
+        }
+
+        // Build notifications URL only if we have a valid site URL.
+        $notificationsUrl = $siteUrl ? rtrim($siteUrl, '/') . '/notifications' : '';
+
+        $linkPart = $notificationsUrl
+            ? "🔗 <a href=\"{$notificationsUrl}\">Перейти на сайт</a>"
+            : '🔗 Перейти на сайт';
 
         return "{$emoji} <b>Сообщение</b>\n\n"
             . $message . "\n\n"
-            . "🔗 <a href=\"{$notificationsUrl}\">Сайтқа өтіңіз</a>";
+            . $linkPart;
     }
 
     /**
