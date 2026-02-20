@@ -99,4 +99,24 @@ class InvestmentProject extends Model
     {
         return $this->hasMany(ProjectPhoto::class, 'project_id');
     }
+
+    /**
+     * Аяқталу мерзімі өтіп кеткен жобаны автоматты түрде тоқтату.
+     */
+    public function getIsExpiredAttribute(): bool
+    {
+        return $this->end_date !== null
+            && $this->end_date->lt(now()->startOfDay())
+            && $this->status !== 'suspended';
+    }
+
+    protected static function booted(): void
+    {
+        static::retrieved(function (InvestmentProject $project) {
+            if ($project->is_expired) {
+                $project->updateQuietly(['status' => 'suspended']);
+                $project->setAttribute('status', 'suspended');
+            }
+        });
+    }
 }

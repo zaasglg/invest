@@ -144,7 +144,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         plan: { label: 'Планирование', color: 'bg-blue-100 text-blue-800' },
         implementation: { label: 'Реализация', color: 'bg-amber-100 text-amber-800' },
         launched: { label: 'Запущен', color: 'bg-green-100 text-green-800' },
-        suspended: { label: 'Приостановлен', color: 'bg-yellow-100 text-yellow-800' },
+        suspended: { label: 'Приостановлен', color: 'bg-red-100 text-red-800' },
     };
 
     const getSectorDetails = () => {

@@ -378,7 +378,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
             plan: 'text-blue-700 border-blue-200 bg-blue-50',
             implementation: 'text-amber-700 border-amber-200 bg-amber-50',
             launched: 'text-emerald-700 border-emerald-200 bg-emerald-50',
-            suspended: 'text-yellow-700 border-yellow-200 bg-yellow-50',
+            suspended: 'text-red-700 border-red-200 bg-red-50',
         };
 
         return classes[status] || 'text-gray-700 border-gray-200 bg-gray-50';

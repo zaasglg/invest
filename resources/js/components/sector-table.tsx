@@ -45,10 +45,10 @@ export default function SectorTable({
             : sectorSummary.total;
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
+        { key: 'invest', label: 'Turkistan Invest', d: data.invest },
         { key: 'sez', label: 'СЭЗ', d: data.sez },
         { key: 'iz', label: 'ИЗ', d: data.iz },
         { key: 'nedro', label: 'Недропользование', d: data.nedro },
-        { key: 'invest', label: 'Turkistan Invest', d: data.invest },
     ];
 
     const maxInvestment = Math.max(...rows.map((r) => r.d.investment));
