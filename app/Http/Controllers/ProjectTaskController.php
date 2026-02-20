@@ -45,6 +45,7 @@ class ProjectTaskController extends Controller
 
         $validated['project_id'] = $investmentProject->id;
         $validated['status'] = 'new';
+        $validated['created_by'] = Auth::id();
 
         $task = ProjectTask::create($validated);
 

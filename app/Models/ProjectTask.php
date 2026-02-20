@@ -11,6 +11,7 @@ class ProjectTask extends Model
         'title',
         'description',
         'assigned_to',
+        'created_by',
         'start_date',
         'due_date',
         'status',
@@ -32,6 +33,11 @@ class ProjectTask extends Model
     public function assignee()
     {
         return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function completions()

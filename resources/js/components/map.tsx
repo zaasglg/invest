@@ -1417,10 +1417,13 @@ export default function Map({
                         </div>
                     </div>
 
-                    <div className="absolute top-4 right-4 z-[400] w-[320px] animate-in overflow-hidden rounded-xl bg-white shadow-2xl duration-300 fade-in slide-in-from-right-4">
-                        <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none">
-                            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-[#1d3b6f] px-4 py-3 text-white">
-                                <CardTitle className="text-lg font-bold tracking-tight text-white">
+                    <div 
+                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                        style={{ maxHeight: 'calc(100% - 32px)' }}
+                    >
+                        <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
+                            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-[#1d3b6f] px-4 py-3 text-white shrink-0">
+                                <CardTitle className="text-lg font-bold tracking-tight text-white break-words">
                                     {activeRegion.name}
                                 </CardTitle>
                                 <Button
@@ -1435,7 +1438,7 @@ export default function Map({
                                     <X className="h-4 w-4" />
                                 </Button>
                             </CardHeader>
-                            <CardContent className="p-0">
+                            <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 overscroll-contain">
                                 {(() => {
                                     const stats = getRegionStats(
                                         activeRegion.id,
@@ -1487,7 +1490,7 @@ export default function Map({
                                     );
                                 })()}
                             </CardContent>
-                            <CardFooter className="bg-blue-800 p-0">
+                            <CardFooter className="bg-blue-800 p-0 shrink-0">
                                 <Link
                                     href={`/regions/${activeRegion.id}`}
                                     className="w-full"
@@ -1508,15 +1511,18 @@ export default function Map({
 
             {/* Active Plot Popup */}
             {activePlot && (
-                <div className="absolute top-4 right-4 z-[400] w-[340px] animate-in overflow-hidden rounded-xl bg-white shadow-2xl duration-300 fade-in slide-in-from-right-4">
-                    <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none">
-                        <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-white">
+                <div 
+                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                    style={{ maxHeight: 'calc(100% - 32px)' }}
+                >
+                    <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
+                        <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-white shrink-0">
                             <div className="min-w-0 flex-1 pr-2">
-                                <CardTitle className="text-base leading-tight font-bold tracking-tight">
+                                <CardTitle className="text-base leading-tight font-bold tracking-tight break-words">
                                     {activePlot.name || 'Инвестиционный проект'}
                                 </CardTitle>
                                 {activePlot.companyName && (
-                                    <p className="mt-0.5 truncate text-xs text-white/80">
+                                    <p className="mt-0.5 text-xs text-white/80 break-words">
                                         {activePlot.companyName}
                                     </p>
                                 )}
@@ -1530,7 +1536,7 @@ export default function Map({
                                 <X className="h-4 w-4" />
                             </Button>
                         </CardHeader>
-                        <CardContent className="max-h-[400px] overflow-y-auto p-0">
+                        <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 overscroll-contain">
                             <div className="gap-0 divide-y divide-gray-100">
                                 {/* Статус */}
                                 {activePlot.statusRaw && (
@@ -1550,7 +1556,7 @@ export default function Map({
                                                         ? 'bg-green-100 text-green-800'
                                                         : activePlot.statusRaw ===
                                                             'suspended'
-                                                          ? 'bg-yellow-100 text-yellow-800'
+                                                          ? 'bg-red-100 text-red-800'
                                                           : 'bg-gray-100 text-gray-800'
                                             }`}
                                         >
@@ -1704,7 +1710,7 @@ export default function Map({
                                 )}
                             </div>
                         </CardContent>
-                        <CardFooter className="border-t border-gray-100 bg-gray-50/50 p-3">
+                        <CardFooter className="border-t border-gray-100 bg-gray-50/50 p-3 shrink-0">
                             <Link
                                 href={`/investment-projects/${activePlot.id}`}
                                 className="w-full"

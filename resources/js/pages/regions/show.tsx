@@ -656,7 +656,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
                                                             onClick={() => handleProjectSelect(project.id)}
                                                         >
-                                                            <TableCell className="font-medium text-gray-900 max-w-[250px] py-3">
+                                                            <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
                                                                 {project.name}
                                                             </TableCell>
                                                             <TableCell className="text-gray-500 text-sm py-3">
@@ -732,7 +732,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3">
+                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
                                                             {project.name}
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
@@ -795,7 +795,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3">
+                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
                                                             {project.name}
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
@@ -867,12 +867,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             }
                                                         }}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3">
+                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
                                                             <div className="flex items-center gap-2">
                                                                 <Pickaxe className="h-4 w-4 text-gray-400 shrink-0" />
                                                                 <Link
                                                                     href={`/subsoil-users/${su.id}`}
-                                                                    className="hover:text-blue-600 hover:underline transition-colors"
+                                                                    className="hover:text-blue-600 hover:underline transition-colors break-words"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     {su.name}
@@ -1036,7 +1036,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-gray-900 truncate">{sez.name}</span>
+                                                            <span className="text-sm font-medium text-gray-900 break-words">{sez.name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
                                                             <Link
@@ -1145,7 +1145,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-gray-900 truncate">{iz.name}</span>
+                                                            <span className="text-sm font-medium text-gray-900 break-words">{iz.name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
                                                             <Link

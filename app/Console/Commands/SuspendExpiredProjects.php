@@ -9,7 +9,7 @@ class SuspendExpiredProjects extends Command
 {
     protected $signature = 'projects:suspend-expired';
 
-    protected $description = 'Аяқталу мерзімі өтіп кеткен жобалардың статусын автоматты түрде "Приостановлен" деп өзгерту';
+    protected $description = 'Автоматическое изменение статуса проектов с истекшим сроком завершения на "Приостановлен" ';
 
     public function handle(): int
     {
