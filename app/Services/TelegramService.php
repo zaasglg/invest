@@ -67,8 +67,13 @@ class TelegramService
             default => '🔔',
         };
 
-        // Try config app.url first, then env APP_URL as a fallback.
-        $siteUrl = config('app.url', '') ?: env('APP_URL', '');
+        // Get the base URL from config (set via APP_URL in .env)
+        $siteUrl = rtrim(config('app.url', ''), '/');
+
+        // Fallback: read APP_URL directly from env if config is empty
+        if (empty($siteUrl)) {
+            $siteUrl = rtrim(env('APP_URL', ''), '/');
+        }
 
         // Ensure the URL has a scheme (Telegram needs absolute URLs in href).
         if ($siteUrl !== '' && !preg_match('#^https?://#i', $siteUrl)) {
@@ -76,7 +81,7 @@ class TelegramService
         }
 
         // Build notifications URL only if we have a valid site URL.
-        $notificationsUrl = $siteUrl ? rtrim($siteUrl, '/') . '/notifications' : '';
+        $notificationsUrl = $siteUrl !== '' ? $siteUrl . '/notifications' : '';
 
         $linkPart = $notificationsUrl
             ? "🔗 <a href=\"{$notificationsUrl}\">Перейти на сайт</a>"

@@ -169,7 +169,10 @@ class InvestmentProjectController extends Controller
 
         $regions = $regionsQuery->get();
         $projectTypes = ProjectType::all();
-        $users = User::all();
+        $users = User::with('roleModel:id,name,display_name')
+            ->select('id', 'full_name', 'region_id', 'role_id', 'baskarma_type', 'position')
+            ->orderBy('full_name')
+            ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
         $subsoilUsers = $subsoilQuery->get();
@@ -301,8 +304,29 @@ class InvestmentProjectController extends Controller
             $this->authorizeDistrictAccess($project);
         }
 
-        // Get main gallery photos (all gallery-type, regardless of gallery_date)
-        $mainGalleryPhotos = $project ? $project->photos()->where('photo_type', 'gallery')->latest()->get() : collect();
+        // Get gallery photos from the most recent date only
+        $mainGalleryPhotos = collect();
+        if ($project) {
+            $latestDate = $project->photos()
+                ->where('photo_type', 'gallery')
+                ->selectRaw('COALESCE(gallery_date, DATE(created_at)) as photo_date')
+                ->orderByDesc('photo_date')
+                ->value('photo_date');
+
+            if ($latestDate) {
+                $mainGalleryPhotos = $project->photos()
+                    ->where('photo_type', 'gallery')
+                    ->where(function ($query) use ($latestDate) {
+                        $query->whereDate('gallery_date', $latestDate)
+                              ->orWhere(function ($q) use ($latestDate) {
+                                  $q->whereNull('gallery_date')
+                                    ->whereDate('created_at', $latestDate);
+                              });
+                    })
+                    ->latest()
+                    ->get();
+            }
+        }
 
         // Get render/future photos
         $renderPhotos = $project ? $project->photos()->renderPhotos()->latest()->get() : collect();
@@ -380,7 +404,10 @@ class InvestmentProjectController extends Controller
 
         $regions = $regionsQuery->get();
         $projectTypes = ProjectType::all();
-        $users = User::all();
+        $users = User::with('roleModel:id,name,display_name')
+            ->select('id', 'full_name', 'region_id', 'role_id', 'baskarma_type', 'position')
+            ->orderBy('full_name')
+            ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
         $subsoilUsers = $subsoilQuery->get();

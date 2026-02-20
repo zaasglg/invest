@@ -550,6 +550,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         fitBounds={true} 
                                         showPolygons={true} 
                                         activeTab={activeTab}
+                                        interactive={true}
                                         onEntitySelect={handleMapEntitySelect}
                                         onProjectSelect={handleProjectSelect}
                                     />

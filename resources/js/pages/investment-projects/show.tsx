@@ -66,7 +66,7 @@ interface InvestmentProject {
     creator?: User;
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
-    issues?: Array<{ id: number; title: string }>;
+    issues?: Array<{ id: number; title: string; description?: string; status?: string; severity?: string }>;
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
@@ -446,6 +446,18 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                                     {/* Photo */}
                                     <div className="overflow-hidden rounded-lg md:col-span-2">
+                                        {mainGallery.length > 0 && mainGallery[0]?.gallery_date && (
+                                            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Calendar className="h-3.5 w-3.5" />
+                                                <span>
+                                                    {new Date(mainGallery[0].gallery_date).toLocaleDateString('ru-RU', {
+                                                        day: 'numeric',
+                                                        month: 'long',
+                                                        year: 'numeric',
+                                                    })}
+                                                </span>
+                                            </div>
+                                        )}
                                         <ProjectGallerySlider photos={mainGallery} />
                                     </div>
 
@@ -513,6 +525,82 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     {project.description || 'Описание отсутствует.'}
                                 </p>
                             </div>
+
+                            {/* Issues / Проблемные вопросы */}
+                            {project.issues && project.issues.length > 0 && (
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                        <AlertTriangle className="h-5 w-5 text-red-500" />
+                                        Проблемные вопросы
+                                        <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
+                                            {project.issues.length}
+                                        </span>
+                                    </h2>
+                                    <div className="space-y-3">
+                                        {project.issues.map((issue) => {
+                                            const severityStyles: Record<string, string> = {
+                                                high: 'border-red-200 bg-red-50',
+                                                medium: 'border-amber-200 bg-amber-50',
+                                                low: 'border-blue-200 bg-blue-50',
+                                                critical: 'border-red-300 bg-red-100',
+                                            };
+                                            const severityLabels: Record<string, string> = {
+                                                high: 'Высокий',
+                                                medium: 'Средний',
+                                                low: 'Низкий',
+                                                critical: 'Критический',
+                                            };
+                                            const severityDot: Record<string, string> = {
+                                                high: 'bg-red-500',
+                                                medium: 'bg-amber-500',
+                                                low: 'bg-blue-500',
+                                                critical: 'bg-red-600',
+                                            };
+                                            const statusLabels: Record<string, string> = {
+                                                open: 'Открыт',
+                                                in_progress: 'В работе',
+                                                resolved: 'Решён',
+                                            };
+                                            const style = severityStyles[issue.severity || ''] || 'border-gray-200 bg-gray-50';
+                                            return (
+                                                <div key={issue.id} className={`rounded-lg border p-4 ${style}`}>
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="flex items-start gap-3 min-w-0">
+                                                            <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`} />
+                                                            <div className="min-w-0">
+                                                                <p className="font-semibold text-gray-900">{issue.title}</p>
+                                                                {issue.description && (
+                                                                    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{issue.description}</p>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex shrink-0 items-center gap-2">
+                                                            {issue.severity && (
+                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                    {severityLabels[issue.severity] || issue.severity}
+                                                                </span>
+                                                            )}
+                                                            {issue.status && (
+                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                    {statusLabels[issue.status] || issue.status}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="mt-4">
+                                        <Link
+                                            href={`/investment-projects/${project.id}/issues`}
+                                            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                                        >
+                                            Все проблемные вопросы →
+                                        </Link>
+                                    </div>
+                                </div>
+                            )}
                         </Card>
 
                         {/* Roadmap / Дорожная карта */}
@@ -614,9 +702,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             <>
                                                                 {' | '}
                                                                 {task.assignee.baskarma_type === 'oblast'
-                                                                    ? 'Облыстық:'
+                                                                    ? 'Областной:'
                                                                     : task.assignee.baskarma_type === 'district'
-                                                                      ? 'Аудандық:'
+                                                                      ? 'Районная:'
                                                                       : ''}
                                                                 {' '}
                                                                 {task.assignee.full_name || task.assignee.name || '—'}
@@ -916,25 +1004,29 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <div
                                                     key={u.id}
                                                     className={`flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer ${
-                                                        taskAssignedTo ===
-                                                        u.id
+                                                        taskAssignedTo === u.id
                                                             ? 'bg-cyan-50'
                                                             : ''
-                                                    } ${idx > 0 ? 'border-t border-gray-100' : ''}`}
+                                                    } ${
+                                                        idx > 0
+                                                            ? 'border-t border-gray-100'
+                                                            : ''
+                                                    }`}
                                                     onClick={() =>
-                                                        setTaskAssignedTo(
-                                                            u.id,
-                                                        )
+                                                        setTaskAssignedTo(u.id)
                                                     }
                                                 >
                                                     <span className="text-gray-700">
                                                         <span className="mr-2 text-gray-400">
                                                             {idx + 1}
                                                         </span>
-                                                        {u.full_name || '—'}
-                                                        {u.role_model
-                                                            ?.display_name &&
-                                                            ` - ${u.role_model.display_name}`}
+                                                        {u.baskarma_type ===
+                                                        'oblast'
+                                                            ? 'Областной'
+                                                            : 'Районная'}
+                                                        : {u.full_name || '—'}
+                                                        {u.position &&
+                                                            ` — ${u.position}`}
                                                     </span>
                                                     {taskAssignedTo ===
                                                         u.id && (

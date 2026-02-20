@@ -12,30 +12,30 @@ class ProjectPhotoController extends Controller
 {
     public function index(InvestmentProject $investmentProject)
     {
-        $mainGalleryPhotos = $investmentProject->photos()
-            ->mainGallery()
-            ->latest()
-            ->get()
-            ->map(function ($photo) {
-                $photo->gallery_date = null;
-                return $photo;
-            });
-
-        $datedGalleryPhotos = $investmentProject->photos()
+        // Get ALL gallery photos grouped by date (newest date first)
+        $allGalleryPhotos = $investmentProject->photos()
             ->where('photo_type', 'gallery')
-            ->whereNotNull('gallery_date')
             ->latest('gallery_date')
             ->latest()
             ->get()
             ->map(function ($photo) {
-                $photo->gallery_date = $photo->gallery_date->toDateString();
+                // Normalize: photos without gallery_date use created_at date
+                $photo->gallery_date = $photo->gallery_date
+                    ? $photo->gallery_date->toDateString()
+                    : $photo->created_at->toDateString();
                 return $photo;
-            })
+            });
+
+        $datedGalleryPhotos = $allGalleryPhotos
             ->groupBy('gallery_date')
+            ->sortKeysDesc()
             ->map(function ($photos) {
                 return $photos->values();
             })
             ->toArray();
+
+        // mainGallery is empty now since all photos are date-grouped
+        $mainGalleryPhotos = collect();
 
         $renderPhotos = $investmentProject->photos()
             ->renderPhotos()
@@ -60,8 +60,9 @@ class ProjectPhotoController extends Controller
             'photo_type' => 'nullable|string|in:gallery,render',
         ]);
 
-        $galleryDate = $validated['gallery_date'] ?? null;
         $photoType = $validated['photo_type'] ?? 'gallery';
+        // Auto-set gallery_date to today for gallery photos if not specified
+        $galleryDate = $validated['gallery_date'] ?? ($photoType === 'gallery' ? now()->toDateString() : null);
 
         foreach ($validated['photos'] as $photo) {
             $path = $photo->store('project-photos/' . $investmentProject->id, 'public');
