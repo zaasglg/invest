@@ -427,7 +427,6 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Наименование</TableHead>
                                 <TableHead>Компания</TableHead>
                                 <TableHead>Регион</TableHead>
@@ -442,16 +441,13 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         <TableBody>
                             {projects.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="text-center text-neutral-500">
+                                    <TableCell colSpan={9} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 projects.data.map((project) => (
                                     <TableRow key={project.id}>
-                                        <TableCell className="font-medium">
-                                            #{project.id}
-                                        </TableCell>
                                         <TableCell className="font-medium">
                                             <Link
                                                 href={investmentProjectsRoutes.show.url(project.id)}
