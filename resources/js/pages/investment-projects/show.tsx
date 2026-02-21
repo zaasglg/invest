@@ -203,19 +203,6 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
     const tasks = project.tasks || [];
 
-    const filteredTasks = tasks.filter((task) => {
-        if (taskFilter === 'all') return true;
-        return task.status === taskFilter;
-    });
-
-    // Ensure tasks are displayed in creation order (oldest first).
-    // Some backends return newest-first; normalize here to show earliest-added first.
-    const displayedTasks = filteredTasks.slice().sort((a, b) => {
-        const ta = new Date(a.created_at).getTime();
-        const tb = new Date(b.created_at).getTime();
-        return ta - tb;
-    });
-
     // Dot color based on deadline: green=done, red=overdue, amber=pending
     const getTaskDotColor = (task: ProjectTaskItem): string => {
         if (task.status === 'done') return 'bg-green-500';
@@ -226,8 +213,25 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             due.setHours(0, 0, 0, 0);
             if (due < now) return 'bg-red-500'; // overdue
         }
-        return 'bg-amber-500'; // not yet due, still pending
+        return 'bg-amber-500';
     };
+
+    const filteredTasks = tasks.filter((task) => {
+        if (taskFilter === 'all') return true;
+        // When user selects "Исполняется", show all amber (pending) tasks.
+        if (taskFilter === 'in_progress') {
+            return getTaskDotColor(task) === 'bg-amber-500';
+        }
+        return task.status === taskFilter;
+    });
+
+    // Ensure tasks are displayed in creation order (oldest first).
+    // Some backends return newest-first; normalize here to show earliest-added first.
+    const displayedTasks = filteredTasks.slice().sort((a, b) => {
+        const ta = new Date(a.created_at).getTime();
+        const tb = new Date(b.created_at).getTime();
+        return ta - tb;
+    });
 
     const taskStatusMap: Record<string, { label: string; dotColor: string }> = {
         new: { label: 'Жаңа', dotColor: 'bg-amber-500' },
@@ -686,11 +690,21 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         {task.title}:
                                                     </p>
                                                     <p className="text-sm text-gray-500">
+                                                        {task.start_date && (
+                                                            <>
+                                                                {new Date(task.start_date).toLocaleDateString('ru-RU', {
+                                                                    day: 'numeric',
+                                                                    month: 'long',
+                                                                    year: 'numeric',
+                                                                })}
+                                                                {' — '}
+                                                            </>
+                                                        )}
                                                         {task.due_date
                                                             ? new Date(
                                                                   task.due_date,
                                                               ).toLocaleDateString(
-                                                                  'kk-KZ',
+                                                                  'ru-RU',
                                                                   {
                                                                       day: 'numeric',
                                                                       month: 'long',
@@ -698,20 +712,19 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                                   },
                                                               )
                                                             : 'Мерзімі белгіленбеген'}
-                                                        {task.assignee && (
-                                                            <>
-                                                                {' | '}
-                                                                {task.assignee.baskarma_type === 'oblast'
-                                                                    ? 'Областной:'
-                                                                    : task.assignee.baskarma_type === 'district'
-                                                                      ? 'Районная:'
-                                                                      : ''}
-                                                                {' '}
-                                                                {task.assignee.full_name || task.assignee.name || '—'}
-                                                                {task.assignee.position && ` — ${task.assignee.position}`}
-                                                            </>
-                                                        )}
                                                     </p>
+                                                    {task.assignee && (
+                                                        <p className="text-sm text-gray-500 mt-1">
+                                                            {task.assignee.baskarma_type === 'oblast'
+                                                                ? 'Областной:'
+                                                                : task.assignee.baskarma_type === 'district'
+                                                                    ? 'Районная:'
+                                                                    : ''}
+                                                            {' '}
+                                                            {task.assignee.full_name || task.assignee.name || '—'}
+                                                            {task.assignee.position && ` — ${task.assignee.position}`}
+                                                        </p>
+                                                    )}
                                                     {/* Status badge for completion */}
                                                     {latestCompletion && (
                                                         <div>

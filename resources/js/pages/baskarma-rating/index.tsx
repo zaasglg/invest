@@ -32,23 +32,56 @@ interface Props {
     oblastRatings: RatingItem[];
 }
 
-function TaskBar({
-    count,
-    color,
-    maxCount,
+function StackedTaskBar({
+    active,
+    completed,
+    overdue,
+    total,
 }: {
-    count: number;
-    color: string;
-    maxCount: number;
+    active: number;
+    completed: number;
+    overdue: number;
+    total: number;
 }) {
-    if (count === 0) return null;
-    const width = maxCount > 0 ? Math.max((count / maxCount) * 100, 20) : 0;
+    // If total is 0, avoid division by zero
+    const safeTotal = total > 0 ? total : 1;
+
+    // Calculate widths as percentages
+    const activePercent = (active / safeTotal) * 100;
+    const completedPercent = (completed / safeTotal) * 100;
+    const overduePercent = (overdue / safeTotal) * 100;
+
     return (
-        <div
-            className={`flex items-center justify-center rounded text-xs font-semibold text-white ${color}`}
-            style={{ width: `${width}%`, minWidth: '28px', height: '22px' }}
-        >
-            {count}
+        <div className="flex w-[160px] flex-col gap-[2px]">
+            {/* 1. Completed (Top - Green) */}
+            <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800">
+                <div
+                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-green-500 text-[10px] font-bold text-white transition-all"
+                    style={{ width: `${completedPercent}%` }}
+                >
+                    {completed > 0 && completed}
+                </div>
+            </div>
+
+            {/* 2. Active (Middle - Yellow) */}
+            <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800">
+                <div
+                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-amber-400 text-[10px] font-bold text-white transition-all"
+                    style={{ width: `${activePercent}%` }}
+                >
+                    {active > 0 && active}
+                </div>
+            </div>
+
+            {/* 3. Overdue (Bottom - Red) */}
+            <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800">
+                <div
+                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-red-500 text-[10px] font-bold text-white transition-all"
+                    style={{ width: `${overduePercent}%` }}
+                >
+                    {overdue > 0 && overdue}
+                </div>
+            </div>
         </div>
     );
 }
@@ -86,10 +119,6 @@ function RatingTable({
     title: string;
     icon: React.ReactNode;
 }) {
-    const maxActive = Math.max(...ratings.map((r) => r.active), 1);
-    const maxCompleted = Math.max(...ratings.map((r) => r.completed), 1);
-    const maxOverdue = Math.max(...ratings.map((r) => r.overdue), 1);
-
     return (
         <Card className="shadow-none">
             <CardHeader className="pb-2">
@@ -114,9 +143,7 @@ function RatingTable({
                                 <TableHead className="text-center">
                                     Проекты
                                 </TableHead>
-                                <TableHead>Активные задачи</TableHead>
-                                <TableHead>Выполненные задачи</TableHead>
-                                <TableHead>Просроченные</TableHead>
+                                <TableHead>Задачи</TableHead>
                                 <TableHead>КПД</TableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
@@ -148,31 +175,12 @@ function RatingTable({
                                         {item.project_count}
                                     </TableCell>
                                     <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <TaskBar
-                                                count={item.active}
-                                                color="bg-amber-500"
-                                                maxCount={maxActive}
-                                            />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <TaskBar
-                                                count={item.completed}
-                                                color="bg-green-600"
-                                                maxCount={maxCompleted}
-                                            />
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex flex-col gap-1">
-                                            <TaskBar
-                                                count={item.overdue}
-                                                color="bg-red-600"
-                                                maxCount={maxOverdue}
-                                            />
-                                        </div>
+                                        <StackedTaskBar
+                                            active={item.active}
+                                            completed={item.completed}
+                                            overdue={item.overdue}
+                                            total={item.total}
+                                        />
                                     </TableCell>
                                     <TableCell>
                                         <KpdBar kpd={item.kpd} />

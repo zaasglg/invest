@@ -67,25 +67,19 @@ class TaskCompletionController extends Controller
         // Update task status to in_progress
         $task->update(['status' => 'in_progress']);
 
-        // Collect all исполнитель user IDs to notify
+        // Notify only the user who assigned the task (creator) and superadmins.
         $notifyUserIds = collect();
 
-        // Project creator and executor
-        if ($investmentProject->created_by) {
-            $notifyUserIds->push($investmentProject->created_by);
+        // Task creator (the user who created the task)
+        if ($task->created_by) {
+            $notifyUserIds->push($task->created_by);
         }
-        if ($investmentProject->executor_id) {
-            $notifyUserIds->push($investmentProject->executor_id);
-        }
-        // Executors from the pivot table
-        $executorIds = $investmentProject->executors()->pluck('users.id');
-        $notifyUserIds = $notifyUserIds->merge($executorIds);
 
-        // All users with ispolnitel role (role_id = 5)
-        $ispolnitelIds = User::where('role_id', 5)->pluck('id');
-        $notifyUserIds = $notifyUserIds->merge($ispolnitelIds);
+        // Superadmins
+        $superadminIds = User::whereHas('roleModel', fn ($q) => $q->where('name', 'superadmin'))->pluck('id');
+        $notifyUserIds = $notifyUserIds->merge($superadminIds);
 
-        // Remove current user (baskarma who submitted) and deduplicate
+        // Remove current user (submitter) and deduplicate
         $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
 
         $submitterName = Auth::user()->full_name ?? 'Басқарма';
