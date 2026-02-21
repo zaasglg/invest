@@ -1109,7 +1109,7 @@ export default function Map({
                                         color: '#7c3aed',
                                         fillColor: '#8b5cf6',
                                         fillOpacity: isSelected
-                                            ? 0.45
+                                            ? 0.15 // Lower opacity when selected
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1117,7 +1117,7 @@ export default function Map({
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                              ? 0.45
+                                              ? 0.15
                                               : 0.95,
                                         dashArray: isSelected
                                             ? ''
@@ -1195,7 +1195,7 @@ export default function Map({
                                         color: '#d97706',
                                         fillColor: '#f59e0b',
                                         fillOpacity: isSelected
-                                            ? 0.45
+                                            ? 0.15 // Lower opacity
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1281,7 +1281,7 @@ export default function Map({
                                         color: '#1f2937',
                                         fillColor: '#4b5563',
                                         fillOpacity: isSelected
-                                            ? 0.4
+                                            ? 0.15 // Lower opacity for better visibility
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1341,7 +1341,9 @@ export default function Map({
                             plot.statusRaw,
                         );
                         const isSelected = activePlot?.id === plot.id;
-                        const shouldMute = hasSelection && !isSelected;
+                        // Only mute if there is an active plot and this is not it
+                        // const shouldMute = Boolean(activePlot) && !isSelected;
+                        const shouldMute = false; // Disable muting per user request to keep all projects visible
 
                         return (
                             <React.Fragment key={plot.id}>
@@ -1379,10 +1381,10 @@ export default function Map({
                                               ? '4, 6'
                                               : undefined,
                                         fillOpacity: isSelected
-                                            ? 0.36
+                                            ? 0.6 // More opaque when selected
                                             : shouldMute
-                                              ? 0.07
-                                              : 0.15,
+                                              ? 0.1
+                                              : 0.5, // More visible generally
                                         fillColor: statusColors.fillColor,
                                         className: cx(
                                             'map-project-polygon',
@@ -1423,7 +1425,7 @@ export default function Map({
                     </div>
 
                     <div 
-                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
                         style={{ maxHeight: 'calc(100% - 32px)' }}
                     >
                         <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
@@ -1517,7 +1519,7 @@ export default function Map({
             {/* Active Plot Popup */}
             {activePlot && (
                 <div 
-                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
                     style={{ maxHeight: 'calc(100% - 32px)' }}
                 >
                     <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">

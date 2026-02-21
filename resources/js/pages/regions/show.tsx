@@ -597,7 +597,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 </div>
 
                                 {/* Reset map zoom button */}
-                                {(selectedEntityId || mapSelectedEntityId || selectedProjectId) && (
+                                {/* {(selectedEntityId || mapSelectedEntityId || selectedProjectId) && (
                                     <button
                                         onClick={handleResetMap}
                                         className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-white hover:text-gray-900 transition-colors"
@@ -605,7 +605,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Maximize2 className="h-3.5 w-3.5" />
                                         Показать всю карту
                                     </button>
-                                )}
+                                )} */}
                             </div>
 
                             {/* Projects / Tabs Section */}

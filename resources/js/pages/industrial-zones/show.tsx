@@ -239,12 +239,12 @@ export default function Show({ industrialZone }: Props) {
                                 {/* Infrastructure */}
                                 {industrialZone.infrastructure && (() => {
                                     const infraItems = [
-                                        { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: industrialZone.infrastructure.electricity },
-                                        { key: 'gas', name: 'Газ', icon: Flame, val: industrialZone.infrastructure.gas },
-                                        { key: 'water', name: 'Водоснабжение', icon: Droplets, val: industrialZone.infrastructure.water },
-                                        { key: 'roads', name: 'Дороги', icon: Car, val: industrialZone.infrastructure.roads },
-                                        { key: 'railway', name: 'Ж/Д тупик', icon: TrainFront, val: industrialZone.infrastructure.railway },
-                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: industrialZone.infrastructure.internet },
+                                        { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: industrialZone.infrastructure.electricity, unit: 'МВт' },
+                                        { key: 'gas', name: 'Газ', icon: Flame, val: industrialZone.infrastructure.gas, unit: 'м³/час' },
+                                        { key: 'water', name: 'Водоснабжение', icon: Droplets, val: industrialZone.infrastructure.water, unit: 'м³/сут' },
+                                        { key: 'roads', name: 'Дороги', icon: Car, val: industrialZone.infrastructure.roads, unit: 'км' },
+                                        { key: 'railway', name: 'Ж/Д тупик', icon: TrainFront, val: industrialZone.infrastructure.railway, unit: 'км' },
+                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: industrialZone.infrastructure.internet, unit: '' },
                                     ].filter(i => i.val && i.val.available !== undefined);
 
                                     if (infraItems.length === 0) return null;
@@ -274,7 +274,9 @@ export default function Show({ industrialZone }: Props) {
                                                                     {active ? 'Доступно' : 'Нет'}
                                                                 </Badge>
                                                                 {detail && (
-                                                                    <div className="mt-0.5 text-[10px] font-medium text-gray-400">{detail}</div>
+                                                                    <div className="mt-0.5 text-[10px] font-medium text-gray-400">
+                                                                        {detail} {item.unit}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>
