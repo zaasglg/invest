@@ -1828,7 +1828,7 @@ export default function Map({
                 })()}
 
             {/* Reset View Button */}
-            <div className="absolute bottom-6 right-6 z-[500] md:bottom-8 md:right-8">
+            <div className="absolute bottom-6 right-6 z-[500] md:bottom-8 md:right-5">
                 <Button
                     variant="default" 
                     size="icon"
