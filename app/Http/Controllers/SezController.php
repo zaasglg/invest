@@ -9,7 +9,7 @@ use Inertia\Inertia;
 
 class SezController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $query = Sez::with('region');
 
@@ -18,10 +18,29 @@ class SezController extends Controller
             $query->where('region_id', $user->region_id);
         }
 
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->region_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         $sezs = $query->latest()->paginate(15)->withQueryString();
+
+        $regionsQuery = Region::query();
+        if ($user && $user->isDistrictScoped()) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('sezs/index', [
             'sezs' => $sezs,
+            'regions' => $regionsQuery->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'region_id', 'status']),
         ]);
     }
 

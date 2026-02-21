@@ -119,7 +119,9 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
         end_date_from: filters.end_date_from ?? '',
         end_date_to: filters.end_date_to ?? '',
     });
-    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(
+        !!(filters.search || filters.region_id || filters.project_type_id || filters.status || filters.executor_id || filters.sector_type || filters.sector_id || filters.min_investment || filters.max_investment || filters.start_date_from || filters.start_date_to || filters.end_date_from || filters.end_date_to),
+    );
 
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены, что хотите удалить этот проект?')) {
@@ -198,12 +200,12 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Инвестиционные проекты', href: '#' }
+            { title: 'Инвестиционные проекты', href: investmentProjectsRoutes.index.url() }
         ]}>
             <Head title="Инвестиционные проекты" />
 
-            <div className="flex h-full flex-col p-4">
-                <div className="flex items-center justify-between mb-6">
+            <div className="flex h-full flex-col p-4 space-y-4">
+                <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
                         Инвестиционные проекты
                     </h1>
@@ -217,10 +219,10 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                     )}
                 </div>
 
-                <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
+                <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800"
+                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800 dark:text-neutral-200"
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
@@ -421,11 +423,11 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                     )}
                 </div>
 
-                <div className="rounded-md">
+                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
+                                <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Наименование</TableHead>
                                 <TableHead>Компания</TableHead>
                                 <TableHead>Регион</TableHead>
@@ -450,7 +452,14 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                         <TableCell className="font-medium">
                                             #{project.id}
                                         </TableCell>
-                                        <TableCell className="font-medium">{project.name}</TableCell>
+                                        <TableCell className="font-medium">
+                                            <Link
+                                                href={investmentProjectsRoutes.show.url(project.id)}
+                                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                            >
+                                                {project.name}
+                                            </Link>
+                                        </TableCell>
                                         <TableCell>{project.company_name || '—'}</TableCell>
                                         <TableCell>{project.region.name}</TableCell>
                                         <TableCell>{project.project_type.name}</TableCell>
@@ -467,26 +476,27 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Link href={`/investment-projects/${project.id}`}>
-                                                    <Button variant="ghost" size="icon" title="Просмотр">
-                                                        <Eye className="h-4 w-4 text-blue-600" />
-                                                    </Button>
-                                                </Link>
+                                            <div className="flex justify-end gap-1">
+                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Просмотр">
+                                                    <Link href={investmentProjectsRoutes.show.url(project.id)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
                                                 {canModify && (
                                                     <>
-                                                        <Link href={investmentProjectsRoutes.edit.url(project.id)}>
-                                                            <Button variant="ghost" size="icon" title="Редактировать">
+                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Редактировать">
+                                                            <Link href={investmentProjectsRoutes.edit.url(project.id)}>
                                                                 <Pencil className="h-4 w-4" />
-                                                            </Button>
-                                                        </Link>
+                                                            </Link>
+                                                        </Button>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
+                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
                                                             onClick={() => handleDelete(project.id)}
                                                             title="Удалить"
                                                         >
-                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </>
                                                 )}
