@@ -395,12 +395,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         if (!data) return null;
 
         const items = [
-            { key: 'electricity', name: "Электроснабжение", icon: Zap, val: data.electricity },
-            { key: 'gas', name: "Газ", icon: Flame, val: data.gas },
-            { key: 'water', name: "Водоснабжение", icon: Droplets, val: data.water },
-            { key: 'roads', name: "Дороги", icon: Car, val: data.roads },
-            { key: 'railway', name: "Ж/Д тупик", icon: TrainFront, val: data.railway },
-            { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet },
+            { key: 'electricity', name: "Электроснабжение", icon: Zap, val: data.electricity, unit: 'МВт' },
+            { key: 'gas', name: "Газ", icon: Flame, val: data.gas, unit: 'м³/час' },
+            { key: 'water', name: "Водоснабжение", icon: Droplets, val: data.water, unit: 'м³/сут' },
+            { key: 'roads', name: "Дороги", icon: Car, val: data.roads, unit: 'км' },
+            { key: 'railway', name: "Ж/Д тупик", icon: TrainFront, val: data.railway, unit: 'км' },
+            { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet, unit: '' },
         ].filter(i => i.val && i.val.available !== undefined);
 
         if (items.length === 0) return null;
@@ -432,7 +432,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             {active ? 'Доступно' : 'Нет'}
                                         </Badge>
                                         {detail && (
-                                            <div className="text-[10px] text-gray-400 font-medium mt-0.5">{detail}</div>
+                                            <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                                {detail} {item.unit}
+                                            </div>
                                         )}
                                     </div>
                                 </div>

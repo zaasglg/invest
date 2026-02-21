@@ -20,7 +20,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 
-import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, Navigation } from 'lucide-react';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -396,6 +396,7 @@ function MapController({
     defaultCenter,
     defaultZoom,
     fitBounds,
+    resetTrigger,
 }: {
     activeRegion: Region | null;
     activePlot: Plot | null;
@@ -404,6 +405,7 @@ function MapController({
     defaultCenter: [number, number];
     defaultZoom: number;
     fitBounds: boolean;
+    resetTrigger: number;
 }) {
     const map = useMap();
 
@@ -468,6 +470,7 @@ function MapController({
         defaultCenter,
         defaultZoom,
         fitBounds,
+        resetTrigger,
     ]);
 
     return null;
@@ -570,6 +573,7 @@ export default function Map({
     const [plots, setPlots] = useState<Plot[]>([]);
     const [activePlot, setActivePlot] = useState<Plot | null>(null);
     const [activeEntity, setActiveEntity] = useState<ActiveEntity | null>(null);
+    const [resetTrigger, setResetTrigger] = useState(0);
     const hasSelection = Boolean(activeRegion || activePlot || activeEntity);
     const outsideCloudMaskPositions = useMemo<
         [number, number][][] | null
@@ -888,6 +892,7 @@ export default function Map({
                     defaultCenter={center}
                     defaultZoom={zoom}
                     fitBounds={fitBounds}
+                    resetTrigger={resetTrigger}
                 />
                 <TileLayer
                     // attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1821,6 +1826,26 @@ export default function Map({
                         </div>
                     );
                 })()}
+
+            {/* Reset View Button */}
+            <div className="absolute bottom-6 right-6 z-[500] md:bottom-8 md:right-8">
+                <Button
+                    variant="default" 
+                    size="icon"
+                    className="h-12 w-12 rounded-full shadow-xl bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                    onClick={() => {
+                        setActivePlot(null);
+                        setActiveEntity(null);
+                        setPopupPosition(null);
+                        onEntitySelect?.(null, null);
+                        onProjectSelect?.(null);
+                        setResetTrigger((t) => t + 1);
+                    }}
+                    title="Сбросить карту"
+                >
+                     <Navigation className="h-6 w-6 text-blue-600" />
+                </Button>
+            </div>
         </div>
     );
 }
