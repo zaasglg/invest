@@ -22,6 +22,7 @@ class Region extends Model
         'icon',
         'area',
         'type',
+        'subtype',
         'geometry',
     ];
 
@@ -58,6 +59,12 @@ class Region extends Model
     public function isDistrict(): bool
     {
         return $this->type === 'district';
+    }
+
+    // Проверка, является ли регион городом
+    public function isCity(): bool
+    {
+        return $this->type === 'district' && $this->subtype === 'city';
     }
 
     public function sezs()

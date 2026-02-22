@@ -30,6 +30,7 @@ export default function Create({ parents }: Props) {
         icon_file: null as File | null,
         area: '',
         type: 'district',
+        subtype: 'district',
         parent_id: '',
         geometry: [] as { lat: number; lng: number }[],
     });
@@ -111,6 +112,40 @@ export default function Create({ parents }: Props) {
                             {errors.parent_id && (
                                 <span className="text-sm text-red-500">
                                     {errors.parent_id}
+                                </span>
+                            )}
+                        </div>
+                    )}
+
+                    {data.type === 'district' && (
+                        <div className="flex flex-col gap-2">
+                            <Label
+                                htmlFor="subtype"
+                                className="font-normal text-neutral-500"
+                            >
+                                Район / Город
+                            </Label>
+                            <Select
+                                value={data.subtype}
+                                onValueChange={(value) =>
+                                    setData('subtype', value)
+                                }
+                            >
+                                <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
+                                    <SelectValue placeholder="Таңдаңыз" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="district">
+                                        Район
+                                    </SelectItem>
+                                    <SelectItem value="city">
+                                        Город
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors.subtype && (
+                                <span className="text-sm text-red-500">
+                                    {errors.subtype}
                                 </span>
                             )}
                         </div>

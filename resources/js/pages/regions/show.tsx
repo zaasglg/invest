@@ -244,10 +244,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     // Subsoil status counts
     const subsoilStatusCounts = React.useMemo(() => {
-        const counts: Record<string, number> = { active: 0, expired: 0, suspended: 0 };
+        const counts: Record<string, number> = { active: 0, expired: 0, suspended: 0, illegal: 0 };
         subsoilUsers.forEach(su => {
             if (counts[su.license_status] !== undefined) {
-                counts[su.license_status]++;
+                counts[su.license_status]++
             }
         });
         return counts;
@@ -516,9 +516,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <span className="text-gray-900">Действует</span>
                             </div> */}
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Район:</span>
+                                <span className="text-gray-400">Область:</span>
                                 <span className="text-blue-600 flex items-center cursor-pointer hover:underline">
-                                    <Link href="/dashboard">Туркестанский район</Link> <ChevronRight className="h-4 w-4" />
+                                    <Link href="/dashboard">Туркестанская область</Link> <ChevronRight className="h-4 w-4" />
                                 </span>
                             </div>
                         </div>
@@ -921,8 +921,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <TabsTrigger value="iz" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2">
                                     <Factory className="w-4 h-4" /> ИЗ
                                 </TabsTrigger>
-                                <TabsTrigger value="subsoil" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2">
-                                    <Pickaxe className="w-4 h-4" />
+                                <TabsTrigger value="subsoil" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600 bg-red-100 data-[state=active]:bg-red-200' : ''}`}>
+                                    <Pickaxe className={`w-4 h-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`} />
+                                    {subsoilStatusCounts.illegal > 0 && (
+                                        <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                                            {subsoilStatusCounts.illegal}
+                                        </span>
+                                    )}
                                 </TabsTrigger>
                             </TabsList>
 

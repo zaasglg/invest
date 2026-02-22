@@ -266,7 +266,7 @@ export default function Index({
                                         </TableCell>
                                         <TableCell>
                                             {sez.investment_total
-                                                ? `${sez.investment_total} млн`
+                                                ? `${Number(sez.investment_total) >= 1000000 ? (Number(sez.investment_total) / 1000000).toFixed(1) + ' млн' : Number(sez.investment_total) >= 1000 ? (Number(sez.investment_total) / 1000000).toFixed(2) + ' млн' : sez.investment_total}`
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>

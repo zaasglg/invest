@@ -21,6 +21,7 @@ interface Region {
     color: string;
     icon: string;
     type: string;
+    subtype: string | null;
     created_at: string;
     updated_at: string;
 }
@@ -78,6 +79,7 @@ export default function Index({ regions: regionsData }: Props) {
                             <TableRow>
                                 <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Наименование</TableHead>
+                                <TableHead>Тип</TableHead>
                                 <TableHead>Цвет</TableHead>
                                 <TableHead>Иконка</TableHead>
                                 <TableHead className="text-right">
@@ -92,6 +94,15 @@ export default function Index({ regions: regionsData }: Props) {
                                         #{region.id}
                                     </TableCell>
                                     <TableCell>{region.name}</TableCell>
+                                    <TableCell>
+                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                                            {region.type === 'oblast'
+                                                ? 'Облыс'
+                                                : region.subtype === 'city'
+                                                  ? 'Город'
+                                                  : 'Район'}
+                                        </span>
+                                    </TableCell>
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <span
@@ -162,7 +173,7 @@ export default function Index({ regions: regionsData }: Props) {
                             {regionsData.data.length === 0 && (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={5}
+                                        colSpan={6}
                                         className="h-24 text-center text-neutral-500"
                                     >
                                         Нет данных. Создайте первый регион.
