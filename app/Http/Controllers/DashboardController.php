@@ -185,6 +185,8 @@ class DashboardController extends Controller
             $subsoilIssues = SubsoilIssue::count();
             $projectIssues = ProjectIssue::count();
 
+            $investProjectCount = InvestmentProject::count();
+
             $total = [
                 'sez' => [
                     'investment' => $sezInvestment,
@@ -206,7 +208,7 @@ class DashboardController extends Controller
                 ],
                 'invest' => [
                     'investment' => $investInvestment,
-                    'projectCount' => null,
+                    'projectCount' => $investProjectCount,
                     'problemCount' => $projectIssues ?: 1,
                     'orgCount' => null,
                 ],
@@ -228,6 +230,9 @@ class DashboardController extends Controller
 
             $investByRegion = InvestmentProject::selectRaw('region_id, COALESCE(SUM(total_investment), 0) as investment')
                 ->groupBy('region_id')->pluck('investment', 'region_id')->toArray();
+
+            $investCountByRegion = InvestmentProject::selectRaw('region_id, COUNT(*) as cnt')
+                ->groupBy('region_id')->pluck('cnt', 'region_id')->toArray();
 
             // Issues by region (via parent entity)
             $sezIssuesByRegion = SezIssue::join('sezs', 'sez_issues.sez_id', '=', 'sezs.id')
@@ -275,7 +280,7 @@ class DashboardController extends Controller
                     ],
                     'invest' => [
                         'investment' => (float) ($investByRegion[$rid] ?? 0),
-                        'projectCount' => null,
+                        'projectCount' => (int) ($investCountByRegion[$rid] ?? 0),
                         'problemCount' => (int) ($projectIssuesByRegion[$rid] ?? 0),
                         'orgCount' => null,
                     ],

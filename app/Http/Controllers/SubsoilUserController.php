@@ -11,7 +11,7 @@ use ZipArchive;
 
 class SubsoilUserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $query = SubsoilUser::with('region');
 
@@ -20,10 +20,41 @@ class SubsoilUserController extends Controller
             $query->where('region_id', $user->region_id);
         }
 
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', '%' . $search . '%')
+                  ->orWhere('bin', 'like', '%' . $search . '%');
+            });
+        }
+
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->region_id);
+        }
+
+        if ($request->filled('license_status')) {
+            $query->where('license_status', $request->license_status);
+        }
+
+        if ($request->filled('mineral_type')) {
+            $query->where('mineral_type', 'like', '%' . $request->mineral_type . '%');
+        }
+
         $subsoilUsers = $query->latest()->paginate(15)->withQueryString();
+
+        $regionsQuery = Region::query();
+        if ($user && $user->isDistrictScoped()) {
+            $regionsQuery->where('id', $user->region_id);
+        }
+
+        // Get distinct mineral types for filter dropdown
+        $mineralTypes = SubsoilUser::distinct()->pluck('mineral_type')->filter()->sort()->values();
 
         return Inertia::render('subsoil-users/index', [
             'subsoilUsers' => $subsoilUsers,
+            'regions' => $regionsQuery->orderBy('name')->get(),
+            'mineralTypes' => $mineralTypes,
+            'filters' => $request->only(['search', 'region_id', 'license_status', 'mineral_type']),
         ]);
     }
 

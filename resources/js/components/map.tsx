@@ -20,7 +20,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 
-import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, Navigation } from 'lucide-react';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
@@ -396,6 +396,7 @@ function MapController({
     defaultCenter,
     defaultZoom,
     fitBounds,
+    resetTrigger,
 }: {
     activeRegion: Region | null;
     activePlot: Plot | null;
@@ -404,6 +405,7 @@ function MapController({
     defaultCenter: [number, number];
     defaultZoom: number;
     fitBounds: boolean;
+    resetTrigger: number;
 }) {
     const map = useMap();
 
@@ -468,6 +470,7 @@ function MapController({
         defaultCenter,
         defaultZoom,
         fitBounds,
+        resetTrigger,
     ]);
 
     return null;
@@ -570,6 +573,7 @@ export default function Map({
     const [plots, setPlots] = useState<Plot[]>([]);
     const [activePlot, setActivePlot] = useState<Plot | null>(null);
     const [activeEntity, setActiveEntity] = useState<ActiveEntity | null>(null);
+    const [resetTrigger, setResetTrigger] = useState(0);
     const hasSelection = Boolean(activeRegion || activePlot || activeEntity);
     const outsideCloudMaskPositions = useMemo<
         [number, number][][] | null
@@ -888,6 +892,7 @@ export default function Map({
                     defaultCenter={center}
                     defaultZoom={zoom}
                     fitBounds={fitBounds}
+                    resetTrigger={resetTrigger}
                 />
                 <TileLayer
                     // attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -1104,7 +1109,7 @@ export default function Map({
                                         color: '#7c3aed',
                                         fillColor: '#8b5cf6',
                                         fillOpacity: isSelected
-                                            ? 0.45
+                                            ? 0.15 // Lower opacity when selected
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1112,7 +1117,7 @@ export default function Map({
                                         opacity: isSelected
                                             ? 1
                                             : shouldMute
-                                              ? 0.45
+                                              ? 0.15
                                               : 0.95,
                                         dashArray: isSelected
                                             ? ''
@@ -1190,7 +1195,7 @@ export default function Map({
                                         color: '#d97706',
                                         fillColor: '#f59e0b',
                                         fillOpacity: isSelected
-                                            ? 0.45
+                                            ? 0.15 // Lower opacity
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1276,7 +1281,7 @@ export default function Map({
                                         color: '#1f2937',
                                         fillColor: '#4b5563',
                                         fillOpacity: isSelected
-                                            ? 0.4
+                                            ? 0.15 // Lower opacity for better visibility
                                             : shouldMute
                                               ? 0.14
                                               : 0.5,
@@ -1336,7 +1341,9 @@ export default function Map({
                             plot.statusRaw,
                         );
                         const isSelected = activePlot?.id === plot.id;
-                        const shouldMute = hasSelection && !isSelected;
+                        // Only mute if there is an active plot and this is not it
+                        // const shouldMute = Boolean(activePlot) && !isSelected;
+                        const shouldMute = false; // Disable muting per user request to keep all projects visible
 
                         return (
                             <React.Fragment key={plot.id}>
@@ -1374,10 +1381,10 @@ export default function Map({
                                               ? '4, 6'
                                               : undefined,
                                         fillOpacity: isSelected
-                                            ? 0.36
+                                            ? 0.6 // More opaque when selected
                                             : shouldMute
-                                              ? 0.07
-                                              : 0.15,
+                                              ? 0.1
+                                              : 0.5, // More visible generally
                                         fillColor: statusColors.fillColor,
                                         className: cx(
                                             'map-project-polygon',
@@ -1418,7 +1425,7 @@ export default function Map({
                     </div>
 
                     <div 
-                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
                         style={{ maxHeight: 'calc(100% - 32px)' }}
                     >
                         <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
@@ -1512,7 +1519,7 @@ export default function Map({
             {/* Active Plot Popup */}
             {activePlot && (
                 <div 
-                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300"
+                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
                     style={{ maxHeight: 'calc(100% - 32px)' }}
                 >
                     <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
@@ -1821,6 +1828,26 @@ export default function Map({
                         </div>
                     );
                 })()}
+
+            {/* Reset View Button */}
+            <div className="absolute bottom-6 right-6 z-[500] md:bottom-8 md:right-5">
+                <Button
+                    variant="default" 
+                    size="icon"
+                    className="h-12 w-12 rounded-full shadow-xl bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                    onClick={() => {
+                        setActivePlot(null);
+                        setActiveEntity(null);
+                        setPopupPosition(null);
+                        onEntitySelect?.(null, null);
+                        onProjectSelect?.(null);
+                        setResetTrigger((t) => t + 1);
+                    }}
+                    title="Сбросить карту"
+                >
+                     <Navigation className="h-6 w-6 text-blue-600" />
+                </Button>
+            </div>
         </div>
     );
 }

@@ -9,7 +9,7 @@ use Inertia\Inertia;
 
 class IndustrialZoneController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $query = IndustrialZone::with('region');
 
@@ -18,10 +18,29 @@ class IndustrialZoneController extends Controller
             $query->where('region_id', $user->region_id);
         }
 
+        if ($request->filled('search')) {
+            $query->where('name', 'like', '%' . $request->search . '%');
+        }
+
+        if ($request->filled('region_id')) {
+            $query->where('region_id', $request->region_id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
         $industrialZones = $query->latest()->paginate(15)->withQueryString();
+
+        $regionsQuery = Region::query();
+        if ($user && $user->isDistrictScoped()) {
+            $regionsQuery->where('id', $user->region_id);
+        }
 
         return Inertia::render('industrial-zones/index', [
             'industrialZones' => $industrialZones,
+            'regions' => $regionsQuery->orderBy('name')->get(),
+            'filters' => $request->only(['search', 'region_id', 'status']),
         ]);
     }
 

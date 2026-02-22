@@ -40,6 +40,9 @@ interface ProjectType {
 interface User {
     id: number;
     full_name: string;
+    region_id?: number | null;
+    baskarma_type?: string | null;
+    position?: string | null;
 }
 
 interface Sez {
@@ -91,8 +94,20 @@ interface Filters {
     end_date_to: string;
 }
 
+interface Stats {
+    total_projects: number;
+    total_investment: number;
+    status_counts: {
+        launched: number;
+        implementation: number;
+        suspended: number;
+        plan: number;
+    };
+}
+
 interface Props {
     projects: PaginatedData<InvestmentProject>;
+    stats: Stats;
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -102,7 +117,7 @@ interface Props {
     filters: Partial<Filters>;
 }
 
-export default function Index({ projects, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
+export default function Index({ projects, stats, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
     const canModify = useCanModify();
     const { data, setData, get, reset } = useForm<Filters>({
         search: filters.search ?? '',
@@ -119,7 +134,9 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
         end_date_from: filters.end_date_from ?? '',
         end_date_to: filters.end_date_to ?? '',
     });
-    const [filtersOpen, setFiltersOpen] = useState(false);
+    const [filtersOpen, setFiltersOpen] = useState(
+        !!(filters.search || filters.region_id || filters.project_type_id || filters.status || filters.executor_id || filters.sector_type || filters.sector_id || filters.min_investment || filters.max_investment || filters.start_date_from || filters.start_date_to || filters.end_date_from || filters.end_date_to),
+    );
 
     const handleDelete = (id: number) => {
         if (confirm('Вы уверены, что хотите удалить этот проект?')) {
@@ -140,6 +157,15 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
         return [];
     }, [data.sector_type, sezs, industrialZones, subsoilUsers]);
 
+    const filteredUsers = useMemo(() => {
+        if (!data.region_id) {
+            // Егер аудан/облыс таңдалмаса, тек облыстық басқармаларды көрсетеміз
+            return users.filter(user => user.baskarma_type === 'oblast');
+        }
+        // Егер аудан/облыс таңдалса, облыстық басқармаларды ЖӘНЕ сол аймаққа тиесілі басқармаларды көрсетеміз
+        return users.filter(user => user.baskarma_type === 'oblast' || String(user.region_id) === data.region_id);
+    }, [users, data.region_id]);
+
     const submitFilters = (event: FormEvent) => {
         event.preventDefault();
         get(investmentProjectsRoutes.index.url(), {
@@ -150,12 +176,7 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
     };
 
     const clearFilters = () => {
-        reset();
-        get(investmentProjectsRoutes.index.url(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(investmentProjectsRoutes.index.url());
     };
 
     const getSectorDisplay = (project: InvestmentProject) => {
@@ -196,14 +217,45 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
+    const formatInvestment = (value: string | number | null) => {
+        if (!value) return '—';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        
+        const inMillions = num / 1000000;
+        return new Intl.NumberFormat('ru-RU', {
+            maximumFractionDigits: 2,
+        }).format(inMillions) + ' млн ₸';
+    };
+
+    const formatTotalInvestment = (value: number) => {
+        if (!value) return '0 ₸';
+        if (value >= 1000000000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000000) + ' трлн ₸';
+        } else if (value >= 1000000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000) + ' млрд ₸';
+        } else if (value >= 1000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000) + ' млн ₸';
+        }
+        return new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
+    };
+
+    const toNormalCase = (str: string) => {
+        if (!str) return '';
+        if (str === str.toUpperCase()) {
+            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        }
+        return str;
+    };
+
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Инвестиционные проекты', href: '#' }
+            { title: 'Инвестиционные проекты', href: investmentProjectsRoutes.index.url() }
         ]}>
             <Head title="Инвестиционные проекты" />
 
-            <div className="flex h-full flex-col p-4">
-                <div className="flex items-center justify-between mb-6">
+            <div className="flex h-full flex-col p-4 space-y-4">
+                <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
                         Инвестиционные проекты
                     </h1>
@@ -217,10 +269,10 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                     )}
                 </div>
 
-                <div className="mb-6 rounded-lg border border-neutral-200 bg-white p-4">
+                <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800"
+                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800 dark:text-neutral-200"
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
@@ -305,9 +357,9 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                             <SelectValue placeholder="Все исполнители" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {users.map((user) => (
+                                            {filteredUsers.map((user) => (
                                                 <SelectItem key={user.id} value={String(user.id)}>
-                                                    {user.full_name}
+                                                    {user.full_name} {user.position ? `- ${user.position}` : ''}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -420,18 +472,45 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         </form>
                     )}
                 </div>
+                
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общее количество проектов</h3>
+                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            Всего: {stats.total_projects} проект
+                        </p>
+                    </div>
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общий объем инвестиций</h3>
+                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            Общая сумма: {formatTotalInvestment(stats.total_investment)}
+                        </p>
+                    </div>
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">По статусам</h3>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                            <span className="flex items-center gap-1">
+                                🟢 Запущенный: {stats.status_counts.launched}
+                            </span>
+                            <span className="flex items-center gap-1">
+                                🟡 Реализуются: {stats.status_counts.implementation}
+                            </span>
+                            <span className="flex items-center gap-1">
+                                🔴 Приостановлено: {stats.status_counts.suspended}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-                <div className="rounded-md">
+                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>ID</TableHead>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead>Компания</TableHead>
+                                <TableHead>Наименование / Компания</TableHead>
                                 <TableHead>Регион</TableHead>
                                 <TableHead>Тип проекта</TableHead>
                                 <TableHead>Сектор</TableHead>
-                                <TableHead>Инвестиции (млн)</TableHead>
+                                <TableHead>Инвестиции</TableHead>
                                 <TableHead>Исполнители</TableHead>
                                 <TableHead>Статус</TableHead>
                                 <TableHead className="text-right">Действия</TableHead>
@@ -440,22 +519,32 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         <TableBody>
                             {projects.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={10} className="text-center text-neutral-500">
+                                    <TableCell colSpan={8} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 projects.data.map((project) => (
                                     <TableRow key={project.id}>
-                                        <TableCell className="font-medium">
-                                            #{project.id}
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <Link
+                                                    href={investmentProjectsRoutes.show.url(project.id)}
+                                                    className="font-bold text-blue-600 hover:underline dark:text-blue-400"
+                                                >
+                                                    {toNormalCase(project.name)}
+                                                </Link>
+                                                {project.company_name && (
+                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                        {toNormalCase(project.company_name)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
-                                        <TableCell className="font-medium">{project.name}</TableCell>
-                                        <TableCell>{project.company_name || '—'}</TableCell>
                                         <TableCell>{project.region.name}</TableCell>
                                         <TableCell>{project.project_type.name}</TableCell>
                                         <TableCell>{getSectorDisplay(project)}</TableCell>
-                                        <TableCell>{project.total_investment || '—'}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
                                         <TableCell>
                                             {project.executors?.length > 0
                                                 ? project.executors.map(e => e.full_name).join(', ')
@@ -467,26 +556,27 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Link href={`/investment-projects/${project.id}`}>
-                                                    <Button variant="ghost" size="icon" title="Просмотр">
-                                                        <Eye className="h-4 w-4 text-blue-600" />
-                                                    </Button>
-                                                </Link>
+                                            <div className="flex justify-end gap-1">
+                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Просмотр">
+                                                    <Link href={investmentProjectsRoutes.show.url(project.id)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
                                                 {canModify && (
                                                     <>
-                                                        <Link href={investmentProjectsRoutes.edit.url(project.id)}>
-                                                            <Button variant="ghost" size="icon" title="Редактировать">
+                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Редактировать">
+                                                            <Link href={investmentProjectsRoutes.edit.url(project.id)}>
                                                                 <Pencil className="h-4 w-4" />
-                                                            </Button>
-                                                        </Link>
+                                                            </Link>
+                                                        </Button>
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
+                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
                                                             onClick={() => handleDelete(project.id)}
                                                             title="Удалить"
                                                         >
-                                                            <Trash2 className="h-4 w-4 text-red-500" />
+                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </>
                                                 )}

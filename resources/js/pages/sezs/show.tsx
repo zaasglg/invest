@@ -242,12 +242,12 @@ export default function Show({ sez, investmentProjects }: Props) {
                                 {/* Infrastructure */}
                                 {sez.infrastructure && (() => {
                                     const infraItems = [
-                                        { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: sez.infrastructure.electricity },
-                                        { key: 'gas', name: 'Газ', icon: Flame, val: sez.infrastructure.gas },
-                                        { key: 'water', name: 'Водоснабжение', icon: Droplets, val: sez.infrastructure.water },
-                                        { key: 'roads', name: 'Дороги', icon: Car, val: sez.infrastructure.roads },
-                                        { key: 'railway', name: 'Ж/Д тупик', icon: TrainFront, val: sez.infrastructure.railway },
-                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: sez.infrastructure.internet },
+                                        { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: sez.infrastructure.electricity, unit: 'МВт' },
+                                        { key: 'gas', name: 'Газ', icon: Flame, val: sez.infrastructure.gas, unit: 'м³/час' },
+                                        { key: 'water', name: 'Водоснабжение', icon: Droplets, val: sez.infrastructure.water, unit: 'м³/сут' },
+                                        { key: 'roads', name: 'Дороги', icon: Car, val: sez.infrastructure.roads, unit: 'км' },
+                                        { key: 'railway', name: 'Ж/Д тупик', icon: TrainFront, val: sez.infrastructure.railway, unit: 'км' },
+                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: sez.infrastructure.internet, unit: '' },
                                     ].filter(i => i.val && i.val.available !== undefined);
 
                                     if (infraItems.length === 0) return null;
@@ -277,7 +277,9 @@ export default function Show({ sez, investmentProjects }: Props) {
                                                                     {active ? 'Доступно' : 'Нет'}
                                                                 </Badge>
                                                                 {detail && (
-                                                                    <div className="mt-0.5 text-[10px] font-medium text-gray-400">{detail}</div>
+                                                                    <div className="mt-0.5 text-[10px] font-medium text-gray-400">
+                                                                        {detail} {item.unit}
+                                                                    </div>
                                                                 )}
                                                             </div>
                                                         </div>

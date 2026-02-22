@@ -395,12 +395,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         if (!data) return null;
 
         const items = [
-            { key: 'electricity', name: "Электроснабжение", icon: Zap, val: data.electricity },
-            { key: 'gas', name: "Газ", icon: Flame, val: data.gas },
-            { key: 'water', name: "Водоснабжение", icon: Droplets, val: data.water },
-            { key: 'roads', name: "Дороги", icon: Car, val: data.roads },
-            { key: 'railway', name: "Ж/Д тупик", icon: TrainFront, val: data.railway },
-            { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet },
+            { key: 'electricity', name: "Электроснабжение", icon: Zap, val: data.electricity, unit: 'МВт' },
+            { key: 'gas', name: "Газ", icon: Flame, val: data.gas, unit: 'м³/час' },
+            { key: 'water', name: "Водоснабжение", icon: Droplets, val: data.water, unit: 'м³/сут' },
+            { key: 'roads', name: "Дороги", icon: Car, val: data.roads, unit: 'км' },
+            { key: 'railway', name: "Ж/Д тупик", icon: TrainFront, val: data.railway, unit: 'км' },
+            { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet, unit: '' },
         ].filter(i => i.val && i.val.available !== undefined);
 
         if (items.length === 0) return null;
@@ -432,7 +432,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             {active ? 'Доступно' : 'Нет'}
                                         </Badge>
                                         {detail && (
-                                            <div className="text-[10px] text-gray-400 font-medium mt-0.5">{detail}</div>
+                                            <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                                {detail} {item.unit}
+                                            </div>
                                         )}
                                     </div>
                                 </div>
@@ -595,7 +597,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 </div>
 
                                 {/* Reset map zoom button */}
-                                {(selectedEntityId || mapSelectedEntityId || selectedProjectId) && (
+                                {/* {(selectedEntityId || mapSelectedEntityId || selectedProjectId) && (
                                     <button
                                         onClick={handleResetMap}
                                         className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-white hover:text-gray-900 transition-colors"
@@ -603,7 +605,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Maximize2 className="h-3.5 w-3.5" />
                                         Показать всю карту
                                     </button>
-                                )}
+                                )} */}
                             </div>
 
                             {/* Projects / Tabs Section */}

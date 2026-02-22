@@ -130,13 +130,34 @@ class InvestmentProjectController extends Controller
             $projectsQuery->whereDate('end_date', '<=', $filters['end_date_to']);
         }
 
+        $statsQuery = clone $projectsQuery;
+        $totalProjects = $statsQuery->count();
+        $totalInvestment = $statsQuery->sum('total_investment');
+        $statusCounts = (clone $statsQuery)
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $stats = [
+            'total_projects' => $totalProjects,
+            'total_investment' => $totalInvestment,
+            'status_counts' => [
+                'launched' => $statusCounts['launched'] ?? 0,
+                'implementation' => $statusCounts['implementation'] ?? 0,
+                'suspended' => $statusCounts['suspended'] ?? 0,
+                'plan' => $statusCounts['plan'] ?? 0,
+            ]
+        ];
+
         $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
 
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
+            'stats' => $stats,
             'regions' => Region::select('id', 'name')->orderBy('name')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
-            'users' => User::select('id', 'full_name')->orderBy('full_name')->get(),
+            'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name')->orderBy('name')->get(),
             'industrialZones' => IndustrialZone::select('id', 'name')->orderBy('name')->get(),
             'subsoilUsers' => SubsoilUser::select('id', 'name')->orderBy('name')->get(),
