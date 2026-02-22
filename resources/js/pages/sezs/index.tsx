@@ -87,12 +87,7 @@ export default function Index({
     };
 
     const clearFilters = () => {
-        reset();
-        get(sezs.index.url(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(sezs.index.url());
     };
 
     const getStatusLabel = (status: string) => {

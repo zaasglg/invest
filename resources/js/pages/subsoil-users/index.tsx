@@ -121,12 +121,7 @@ export default function Index({
     };
 
     const clearFilters = () => {
-        reset();
-        get(subsoilUsersRoutes.index.url(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(subsoilUsersRoutes.index.url());
     };
 
     return (

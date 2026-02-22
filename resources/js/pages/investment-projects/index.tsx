@@ -40,6 +40,9 @@ interface ProjectType {
 interface User {
     id: number;
     full_name: string;
+    region_id?: number | null;
+    baskarma_type?: string | null;
+    position?: string | null;
 }
 
 interface Sez {
@@ -91,8 +94,20 @@ interface Filters {
     end_date_to: string;
 }
 
+interface Stats {
+    total_projects: number;
+    total_investment: number;
+    status_counts: {
+        launched: number;
+        implementation: number;
+        suspended: number;
+        plan: number;
+    };
+}
+
 interface Props {
     projects: PaginatedData<InvestmentProject>;
+    stats: Stats;
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -102,7 +117,7 @@ interface Props {
     filters: Partial<Filters>;
 }
 
-export default function Index({ projects, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
+export default function Index({ projects, stats, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
     const canModify = useCanModify();
     const { data, setData, get, reset } = useForm<Filters>({
         search: filters.search ?? '',
@@ -142,6 +157,15 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
         return [];
     }, [data.sector_type, sezs, industrialZones, subsoilUsers]);
 
+    const filteredUsers = useMemo(() => {
+        if (!data.region_id) {
+            // Егер аудан/облыс таңдалмаса, тек облыстық басқармаларды көрсетеміз
+            return users.filter(user => user.baskarma_type === 'oblast');
+        }
+        // Егер аудан/облыс таңдалса, облыстық басқармаларды ЖӘНЕ сол аймаққа тиесілі басқармаларды көрсетеміз
+        return users.filter(user => user.baskarma_type === 'oblast' || String(user.region_id) === data.region_id);
+    }, [users, data.region_id]);
+
     const submitFilters = (event: FormEvent) => {
         event.preventDefault();
         get(investmentProjectsRoutes.index.url(), {
@@ -152,12 +176,7 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
     };
 
     const clearFilters = () => {
-        reset();
-        get(investmentProjectsRoutes.index.url(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(investmentProjectsRoutes.index.url());
     };
 
     const getSectorDisplay = (project: InvestmentProject) => {
@@ -196,6 +215,37 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
             suspended: 'bg-red-100 text-red-800',
         };
         return colors[status] || 'bg-gray-100 text-gray-800';
+    };
+
+    const formatInvestment = (value: string | number | null) => {
+        if (!value) return '—';
+        const num = Number(value);
+        if (isNaN(num)) return value;
+        
+        const inMillions = num / 1000000;
+        return new Intl.NumberFormat('ru-RU', {
+            maximumFractionDigits: 2,
+        }).format(inMillions) + ' млн ₸';
+    };
+
+    const formatTotalInvestment = (value: number) => {
+        if (!value) return '0 ₸';
+        if (value >= 1000000000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000000) + ' трлн ₸';
+        } else if (value >= 1000000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000) + ' млрд ₸';
+        } else if (value >= 1000000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000) + ' млн ₸';
+        }
+        return new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
+    };
+
+    const toNormalCase = (str: string) => {
+        if (!str) return '';
+        if (str === str.toUpperCase()) {
+            return str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
+        }
+        return str;
     };
 
     return (
@@ -307,9 +357,9 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                                             <SelectValue placeholder="Все исполнители" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            {users.map((user) => (
+                                            {filteredUsers.map((user) => (
                                                 <SelectItem key={user.id} value={String(user.id)}>
-                                                    {user.full_name}
+                                                    {user.full_name} {user.position ? `- ${user.position}` : ''}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -422,17 +472,45 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         </form>
                     )}
                 </div>
+                
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общее количество проектов</h3>
+                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            Всего: {stats.total_projects} проект
+                        </p>
+                    </div>
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общий объем инвестиций</h3>
+                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                            Общая сумма: {formatTotalInvestment(stats.total_investment)}
+                        </p>
+                    </div>
+                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">По статусам</h3>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
+                            <span className="flex items-center gap-1">
+                                🟢 Запущенный: {stats.status_counts.launched}
+                            </span>
+                            <span className="flex items-center gap-1">
+                                🟡 Реализуются: {stats.status_counts.implementation}
+                            </span>
+                            <span className="flex items-center gap-1">
+                                🔴 Приостановлено: {stats.status_counts.suspended}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
                 <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead>Компания</TableHead>
+                                <TableHead>Наименование / Компания</TableHead>
                                 <TableHead>Регион</TableHead>
                                 <TableHead>Тип проекта</TableHead>
                                 <TableHead>Сектор</TableHead>
-                                <TableHead>Инвестиции (млн)</TableHead>
+                                <TableHead>Инвестиции</TableHead>
                                 <TableHead>Исполнители</TableHead>
                                 <TableHead>Статус</TableHead>
                                 <TableHead className="text-right">Действия</TableHead>
@@ -441,26 +519,32 @@ export default function Index({ projects, regions, projectTypes, users, sezs, in
                         <TableBody>
                             {projects.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={9} className="text-center text-neutral-500">
+                                    <TableCell colSpan={8} className="text-center text-neutral-500">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 projects.data.map((project) => (
                                     <TableRow key={project.id}>
-                                        <TableCell className="font-medium">
-                                            <Link
-                                                href={investmentProjectsRoutes.show.url(project.id)}
-                                                className="text-blue-600 hover:underline dark:text-blue-400"
-                                            >
-                                                {project.name}
-                                            </Link>
+                                        <TableCell>
+                                            <div className="flex flex-col">
+                                                <Link
+                                                    href={investmentProjectsRoutes.show.url(project.id)}
+                                                    className="font-bold text-blue-600 hover:underline dark:text-blue-400"
+                                                >
+                                                    {toNormalCase(project.name)}
+                                                </Link>
+                                                {project.company_name && (
+                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                        {toNormalCase(project.company_name)}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </TableCell>
-                                        <TableCell>{project.company_name || '—'}</TableCell>
                                         <TableCell>{project.region.name}</TableCell>
                                         <TableCell>{project.project_type.name}</TableCell>
                                         <TableCell>{getSectorDisplay(project)}</TableCell>
-                                        <TableCell>{project.total_investment || '—'}</TableCell>
+                                        <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
                                         <TableCell>
                                             {project.executors?.length > 0
                                                 ? project.executors.map(e => e.full_name).join(', ')

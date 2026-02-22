@@ -85,12 +85,7 @@ export default function Index({
     };
 
     const clearFilters = () => {
-        reset();
-        get(industrialZonesRoutes.index.url(), {
-            preserveState: true,
-            preserveScroll: true,
-            replace: true,
-        });
+        router.get(industrialZonesRoutes.index.url());
     };
 
     const getStatusLabel = (status: string) => {
