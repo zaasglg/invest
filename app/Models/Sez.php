@@ -14,7 +14,6 @@ class Sez extends Model
         'status',
         'infrastructure',
         'location',
-        'geometry',
         'description',
     ];
 

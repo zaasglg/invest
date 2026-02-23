@@ -14,7 +14,6 @@ class IndustrialZone extends Model
         'investment_total',
         'infrastructure',
         'location',
-        'geometry',
         'description',
     ];
 

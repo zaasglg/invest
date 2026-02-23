@@ -19,7 +19,6 @@ class InvestmentProject extends Model
         'start_date',
         'end_date',
         'created_by',
-        'executor_id',
         'geometry',
     ];
 
