@@ -37,11 +37,17 @@ class RegionController extends Controller
             'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
+            'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'nullable|exists:regions,id',
             'geometry' => 'nullable|array',
             'geometry.*.lat' => 'required|numeric',
             'geometry.*.lng' => 'required|numeric',
         ]);
+
+        // Clear subtype if type is oblast
+        if ($validated['type'] === 'oblast') {
+            $validated['subtype'] = null;
+        }
 
         if ($request->hasFile('icon_file')) {
             $validated['icon'] = $request->file('icon_file')->store('region-icons', 'public');
@@ -148,11 +154,17 @@ class RegionController extends Controller
             'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
+            'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'nullable|exists:regions,id',
             'geometry' => 'nullable|array',
             'geometry.*.lat' => 'required|numeric',
             'geometry.*.lng' => 'required|numeric',
         ]);
+
+        // Clear subtype if type is oblast
+        if ($validated['type'] === 'oblast') {
+            $validated['subtype'] = null;
+        }
 
         if ($request->hasFile('icon_file')) {
             if ($region->icon && str_contains($region->icon, '/')) {

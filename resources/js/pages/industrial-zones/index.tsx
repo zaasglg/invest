@@ -268,7 +268,9 @@ export default function Index({
                                             {zone.total_area || '—'}
                                         </TableCell>
                                         <TableCell>
-                                            {zone.investment_total || '—'}
+                                            {zone.investment_total
+                                                ? `${Number(zone.investment_total) >= 1000000 ? (Number(zone.investment_total) / 1000000).toFixed(1) + ' млн' : Number(zone.investment_total) >= 1000 ? (Number(zone.investment_total) / 1000000).toFixed(2) + ' млн' : zone.investment_total}`
+                                                : '—'}
                                         </TableCell>
                                         <TableCell>
                                             <Badge

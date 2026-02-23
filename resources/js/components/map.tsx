@@ -157,8 +157,8 @@ const REGION_VIBRANT_COLORS = [
 ];
 
 const MIN_REGION_ICON_SIZE = 24;
-const MAX_REGION_ICON_SIZE = 56;
-const DEFAULT_REGION_ICON_SIZE = 32;
+const MAX_REGION_ICON_SIZE = 32;
+const DEFAULT_REGION_ICON_SIZE = 28;
 
 type Props = {
     className?: string;
