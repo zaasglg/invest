@@ -448,10 +448,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     // Derived stats
     const totalSezArea = sezs.reduce((acc, curr) => acc + Number(curr.total_area), 0);
-    const totalSezInvestment = sezs.reduce((acc, curr) => acc + Number(curr.investment_total), 0);
 
     const totalIzArea = industrialZones.reduce((acc, curr) => acc + Number(curr.total_area), 0);
-    const totalIzInvestment = industrialZones.reduce((acc, curr) => acc + Number(curr.investment_total), 0);
 
     // Helper to safely get lat/lng
     function getLatLng(point: any): { lat: number, lng: number } | null {
@@ -488,6 +486,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
             ];
         }
     }
+
+    const mapProjects = React.useMemo(() => {
+        if (activeTab === 'sez') return sezProjects;
+        if (activeTab === 'iz') return izProjects;
+        if (activeTab === 'subsoil') return subsoilProjects;
+        return projects;
+    }, [activeTab, projects, sezProjects, izProjects, subsoilProjects]);
 
     return (
         <AppLayout
@@ -539,10 +544,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <div className="h-[500px] w-full relative z-0">
                                     <Map 
                                         regions={[region]} 
-                                        projects={projects}
-                                        sezs={sezs}
-                                        industrialZones={industrialZones}
-                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : subsoilUsers}
+                                        projects={mapProjects}
+                                        sezs={activeTab === 'sez' || activeTab === 'all' ? sezs : []}
+                                        industrialZones={activeTab === 'iz' || activeTab === 'all' ? industrialZones : []}
+                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : activeTab === 'all' ? subsoilUsers : []}
                                         selectedEntityId={selectedEntityId ?? mapSelectedEntityId}
                                         selectedEntityType={selectedEntityType ?? mapSelectedEntityType}
                                         selectedProjectId={selectedProjectId}
@@ -986,7 +991,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             const selectedSez = selectedSezId ? sezs.find(s => s.id === selectedSezId) : null;
                                             const displayZones = selectedSez ? 1 : sezs.length;
                                             const displayArea = selectedSez ? Number(selectedSez.total_area) : totalSezArea;
-                                            const displayInvestment = selectedSez ? Number(selectedSez.investment_total) : totalSezInvestment;
+                                            const displayInvestment = sezProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedSez ? (selectedSez.issues_count ?? 0) : stats.sezIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
@@ -1095,7 +1100,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             const selectedIz = selectedIzId ? industrialZones.find(z => z.id === selectedIzId) : null;
                                             const displayZones = selectedIz ? 1 : industrialZones.length;
                                             const displayArea = selectedIz ? Number(selectedIz.total_area) : totalIzArea;
-                                            const displayInvestment = selectedIz ? Number(selectedIz.investment_total) : totalIzInvestment;
+                                            const displayInvestment = izProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedIz ? (selectedIz.issues_count ?? 0) : stats.izIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
