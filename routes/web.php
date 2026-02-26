@@ -4,11 +4,14 @@ use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 use Laravel\Fortify\Features;
 
-Route::get('/', function () {
-    return Inertia::render('welcome', [
-        'canRegister' => Features::enabled(Features::registration()),
-    ]);
-})->name('home');
+// Route::get('/', function () {
+//     return Inertia::render('welcome', [
+//         'canRegister' => Features::enabled(Features::registration()),
+//     ]);
+// })->name('home');
+route::get('/', function () {
+    return redirect()->route('dashboard');
+});
 
 Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'verified'])
@@ -32,8 +35,13 @@ Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::cl
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::post('investment-projects-bulk-presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'bulkPresentation'])
+    ->middleware(['auth', 'verified', 'role.access'])
+    ->name('investment-projects.bulk-presentation');
+
 Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
     Route::get('passport', [\App\Http\Controllers\InvestmentProjectController::class, 'passport'])->name('investment-projects.passport');
+    Route::get('presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'presentation'])->name('investment-projects.presentation');
 
     Route::get('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])->name('investment-projects.documents.index');
     Route::post('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])->name('investment-projects.documents.store');

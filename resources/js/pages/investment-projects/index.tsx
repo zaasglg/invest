@@ -254,31 +254,31 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         ]}>
             <Head title="Инвестиционные проекты" />
 
-            <div className="flex h-full flex-col p-4 space-y-4">
+            <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Инвестиционные проекты
                     </h1>
                     {canModify && (
                         <Link href={investmentProjectsRoutes.create.url()}>
-                            <Button className="shadow-none">
-                                <Plus className="h-4 w-4 mr-2" />
+                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                                <Plus className="mr-2 h-4 w-4" />
                                 Создать проект
                             </Button>
                         </Link>
                     )}
                 </div>
 
-                <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800 dark:text-neutral-200"
+                        className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#0f1b3d]"
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
                         Фильтры
                         <ChevronDown
-                            className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                            className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
                     </button>
 
@@ -462,10 +462,10 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                 </div>
                             </div>
                             <div className="mt-4 flex flex-wrap gap-2">
-                                <Button type="submit" className="shadow-none">
+                                <Button type="submit" className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]">
                                     Применить
                                 </Button>
-                                <Button type="button" variant="outline" className="shadow-none" onClick={clearFilters}>
+                                <Button type="button" variant="outline" className="border-gray-200 shadow-none hover:bg-gray-50" onClick={clearFilters}>
                                     Сбросить
                                 </Button>
                             </div>
@@ -474,35 +474,35 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                 </div>
                 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общее количество проектов</h3>
-                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                            Всего: {stats.total_projects} проект
+                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Количество проектов</h3>
+                        <p className="mt-2 text-2xl font-bold text-[#0f1b3d]">
+                            {stats.total_projects}
                         </p>
                     </div>
-                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">Общий объем инвестиций</h3>
-                        <p className="mt-2 text-2xl font-bold text-neutral-900 dark:text-neutral-100">
-                            Общая сумма: {formatTotalInvestment(stats.total_investment)}
+                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Объём инвестиций</h3>
+                        <p className="mt-2 text-2xl font-bold text-[#c8a44e]">
+                            {formatTotalInvestment(stats.total_investment)}
                         </p>
                     </div>
-                    <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
-                        <h3 className="text-sm font-medium text-neutral-500 dark:text-neutral-400">По статусам</h3>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-neutral-900 dark:text-neutral-100">
-                            <span className="flex items-center gap-1">
-                                🟢 Запущенный: {stats.status_counts.launched}
+                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">По статусам</h3>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-[#0f1b3d]">
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Запущенный: {stats.status_counts.launched}
                             </span>
-                            <span className="flex items-center gap-1">
-                                🟡 Реализуются: {stats.status_counts.implementation}
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-amber-500" /> Реализуются: {stats.status_counts.implementation}
                             </span>
-                            <span className="flex items-center gap-1">
-                                🔴 Приостановлено: {stats.status_counts.suspended}
+                            <span className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-red-500" /> Приостановлено: {stats.status_counts.suspended}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -519,7 +519,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         <TableBody>
                             {projects.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={8} className="text-center text-neutral-500">
+                                    <TableCell colSpan={8} className="py-12 text-center text-gray-400">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
@@ -530,12 +530,12 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                             <div className="flex flex-col">
                                                 <Link
                                                     href={investmentProjectsRoutes.show.url(project.id)}
-                                                    className="font-bold text-blue-600 hover:underline dark:text-blue-400"
+                                                    className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
                                                 >
                                                     {toNormalCase(project.name)}
                                                 </Link>
                                                 {project.company_name && (
-                                                    <span className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
+                                                    <span className="mt-0.5 text-xs text-gray-400">
                                                         {toNormalCase(project.company_name)}
                                                     </span>
                                                 )}
@@ -557,14 +557,14 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
-                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Просмотр">
+                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Просмотр">
                                                     <Link href={investmentProjectsRoutes.show.url(project.id)}>
                                                         <Eye className="h-4 w-4" />
                                                     </Link>
                                                 </Button>
                                                 {canModify && (
                                                     <>
-                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600" title="Редактировать">
+                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Редактировать">
                                                             <Link href={investmentProjectsRoutes.edit.url(project.id)}>
                                                                 <Pencil className="h-4 w-4" />
                                                             </Link>
@@ -572,7 +572,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
                                                             onClick={() => handleDelete(project.id)}
                                                             title="Удалить"
                                                         >

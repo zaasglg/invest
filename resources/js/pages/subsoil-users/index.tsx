@@ -135,14 +135,14 @@ export default function Index({
         >
             <Head title="Недропользование" />
 
-            <div className="flex h-full flex-col p-4 space-y-4">
+            <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Недропользование
                     </h1>
                     {canModify && (
                         <Link href={subsoilUsersRoutes.create.url()}>
-                            <Button className="shadow-none">
+                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Создать нового
                             </Button>
@@ -150,16 +150,16 @@ export default function Index({
                     )}
                 </div>
 
-                <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800 dark:text-neutral-200"
+                        className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#0f1b3d]"
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
                         Фильтры
                         <ChevronDown
-                            className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                            className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
                     </button>
 
@@ -259,14 +259,14 @@ export default function Index({
                             <div className="mt-4 flex flex-wrap gap-2">
                                 <Button
                                     type="submit"
-                                    className="shadow-none"
+                                    className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                 >
                                     Применить
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="shadow-none"
+                                    className="border-gray-200 shadow-none hover:bg-gray-50"
                                     onClick={clearFilters}
                                 >
                                     Сбросить
@@ -276,7 +276,7 @@ export default function Index({
                     )}
                 </div>
 
-                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -299,7 +299,7 @@ export default function Index({
                                 <TableRow>
                                     <TableCell
                                         colSpan={8}
-                                        className="h-24 text-center text-neutral-500"
+                                        className="py-12 text-center text-gray-400"
                                     >
                                         Нет данных
                                     </TableCell>
@@ -307,7 +307,7 @@ export default function Index({
                             ) : (
                                 subsoilUsers.data.map((user) => (
                                     <TableRow key={user.id}>
-                                        <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">
+                                        <TableCell className="font-medium text-gray-400">
                                             #{user.id}
                                         </TableCell>
                                         <TableCell className="font-medium">
@@ -315,7 +315,7 @@ export default function Index({
                                                 href={subsoilUsersRoutes.show.url(
                                                     user.id,
                                                 )}
-                                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                                className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
                                             >
                                                 {user.name}
                                             </Link>
@@ -351,7 +351,7 @@ export default function Index({
                                                     variant="ghost"
                                                     size="icon"
                                                     asChild
-                                                    className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                     title="Просмотр"
                                                 >
                                                     <Link
@@ -368,7 +368,7 @@ export default function Index({
                                                             variant="ghost"
                                                             size="icon"
                                                             asChild
-                                                            className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                             title="Редактировать"
                                                         >
                                                             <Link

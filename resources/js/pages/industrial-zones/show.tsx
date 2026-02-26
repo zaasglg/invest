@@ -79,7 +79,6 @@ interface IndustrialZone {
     region_id: number;
     region?: Region;
     total_area?: number;
-    investment_total?: number;
     status: 'active' | 'developing';
     infrastructure?: InfrastructureData | null;
     description?: string;
@@ -170,7 +169,7 @@ export default function Show({ industrialZone }: Props) {
                 {/* Back link */}
                 <Link
                     href={`/regions/${industrialZone.region_id}`}
-                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Назад к списку
                 </Link>
@@ -181,7 +180,7 @@ export default function Show({ industrialZone }: Props) {
                         {/* Banner + Info + Description */}
                         <Card className="overflow-hidden shadow-none py-0">
                             {/* Banner Header */}
-                            <div className="bg-gray-900 px-6 py-4">
+                            <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-white">
                                         <Layers className="h-5 w-5" />
@@ -204,7 +203,7 @@ export default function Show({ industrialZone }: Props) {
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                             <MapPin className="h-3.5 w-3.5" /> Район
                                         </p>
-                                        <p className="text-sm font-bold text-gray-900">
+                                        <p className="text-sm font-bold text-[#0f1b3d]">
                                             {industrialZone.region?.name || 'Не указан'}
                                         </p>
                                     </div>
@@ -212,7 +211,7 @@ export default function Show({ industrialZone }: Props) {
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                             <Activity className="h-3.5 w-3.5" /> Статус
                                         </p>
-                                        <p className="text-sm font-bold text-gray-900">
+                                        <p className="text-sm font-bold text-[#0f1b3d]">
                                             {statusMap[industrialZone.status]?.label || industrialZone.status}
                                         </p>
                                     </div>
@@ -220,7 +219,7 @@ export default function Show({ industrialZone }: Props) {
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                             <MapPin className="h-3.5 w-3.5" /> Площадь
                                         </p>
-                                        <p className="text-sm font-bold text-gray-900">
+                                        <p className="text-sm font-bold text-[#0f1b3d]">
                                             {industrialZone.total_area ? `${industrialZone.total_area} га` : 'Не указана'}
                                         </p>
                                     </div>
@@ -228,10 +227,11 @@ export default function Show({ industrialZone }: Props) {
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                             <Building2 className="h-3.5 w-3.5" /> Объем инвестиций
                                         </p>
-                                        <p className="text-sm font-bold text-gray-900">
-                                            {industrialZone.investment_total
-                                                ? formatCurrency(Number(industrialZone.investment_total))
-                                                : 'Не указан'}
+                                        <p className="text-sm font-bold text-[#0f1b3d]">
+                                            {(() => {
+                                                const sum = projects.reduce((acc, p) => acc + Number(p.total_investment || 0), 0);
+                                                return sum > 0 ? formatCurrency(sum) : 'Не указан';
+                                            })()}
                                         </p>
                                     </div>
                                 </div>
@@ -290,7 +290,7 @@ export default function Show({ industrialZone }: Props) {
 
                             {/* Description */}
                             <div className="border-t border-gray-200 px-6 py-5">
-                                {/* <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                {/* <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <FileText className="h-5 w-5 text-gray-500" />
                                     {industrialZone.name}
                                 </h2> */}
@@ -342,7 +342,7 @@ export default function Show({ industrialZone }: Props) {
                                                         (window.location.href = `/investment-projects/${project.id}`)
                                                     }
                                                 >
-                                                    <TableCell className="font-medium text-gray-900">
+                                                    <TableCell className="font-medium text-[#0f1b3d]">
                                                         {project.name}
                                                     </TableCell>
                                                     <TableCell className="text-gray-600">
@@ -457,7 +457,7 @@ export default function Show({ industrialZone }: Props) {
                                                 className="rounded-lg border p-3"
                                             >
                                                 <div className="mb-1 flex items-center justify-between">
-                                                    <p className="text-sm font-semibold text-gray-900">
+                                                    <p className="text-sm font-semibold text-[#0f1b3d]">
                                                         {issue.title}
                                                     </p>
                                                     <div className="flex gap-1">

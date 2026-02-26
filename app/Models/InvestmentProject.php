@@ -19,8 +19,8 @@ class InvestmentProject extends Model
         'start_date',
         'end_date',
         'created_by',
-        'executor_id',
         'geometry',
+        'infrastructure',
     ];
 
     protected function casts(): array
@@ -30,6 +30,7 @@ class InvestmentProject extends Model
             'start_date' => 'date',
             'end_date' => 'date',
             'geometry' => 'array',
+            'infrastructure' => 'array',
         ];
     }
 

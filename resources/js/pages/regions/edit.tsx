@@ -119,8 +119,8 @@ export default function Edit({ region, parents }: Props) {
         >
             <Head title="Редактирование региона" />
 
-            <div className="flex h-full max-w-2xl flex-col p-4">
-                <h1 className="mb-6 font-serif text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="mb-6 text-2xl font-bold text-[#0f1b3d]">
                     Редактирование региона
                 </h1>
 
@@ -128,7 +128,7 @@ export default function Edit({ region, parents }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label
                             htmlFor="type"
-                            className="font-normal text-neutral-500"
+                            className="font-normal text-gray-500"
                         >
                             Тип региона
                         </Label>
@@ -136,7 +136,7 @@ export default function Edit({ region, parents }: Props) {
                             value={data.type}
                             onValueChange={(value) => setData('type', value)}
                         >
-                            <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
+                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                 <SelectValue placeholder="Выберите тип" />
                             </SelectTrigger>
                             <SelectContent>
@@ -155,7 +155,7 @@ export default function Edit({ region, parents }: Props) {
                         <div className="flex flex-col gap-2">
                             <Label
                                 htmlFor="parent_id"
-                                className="font-normal text-neutral-500"
+                                className="font-normal text-gray-500"
                             >
                                 Родительский регион (Область)
                             </Label>
@@ -165,7 +165,7 @@ export default function Edit({ region, parents }: Props) {
                                     setData('parent_id', value)
                                 }
                             >
-                                <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
+                                <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                     <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -191,7 +191,7 @@ export default function Edit({ region, parents }: Props) {
                         <div className="flex flex-col gap-2">
                             <Label
                                 htmlFor="subtype"
-                                className="font-normal text-neutral-500"
+                                className="font-normal text-gray-500"
                             >
                                 Район / Город
                             </Label>
@@ -201,7 +201,7 @@ export default function Edit({ region, parents }: Props) {
                                     setData('subtype', value)
                                 }
                             >
-                                <SelectTrigger className="h-10 w-full border-neutral-200 shadow-none focus:border-neutral-900 focus:ring-0">
+                                <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                     <SelectValue placeholder="Таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -224,7 +224,7 @@ export default function Edit({ region, parents }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label
                             htmlFor="name"
-                            className="font-normal text-neutral-500"
+                            className="font-normal text-gray-500"
                         >
                             Наименование
                         </Label>
@@ -232,7 +232,7 @@ export default function Edit({ region, parents }: Props) {
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            className="h-10 border-neutral-200 bg-transparent shadow-none focus:border-neutral-900 focus-visible:ring-0"
+                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                             placeholder="Например: Сауран"
                             autoFocus
                         />
@@ -246,7 +246,7 @@ export default function Edit({ region, parents }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label
                             htmlFor="color"
-                            className="font-normal text-neutral-500"
+                            className="font-normal text-gray-500"
                         >
                             Цвет региона
                         </Label>
@@ -261,14 +261,14 @@ export default function Edit({ region, parents }: Props) {
                                         e.target.value.toUpperCase(),
                                     )
                                 }
-                                className="h-10 w-14 cursor-pointer rounded-md border-neutral-200 bg-transparent p-1 shadow-none"
+                                className="h-10 w-14 cursor-pointer rounded-md border-gray-200 bg-transparent p-1 shadow-none"
                             />
                             <Input
                                 value={data.color}
                                 onChange={(e) =>
                                     setData('color', e.target.value)
                                 }
-                                className="h-10 border-neutral-200 bg-transparent font-mono uppercase shadow-none focus:border-neutral-900 focus-visible:ring-0"
+                                className="h-10 border-gray-200 bg-transparent font-mono uppercase shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                 placeholder="#3B82F6"
                             />
                         </div>
@@ -282,7 +282,7 @@ export default function Edit({ region, parents }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label
                             htmlFor="icon_file"
-                            className="font-normal text-neutral-500"
+                            className="font-normal text-gray-500"
                         >
                             Загрузить новую иконку (PNG, JPG, WEBP, SVG)
                         </Label>
@@ -296,21 +296,21 @@ export default function Edit({ region, parents }: Props) {
                                     e.target.files?.[0] ?? null,
                                 )
                             }
-                            className="h-10 border-neutral-200 bg-transparent shadow-none file:mr-3 file:rounded-md file:border-0 file:bg-neutral-100 file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-neutral-200 focus:border-neutral-900 focus-visible:ring-0"
+                            className="h-10 border-gray-200 bg-transparent shadow-none file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-gray-200 focus:border-[#0f1b3d] focus-visible:ring-0"
                         />
                         {existingIconPath && (
-                            <div className="flex items-center gap-2 rounded-md border border-neutral-200 p-2">
+                            <div className="flex items-center gap-2 rounded-md border border-gray-200 p-2">
                                 <img
                                     src={existingIconPath}
                                     alt="Текущая иконка региона"
                                     className="h-8 w-8 object-contain"
                                 />
-                                <span className="text-xs text-neutral-500">
+                                <span className="text-xs text-gray-500">
                                     Текущая загруженная иконка
                                 </span>
                             </div>
                         )}
-                        <p className="text-xs text-neutral-500">
+                        <p className="text-xs text-gray-500">
                             Если файл не загрузить, текущая иконка останется без
                             изменений.
                         </p>
@@ -324,7 +324,7 @@ export default function Edit({ region, parents }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label
                             htmlFor="area"
-                            className="font-normal text-neutral-500"
+                            className="font-normal text-gray-500"
                         >
                             Аумағы (га)
                         </Label>
@@ -335,7 +335,7 @@ export default function Edit({ region, parents }: Props) {
                             min="0"
                             value={data.area}
                             onChange={(e) => setData('area', e.target.value)}
-                            className="h-10 border-neutral-200 bg-transparent shadow-none focus:border-neutral-900 focus-visible:ring-0"
+                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                             placeholder="Например: 120.50"
                         />
                         {errors.area && (
@@ -346,7 +346,7 @@ export default function Edit({ region, parents }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="font-normal text-neutral-500">
+                        <Label className="font-normal text-gray-500">
                             Геолокация (полигон)
                         </Label>
                         <LocationPicker
@@ -368,12 +368,12 @@ export default function Edit({ region, parents }: Props) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Обновить
                         </Button>
                         <Link
                             href={regions.index.url()}
-                            className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline"
+                            className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]"
                         >
                             Отмена
                         </Link>

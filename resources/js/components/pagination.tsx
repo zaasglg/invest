@@ -31,17 +31,20 @@ export default function Pagination<T>({
     );
 
     return (
-        <div className="flex flex-col items-center justify-between gap-4 px-2 py-4 sm:flex-row">
-            <p className="text-sm text-neutral-500">
-                Показано {paginator.from ?? 0}–{paginator.to ?? 0} из{' '}
-                {paginator.total}
+        <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3.5 shadow-sm sm:flex-row">
+            <p className="text-sm font-medium text-gray-500">
+                Показано{' '}
+                <span className="text-[#0f1b3d]">
+                    {paginator.from ?? 0}–{paginator.to ?? 0}
+                </span>{' '}
+                из <span className="text-[#0f1b3d]">{paginator.total}</span>
             </p>
 
             <div className="flex items-center gap-1">
                 <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 shadow-none"
+                    className="h-8 w-8 border-gray-200 shadow-none hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                     disabled={!paginator.prev_page_url}
                     onClick={() => navigate(paginator.prev_page_url)}
                 >
@@ -52,7 +55,7 @@ export default function Pagination<T>({
                     page === '...' ? (
                         <span
                             key={`ellipsis-${idx}`}
-                            className="flex h-8 w-8 items-center justify-center text-sm text-neutral-400"
+                            className="flex h-8 w-8 items-center justify-center text-sm text-gray-400"
                         >
                             …
                         </span>
@@ -65,7 +68,11 @@ export default function Pagination<T>({
                                     : 'outline'
                             }
                             size="icon"
-                            className="h-8 w-8 shadow-none"
+                            className={
+                                page === paginator.current_page
+                                    ? 'h-8 w-8 border-[#c8a44e] bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]'
+                                    : 'h-8 w-8 border-gray-200 shadow-none hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]'
+                            }
                             onClick={() => {
                                 const link = paginator.links.find(
                                     (l) => l.label === String(page),
@@ -81,7 +88,7 @@ export default function Pagination<T>({
                 <Button
                     variant="outline"
                     size="icon"
-                    className="h-8 w-8 shadow-none"
+                    className="h-8 w-8 border-gray-200 shadow-none hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                     disabled={!paginator.next_page_url}
                     onClick={() => navigate(paginator.next_page_url)}
                 >

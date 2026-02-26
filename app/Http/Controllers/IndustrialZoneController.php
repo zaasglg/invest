@@ -11,7 +11,8 @@ class IndustrialZoneController extends Controller
 {
     public function index(Request $request)
     {
-        $query = IndustrialZone::with('region');
+        $query = IndustrialZone::with('region')
+            ->withSum('investmentProjects', 'total_investment');
 
         $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
@@ -83,7 +84,6 @@ class IndustrialZoneController extends Controller
                 },
             ],
             'total_area' => 'nullable|numeric|min:0',
-            'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',
@@ -143,7 +143,6 @@ class IndustrialZoneController extends Controller
                 },
             ],
             'total_area' => 'nullable|numeric|min:0',
-            'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',

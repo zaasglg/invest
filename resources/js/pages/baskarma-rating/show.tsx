@@ -109,7 +109,7 @@ function TaskTable({
                                         {index + 1}
                                     </TableCell>
                                     <TableCell>
-                                        <p className="font-medium text-gray-900">
+                                        <p className="font-medium text-[#0f1b3d]">
                                             {task.title}
                                         </p>
                                         {task.region && (
@@ -169,7 +169,7 @@ export default function BaskarmaRatingShow({
                 {/* Back */}
                 <Link
                     href="/baskarma-rating"
-                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Вернуться к рейтингу
                 </Link>
@@ -181,7 +181,7 @@ export default function BaskarmaRatingShow({
                             <UserIcon className="h-7 w-7 text-gray-500" />
                         </div>
                         <div className="flex-1">
-                            <h1 className="text-xl font-bold text-gray-900">
+                            <h1 className="text-xl font-bold text-[#0f1b3d]">
                                 {user.full_name}
                             </h1>
                             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
@@ -205,7 +205,7 @@ export default function BaskarmaRatingShow({
                         {/* Summary stats */}
                         <div className="flex gap-4">
                             <div className="rounded-lg border border-gray-200 px-4 py-2 text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-[#0f1b3d]">
                                     {projectCount}
                                 </p>
                                 <p className="text-xs text-gray-500">
@@ -213,7 +213,7 @@ export default function BaskarmaRatingShow({
                                 </p>
                             </div>
                             <div className="rounded-lg border border-gray-200 px-4 py-2 text-center">
-                                <p className="text-2xl font-bold text-gray-900">
+                                <p className="text-2xl font-bold text-[#0f1b3d]">
                                     {totalTasks}
                                 </p>
                                 <p className="text-xs text-gray-500">

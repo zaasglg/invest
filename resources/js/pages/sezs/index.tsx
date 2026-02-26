@@ -38,7 +38,7 @@ interface Sez {
     name: string;
     region: Region;
     total_area: string | null;
-    investment_total: string | null;
+    investment_projects_sum_total_investment: string | null;
     status: string;
     created_at: string;
     updated_at: string;
@@ -106,14 +106,14 @@ export default function Index({
         >
             <Head title="СЭЗ" />
 
-            <div className="flex h-full flex-col p-4 space-y-4">
+            <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Специальные экономические зоны
                     </h1>
                     {canModify && (
                         <Link href={sezs.create.url()}>
-                            <Button className="shadow-none">
+                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                 <Plus className="mr-2 h-4 w-4" />
                                 Создать новую
                             </Button>
@@ -121,16 +121,16 @@ export default function Index({
                     )}
                 </div>
 
-                <div className="rounded-lg border border-neutral-200 bg-white p-4 dark:border-neutral-700 dark:bg-neutral-900">
+                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
                     <button
                         type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-medium text-neutral-800 dark:text-neutral-200"
+                        className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#0f1b3d]"
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
                         Фильтры
                         <ChevronDown
-                            className={`h-4 w-4 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                            className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
                     </button>
 
@@ -198,14 +198,14 @@ export default function Index({
                             <div className="mt-4 flex flex-wrap gap-2">
                                 <Button
                                     type="submit"
-                                    className="shadow-none"
+                                    className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                 >
                                     Применить
                                 </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    className="shadow-none"
+                                    className="border-gray-200 shadow-none hover:bg-gray-50"
                                     onClick={clearFilters}
                                 >
                                     Сбросить
@@ -215,7 +215,7 @@ export default function Index({
                     )}
                 </div>
 
-                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -237,7 +237,7 @@ export default function Index({
                                 <TableRow>
                                     <TableCell
                                         colSpan={7}
-                                        className="h-24 text-center text-neutral-500"
+                                        className="py-12 text-center text-gray-400"
                                     >
                                         Нет данных
                                     </TableCell>
@@ -245,15 +245,15 @@ export default function Index({
                             ) : (
                                 sezsData.data.map((sez) => (
                                     <TableRow key={sez.id}>
-                                        <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">
+                                        <TableCell className="font-medium text-gray-400">
                                             #{sez.id}
                                         </TableCell>
-                                        <TableCell className="font-medium">
+                                        <TableCell className="font-semibold">
                                             <Link
                                                 href={sezs.show.url(
                                                     sez.id,
                                                 )}
-                                                className="text-blue-600 hover:underline dark:text-blue-400"
+                                                className="text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
                                             >
                                                 {sez.name}
                                             </Link>
@@ -265,8 +265,8 @@ export default function Index({
                                             {sez.total_area || '—'}
                                         </TableCell>
                                         <TableCell>
-                                            {sez.investment_total
-                                                ? `${Number(sez.investment_total) >= 1000000 ? (Number(sez.investment_total) / 1000000).toFixed(1) + ' млн' : Number(sez.investment_total) >= 1000 ? (Number(sez.investment_total) / 1000000).toFixed(2) + ' млн' : sez.investment_total}`
+                                            {sez.investment_projects_sum_total_investment
+                                                ? `${Number(sez.investment_projects_sum_total_investment) >= 1000000 ? (Number(sez.investment_projects_sum_total_investment) / 1000000).toFixed(1) + ' млн' : Number(sez.investment_projects_sum_total_investment) >= 1000 ? (Number(sez.investment_projects_sum_total_investment) / 1000000).toFixed(2) + ' млн' : sez.investment_projects_sum_total_investment}`
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>
@@ -284,7 +284,7 @@ export default function Index({
                                                     variant="ghost"
                                                     size="icon"
                                                     asChild
-                                                    className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                     title="Просмотр"
                                                 >
                                                     <Link
@@ -301,7 +301,7 @@ export default function Index({
                                                             variant="ghost"
                                                             size="icon"
                                                             asChild
-                                                            className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
+                                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                             title="Редактировать"
                                                         >
                                                             <Link
@@ -315,7 +315,7 @@ export default function Index({
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
                                                             onClick={() =>
                                                                 handleDelete(
                                                                     sez.id,

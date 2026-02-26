@@ -11,10 +11,8 @@ class IndustrialZone extends Model
         'region_id',
         'status',
         'total_area',
-        'investment_total',
         'infrastructure',
         'location',
-        'geometry',
         'description',
     ];
 
@@ -22,7 +20,6 @@ class IndustrialZone extends Model
     {
         return [
             'total_area' => 'decimal:2',
-            'investment_total' => 'decimal:2',
             'infrastructure' => 'array',
             'location' => 'array',
             'geometry' => 'array',

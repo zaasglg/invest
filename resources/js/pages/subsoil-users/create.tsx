@@ -78,18 +78,18 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
         ]}>
             <Head title="Создание недропользователя" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Новый недропользователь</h1>
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Новый недропользователь</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="name" className="text-neutral-500 font-normal">Наименование</Label>
+                            <Label htmlFor="name" className="text-gray-500 font-normal">Наименование</Label>
                             <Input
                                 id="name"
                                 value={data.name}
                                 onChange={(e) => setData('name', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="Компания / организация"
                                 autoFocus
                             />
@@ -97,12 +97,12 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="bin" className="text-neutral-500 font-normal">БИН</Label>
+                            <Label htmlFor="bin" className="text-gray-500 font-normal">БИН</Label>
                             <Input
                                 id="bin"
                                 value={data.bin}
                                 onChange={(e) => setData('bin', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="Идентификатор"
                             />
                             {errors.bin && <span className="text-sm text-red-500">{errors.bin}</span>}
@@ -111,7 +111,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -120,7 +120,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                 }}
                                 disabled={isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -134,13 +134,13 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId || isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -162,26 +162,26 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="mineral_type" className="text-neutral-500 font-normal">Тип минерала</Label>
+                            <Label htmlFor="mineral_type" className="text-gray-500 font-normal">Тип минерала</Label>
                             <Input
                                 id="mineral_type"
                                 value={data.mineral_type}
                                 onChange={(e) => setData('mineral_type', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="Например: нефть"
                             />
                             {errors.mineral_type && <span className="text-sm text-red-500">{errors.mineral_type}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_area" className="text-neutral-500 font-normal">Площадь (га)</Label>
+                            <Label htmlFor="total_area" className="text-gray-500 font-normal">Площадь (га)</Label>
                             <Input
                                 id="total_area"
                                 type="number"
                                 step="0.01"
                                 value={data.total_area}
                                 onChange={(e) => setData('total_area', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="0.00"
                             />
                             {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
@@ -189,12 +189,12 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-neutral-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
                         <textarea
                             id="description"
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
-                            className="min-h-[100px] w-full resize-none rounded-md border border-neutral-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-neutral-900 focus:outline-none focus-visible:ring-0"
+                            className="min-h-[100px] w-full resize-none rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-[#0f1b3d] focus:outline-none focus-visible:ring-0"
                             placeholder="Описание деятельности недропользователя"
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
@@ -203,12 +203,12 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     <div className="grid grid-cols-2 gap-4">
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_status" className="text-neutral-500 font-normal">Статус лицензии</Label>
+                            <Label htmlFor="license_status" className="text-gray-500 font-normal">Статус лицензии</Label>
                             <Select
                                 value={data.license_status}
                                 onValueChange={(value) => setData('license_status', value)}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите статус" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -224,32 +224,32 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_start" className="text-neutral-500 font-normal">Дата начала лицензии</Label>
+                            <Label htmlFor="license_start" className="text-gray-500 font-normal">Дата начала лицензии</Label>
                             <Input
                                 id="license_start"
                                 type="date"
                                 value={data.license_start}
                                 onChange={(e) => setData('license_start', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.license_start && <span className="text-sm text-red-500">{errors.license_start}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_end" className="text-neutral-500 font-normal">Дата окончания лицензии</Label>
+                            <Label htmlFor="license_end" className="text-gray-500 font-normal">Дата окончания лицензии</Label>
                             <Input
                                 id="license_end"
                                 type="date"
                                 value={data.license_end}
                                 onChange={(e) => setData('license_end', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.license_end && <span className="text-sm text-red-500">{errors.license_end}</span>}
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
@@ -262,10 +262,10 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Сохранить
                         </Button>
-                        <Link href={subsoilUsersRoutes.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link href={subsoilUsersRoutes.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Отмена
                         </Link>
                     </div>

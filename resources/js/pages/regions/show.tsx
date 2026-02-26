@@ -1,7 +1,7 @@
 import Map from '@/components/map';
 import AppLayout from '@/layouts/app-layout';
 import React, { useState } from 'react';
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -31,6 +31,7 @@ import {
     Pickaxe,
     TrainFront,
     Maximize2,
+    Presentation,
 } from 'lucide-react';
 
 interface InfrastructureDetails {
@@ -62,7 +63,6 @@ interface Sez {
     name: string;
     status: string;
     total_area: number;
-    investment_total: number;
     description: string;
     infrastructure?: InfrastructureData | null;
     location?: { lat: number, lng: number }[] | null;
@@ -74,7 +74,6 @@ interface IndustrialZone {
     name: string;
     status: string;
     total_area: number;
-    investment_total: number;
     description: string;
     infrastructure?: InfrastructureData | null;
     location?: { lat: number, lng: number }[] | null;
@@ -318,7 +317,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             key={p}
                             variant={p === currentPage ? 'default' : 'ghost'}
                             size="sm"
-                            className={`h-8 w-8 p-0 text-xs ${p === currentPage ? 'bg-blue-600 text-white hover:bg-blue-700' : ''}`}
+                            className={`h-8 w-8 p-0 text-xs ${p === currentPage ? 'bg-[#0f1b3d] text-white hover:bg-[#0f1b3d]/90' : ''}`}
                             onClick={() => setPage(p)}
                         >
                             {p}
@@ -408,7 +407,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return (
             <Card className="border-gray-100 shadow-none mt-6">
                 <CardHeader className="pb-4 border-b border-gray-100">
-                    <CardTitle className="text-base font-semibold text-gray-900">{title}</CardTitle>
+                    <CardTitle className="text-base font-semibold text-[#0f1b3d]">{title}</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y divide-gray-100">
@@ -448,10 +447,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     // Derived stats
     const totalSezArea = sezs.reduce((acc, curr) => acc + Number(curr.total_area), 0);
-    const totalSezInvestment = sezs.reduce((acc, curr) => acc + Number(curr.investment_total), 0);
 
     const totalIzArea = industrialZones.reduce((acc, curr) => acc + Number(curr.total_area), 0);
-    const totalIzInvestment = industrialZones.reduce((acc, curr) => acc + Number(curr.investment_total), 0);
 
     // Helper to safely get lat/lng
     function getLatLng(point: any): { lat: number, lng: number } | null {
@@ -489,6 +486,55 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         }
     }
 
+    const mapProjects = React.useMemo(() => {
+        if (activeTab === 'sez') return sezProjects;
+        if (activeTab === 'iz') return izProjects;
+        if (activeTab === 'subsoil') return subsoilProjects;
+        return projects;
+    }, [activeTab, projects, sezProjects, izProjects, subsoilProjects]);
+
+    const [downloadingPresentations, setDownloadingPresentations] = useState(false);
+
+    const handleBulkPresentationDownload = (projectList: InvestmentProject[], currentPage: number) => {
+        const paginatedIds = projectList
+            .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
+            .map(p => p.id);
+
+        if (paginatedIds.length === 0) return;
+
+        setDownloadingPresentations(true);
+
+        // Create a form and submit it to download
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/investment-projects-bulk-presentation';
+        form.style.display = 'none';
+
+        // CSRF token
+        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
+        if (csrfMeta) {
+            const csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = '_token';
+            csrfInput.value = csrfMeta.getAttribute('content') || '';
+            form.appendChild(csrfInput);
+        }
+
+        paginatedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'project_ids[]';
+            input.value = id.toString();
+            form.appendChild(input);
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+        document.body.removeChild(form);
+
+        setTimeout(() => setDownloadingPresentations(false), 3000);
+    };
+
     return (
         <AppLayout
             breadcrumbs={[
@@ -503,21 +549,21 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-gray-100 pb-6">
                     <div>
                         <div className="flex items-center gap-3 mb-2">
-                            <Globe className="h-8 w-8 text-blue-600" />
-                            <h1 className="text-3xl font-semibold tracking-tight text-gray-900">{region.name}</h1>
+                            <Globe className="h-8 w-8 text-[#0f1b3d]" />
+                            <h1 className="text-3xl font-semibold tracking-tight text-[#0f1b3d]">{region.name}</h1>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Площадь:</span>
-                                <span className="text-gray-900">{formatArea(stats.totalArea)} га</span>
+                                <span className="text-[#0f1b3d]">{formatArea(stats.totalArea)} га</span>
                             </div>
                             {/* <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Статус:</span>
-                                <span className="text-gray-900">Действует</span>
+                                <span className="text-[#0f1b3d]">Действует</span>
                             </div> */}
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Область:</span>
-                                <span className="text-blue-600 flex items-center cursor-pointer hover:underline">
+                                <span className="text-[#0f1b3d] flex items-center cursor-pointer hover:underline">
                                     <Link href="/dashboard">Туркестанская область</Link> <ChevronRight className="h-4 w-4" />
                                 </span>
                             </div>
@@ -539,10 +585,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <div className="h-[500px] w-full relative z-0">
                                     <Map 
                                         regions={[region]} 
-                                        projects={projects}
-                                        sezs={sezs}
-                                        industrialZones={industrialZones}
-                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : subsoilUsers}
+                                        projects={mapProjects}
+                                        sezs={activeTab === 'sez' || activeTab === 'all' ? sezs : []}
+                                        industrialZones={activeTab === 'iz' || activeTab === 'all' ? industrialZones : []}
+                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : activeTab === 'all' ? subsoilUsers : []}
                                         selectedEntityId={selectedEntityId ?? mapSelectedEntityId}
                                         selectedEntityType={selectedEntityType ?? mapSelectedEntityType}
                                         selectedProjectId={selectedProjectId}
@@ -600,7 +646,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* {(selectedEntityId || mapSelectedEntityId || selectedProjectId) && (
                                     <button
                                         onClick={handleResetMap}
-                                        className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-white hover:text-gray-900 transition-colors"
+                                        className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-white hover:text-[#0f1b3d] transition-colors"
                                     >
                                         <Maximize2 className="h-3.5 w-3.5" />
                                         Показать всю карту
@@ -612,7 +658,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <div className="w-full">
                                 <TabsContent value="all" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                                        <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {mapSelectedEntityType === 'sez' ? `Проекты в СЭЗ` :
                                              mapSelectedEntityType === 'iz' ? `Проекты в ИЗ` :
                                              mapSelectedEntityType === 'subsoil' ? `Проекты недропользователя` :
@@ -624,8 +670,27 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     Сбросить фильтр
                                                 </Button>
                                             )}
-                                            {/* <Link href="/investment-projects" className="text-blue-600 hover:text-blue-700 hover:underline text-sm">
-                                                <Button variant="ghost" className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 text-sm h-auto py-1 px-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                                disabled={downloadingPresentations}
+                                                onClick={() => {
+                                                    const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
+                                                        ? projects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
+                                                        : mapSelectedEntityType === 'iz' && mapSelectedEntityId
+                                                        ? projects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
+                                                        : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
+                                                        ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
+                                                        : projects;
+                                                    handleBulkPresentationDownload(filteredProjects, allPage);
+                                                }}
+                                            >
+                                                <Presentation className="h-3.5 w-3.5" />
+                                                Презентация
+                                            </Button>
+                                            {/* <Link href="/investment-projects" className="text-[#0f1b3d] hover:text-[#c8a44e] hover:underline text-sm">
+                                                <Button variant="ghost" className="text-[#0f1b3d] hover:text-[#c8a44e] hover:bg-[#0f1b3d]/5 text-sm h-auto py-1 px-2">
                                                     Все проекты <ChevronRight className="ml-1 h-3 w-3" />
                                                 </Button>
                                             </Link> */}
@@ -655,10 +720,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     return paginatedAll.length > 0 ? paginatedAll.map((project) => (
                                                         <TableRow
                                                             key={project.id}
-                                                            className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
+                                                            className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
                                                             onClick={() => handleProjectSelect(project.id)}
                                                         >
-                                                            <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
+                                                            <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
                                                                 {project.name}
                                                             </TableCell>
                                                             <TableCell className="text-gray-500 text-sm py-3">
@@ -675,7 +740,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             <TableCell className="text-gray-700 font-medium text-sm py-3">
                                                                 —
                                                             </TableCell>
-                                                            <TableCell className="text-gray-900 font-semibold text-right text-sm py-3">
+                                                            <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                                 {project.total_investment
                                                                     ? formatCurrency(Number(project.total_investment))
                                                                     : '—'}
@@ -706,7 +771,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 <TabsContent value="sez" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                                        <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSezId
                                                 ? `Проекты: ${sezs.find(s => s.id === selectedSezId)?.name || 'СЭЗ'}`
                                                 : 'Проекты СЭЗ'}
@@ -716,6 +781,16 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 Сбросить фильтр
                                             </Button>
                                         )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                            disabled={downloadingPresentations || sezProjects.length === 0}
+                                            onClick={() => handleBulkPresentationDownload(sezProjects, sezPage)}
+                                        >
+                                            <Presentation className="h-3.5 w-3.5" />
+                                            Презентация
+                                        </Button>
                                     </div>
                                     <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
                                         <Table>
@@ -731,10 +806,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 {sezProjects.length > 0 ? sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map((project) => (
                                                     <TableRow
                                                         key={project.id}
-                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
+                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
+                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
                                                             {project.name}
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
@@ -748,7 +823,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 {getStatusLabel(project.status)}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-gray-900 font-semibold text-right text-sm py-3">
+                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                             {project.total_investment
                                                                 ? formatCurrency(Number(project.total_investment))
                                                                 : '—'}
@@ -769,7 +844,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 <TabsContent value="iz" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                                        <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedIzId
                                                 ? `Проекты: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИЗ'}`
                                                 : 'Проекты ИЗ'}
@@ -779,6 +854,16 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 Сбросить фильтр
                                             </Button>
                                         )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                            disabled={downloadingPresentations || izProjects.length === 0}
+                                            onClick={() => handleBulkPresentationDownload(izProjects, izPage)}
+                                        >
+                                            <Presentation className="h-3.5 w-3.5" />
+                                            Презентация
+                                        </Button>
                                     </div>
                                     <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
                                         <Table>
@@ -794,10 +879,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 {izProjects.length > 0 ? izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map((project) => (
                                                     <TableRow
                                                         key={project.id}
-                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-blue-50 border-l-2 border-l-blue-500' : 'hover:bg-gray-50'}`}
+                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
+                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
                                                             {project.name}
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
@@ -811,7 +896,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 {getStatusLabel(project.status)}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-gray-900 font-semibold text-right text-sm py-3">
+                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                             {project.total_investment
                                                                 ? formatCurrency(Number(project.total_investment))
                                                                 : '—'}
@@ -832,7 +917,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 <TabsContent value="subsoil" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
-                                        <h2 className="text-xl font-semibold tracking-tight text-gray-900">
+                                        <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSubsoilStatus
                                                 ? `Недропользователи: ${licenseStatusMap[selectedSubsoilStatus]?.label || selectedSubsoilStatus}`
                                                 : 'Недропользователи'}
@@ -869,12 +954,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             }
                                                         }}
                                                     >
-                                                        <TableCell className="font-medium text-gray-900 max-w-[250px] py-3 break-words">
+                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
                                                             <div className="flex items-center gap-2">
                                                                 <Pickaxe className="h-4 w-4 text-gray-400 shrink-0" />
                                                                 <Link
                                                                     href={`/subsoil-users/${su.id}`}
-                                                                    className="hover:text-blue-600 hover:underline transition-colors break-words"
+                                                                    className="hover:text-[#0f1b3d] hover:underline transition-colors break-words"
                                                                     onClick={(e) => e.stopPropagation()}
                                                                 >
                                                                     {su.name}
@@ -892,7 +977,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 {licenseStatusMap[su.license_status]?.label || su.license_status}
                                                             </Badge>
                                                         </TableCell>
-                                                        <TableCell className="text-gray-900 font-semibold text-right text-sm py-3">
+                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                             {su.total_area ? formatArea(Number(su.total_area)) : '—'}
                                                         </TableCell>
                                                     </TableRow>
@@ -945,25 +1030,25 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="all" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Ключевые показатели</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Ключевые показатели</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                             <div >
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.projectsCount}</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectsCount}</div>
                                                 <div className="text-xs font-medium text-gray-500">Количество проектов</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(stats.totalArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(stats.totalArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
                                                 <div className="text-xs font-medium text-gray-500">Общая площадь</div>
                                             </div>
                                             
                                             <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(stats.totalInvestment)}</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(stats.totalInvestment)}</div>
                                                 <div className="text-xs font-medium text-gray-500">Инвестиции</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.projectIssuesCount}</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectIssuesCount}</div>
                                                 <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
                                             </div>
                                         </div>
@@ -975,7 +1060,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="sez" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedSezId
                                                 ? `Показатели: ${sezs.find(s => s.id === selectedSezId)?.name || 'СЭЗ'}`
                                                 : 'Показатели СЭЗ'}
@@ -986,24 +1071,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             const selectedSez = selectedSezId ? sezs.find(s => s.id === selectedSezId) : null;
                                             const displayZones = selectedSez ? 1 : sezs.length;
                                             const displayArea = selectedSez ? Number(selectedSez.total_area) : totalSezArea;
-                                            const displayInvestment = selectedSez ? Number(selectedSez.investment_total) : totalSezInvestment;
+                                            const displayInvestment = sezProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedSez ? (selectedSez.issues_count ?? 0) : stats.sezIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayZones}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
                                                         <div className="text-xs font-medium text-gray-500">Количество зон</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
                                                         <div className="text-xs font-medium text-gray-500">Общая площадь</div>
                                                     </div>
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(displayInvestment)}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
                                                         <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayIssues}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
                                                         <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
                                                     </div>
                                                 </div>
@@ -1015,7 +1100,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* SEZ List */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Список СЭЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Список СЭЗ</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {sezs.length > 0 ? (
@@ -1034,7 +1119,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 >
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
-                                                        <span className="text-sm font-medium text-gray-900">Все</span>
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">Все</span>
                                                     </div>
                                                     <Badge variant="secondary" className="text-[10px]">{sezs.length} зон</Badge>
                                                 </div>
@@ -1053,7 +1138,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-gray-900 break-words">{sez.name}</span>
+                                                            <span className="text-sm font-medium text-[#0f1b3d] break-words">{sez.name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
                                                             <Link
@@ -1084,7 +1169,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="iz" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedIzId
                                                 ? `Показатели: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИЗ'}`
                                                 : 'Показатели ИЗ'}
@@ -1095,24 +1180,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             const selectedIz = selectedIzId ? industrialZones.find(z => z.id === selectedIzId) : null;
                                             const displayZones = selectedIz ? 1 : industrialZones.length;
                                             const displayArea = selectedIz ? Number(selectedIz.total_area) : totalIzArea;
-                                            const displayInvestment = selectedIz ? Number(selectedIz.investment_total) : totalIzInvestment;
+                                            const displayInvestment = izProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedIz ? (selectedIz.issues_count ?? 0) : stats.izIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayZones}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
                                                         <div className="text-xs font-medium text-gray-500">Количество зон</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
                                                         <div className="text-xs font-medium text-gray-500">Общая площадь</div>
                                                     </div>
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatCurrency(displayInvestment)}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
                                                         <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{displayIssues}</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
                                                         <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
                                                     </div>
                                                 </div>
@@ -1124,7 +1209,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* IZ List */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Список ИЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Список ИЗ</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {industrialZones.length > 0 ? (
@@ -1143,7 +1228,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 >
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                        <span className="text-sm font-medium text-gray-900">Все</span>
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">Все</span>
                                                     </div>
                                                     <Badge variant="secondary" className="text-[10px]">{industrialZones.length} зон</Badge>
                                                 </div>
@@ -1162,7 +1247,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
                                                             <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-gray-900 break-words">{iz.name}</span>
+                                                            <span className="text-sm font-medium text-[#0f1b3d] break-words">{iz.name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 shrink-0">
                                                             <Link
@@ -1193,22 +1278,22 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="subsoil" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Показатели недропользования</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Показатели недропользования</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-3 gap-x-4">
                                             <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">
                                                     {selectedSubsoilStatus ? filteredSubsoilUsers.length : subsoilUsers.length}
                                                 </div>
                                                 <div className="text-xs font-medium text-gray-500">Количество проектов</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{formatArea(totalSubsoilArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(totalSubsoilArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
                                                 <div className="text-xs font-medium text-gray-500">Площадь</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-gray-900 mb-1">{stats.subsoilIssuesCount}</div>
+                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.subsoilIssuesCount}</div>
                                                 <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
                                             </div>
                                         </div>
@@ -1218,7 +1303,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* Status Filter */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-gray-900">Статус лицензии</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Статус лицензии</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-gray-100">
@@ -1232,7 +1317,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <Pickaxe className="h-4 w-4 text-gray-500 shrink-0" />
-                                                    <span className="text-sm font-medium text-gray-900">Все статусы</span>
+                                                    <span className="text-sm font-medium text-[#0f1b3d]">Все статусы</span>
                                                 </div>
                                                 <Badge variant="secondary" className="text-[10px]">{subsoilUsers.length}</Badge>
                                             </div>

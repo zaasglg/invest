@@ -39,14 +39,14 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     }
 
     return (
-        <div className="px-4 py-6">
+        <div className="px-6 py-6">
             <Heading
-                title="Settings"
-                description="Manage your profile and account settings"
+                title="Настройки"
+                description="Управление профилем и настройками аккаунта"
             />
 
             <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-48">
+                <aside className="w-full max-w-xl lg:w-52">
                     <nav
                         className="flex flex-col space-y-1 space-x-0"
                         aria-label="Settings"
@@ -57,8 +57,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                 size="sm"
                                 variant="ghost"
                                 asChild
-                                className={cn('w-full justify-start', {
-                                    'bg-muted': isCurrentUrl(item.href),
+                                className={cn('w-full justify-start rounded-lg text-gray-600 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]', {
+                                    'bg-[#0f1b3d]/5 text-[#0f1b3d] font-semibold': isCurrentUrl(item.href),
                                 })}
                             >
                                 <Link href={item.href}>

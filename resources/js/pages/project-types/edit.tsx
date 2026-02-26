@@ -32,17 +32,17 @@ export default function Edit({ projectType }: Props) {
         ]}>
             <Head title="Редактирование типа проекта" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Редактирование типа проекта</h1>
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование типа проекта</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-neutral-500 font-normal">Наименование</Label>
+                        <Label htmlFor="name" className="text-gray-500 font-normal">Наименование</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Например: Ветроэлектростанция"
                             autoFocus
                         />
@@ -50,10 +50,10 @@ export default function Edit({ projectType }: Props) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Обновить
                         </Button>
-                        <Link href={projectTypes.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link href={projectTypes.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Отмена
                         </Link>
                     </div>

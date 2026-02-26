@@ -91,17 +91,17 @@ export default function Edit({ user, regions, roles }: Props) {
         ]}>
             <Head title="Редактирование пользователя" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Редактирование пользователя</h1>
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование пользователя</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="full_name" className="text-neutral-500 font-normal">ФИО</Label>
+                        <Label htmlFor="full_name" className="text-gray-500 font-normal">ФИО</Label>
                         <Input
                             id="full_name"
                             value={data.full_name}
                             onChange={(e) => setData('full_name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Иванов Иван Иванович"
                             autoFocus
                         />
@@ -109,13 +109,13 @@ export default function Edit({ user, regions, roles }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="email" className="text-neutral-500 font-normal">Email</Label>
+                        <Label htmlFor="email" className="text-gray-500 font-normal">Email</Label>
                         <Input
                             id="email"
                             type="email"
                             value={data.email}
                             onChange={(e) => setData('email', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="user@example.com"
                         />
                         {errors.email && <span className="text-sm text-red-500">{errors.email}</span>}
@@ -123,29 +123,29 @@ export default function Edit({ user, regions, roles }: Props) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="password" className="text-neutral-500 font-normal">
+                            <Label htmlFor="password" className="text-gray-500 font-normal">
                                 Новый пароль
-                                <span className="text-xs ml-2 text-neutral-400">(оставьте пустым, чтобы не менять)</span>
+                                <span className="text-xs ml-2 text-gray-400">(оставьте пустым, чтобы не менять)</span>
                             </Label>
                             <Input
                                 id="password"
                                 type="password"
                                 value={data.password}
                                 onChange={(e) => setData('password', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="••••••••"
                             />
                             {errors.password && <span className="text-sm text-red-500">{errors.password}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="password_confirmation" className="text-neutral-500 font-normal">Подтверждение пароля</Label>
+                            <Label htmlFor="password_confirmation" className="text-gray-500 font-normal">Подтверждение пароля</Label>
                             <Input
                                 id="password_confirmation"
                                 type="password"
                                 value={data.password_confirmation}
                                 onChange={(e) => setData('password_confirmation', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="••••••••"
                             />
                             {errors.password_confirmation && <span className="text-sm text-red-500">{errors.password_confirmation}</span>}
@@ -153,7 +153,7 @@ export default function Edit({ user, regions, roles }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="role_id" className="text-neutral-500 font-normal">Роль</Label>
+                        <Label htmlFor="role_id" className="text-gray-500 font-normal">Роль</Label>
                         <Select
                             value={data.role_id}
                             onValueChange={(value) => {
@@ -167,7 +167,7 @@ export default function Edit({ user, regions, roles }: Props) {
                                 setSelectedOblastId('');
                             }}
                         >
-                            <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                            <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                 <SelectValue placeholder="Выберите роль" />
                             </SelectTrigger>
                             <SelectContent>
@@ -185,7 +185,7 @@ export default function Edit({ user, regions, roles }: Props) {
                     {/* Басқарма type selection */}
                     {isBaskarma && (
                         <div className="flex flex-col gap-2">
-                            <Label className="text-neutral-500 font-normal">Басқарма түрі</Label>
+                            <Label className="text-gray-500 font-normal">Басқарма түрі</Label>
                             <Select
                                 value={data.baskarma_type}
                                 onValueChange={(value) => {
@@ -198,7 +198,7 @@ export default function Edit({ user, regions, roles }: Props) {
                                     setSelectedOblastId('');
                                 }}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Басқарма түрін таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -213,12 +213,12 @@ export default function Edit({ user, regions, roles }: Props) {
                     {/* Position field for baskarma */}
                     {isBaskarma && data.baskarma_type && (
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="position" className="text-neutral-500 font-normal">Лауазымы</Label>
+                            <Label htmlFor="position" className="text-gray-500 font-normal">Лауазымы</Label>
                             <Input
                                 id="position"
                                 value={data.position}
                                 onChange={(e) => setData('position', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="Мысалы: Басқарма басшысы"
                             />
                             {errors.position && <span className="text-sm text-red-500">{errors.position}</span>}
@@ -229,7 +229,7 @@ export default function Edit({ user, regions, roles }: Props) {
                     {showRegionSelects && (
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Облыс</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Облыс</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -237,7 +237,7 @@ export default function Edit({ user, regions, roles }: Props) {
                                     setData('region_id', '');
                                 }}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -251,13 +251,13 @@ export default function Edit({ user, regions, roles }: Props) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Аудан / Қала</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Аудан / Қала</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Ауданды таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -279,26 +279,26 @@ export default function Edit({ user, regions, roles }: Props) {
                     )}
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="telegram_chat_id" className="text-neutral-500 font-normal">
+                        <Label htmlFor="telegram_chat_id" className="text-gray-500 font-normal">
                             Telegram Chat ID
-                            <span className="text-xs ml-2 text-neutral-400">(міндетті емес)</span>
+                            <span className="text-xs ml-2 text-gray-400">(міндетті емес)</span>
                         </Label>
                         <Input
                             id="telegram_chat_id"
                             value={data.telegram_chat_id}
                             onChange={(e) => setData('telegram_chat_id', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Мысалы: 123456789"
                         />
                         {errors.telegram_chat_id && <span className="text-sm text-red-500">{errors.telegram_chat_id}</span>}
-                        <p className="text-xs text-neutral-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы керек</p>
+                        <p className="text-xs text-gray-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы керек</p>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Сохранить
                         </Button>
-                        <Link href={users.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link href={users.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Отмена
                         </Link>
                     </div>

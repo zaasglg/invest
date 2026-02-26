@@ -9,7 +9,10 @@ description: >-
 
 # Pest Testing 4
 
+
+
 ## When to Apply
+
 
 Activate this skill when:
 
@@ -19,23 +22,33 @@ Activate this skill when:
 - Working with browser testing or smoke testing
 - Writing architecture tests or visual regression tests
 
+
 ## Documentation
+
 
 Use `search-docs` for detailed Pest 4 patterns and documentation.
 
+
 ## Basic Usage
+
+
 
 ### Creating Tests
 
+
 All tests must be written using Pest. Use `php artisan make:test --pest {name}`.
 
+
 ### Test Organization
+
 
 - Unit/Feature tests: `tests/Feature` and `tests/Unit` directories.
 - Browser tests: `tests/Browser/` directory.
 - Do NOT remove tests without approval - these are core application code.
 
+
 ### Basic Test Structure
+
 
 <code-snippet name="Basic Pest Test Example" lang="php">
 
@@ -45,13 +58,19 @@ it('is true', function () {
 
 </code-snippet>
 
+
+
+
 ### Running Tests
+
 
 - Run minimal tests with filter before finalizing: `php artisan test --compact --filter=testName`.
 - Run all tests: `php artisan test --compact`.
 - Run file: `php artisan test --compact tests/Feature/ExampleTest.php`.
 
+
 ## Assertions
+
 
 Use specific assertions (`assertSuccessful()`, `assertNotFound()`) instead of `assertStatus()`:
 
@@ -63,17 +82,23 @@ it('returns all', function () {
 
 </code-snippet>
 
+
+
 | Use | Instead of |
 |-----|------------|
 | `assertSuccessful()` | `assertStatus(200)` |
 | `assertNotFound()` | `assertStatus(404)` |
 | `assertForbidden()` | `assertStatus(403)` |
 
+
 ## Mocking
+
 
 Import mock function before use: `use function Pest\Laravel\mock;`
 
+
 ## Datasets
+
 
 Use datasets for repetitive tests (validation rules, etc.):
 
@@ -88,7 +113,11 @@ it('has emails', function (string $email) {
 
 </code-snippet>
 
+
+
+
 ## Pest 4 Features
+
 
 | Feature | Purpose |
 |---------|---------|
@@ -98,7 +127,9 @@ it('has emails', function (string $email) {
 | Test Sharding | Parallel CI runs |
 | Architecture Testing | Enforce code conventions |
 
+
 ### Browser Test Example
+
 
 Browser tests run in real browsers for full integration testing:
 
@@ -132,7 +163,11 @@ it('may reset the password', function () {
 
 </code-snippet>
 
+
+
+
 ### Smoke Testing
+
 
 Quickly validate multiple pages have no JavaScript errors:
 
@@ -144,15 +179,23 @@ $pages->assertNoJavascriptErrors()->assertNoConsoleLogs();
 
 </code-snippet>
 
+
+
+
 ### Visual Regression Testing
+
 
 Capture and compare screenshots to detect visual changes.
 
+
 ### Test Sharding
+
 
 Split tests across parallel processes for faster CI runs.
 
+
 ### Architecture Testing
+
 
 Pest 4 includes architecture testing (from Pest 3):
 
@@ -165,7 +208,11 @@ arch('controllers')
 
 </code-snippet>
 
+
+
+
 ## Common Pitfalls
+
 
 - Not importing `use function Pest\Laravel\mock;` before using mock
 - Using `assertStatus(200)` instead of `assertSuccessful()`

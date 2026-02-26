@@ -1,68 +1,54 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
-import { dashboard, login, register } from '@/routes';
+
+import {
+    AboutSection,
+    HeroSection,
+    LandingFooter,
+    SectorsBentoGrid,
+    StatisticsSection,
+    StickyNavbar,
+    WhyTurkistanSection,
+} from '@/components/landing';
+import { dashboard } from '@/routes';
 import type { SharedData } from '@/types';
 
-export default function Welcome({
-    canRegister = true,
-}: {
-    canRegister?: boolean;
-}) {
+export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
     const isAuthenticated = !!auth.user;
 
     useEffect(() => {
-        if (!isAuthenticated) {
-            router.visit(login());
+        if (isAuthenticated) {
+            router.visit(dashboard());
         }
-    }, [isAuthenticated, login]);
+    }, [isAuthenticated]);
 
-    if (!isAuthenticated) {
+    if (isAuthenticated) {
         return null;
     }
 
     return (
         <>
-            <Head title="Welcome">
+            <Head title="Turkistan Invest — Gateway to Central Asia">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
-                    href="https://fonts.bunny.net/css?family=instrument-sans:400,500,600"
+                    href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800,900"
                     rel="stylesheet"
                 />
+                <meta
+                    name="description"
+                    content="Discover world-class investment opportunities in Turkistan, Kazakhstan. Agriculture, tourism, industry, and special economic zones."
+                />
             </Head>
-            <div className="flex min-h-screen flex-col items-center bg-[#FDFDFC] p-6 text-[#1b1b18] lg:justify-center lg:p-8">
-                <header className="mb-6 w-full max-w-[335px] text-sm not-has-[nav]:hidden lg:max-w-4xl">
-                    <nav className="flex items-center justify-end gap-4">
-                        {auth.user ? (
-                            <Link
-                                href={dashboard()}
-                                        className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a]"
-                            >
-                                Dashboard
-                            </Link>
-                        ) : (
-                            <>
-                                <Link
-                                    href={login()}
-                                    className="inline-block rounded-sm border border-transparent px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#19140035]"
-                                >
-                                    Log in
-                                </Link>
-                                {canRegister && (
-                                    <Link
-                                        href={register()}
-                                className="inline-block rounded-sm border border-[#19140035] px-5 py-1.5 text-sm leading-normal text-[#1b1b18] hover:border-[#1915014a]"
-                                    >
-                                        Register
-                                    </Link>
-                                )}
-                            </>
-                        )}
-                    </nav>
-                </header>
-                <div className="flex w-full items-center justify-center opacity-100 transition-opacity duration-750 lg:grow starting:opacity-0">
-                    {/* Main content area */}
-                </div>
+
+            <div className="min-h-screen bg-white">
+                <StickyNavbar />
+                <HeroSection />
+                <AboutSection />
+                <SectorsBentoGrid />
+                <StatisticsSection />
+                <WhyTurkistanSection />
+                <LandingFooter />
             </div>
         </>
     );

@@ -8,20 +8,29 @@ description: >-
 
 # Wayfinder Development
 
+
+
 ## When to Apply
+
 
 Activate whenever referencing backend routes in frontend components:
 - Importing from `@/actions/` or `@/routes/`
 - Calling Laravel routes from TypeScript/JavaScript
 - Creating links or navigation to backend endpoints
 
+
 ## Documentation
+
 
 Use `search-docs` for detailed Wayfinder patterns and documentation.
 
+
 ## Quick Reference
 
+
+
 ### Generate Routes
+
 
 Run after route changes if Vite plugin isn't installed:
 
@@ -31,7 +40,9 @@ For form helpers, use `--with-form` flag:
 
 php artisan wayfinder:generate --with-form --no-interaction
 
+
 ### Import Patterns
+
 
 <code-snippet name="Controller Action Imports" lang="typescript">
 
@@ -43,7 +54,11 @@ import { show as postShow } from '@/routes/post'
 
 </code-snippet>
 
+
+
+
 ### Common Methods
+
 
 <code-snippet name="Wayfinder Methods" lang="typescript">
 
@@ -67,26 +82,32 @@ show(1, { query: { page: 1 } }) // "/posts/1?page=1"
 
 </code-snippet>
 
+
+
+
 ## Wayfinder + Inertia
 
-Use Wayfinder with `useForm`:
 
-<code-snippet name="Wayfinder useForm" lang="typescript">
+Use Wayfinder with the `<Form>` component:
+<code-snippet name="Wayfinder Form (React)" lang="typescript">
 
-import { store } from "@/actions/App/Http/Controllers/ExampleController";
-
-const form = useForm({ name: "My Big Post" });
-form.submit(store());
+<Form {...store.form()}><input name="title" /></Form>
 
 </code-snippet>
 
+
+
+
 ## Verification
+
 
 1. Run `php artisan wayfinder:generate` to regenerate routes if Vite plugin isn't installed
 2. Check TypeScript imports resolve correctly
 3. Verify route URLs match expected paths
 
+
 ## Common Pitfalls
+
 
 - Using default imports instead of named imports (breaks tree-shaking)
 - Forgetting to regenerate after route changes
