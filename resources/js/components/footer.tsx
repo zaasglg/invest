@@ -18,13 +18,13 @@ export default function Footer() {
                     </span>
                 </div>
                 <div className="flex gap-5">
-                    <Link
-                        href="#"
-                        className="text-xs font-medium text-gray-400 transition-colors hover:text-[#0f1b3d]"
-                    >
-                        О проекте
-                    </Link>
-                    <Link
+                        <Link
+                            href="/investment-projects"
+                            className="text-xs font-medium text-gray-400 transition-colors hover:text-[#0f1b3d]"
+                        >
+                            О проекте
+                        </Link>
+                    {/* <Link
                         href="#"
                         className="text-xs font-medium text-gray-400 transition-colors hover:text-[#0f1b3d]"
                     >
@@ -35,7 +35,7 @@ export default function Footer() {
                         className="text-xs font-medium text-gray-400 transition-colors hover:text-[#0f1b3d]"
                     >
                         Контакты
-                    </Link>
+                    </Link> */}
                 </div>
             </div>
         </footer>
