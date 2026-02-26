@@ -95,7 +95,7 @@ export default function Documents({ project, documents }: Props) {
         if (typeLower === 'pdf') {
             return <div className={`${iconClass} bg-red-100 text-red-600 rounded-lg flex items-center justify-center font-bold text-sm`}>PDF</div>;
         } else if (['doc', 'docx'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-blue-100 text-blue-600 rounded-lg flex items-center justify-center font-bold text-sm`}>DOC</div>;
+            return <div className={`${iconClass} bg-blue-100 text-[#0f1b3d] rounded-lg flex items-center justify-center font-bold text-sm`}>DOC</div>;
         } else if (['xls', 'xlsx'].includes(typeLower)) {
             return <div className={`${iconClass} bg-green-100 text-green-600 rounded-lg flex items-center justify-center font-bold text-sm`}>XLS</div>;
         } else if (['jpg', 'jpeg', 'png', 'gif'].includes(typeLower)) {
@@ -125,10 +125,10 @@ export default function Documents({ project, documents }: Props) {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-2 transition-colors">
+                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] mb-2 transition-colors">
                             <ArrowLeft className="h-4 w-4 mr-1" /> Назад к проекту
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Документы проекта</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Документы проекта</h1>
                         <p className="text-sm text-gray-500 mt-1">{project.name}</p>
                     </div>
                 </div>
@@ -247,7 +247,7 @@ export default function Documents({ project, documents }: Props) {
                                             >
                                                 {getFileIcon(document.type)}
                                                 <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-gray-900 truncate">
+                                                    <p className="font-medium text-[#0f1b3d] truncate">
                                                         {document.name}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
@@ -259,7 +259,7 @@ export default function Documents({ project, documents }: Props) {
                                                         href={`/storage/${document.file_path}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                        className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
                                                         title="Скачать"
                                                     >
                                                         <Download className="h-4 w-4" />

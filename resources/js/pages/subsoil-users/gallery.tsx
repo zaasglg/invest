@@ -208,11 +208,11 @@ export default function Gallery({
                     <div>
                         <Link
                             href={`/subsoil-users/${subsoilUser.id}`}
-                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                         >
                             <ArrowLeft className="mr-1 h-4 w-4" /> Назад
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
                             Галерея
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
@@ -512,7 +512,7 @@ export default function Gallery({
                         {/* Dated Galleries */}
                         {Object.keys(sortedDatedGallery).length > 0 && (
                             <div className="space-y-8">
-                                <h2 className="flex items-center gap-2 text-xl font-bold text-gray-900">
+                                <h2 className="flex items-center gap-2 text-xl font-bold text-[#0f1b3d]">
                                     <Calendar className="h-5 w-5" />
                                     Ход реализации по датам
                                 </h2>

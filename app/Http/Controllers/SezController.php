@@ -11,7 +11,8 @@ class SezController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Sez::with('region');
+        $query = Sez::with('region')
+            ->withSum('investmentProjects', 'total_investment');
 
         $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
@@ -83,7 +84,6 @@ class SezController extends Controller
                 },
             ],
             'total_area' => 'nullable|numeric|min:0',
-            'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',
@@ -150,7 +150,6 @@ class SezController extends Controller
                 },
             ],
             'total_area' => 'nullable|numeric|min:0',
-            'investment_total' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',

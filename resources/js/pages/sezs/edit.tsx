@@ -33,7 +33,6 @@ interface Sez {
     name: string;
     region_id: number;
     total_area: string | null;
-    investment_total: string | null;
     status: string;
     description: string | null;
     location?: { lat: number; lng: number }[];
@@ -51,7 +50,6 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
         name: sez.name || '',
         region_id: sez.region_id?.toString() || '',
         total_area: sez.total_area || '',
-        investment_total: sez.investment_total || '',
         status: sez.status || 'developing',
         description: sez.description || '',
         location: sez.location || [],
@@ -89,17 +87,17 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
         ]}>
             <Head title="Редактирование СЭЗ" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Редактирование СЭЗ</h1>
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование СЭЗ</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-neutral-500 font-normal">Наименование</Label>
+                        <Label htmlFor="name" className="text-gray-500 font-normal">Наименование</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Например: СЭЗ Астана"
                             autoFocus
                         />
@@ -108,7 +106,7 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -117,7 +115,7 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                                 }}
                                 disabled={isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -131,13 +129,13 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId || isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -157,43 +155,27 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_area" className="text-neutral-500 font-normal">Общая площадь (га)</Label>
-                            <Input
-                                id="total_area"
-                                type="number"
-                                step="0.01"
-                                value={data.total_area}
-                                onChange={(e) => setData('total_area', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
-                                placeholder="0.00"
-                            />
-                            {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
-                        </div>
-
-                        <div className="flex flex-col gap-2">
-                            <Label htmlFor="investment_total" className="text-neutral-500 font-normal">Общий объем инвестиций (млн)</Label>
-                            <Input
-                                id="investment_total"
-                                type="number"
-                                step="0.01"
-                                value={data.investment_total}
-                                onChange={(e) => setData('investment_total', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
-                                placeholder="0.00"
-                            />
-                            {errors.investment_total && <span className="text-sm text-red-500">{errors.investment_total}</span>}
-                        </div>
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="total_area" className="text-gray-500 font-normal">Общая площадь (га)</Label>
+                        <Input
+                            id="total_area"
+                            type="number"
+                            step="0.01"
+                            value={data.total_area}
+                            onChange={(e) => setData('total_area', e.target.value)}
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                            placeholder="0.00"
+                        />
+                        {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="status" className="text-neutral-500 font-normal">Статус</Label>
+                        <Label htmlFor="status" className="text-gray-500 font-normal">Статус</Label>
                         <Select
                             value={data.status}
                             onValueChange={(value) => setData('status', value)}
                         >
-                            <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                            <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                 <SelectValue placeholder="Выберите статус" />
                             </SelectTrigger>
                             <SelectContent>
@@ -205,12 +187,12 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-neutral-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
                         <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 bg-transparent min-h-[120px]"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
                             placeholder="Описание СЭЗ..."
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
@@ -222,7 +204,7 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                     />
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
@@ -235,10 +217,10 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Сохранить
                         </Button>
-                        <Link href={sezs.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link href={sezs.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Отмена
                         </Link>
                     </div>

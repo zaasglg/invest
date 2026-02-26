@@ -37,18 +37,18 @@ export default function Index({ types }: Props) {
         <AppLayout breadcrumbs={[{ title: 'Типы проектов', href: projectTypes.index.url() }]}>
             <Head title="Типы проектов" />
 
-            <div className="flex h-full flex-col p-4 space-y-4">
+            <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">Типы проектов</h1>
-                    <Button asChild size="sm" className="shadow-none">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">Типы проектов</h1>
+                    <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                         <Link href={projectTypes.create.url()}>Создать новый</Link>
                     </Button>
                 </div>
 
-                <div className="rounded-xl bg-white dark:bg-neutral-900 overflow-hidden">
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
-                            <TableRow className="hover:bg-neutral-50 dark:hover:bg-neutral-900">
+                            <TableRow>
                                 <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Наименование</TableHead>
                                 <TableHead className="text-right">Действия</TableHead>
@@ -57,15 +57,15 @@ export default function Index({ types }: Props) {
                         <TableBody>
                             {types.data.map((type) => (
                                 <TableRow key={type.id}>
-                                    <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">#{type.id}</TableCell>
+                                    <TableCell className="font-medium text-gray-400">#{type.id}</TableCell>
                                     <TableCell>{type.name}</TableCell>
                                     <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600 transition-colors">
+                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]">
                                             <Link href={projectTypes.edit.url(type.id)}>
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700 transition-colors" onClick={() => handleDelete(type.id)}>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700" onClick={() => handleDelete(type.id)}>
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -73,7 +73,7 @@ export default function Index({ types }: Props) {
                             ))}
                             {types.data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="h-24 text-center text-neutral-500">
+                                    <TableCell colSpan={3} className="py-12 text-center text-gray-400">
                                         Нет данных. Создайте первый тип проекта.
                                     </TableCell>
                                 </TableRow>

@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
 import type { SharedData } from '@/types';
@@ -32,6 +32,7 @@ interface User {
     id: number;
     name?: string;
     full_name?: string;
+    position?: string | null;
 }
 
 interface Photo {
@@ -70,6 +71,7 @@ interface InvestmentProject {
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
+    infrastructure?: Record<string, { needed: boolean; capacity: string }> | null;
     created_at: string;
 }
 
@@ -415,13 +417,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
                 {/* Back link */}
-                {/* <Link href="/investment-projects" className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors">
+                {/* <Link href="/investment-projects" className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors">
                     <ArrowLeft className="h-4 w-4 mr-1" /> Назад к списку
                 </Link> */}
                   <button
                     type='button'
                     onClick={() => window.history.back()}
-                    className='inline-flex items-center text-sm text-gray-500 hover:text-gray-900 transition-colors'
+                    className='inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors'
                 >
                     <ArrowLeft className='h-4 w-4 mr-1' /> Назад к списку
                 </button>
@@ -431,7 +433,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                         {/* Project Banner + Info */}
                         <Card className="overflow-hidden shadow-none py-0">
                             {/* Banner Header */}
-                            <div className="bg-gray-900 px-6 py-4">
+                            <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-white">
                                         <Activity className="h-5 w-5" />
@@ -471,7 +473,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <MapPin className="h-3.5 w-3.5" /> Район
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.region?.name || 'Не указан'}
                                             </p>
                                         </div>
@@ -479,7 +481,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <FileText className="h-3.5 w-3.5" /> Тип проекта
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.project_type?.name || 'Не указан'}
                                             </p>
                                         </div>
@@ -487,7 +489,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Building2 className="h-3.5 w-3.5" /> Сумма инвестиций
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.total_investment
                                                     ? formatCurrency(project.total_investment)
                                                     : 'Не указана'}
@@ -497,7 +499,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Calendar className="h-3.5 w-3.5" /> Даты реализации
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.start_date
                                                     ? new Date(project.start_date).toLocaleDateString()
                                                     : '...'}
@@ -511,7 +513,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Users className="h-3.5 w-3.5" /> Куратор
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.creator?.full_name || project.creator?.name || 'Не указан'}
                                             </p>
                                         </div>
@@ -521,7 +523,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                             {/* Company & Description */}
                             <div className="border-t border-gray-200 px-6 py-5">
-                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <Building2 className="h-5 w-5 text-gray-500" />
                                     {project.company_name || 'Компания не указана'}
                                 </h2>
@@ -530,10 +532,39 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </p>
                             </div>
 
+                            {/* Инфрақұрылым қажеттілігі */}
+                            {project.infrastructure && Object.values(project.infrastructure).some((v: any) => v?.needed) && (
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                        <Building2 className="h-5 w-5 text-gray-500" />
+                                        Инфрақұрылым қажеттілігі
+                                    </h2>
+                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                        {[
+                                            { key: 'gas', label: 'Газ', unit: 'м³/час' },
+                                            { key: 'water', label: 'Су', unit: 'м³/сут' },
+                                            { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
+                                            { key: 'land', label: 'Жер телімі', unit: 'га' },
+                                        ].map((item) => {
+                                            const infra = (project.infrastructure as any)?.[item.key];
+                                            if (!infra?.needed) return null;
+                                            return (
+                                                <div key={item.key} className="rounded-lg border border-gray-200 p-3">
+                                                    <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
+                                                    <p className="text-sm font-bold text-[#0f1b3d]">
+                                                        {infra.capacity ? `${infra.capacity} ${item.unit}` : 'Қажет'}
+                                                    </p>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
+
                             {/* Issues / Проблемные вопросы */}
                             {project.issues && project.issues.length > 0 && (
                                 <div className="border-t border-gray-200 px-6 py-5">
-                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <AlertTriangle className="h-5 w-5 text-red-500" />
                                         Проблемные вопросы
                                         <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
@@ -572,7 +603,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         <div className="flex items-start gap-3 min-w-0">
                                                             <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`} />
                                                             <div className="min-w-0">
-                                                                <p className="font-semibold text-gray-900">{issue.title}</p>
+                                                                <p className="font-semibold text-[#0f1b3d]">{issue.title}</p>
                                                                 {issue.description && (
                                                                     <p className="mt-1 text-sm text-gray-600 line-clamp-2">{issue.description}</p>
                                                                 )}
@@ -598,7 +629,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="mt-4">
                                         <Link
                                             href={`/investment-projects/${project.id}/issues`}
-                                            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 transition-colors"
+                                            className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] hover:text-[#c8a44e] transition-colors"
                                         >
                                             Все проблемные вопросы →
                                         </Link>
@@ -609,7 +640,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                         {/* Roadmap / Дорожная карта */}
                         <Card className="shadow-none overflow-hidden py-0">
-                            <div className="bg-gray-900 px-6 py-4">
+                            <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-white">
                                         <Flag className="h-5 w-5" />
@@ -686,7 +717,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
                                                 />
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="font-semibold text-gray-900">
+                                                    <p className="font-semibold text-[#0f1b3d]">
                                                         {task.title}:
                                                     </p>
                                                     <p className="text-sm text-gray-500">
@@ -824,11 +855,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div>
                                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ответственный</p>
                                     <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0f1b3d] font-bold text-xs">
                                             {(project.creator?.full_name || project.creator?.name)?.slice(0, 2).toUpperCase() || 'NA'}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-medium text-gray-900">{project.creator?.full_name || project.creator?.name || 'Не указан'}</p>
+                                            <p className="text-sm font-medium text-[#0f1b3d]">{project.creator?.full_name || project.creator?.name || 'Не указан'}</p>
                                             <p className="text-xs text-gray-500">Куратор проекта</p>
                                         </div>
                                     </div>
@@ -844,7 +875,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
                                                         {(executor.full_name || executor.name)?.slice(0, 2).toUpperCase() || 'NA'}
                                                     </div>
-                                                    <p className="text-sm text-gray-700">{executor.full_name || executor.name || '—'}</p>
+                                                    <div>
+                                                        <p className="text-sm text-gray-700">
+                                                            {executor.position || 'Исполнитель'}
+                                                        </p>
+                                                        <p className="text-xs text-gray-400">
+                                                            ({executor.full_name || executor.name || '—'})
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -900,9 +938,18 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     href={`/investment-projects/${project.id}/passport`}
                                     className="w-full"
                                 >
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                                    <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]">
                                         <Download className="mr-2 h-4 w-4" />
                                         Скачать паспорт проекта
+                                    </Button>
+                                </a>
+                                <a
+                                    href={`/investment-projects/${project.id}/presentation`}
+                                    className="w-full"
+                                >
+                                    <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5a] text-white">
+                                        <Presentation className="mr-2 h-4 w-4" />
+                                        Скачать презентацию
                                     </Button>
                                 </a>
                             </CardContent>
@@ -914,7 +961,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                 {showTaskModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                         <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
-                            <div className="flex items-center justify-between rounded-t-xl bg-gray-900 px-6 py-4">
+                            <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Flag className="h-5 w-5" />
                                     Добавить этап к проекту
@@ -932,7 +979,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 className="p-6 space-y-5"
                             >
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         Название темы (модуля)
                                     </Label>
                                     <Input
@@ -947,7 +994,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </div>
 
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         Описание
                                     </Label>
                                     <textarea
@@ -963,7 +1010,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <Label className="text-sm font-semibold text-gray-900">
+                                        <Label className="text-sm font-semibold text-[#0f1b3d]">
                                             Дата начала
                                         </Label>
                                         <Input
@@ -978,7 +1025,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         />
                                     </div>
                                     <div>
-                                        <Label className="text-sm font-semibold text-gray-900">
+                                        <Label className="text-sm font-semibold text-[#0f1b3d]">
                                             Дата окончания
                                         </Label>
                                         <Input
@@ -993,7 +1040,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </div>
 
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         Назначить ответственного
                                     </Label>
                                     <div className="relative mt-1.5">
@@ -1095,7 +1142,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                 {showCompletionModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                         <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
-                            <div className="flex items-center justify-between rounded-t-xl bg-gray-900 px-6 py-4">
+                            <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Upload className="h-5 w-5" />
                                     Подтвердите выполнение задачи!
@@ -1110,7 +1157,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             </div>
                             <form onSubmit={handleCompletionSubmit} className="p-6 space-y-5">
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
                                         Документы (файлы)
                                     </Label>
@@ -1129,7 +1176,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </div>
 
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
                                         Изображения
                                     </Label>
@@ -1149,7 +1196,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </div>
 
                                 <div>
-                                    <Label className="text-sm font-semibold text-gray-900">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         Комментарий
                                     </Label>
                                     <textarea
@@ -1186,7 +1233,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                 {showReviewModal && reviewCompletion && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                         <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
-                            <div className="flex items-center justify-between bg-gray-900 px-6 py-4">
+                            <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Eye className="h-5 w-5" />
                                     Проверить задание
@@ -1211,7 +1258,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                                             Тапсырма
                                         </p>
-                                        <p className="mt-1 font-semibold text-gray-900">
+                                        <p className="mt-1 font-semibold text-[#0f1b3d]">
                                             {reviewTask.title}
                                         </p>
                                         {reviewTask.description && (
@@ -1227,7 +1274,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                                         Отправил
                                     </p>
-                                    <p className="mt-1 font-medium text-gray-900">
+                                    <p className="mt-1 font-medium text-[#0f1b3d]">
                                         {reviewCompletion.submitter?.full_name || '—'}
                                     </p>
                                     <p className="text-xs text-gray-500">
@@ -1273,7 +1320,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         </div>
                                                     )}
                                                     <div className="min-w-0 flex-1">
-                                                        <p className="truncate text-sm font-medium text-gray-900">
+                                                        <p className="truncate text-sm font-medium text-[#0f1b3d]">
                                                             {file.file_name}
                                                         </p>
                                                         <p className="text-xs text-gray-400">
@@ -1284,7 +1331,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         href={`/storage/${file.file_path}`}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="text-blue-600 hover:text-blue-800"
+                                                        className="text-[#0f1b3d] hover:text-[#c8a44e]"
                                                     >
                                                         <Download className="h-4 w-4" />
                                                     </a>
@@ -1297,7 +1344,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {/* Review form */}
                                 <div className="space-y-4 border-t border-gray-200 pt-4">
                                     <div>
-                                        <label className="text-sm font-semibold text-gray-900">
+                                        <label className="text-sm font-semibold text-[#0f1b3d]">
                                             Комментарий
                                         </label>
                                         <textarea

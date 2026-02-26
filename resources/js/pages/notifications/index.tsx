@@ -164,8 +164,10 @@ export default function NotificationsIndex({ notifications }: Props) {
             <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                        <Bell className="h-6 w-6 text-gray-700" />
-                        <h1 className="text-2xl font-bold text-gray-900">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f1b3d]">
+                            <Bell className="h-5 w-5 text-[#c8a44e]" />
+                        </div>
+                        <h1 className="text-2xl font-bold text-[#0f1b3d]">
                             Уведомления
                         </h1>
                         {unreadCount > 0 && (
@@ -178,6 +180,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                         <Button
                             variant="outline"
                             size="sm"
+                            className="border-gray-200 shadow-none hover:bg-gray-50"
                             onClick={handleMarkAllRead}
                         >
                             <CheckCircle2 className="mr-2 h-4 w-4" />
@@ -187,14 +190,12 @@ export default function NotificationsIndex({ notifications }: Props) {
                 </div>
 
                 {notifications.data.length === 0 ? (
-                    <Card className="shadow-none">
-                        <CardContent className="py-16 text-center">
-                            <Bell className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                            <p className="text-gray-500">
-                                Нет уведомлений
-                            </p>
-                        </CardContent>
-                    </Card>
+                    <div className="rounded-xl border border-gray-100 bg-white py-16 text-center shadow-sm">
+                        <Bell className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                        <p className="text-gray-400">
+                            Нет уведомлений
+                        </p>
+                    </div>
                 ) : (
                     <div className="space-y-3">
                         {notifications.data.map((notification) => {
@@ -206,9 +207,9 @@ export default function NotificationsIndex({ notifications }: Props) {
                             return (
                                 <Card
                                     key={notification.id}
-                                    className={`cursor-pointer shadow-none transition-colors hover:bg-gray-50 ${
+                                    className={`cursor-pointer rounded-xl border-gray-100 shadow-sm transition-colors hover:bg-[#f8fafc] ${
                                         !notification.is_read
-                                            ? 'border-l-4 border-l-blue-500 bg-blue-50/30'
+                                            ? 'border-l-4 border-l-[#c8a44e] bg-[#c8a44e]/5'
                                             : ''
                                     }`}
                                     onClick={() => {
@@ -255,7 +256,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     <span className="h-2 w-2 rounded-full bg-blue-500" />
                                                 )}
                                             </div>
-                                            <p className="text-sm font-medium text-gray-900">
+                                            <p className="text-sm font-medium text-[#0f1b3d]">
                                                 {notification.message}
                                             </p>
                                             {notification.task?.project && (
@@ -316,8 +317,8 @@ export default function NotificationsIndex({ notifications }: Props) {
                 {/* Review Completion Modal */}
                 {viewCompletion && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
-                            <div className="flex items-center justify-between bg-gray-900 px-6 py-4">
+                        <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Eye className="h-5 w-5" />
                                     Проверка задания
@@ -341,7 +342,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                                             Задание
                                         </p>
-                                        <p className="mt-1 font-semibold text-gray-900">
+                                        <p className="mt-1 font-semibold text-[#0f1b3d]">
                                             {viewTask.title}
                                         </p>
                                         {viewTask.description && (
@@ -357,7 +358,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                     <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
                                         Отправил
                                     </p>
-                                    <p className="mt-1 font-medium text-gray-900">
+                                    <p className="mt-1 font-medium text-[#0f1b3d]">
                                         {viewCompletion.submitter
                                             ?.full_name || '—'}
                                     </p>
@@ -411,7 +412,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                                 </div>
                                                             )}
                                                             <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm font-medium text-gray-900">
+                                                                <p className="truncate text-sm font-medium text-[#0f1b3d]">
                                                                     {
                                                                         file.file_name
                                                                     }
@@ -493,7 +494,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {viewCompletion.status === 'pending' && (
                                     <div className="space-y-4 border-t border-gray-200 pt-4">
                                         <div>
-                                            <label className="text-sm font-semibold text-gray-900">
+                                            <label className="text-sm font-semibold text-[#0f1b3d]">
                                                 Комментарий
                                             </label>
                                             <textarea
@@ -504,7 +505,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     )
                                                 }
                                                 placeholder="Введите комментарий..."
-                                                className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                                className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:outline-none focus:ring-1 focus:ring-[#c8a44e]"
                                                 rows={3}
                                             />
                                         </div>

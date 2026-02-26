@@ -63,17 +63,17 @@ export default function Index({ regions: regionsData }: Props) {
         >
             <Head title="Регионы" />
 
-            <div className="flex h-full flex-col space-y-4 p-4">
+            <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="font-serif text-2xl font-bold text-neutral-900 dark:text-neutral-100">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Регионы
                     </h1>
-                    <Button asChild size="sm" className="shadow-none">
+                    <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                         <Link href={regions.create.url()}>Создать новый</Link>
                     </Button>
                 </div>
 
-                <div className="overflow-hidden rounded-xl bg-white dark:bg-neutral-900">
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -90,10 +90,10 @@ export default function Index({ regions: regionsData }: Props) {
                         <TableBody>
                             {regionsData.data.map((region) => (
                                 <TableRow key={region.id}>
-                                    <TableCell className="font-medium text-neutral-600 dark:text-neutral-400">
+                                    <TableCell className="font-medium text-gray-400">
                                         #{region.id}
                                     </TableCell>
-                                    <TableCell>{region.name}</TableCell>
+                                    <TableCell className="font-semibold text-[#0f1b3d]">{region.name}</TableCell>
                                     <TableCell>
                                         <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
                                             {region.type === 'oblast'
@@ -106,19 +106,19 @@ export default function Index({ regions: regionsData }: Props) {
                                     <TableCell>
                                         <div className="flex items-center gap-2">
                                             <span
-                                                className="h-4 w-4 rounded border border-neutral-300"
+                                                className="h-4 w-4 rounded border border-gray-200"
                                                 style={{
                                                     backgroundColor:
                                                         region.color ||
                                                         '#3B82F6',
                                                 }}
                                             />
-                                            <span className="font-mono text-xs text-neutral-600 uppercase">
+                                            <span className="font-mono text-xs text-gray-500 uppercase">
                                                 {region.color || '#3B82F6'}
                                             </span>
                                         </div>
                                     </TableCell>
-                                    <TableCell className="text-neutral-700">
+                                    <TableCell className="text-gray-600">
                                         {(() => {
                                             const iconPath =
                                                 resolveRegionIconPath(
@@ -147,7 +147,7 @@ export default function Index({ regions: regionsData }: Props) {
                                             variant="ghost"
                                             size="icon"
                                             asChild
-                                            className="h-8 w-8 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                            className="h-8 w-8 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                         >
                                             <Link
                                                 href={regions.edit.url(
@@ -174,7 +174,7 @@ export default function Index({ regions: regionsData }: Props) {
                                 <TableRow>
                                     <TableCell
                                         colSpan={6}
-                                        className="h-24 text-center text-neutral-500"
+                                        className="py-12 text-center text-gray-400"
                                     >
                                         Нет данных. Создайте первый регион.
                                     </TableCell>

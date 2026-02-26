@@ -12,6 +12,13 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use PhpOffice\PhpPresentation\PhpPresentation;
+use PhpOffice\PhpPresentation\IOFactory;
+use PhpOffice\PhpPresentation\Style\Alignment;
+use PhpOffice\PhpPresentation\Style\Color;
+use PhpOffice\PhpPresentation\Style\Fill;
+use PhpOffice\PhpPresentation\Shape\RichText;
+use PhpOffice\PhpPresentation\Slide\Background\Color as BackgroundColor;
 use ZipArchive;
 
 class InvestmentProjectController extends Controller
@@ -261,6 +268,11 @@ class InvestmentProjectController extends Controller
             'executor_ids' => 'nullable|array',
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
+            'infrastructure' => 'nullable|array',
+            'infrastructure.gas' => 'nullable|array',
+            'infrastructure.water' => 'nullable|array',
+            'infrastructure.electricity' => 'nullable|array',
+            'infrastructure.land' => 'nullable|array',
         ]);
 
         $validated['created_by'] = auth()->id();
@@ -523,6 +535,11 @@ class InvestmentProjectController extends Controller
             'executor_ids' => 'nullable|array',
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
+            'infrastructure' => 'nullable|array',
+            'infrastructure.gas' => 'nullable|array',
+            'infrastructure.water' => 'nullable|array',
+            'infrastructure.electricity' => 'nullable|array',
+            'infrastructure.land' => 'nullable|array',
         ]);
 
         // Парсим массив sectors в формате ["sez-1", "industrial_zone-5", "subsoil-3"]
@@ -630,6 +647,40 @@ class InvestmentProjectController extends Controller
         return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
     }
 
+    /**
+     * Generate a PPTX presentation for all projects in the same region.
+     * Each project gets its own slide within a single PPTX file.
+     */
+    public function presentation(InvestmentProject $investmentProject)
+    {
+        // Load the single project with all relations
+        $investmentProject->load([
+            'region', 'projectType', 'creator', 'executors',
+            'documents', 'photos', 'issues',
+            'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
+        ]);
+
+        $pptx = new PhpPresentation();
+        $pptx->getDocumentProperties()
+            ->setCreator('Turkistan Invest')
+            ->setTitle($investmentProject->name)
+            ->setSubject('Инвестиционный проект');
+
+        $slide = $pptx->getActiveSlide();
+        $this->buildProjectSlide($slide, $investmentProject);
+
+        $projectName = preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $investmentProject->name);
+        $fileName = 'pres_' . $investmentProject->id . '_' . time() . '.pptx';
+        $filePath = storage_path('app/private/' . $fileName);
+
+        $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
+        $writer->save($filePath);
+
+        $downloadName = 'Презентация_' . $projectName . '.pptx';
+
+        return response()->download($filePath, $downloadName)->deleteFileAfterSend(true);
+    }
+
     public function destroy(InvestmentProject $investmentProject)
     {
         $this->authorizeDistrictAccess($investmentProject);
@@ -637,6 +688,342 @@ class InvestmentProjectController extends Controller
         $investmentProject->delete();
 
         return redirect()->back()->with('success', 'Проект удален.');
+    }
+
+    /**
+     * Generate a single PPTX with one slide per project.
+     */
+    public function bulkPresentation(Request $request)
+    {
+        $validated = $request->validate([
+            'project_ids' => 'required|array|min:1',
+            'project_ids.*' => 'integer|exists:investment_projects,id',
+        ]);
+
+        $projectIds = $validated['project_ids'];
+        $projects = InvestmentProject::with([
+            'region', 'projectType', 'creator', 'executors',
+            'documents', 'photos', 'issues',
+            'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
+        ])->whereIn('id', $projectIds)->get();
+
+        if ($projects->isEmpty()) {
+            abort(404, 'Проекты не найдены.');
+        }
+
+        $pptx = new PhpPresentation();
+        $pptx->getDocumentProperties()
+            ->setCreator('Turkistan Invest')
+            ->setTitle('Презентации проектов');
+
+        $isFirst = true;
+        foreach ($projects as $project) {
+            if ($isFirst) {
+                $slide = $pptx->getActiveSlide();
+                $isFirst = false;
+            } else {
+                $slide = $pptx->createSlide();
+            }
+            $this->buildProjectSlide($slide, $project);
+        }
+
+        $fileName = 'presentations_' . time() . '.pptx';
+        $filePath = storage_path('app/private/' . $fileName);
+
+        $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
+        $writer->save($filePath);
+
+        $downloadName = 'Презентации_проектов.pptx';
+
+        return response()->download($filePath, $downloadName)->deleteFileAfterSend(true);
+    }
+
+    /**
+     * Generate a PPTX file for a project and return the file path.
+     */
+    protected function generatePresentationFile(InvestmentProject $project): ?string
+    {
+        $pptx = new PhpPresentation();
+        $pptx->getDocumentProperties()
+            ->setCreator('Turkistan Invest')
+            ->setTitle($project->name);
+
+        $slide = $pptx->getActiveSlide();
+        $this->buildProjectSlide($slide, $project);
+
+        $fileName = 'pres_' . $project->id . '_' . time() . '.pptx';
+        $filePath = storage_path('app/private/' . $fileName);
+
+        $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
+        $writer->save($filePath);
+
+        return $filePath;
+    }
+
+    /**
+     * Build a single slide for a project on the given slide object.
+     */
+    protected function buildProjectSlide($slide, InvestmentProject $project): void
+    {
+        $white    = 'FFFFFF';
+        $darkGray = '333333';
+        $midGray  = '666666';
+        $blue     = '1565C0';
+
+        $addText = function (RichText $shape, string $text, int $size, string $color, bool $bold = false) {
+            $run = $shape->createTextRun($text);
+            $run->getFont()
+                ->setSize($size)
+                ->setColor(new Color('FF' . $color))
+                ->setBold($bold)
+                ->setName('Arial');
+            return $run;
+        };
+
+        $fillSlide = function ($slide, string $color) {
+            $bg = new BackgroundColor();
+            $bg->setColor(new Color('FF' . $color));
+            $slide->setBackground($bg);
+        };
+
+        $formatCurrency = function ($amount) {
+            if (!$amount) return 'Не указано';
+            return number_format((float) $amount, 0, ',', ' ') . ' ₸';
+        };
+
+        $taskStatusLabels = [
+            'new' => 'Новая', 'in_progress' => 'В работе',
+            'done' => 'Выполнено', 'rejected' => 'Отклонено',
+        ];
+
+        $fillSlide($slide, $white);
+
+        $leftX = 15;
+        $leftW = 530;
+        $rightX = 560;
+        $rightW = 385;
+
+        // ── HEADER ───────────────────────────────────────────────
+        $logoPath = public_path('apple-touch-icon.png');
+        $logoW = 50;
+        if (file_exists($logoPath)) {
+            try {
+                $logoImg = $slide->createDrawingShape();
+                $logoImg->setPath($logoPath);
+                $logoImg->setWidth(50)->setHeight(50);
+                $logoImg->setOffsetX($leftX)->setOffsetY(4);
+            } catch (\Exception $e) {}
+        }
+
+        $titleName = mb_strtoupper($project->name);
+        $titleShape = $slide->createRichTextShape();
+        $titleShape->setHeight(30)->setWidth(930)->setOffsetX($leftX)->setOffsetY(6);
+        $titleShape->getActiveParagraph()->getAlignment()
+            ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+            ->setVertical(Alignment::VERTICAL_CENTER);
+        $addText($titleShape, $titleName, 14, $blue, true);
+
+        if ($project->company_name) {
+            $companyShape = $slide->createRichTextShape();
+            $companyShape->setHeight(20)->setWidth(930)->setOffsetX($leftX)->setOffsetY(34);
+            $companyShape->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $addText($companyShape, '(«' . $project->company_name . '»)', 10, $midGray, false);
+        }
+
+        $blueLine = $slide->createRichTextShape();
+        $blueLine->setHeight(2)->setWidth(930)->setOffsetX($leftX)->setOffsetY(56);
+        $blueLine->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FF' . $blue));
+
+        // ── LEFT COLUMN ──────────────────────────────────────────
+        $yLeft = 66;
+
+        $sectionHeader = $slide->createRichTextShape();
+        $sectionHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+        $addText($sectionHeader, 'ЖОБА ТУРАЛЫ', 12, $blue, true);
+        $yLeft += 26;
+
+        $infoItems = [
+            ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
+            ['Құны', $formatCurrency($project->total_investment)],
+            ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
+            ['Жобаның қуаттылығы', $project->description ? mb_substr($project->description, 0, 120) : '—'],
+            ['Жұмыс орындары', '—'],
+            ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
+            ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
+        ];
+
+        foreach ($infoItems as $item) {
+            $fullText = $item[0] . ': ' . $item[1];
+            $lineHeight = mb_strlen($fullText) > 70 ? 32 : 22;
+
+            $row = $slide->createRichTextShape();
+            $row->setHeight($lineHeight)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+            $row->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_TOP);
+            $row->setAutoFit(RichText::AUTOFIT_NORMAL);
+            $addText($row, $item[0] . ': ', 11, $darkGray, true);
+            $addText($row, $item[1], 11, $darkGray, false);
+            $yLeft += $lineHeight;
+        }
+
+        $yLeft += 8;
+
+        // ── АҒЫМДАҒЫ ЖАҒДАЙЫ ────────────────────────────────────
+        $roadmapHeader = $slide->createRichTextShape();
+        $roadmapHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+        $addText($roadmapHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЫ', 12, $blue, true);
+        $yLeft += 26;
+
+        $tasks = $project->tasks->sortBy('created_at');
+        if ($tasks->isNotEmpty()) {
+            foreach ($tasks->take(12) as $task) {
+                if ($yLeft > 640) break;
+
+                $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
+                $statusColor = match($task->status) {
+                    'done' => '2E7D32',
+                    'in_progress' => 'F57C00',
+                    'rejected' => 'C62828',
+                    default => $midGray,
+                };
+
+                $taskText = '• ' . $task->title;
+
+                $taskRow = $slide->createRichTextShape();
+                $taskRow->setHeight(20)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
+                $taskRow->getActiveParagraph()->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_TOP);
+                $taskRow->setAutoFit(RichText::AUTOFIT_NORMAL);
+                $addText($taskRow, $taskText, 10, $darkGray, false);
+                $addText($taskRow, '  [' . $statusLabel . ']', 9, $statusColor, true);
+                $yLeft += 20;
+
+                if ($task->assignee) {
+                    $assigneeText = $task->assignee->position ?? 'Орындаушы';
+                    $assigneeName = $task->assignee->full_name ?? $task->assignee->name;
+
+                    $assigneeRow = $slide->createRichTextShape();
+                    $assigneeRow->setHeight(16)->setWidth($leftW - 20)->setOffsetX($leftX + 15)->setOffsetY($yLeft);
+                    $assigneeRow->getActiveParagraph()->getAlignment()
+                        ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                        ->setVertical(Alignment::VERTICAL_CENTER);
+                    $addText($assigneeRow, $assigneeText . ' (' . $assigneeName . ')', 9, $blue, false);
+                    $yLeft += 16;
+                }
+
+                $yLeft += 4;
+            }
+        } else {
+            $noTasks = $slide->createRichTextShape();
+            $noTasks->setHeight(20)->setWidth($leftW)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
+            $addText($noTasks, 'Дорожная карта бос', 10, $midGray, false);
+            $yLeft += 20;
+        }
+
+        // ── RIGHT COLUMN ─────────────────────────────────────────
+        $yRight = 66;
+
+        $imgMaxW = $rightW;
+        $imgMaxH = 280;
+
+        $renderPhoto = $project->photos->where('photo_type', 'render')->first();
+        $actualImgH = 0;
+        if ($renderPhoto) {
+            $filePath = Storage::disk('public')->path($renderPhoto->file_path);
+            if (file_exists($filePath)) {
+                try {
+                    $imgShape = $slide->createDrawingShape();
+                    $imgShape->setPath($filePath);
+                    $origW = $imgShape->getWidth();
+                    $origH = $imgShape->getHeight();
+                    if ($origW > 0 && $origH > 0) {
+                        $ratio = min($imgMaxW / $origW, $imgMaxH / $origH);
+                        $newW = (int)($origW * $ratio);
+                        $newH = (int)($origH * $ratio);
+                        $imgShape->setWidth($newW)->setHeight($newH);
+                        $imgShape->setOffsetX($rightX + (int)(($imgMaxW - $newW) / 2));
+                        $imgShape->setOffsetY($yRight);
+                        $actualImgH = $newH;
+                    }
+                } catch (\Exception $e) {}
+            }
+        }
+
+        $yRight += max($actualImgH + 15, 200);
+
+        // ── ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ ─────────────────────────────
+        $infrastructure = $project->infrastructure;
+        $hasInfra = $infrastructure && is_array($infrastructure) &&
+            collect($infrastructure)->contains(fn($v) => is_array($v) && ($v['needed'] ?? false));
+
+        if ($hasInfra) {
+            $infraHeader = $slide->createRichTextShape();
+            $infraHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
+            $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ', 12, $blue, true);
+            $yRight += 28;
+
+            $infraItems = [
+                ['key' => 'gas',         'label' => 'Газ'],
+                ['key' => 'water',       'label' => 'Су'],
+                ['key' => 'electricity', 'label' => 'Электр қуаты'],
+                ['key' => 'land',        'label' => 'Жер телімі'],
+            ];
+
+            $colCount = count($infraItems);
+            $colW = (int)(($rightW - ($colCount - 1) * 4) / $colCount);
+            $colX = $rightX;
+
+            foreach ($infraItems as $item) {
+                $val = $infrastructure[$item['key']] ?? null;
+                $isNeeded = is_array($val) && ($val['needed'] ?? false);
+
+                $headerCell = $slide->createRichTextShape();
+                $headerCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yRight);
+                $headerCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFE3F2FD'));
+                $headerCell->getActiveParagraph()->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(Alignment::VERTICAL_CENTER);
+                $addText($headerCell, $item['label'], 10, $blue, true);
+
+                $valueCell = $slide->createRichTextShape();
+                $valueCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yRight + 24);
+                $valueCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFAFAFA'));
+                $valueCell->getActiveParagraph()->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
+                    ->setVertical(Alignment::VERTICAL_CENTER);
+
+                if ($isNeeded) {
+                    $addText($valueCell, ($val['capacity'] ?? '') ?: 'Қажет', 10, $darkGray, false);
+                } else {
+                    $addText($valueCell, '—', 10, $midGray, false);
+                }
+
+                $colX += $colW + 4;
+            }
+
+            $yRight += 52; // header row (24) + value row (24) + spacing (4)
+        }
+
+        // ── DESCRIPTION — full-width at bottom ───────────────────
+        $descY = max($yLeft, $yRight) + 10;
+        if ($project->description && $descY < 700) {
+            $descText = $project->description;
+            $descAvailH = 720 - $descY - 10;
+            $descH = min($descAvailH, max(40, (int)(mb_strlen($descText) / 3)));
+
+            $descShape = $slide->createRichTextShape();
+            $descShape->setHeight($descH)->setWidth(930)->setOffsetX($leftX)->setOffsetY($descY);
+            $descShape->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_TOP);
+            $descShape->setAutoFit(RichText::AUTOFIT_NORMAL);
+            $addText($descShape, 'СИПАТТАМАСЫ: ', 10, $blue, true);
+            $addText($descShape, $descText, 10, $darkGray, false);
+        }
     }
 
     /**

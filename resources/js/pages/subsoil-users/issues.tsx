@@ -138,12 +138,12 @@ export default function Issues({ subsoilUser, issues }: Props) {
                 <div>
                     <Link
                         href={`/subsoil-users/${subsoilUser.id}`}
-                        className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                        className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                     >
                         <ArrowLeft className="mr-1 h-4 w-4" /> Назад к
                         недропользователю
                     </Link>
-                    <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                    <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
                         Проблемные вопросы
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
@@ -373,7 +373,7 @@ export default function Issues({ subsoilUser, issues }: Props) {
                                                 ) : (
                                                     <>
                                                         <div className="mb-2 flex items-start justify-between">
-                                                            <p className="text-sm text-gray-900">
+                                                            <p className="text-sm text-[#0f1b3d]">
                                                                 {
                                                                     issue.description
                                                                 }
@@ -418,7 +418,7 @@ export default function Issues({ subsoilUser, issues }: Props) {
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="h-7 w-7 text-gray-400 hover:text-blue-600"
+                                                                        className="h-7 w-7 text-gray-400 hover:text-[#0f1b3d]"
                                                                         onClick={() =>
                                                                             startEdit(
                                                                                 issue,

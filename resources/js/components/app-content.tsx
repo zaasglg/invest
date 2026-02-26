@@ -1,4 +1,5 @@
 import * as React from 'react';
+
 import { SidebarInset } from '@/components/ui/sidebar';
 
 type Props = React.ComponentProps<'main'> & {
@@ -12,7 +13,7 @@ export function AppContent({ variant = 'header', children, ...props }: Props) {
 
     return (
         <main
-            className="mx-auto flex h-full w-full flex-1 flex-col gap-4 rounded-xl"
+            className="flex h-full w-full flex-1 flex-col bg-[#f8fafc]"
             {...props}
         >
             {children}

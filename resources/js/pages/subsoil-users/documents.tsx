@@ -113,7 +113,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
         } else if (['doc', 'docx'].includes(typeLower)) {
             return (
                 <div
-                    className={`${iconClass} flex items-center justify-center rounded-lg bg-blue-100 text-sm font-bold text-blue-600`}
+                    className={`${iconClass} flex items-center justify-center rounded-lg bg-blue-100 text-sm font-bold text-[#0f1b3d]`}
                 >
                     DOC
                 </div>
@@ -167,11 +167,11 @@ export default function Documents({ subsoilUser, documents }: Props) {
                     <div>
                         <Link
                             href={`/subsoil-users/${subsoilUser.id}`}
-                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                         >
                             <ArrowLeft className="mr-1 h-4 w-4" /> Назад
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
                             Документы
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
@@ -333,7 +333,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                             >
                                                 {getFileIcon(document.type)}
                                                 <div className="min-w-0 flex-1">
-                                                    <p className="truncate font-medium text-gray-900">
+                                                    <p className="truncate font-medium text-[#0f1b3d]">
                                                         {document.name}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
@@ -351,7 +351,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                                         href={`/storage/${document.file_path}`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
-                                                        className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-blue-50 hover:text-blue-600"
+                                                        className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                         title="Скачать"
                                                     >
                                                         <Download className="h-4 w-4" />

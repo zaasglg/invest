@@ -119,7 +119,7 @@ export default function Show({
                 {/* Back link */}
                 <Link
                     href={`/regions/${subsoilUser.region_id}`}
-                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-gray-900"
+                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Назад к
                     списку
@@ -131,7 +131,7 @@ export default function Show({
                         {/* Banner + Info */}
                         <Card className="overflow-hidden shadow-none py-0">
                             {/* Banner Header */}
-                            <div className="bg-gray-900 px-6 py-4">
+                            <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-white">
                                         <Layers className="h-5 w-5" />
@@ -169,7 +169,7 @@ export default function Show({
                                                 <MapPin className="h-3.5 w-3.5" />{' '}
                                                 Район
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.region?.name ||
                                                     'Не указан'}
                                             </p>
@@ -179,7 +179,7 @@ export default function Show({
                                                 <FileText className="h-3.5 w-3.5" />{' '}
                                                 БИН
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.bin || 'Не указан'}
                                             </p>
                                         </div>
@@ -188,7 +188,7 @@ export default function Show({
                                                 <Layers className="h-3.5 w-3.5" />{' '}
                                                 Полезное ископаемое
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.mineral_type ||
                                                     'Не указано'}
                                             </p>
@@ -198,7 +198,7 @@ export default function Show({
                                                 <Activity className="h-3.5 w-3.5" />{' '}
                                                 Статус лицензии
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.license_status
                                                     ? licenseStatusMap[
                                                           subsoilUser
@@ -213,7 +213,7 @@ export default function Show({
                                                 <MapPin className="h-3.5 w-3.5" />{' '}
                                                 Площадь участка
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.total_area !=
                                                     null &&
                                                 Number(
@@ -228,7 +228,7 @@ export default function Show({
                                                 <Calendar className="h-3.5 w-3.5" />{' '}
                                                 Срок лицензии
                                             </p>
-                                            <p className="text-sm font-bold text-gray-900">
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.license_start
                                                     ? new Date(
                                                           subsoilUser.license_start,
@@ -248,7 +248,7 @@ export default function Show({
 
                             {/* Name & Description */}
                             <div className="border-t border-gray-200 px-6 py-5">
-                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-gray-900">
+                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <FileText className="h-5 w-5 text-gray-500" />
                                     {subsoilUser.name}
                                 </h2>
@@ -368,7 +368,7 @@ export default function Show({
                                     href={`/subsoil-users/${subsoilUser.id}/passport`}
                                     className="w-full"
                                 >
-                                    <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                                    <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]">
                                         <Download className="mr-2 h-4 w-4" />
                                         Скачать паспорт объекта
                                     </Button>

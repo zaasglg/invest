@@ -176,10 +176,10 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-gray-900 mb-2 transition-colors">
+                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] mb-2 transition-colors">
                             <ArrowLeft className="h-4 w-4 mr-1" /> Назад к проекту
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-gray-900">Галерея проекта</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Галерея проекта</h1>
                         <p className="text-sm text-gray-500 mt-1">{project.name}</p>
                     </div>
                 </div>
@@ -410,7 +410,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                         {/* Dated Galleries */}
                         {Object.keys(sortedDatedGallery).length > 0 ? (
                             <div className="space-y-8">
-                                <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                <h2 className="text-xl font-bold text-[#0f1b3d] flex items-center gap-2">
                                     <Calendar className="h-5 w-5" />
                                     Ход реализации по датам
                                 </h2>

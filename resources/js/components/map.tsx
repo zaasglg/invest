@@ -12,13 +12,6 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardFooter,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
 
 import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, Navigation } from 'lucide-react';
 
@@ -89,7 +82,6 @@ interface MapSez {
     name: string;
     status?: string;
     total_area?: number;
-    investment_total?: number;
     location?: { lat: number; lng: number }[] | null;
 }
 
@@ -98,7 +90,6 @@ interface MapIndustrialZone {
     name: string;
     status?: string;
     total_area?: number;
-    investment_total?: number;
     location?: { lat: number; lng: number }[] | null;
 }
 
@@ -115,7 +106,6 @@ interface ActiveEntity {
     type: 'sez' | 'iz' | 'subsoil';
     status?: string;
     total_area?: number;
-    investment_total?: number;
     mineral_type?: string;
     positions: [number, number][];
 }
@@ -694,7 +684,6 @@ export default function Map({
                         type: 'sez',
                         status: sez.status,
                         total_area: sez.total_area,
-                        investment_total: sez.investment_total,
                         positions,
                     };
                 }
@@ -719,7 +708,6 @@ export default function Map({
                         type: 'iz',
                         status: iz.status,
                         total_area: iz.total_area,
-                        investment_total: iz.investment_total,
                         positions,
                     };
                 }
@@ -1140,8 +1128,6 @@ export default function Map({
                                                 type: 'sez' as const,
                                                 status: sez.status,
                                                 total_area: sez.total_area,
-                                                investment_total:
-                                                    sez.investment_total,
                                                 positions,
                                             };
                                             setActiveEntity(entity);
@@ -1226,8 +1212,6 @@ export default function Map({
                                                 type: 'iz' as const,
                                                 status: iz.status,
                                                 total_area: iz.total_area,
-                                                investment_total:
-                                                    iz.investment_total,
                                                 positions,
                                             };
                                             setActiveEntity(entity);
@@ -1416,141 +1400,122 @@ export default function Map({
 
             {/* Active Region Popup */}
             {activeRegion && !activeEntity && (
-                <>
-                    {/* Arrow pointing to region */}
-                    <div className="absolute top-[60px] right-[340px] z-[399]">
-                        <div className="relative">
-                            <div className="h-0 w-0 border-t-[15px] border-r-[20px] border-b-[15px] border-t-transparent border-r-[#1d3b6f] border-b-transparent"></div>
+                <div 
+                    className="absolute top-4 right-4 z-[400] flex w-[320px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-right-4 duration-300"
+                    style={{ maxHeight: 'calc(100% - 32px)' }}
+                >
+                    {/* Header */}
+                    <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
+                        <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Район</p>
+                            <h3 className="mt-0.5 text-lg font-bold leading-tight text-white break-words">
+                                {activeRegion.name}
+                            </h3>
                         </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                            onClick={() => {
+                                setActiveRegion(null);
+                                setPopupPosition(null);
+                            }}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </div>
 
-                    <div 
-                        className="absolute top-4 right-4 z-[400] w-[320px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
-                        style={{ maxHeight: 'calc(100% - 32px)' }}
-                    >
-                        <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
-                            <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-[#1d3b6f] px-4 py-3 text-white shrink-0">
-                                <CardTitle className="text-lg font-bold tracking-tight text-white break-words">
-                                    {activeRegion.name}
-                                </CardTitle>
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-6 w-6 rounded-full text-white hover:bg-white/20"
-                                    onClick={() => {
-                                        setActiveRegion(null);
-                                        setPopupPosition(null);
-                                    }}
-                                >
-                                    <X className="h-4 w-4" />
-                                </Button>
-                            </CardHeader>
-                            <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 overscroll-contain">
-                                {(() => {
-                                    const stats = getRegionStats(
-                                        activeRegion.id,
-                                    );
-                                    return (
-                                        <div className="space-y-0 bg-white">
-                                            {/* Объем инвестиций */}
-                                            <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-                                                <p className="mb-1 text-sm text-gray-600">
-                                                    Объем инвестиций:
-                                                </p>
-                                                <p className="text-xl font-bold text-blue-600">
-                                                    {formatInvestment(
-                                                        stats.investments,
-                                                    )}
-                                                </p>
-                                            </div>
-
-                                            {/* Проектов в ИЗ */}
-                                            <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-                                                <span className="text-base text-gray-700">
-                                                    Проектов в ИЗ:
-                                                </span>
-                                                <span className="text-xl font-bold text-blue-600">
-                                                    {stats.izProjects}
-                                                </span>
-                                            </div>
-
-                                            {/* Проектов в СЭЗ */}
-                                            <div className="flex items-center justify-between border-b border-gray-100 bg-white px-4 py-3">
-                                                <span className="text-base text-gray-700">
-                                                    Проектов в СЭЗ:
-                                                </span>
-                                                <span className="text-xl font-bold text-blue-600">
-                                                    {stats.sezProjects}
-                                                </span>
-                                            </div>
-
-                                            {/* Недропользователи */}
-                                            <div className="flex items-center justify-between bg-white px-4 py-3">
-                                                <span className="text-base text-gray-700">
-                                                    Недропользователи:
-                                                </span>
-                                                <span className="text-xl font-bold text-blue-600">
-                                                    {stats.subsoilUsers}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    );
-                                })()}
-                            </CardContent>
-                            <CardFooter className="bg-blue-800 p-0 shrink-0">
-                                <Link
-                                    href={`/regions/${activeRegion.id}`}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        className="flex h-14 w-full items-center justify-center gap-2 rounded-none border-none bg-[#1d3b6f] text-base font-semibold text-white shadow-none hover:bg-blue-900"
-                                        size="sm"
-                                    >
-                                        Подробнее о районе{' '}
-                                        <ChevronRight className="h-5 w-5" />
-                                    </Button>
-                                </Link>
-                            </CardFooter>
-                        </Card>
+                    {/* Stats */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
+                        {(() => {
+                            const stats = getRegionStats(activeRegion.id);
+                            return (
+                                <div className="divide-y divide-gray-100">
+                                    <div className="flex items-center justify-between px-5 py-3.5">
+                                        <span className="text-sm text-gray-500">Объем инвестиций</span>
+                                        <span className="text-lg font-bold text-[#c8a44e]">
+                                            {formatInvestment(stats.investments)}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-5 py-3.5">
+                                        <span className="text-sm text-gray-500">Проектов в ИЗ</span>
+                                        <span className="text-lg font-bold text-[#0f1b3d]">
+                                            {stats.izProjects}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-5 py-3.5">
+                                        <span className="text-sm text-gray-500">Проектов в СЭЗ</span>
+                                        <span className="text-lg font-bold text-[#0f1b3d]">
+                                            {stats.sezProjects}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-5 py-3.5">
+                                        <span className="text-sm text-gray-500">Недропользователи</span>
+                                        <span className="text-lg font-bold text-[#0f1b3d]">
+                                            {stats.subsoilUsers}
+                                        </span>
+                                    </div>
+                                </div>
+                            );
+                        })()}
                     </div>
-                </>
+
+                    {/* Footer */}
+                    <div className="shrink-0 border-t border-gray-100 p-3">
+                        <Link
+                            href={`/regions/${activeRegion.id}`}
+                            className="w-full"
+                        >
+                            <Button
+                                className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0f1b3d] text-sm font-semibold text-white shadow-none hover:bg-[#1a2d5a]"
+                                size="sm"
+                            >
+                                Подробнее о районе
+                                <ChevronRight className="h-4 w-4" />
+                            </Button>
+                        </Link>
+                    </div>
+                </div>
             )}
 
             {/* Active Plot Popup */}
             {activePlot && (
                 <div 
-                    className="absolute top-4 right-4 z-[400] w-[340px] rounded-xl bg-white shadow-2xl flex flex-col animate-in fade-in slide-in-from-right-4 duration-300 overflow-hidden"
+                    className="absolute top-4 right-4 z-[400] flex w-[340px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-right-4 duration-300"
                     style={{ maxHeight: 'calc(100% - 32px)' }}
                 >
-                    <Card className="gap-0 rounded-none border-none py-0 font-sans shadow-none flex flex-col min-h-0 h-full">
-                        <CardHeader className="relative flex flex-row items-center justify-between space-y-0 bg-gradient-to-r from-orange-500 to-amber-600 px-4 py-3 text-white shrink-0">
-                            <div className="min-w-0 flex-1 pr-2">
-                                <CardTitle className="text-base leading-tight font-bold tracking-tight break-words">
-                                    {activePlot.name || 'Инвестиционный проект'}
-                                </CardTitle>
-                                {activePlot.companyName && (
-                                    <p className="mt-0.5 text-xs text-white/80 break-words">
-                                        {activePlot.companyName}
+                    {/* Header */}
+                    <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
+                        <div className="min-w-0 flex-1 pr-2">
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Проект</p>
+                            <h3 className="mt-0.5 text-base font-bold leading-tight text-white break-words">
+                                {activePlot.name || 'Инвестиционный проект'}
+                            </h3>
+                            {activePlot.companyName && (
+                                <p className="mt-0.5 text-xs text-white/60 break-words">
+                                    {activePlot.companyName}
+                                </p>
+                            )}
+                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 shrink-0 rounded-full text-white/70 hover:bg-white/10 hover:text-white"
+                            onClick={() => setActivePlot(null)}
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 overflow-y-auto overscroll-contain">
+                        <div className="divide-y divide-gray-100">
+                            {/* Статус */}
+                            {activePlot.statusRaw && (
+                                <div className="flex items-center justify-between px-5 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        Статус
                                     </p>
-                                )}
-                            </div>
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 shrink-0 rounded-full text-white hover:bg-white/20"
-                                onClick={() => setActivePlot(null)}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </CardHeader>
-                        <CardContent className="flex-1 overflow-y-auto min-h-0 p-0 overscroll-contain">
-                            <div className="gap-0 divide-y divide-gray-100">
-                                {/* Статус */}
-                                {activePlot.statusRaw && (
-                                    <div className="flex items-center justify-between px-4 py-2.5">
-                                        <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                            Статус
-                                        </p>
                                         <span
                                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                                                 activePlot.statusRaw === 'plan'
@@ -1583,43 +1548,43 @@ export default function Map({
                                     </div>
                                 )}
 
-                                {/* Инвестиции */}
-                                {activePlot.totalInvestment !== undefined &&
-                                    activePlot.totalInvestment !== null && (
-                                        <div className="flex items-center justify-between px-4 py-2.5">
-                                            <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                                Инвестиции
-                                            </p>
-                                            <p className="text-sm font-bold text-gray-900">
-                                                {formatInvestment(
-                                                    Number(
-                                                        activePlot.totalInvestment,
-                                                    ),
-                                                )}
-                                            </p>
-                                        </div>
-                                    )}
-
-                                {/* Тип проекта */}
-                                {activePlot.projectTypeName && (
-                                    <div className="flex items-center justify-between px-4 py-2.5">
-                                        <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                            Тип проекта
+                            {/* Инвестиции */}
+                            {activePlot.totalInvestment !== undefined &&
+                                activePlot.totalInvestment !== null && (
+                                    <div className="flex items-center justify-between px-5 py-3">
+                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                            Инвестиции
                                         </p>
-                                        <p className="text-sm font-medium text-gray-900">
-                                            {activePlot.projectTypeName}
+                                        <p className="text-sm font-bold text-[#c8a44e]">
+                                            {formatInvestment(
+                                                Number(
+                                                    activePlot.totalInvestment,
+                                                ),
+                                            )}
                                         </p>
                                     </div>
                                 )}
 
-                                {/* Сроки */}
-                                {(activePlot.startDate ||
-                                    activePlot.endDate) && (
-                                    <div className="flex items-center justify-between px-4 py-2.5">
-                                        <p className="text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                            Сроки
-                                        </p>
-                                        <p className="text-sm font-medium text-gray-900">
+                            {/* Тип проекта */}
+                            {activePlot.projectTypeName && (
+                                <div className="flex items-center justify-between px-5 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        Тип проекта
+                                    </p>
+                                    <p className="text-sm font-medium text-[#0f1b3d]">
+                                        {activePlot.projectTypeName}
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Сроки */}
+                            {(activePlot.startDate ||
+                                activePlot.endDate) && (
+                                <div className="flex items-center justify-between px-5 py-3">
+                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        Сроки
+                                    </p>
+                                    <p className="text-sm font-medium text-[#0f1b3d]">
                                             {activePlot.startDate
                                                 ? new Date(
                                                       activePlot.startDate,
@@ -1635,46 +1600,46 @@ export default function Map({
                                     </div>
                                 )}
 
-                                {/* Исполнители */}
-                                {activePlot.executorNames &&
-                                    activePlot.executorNames.length > 0 && (
-                                        <div className="px-4 py-2.5">
-                                            <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                                Исполнители
-                                            </p>
-                                            <div className="flex flex-wrap gap-1">
-                                                {activePlot.executorNames.map(
-                                                    (name, i) => (
-                                                        <span
-                                                            key={i}
-                                                            className="inline-flex items-center rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700"
-                                                        >
-                                                            {name}
-                                                        </span>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                {/* Секторы: СЭЗ, ИЗ, Недропользователи */}
-                                {((activePlot.sezNames &&
-                                    activePlot.sezNames.length > 0) ||
-                                    (activePlot.izNames &&
-                                        activePlot.izNames.length > 0) ||
-                                    (activePlot.subsoilNames &&
-                                        activePlot.subsoilNames.length >
-                                            0)) && (
-                                    <div className="px-4 py-2.5">
-                                        <p className="mb-1 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                            Секторы
+                            {/* Исполнители */}
+                            {activePlot.executorNames &&
+                                activePlot.executorNames.length > 0 && (
+                                    <div className="px-5 py-3">
+                                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                            Исполнители
                                         </p>
+                                        <div className="flex flex-wrap gap-1">
+                                            {activePlot.executorNames.map(
+                                                (name, i) => (
+                                                    <span
+                                                        key={i}
+                                                        className="inline-flex items-center rounded-full bg-[#0f1b3d]/5 px-2.5 py-0.5 text-[11px] font-medium text-[#0f1b3d]"
+                                                    >
+                                                        {name}
+                                                    </span>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                            {/* Секторы: СЭЗ, ИЗ, Недропользователи */}
+                            {((activePlot.sezNames &&
+                                activePlot.sezNames.length > 0) ||
+                                (activePlot.izNames &&
+                                    activePlot.izNames.length > 0) ||
+                                (activePlot.subsoilNames &&
+                                    activePlot.subsoilNames.length >
+                                        0)) && (
+                                <div className="px-5 py-3">
+                                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        Секторы
+                                    </p>
                                         <div className="flex flex-wrap gap-1">
                                             {activePlot.sezNames?.map(
                                                 (name, i) => (
                                                     <span
                                                         key={`sez-${i}`}
-                                                        className="inline-flex items-center rounded bg-purple-100 px-1.5 py-0.5 text-[10px] font-medium text-purple-800"
+                                                        className="inline-flex items-center rounded-full bg-[#c8a44e]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#c8a44e]"
                                                     >
                                                         СЭЗ: {name}
                                                     </span>
@@ -1684,7 +1649,7 @@ export default function Map({
                                                 (name, i) => (
                                                     <span
                                                         key={`iz-${i}`}
-                                                        className="inline-flex items-center rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-800"
+                                                        className="inline-flex items-center rounded-full bg-[#0f1b3d]/8 px-2.5 py-0.5 text-[10px] font-medium text-[#0f1b3d]"
                                                     >
                                                         ИЗ: {name}
                                                     </span>
@@ -1694,7 +1659,7 @@ export default function Map({
                                                 (name, i) => (
                                                     <span
                                                         key={`su-${i}`}
-                                                        className="inline-flex items-center rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-800"
+                                                        className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
                                                     >
                                                         Недропользование: {name}
                                                     </span>
@@ -1704,30 +1669,31 @@ export default function Map({
                                     </div>
                                 )}
 
-                                {/* Описание */}
-                                {activePlot.description && (
-                                    <div className="px-4 py-2.5">
-                                        <p className="mb-0.5 text-[10px] font-bold tracking-wider text-gray-400 uppercase">
-                                            Описание
-                                        </p>
-                                        <p className="line-clamp-3 text-sm leading-snug text-gray-700">
-                                            {activePlot.description}
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </CardContent>
-                        <CardFooter className="border-t border-gray-100 bg-gray-50/50 p-3 shrink-0">
-                            <Link
-                                href={`/investment-projects/${activePlot.id}`}
-                                className="w-full"
-                            >
-                                <Button className="h-9 w-full bg-orange-500 text-sm font-medium text-white shadow-none hover:bg-orange-600">
-                                    Подробнее о проекте
-                                </Button>
-                            </Link>
-                        </CardFooter>
-                    </Card>
+                            {/* Описание */}
+                            {activePlot.description && (
+                                <div className="px-5 py-3">
+                                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        Описание
+                                    </p>
+                                    <p className="line-clamp-3 text-sm leading-snug text-gray-600">
+                                        {activePlot.description}
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Footer */}
+                    <div className="shrink-0 border-t border-gray-100 p-3">
+                        <Link
+                            href={`/investment-projects/${activePlot.id}`}
+                            className="w-full"
+                        >
+                            <Button className="h-10 w-full rounded-xl bg-[#c8a44e] text-sm font-semibold text-white shadow-none hover:bg-[#b8943e]">
+                                Подробнее о проекте
+                            </Button>
+                        </Link>
+                    </div>
                 </div>
             )}
 
@@ -1758,10 +1724,10 @@ export default function Map({
 
                     return (
                         <div className="absolute inset-x-5 bottom-4 z-[400] sm:inset-x-8 lg:inset-x-10">
-                            <div className="mx-auto w-full max-w-[1360px] overflow-hidden rounded-[2px] border border-slate-300/70 bg-white/65 shadow-lg backdrop-blur-sm">
+                            <div className="mx-auto w-full max-w-[1360px] overflow-hidden rounded-xl border border-white/20 bg-white/70 shadow-xl ring-1 ring-black/5 backdrop-blur-md">
                                 <button
                                     onClick={() => setIsTableCollapsed(!isTableCollapsed)}
-                                    className="flex w-full items-center justify-center gap-1.5 border-b border-slate-300/40 bg-slate-100/80 px-4 py-1.5 text-xs font-medium text-[#4e6882] transition-colors hover:bg-slate-200/80"
+                                    className="flex w-full items-center justify-center gap-1.5 border-b border-gray-200/50 bg-[#0f1b3d]/5 px-4 py-2 text-xs font-semibold text-[#0f1b3d] transition-colors hover:bg-[#0f1b3d]/10"
                                 >
                                     {isTableCollapsed ? (
                                         <><ChevronUp className="h-3.5 w-3.5" /> Показать таблицу</>
@@ -1771,50 +1737,50 @@ export default function Map({
                                 </button>
                                 {!isTableCollapsed && <div className="custom-scrollbar overflow-x-auto">
                                     <table className="w-full min-w-[780px] border-collapse text-left text-sm">
-                                        <thead className="border-b border-slate-300/60 bg-slate-100/70">
-                                            <tr className="text-[13px] font-semibold text-[#4e6882]">
-                                                <th className="border-r border-slate-300/40 px-4 py-2.5 sm:px-5">
+                                        <thead className="border-b border-gray-200/60 bg-[#0f1b3d]/[0.03]">
+                                            <tr className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                                <th className="border-r border-gray-200/40 px-5 py-2.5">
                                                     Сектор
                                                 </th>
-                                                <th className="border-r border-slate-300/40 px-4 py-2.5 text-center sm:px-5">
+                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
                                                     Инвестиции
                                                 </th>
-                                                <th className="border-r border-slate-300/40 px-4 py-2.5 text-center sm:px-5">
+                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
                                                     Кол-во проектов
                                                 </th>
-                                                <th className="border-r border-slate-300/40 px-4 py-2.5 text-center sm:px-5">
+                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
                                                     Проблемные вопросы
                                                 </th>
-                                                <th className="px-4 py-2.5 text-center sm:px-5">
+                                                <th className="px-5 py-2.5 text-center">
                                                     Организации
                                                 </th>
                                             </tr>
                                         </thead>
-                                        <tbody className="bg-white/35">
+                                        <tbody className="bg-white/40">
                                             {rows.map((row) => (
                                                 <tr
                                                     key={row.key}
-                                                    className="border-b border-slate-300/30 last:border-b-0"
+                                                    className="border-b border-gray-200/30 last:border-b-0 transition-colors hover:bg-[#0f1b3d]/[0.02]"
                                                 >
-                                                    <td className="border-r border-slate-300/30 px-4 py-2.5 font-semibold text-slate-700 sm:px-5">
+                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 font-semibold text-[#0f1b3d]">
                                                         {row.label}
                                                     </td>
-                                                    <td className="border-r border-slate-300/30 px-4 py-2.5 text-center text-xl font-bold text-[#0d5b96] sm:px-5">
+                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#c8a44e]">
                                                         {formatInvestment(
                                                             row.d.investment,
                                                         )}
                                                     </td>
-                                                    <td className="border-r border-slate-300/30 px-4 py-2.5 text-center text-xl font-bold text-[#0d5b96] sm:px-5">
+                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
                                                         {formatCount(
                                                             row.d.projectCount,
                                                         )}
                                                     </td>
-                                                    <td className="border-r border-slate-300/30 px-4 py-2.5 text-center text-xl font-bold text-[#0d5b96] sm:px-5">
+                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
                                                         {formatCount(
                                                             row.d.problemCount,
                                                         )}
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-center text-xl font-bold text-[#0d5b96] sm:px-5">
+                                                    <td className="px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
                                                         {formatCount(
                                                             row.d.orgCount,
                                                         )}
@@ -1834,7 +1800,7 @@ export default function Map({
                 <Button
                     variant="default" 
                     size="icon"
-                    className="h-12 w-12 rounded-full shadow-xl bg-white hover:bg-gray-50 text-gray-700 border border-gray-200"
+                    className="h-12 w-12 rounded-full bg-white shadow-xl ring-1 ring-black/5 hover:bg-gray-50 text-[#0f1b3d] border-0"
                     onClick={() => {
                         setActivePlot(null);
                         setActiveEntity(null);
@@ -1845,7 +1811,7 @@ export default function Map({
                     }}
                     title="Сбросить карту"
                 >
-                     <Navigation className="h-6 w-6 text-blue-600" />
+                     <Navigation className="h-6 w-6 text-[#0f1b3d]" />
                 </Button>
             </div>
         </div>

@@ -90,6 +90,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         end_date: '',
         executor_ids: [] as string[],
         geometry: [] as { lat: number, lng: number }[],
+        infrastructure: {
+            gas: { needed: false, capacity: '' },
+            water: { needed: false, capacity: '' },
+            electricity: { needed: false, capacity: '' },
+            land: { needed: false, capacity: '' },
+        } as Record<string, { needed: boolean; capacity: string }>,
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
@@ -178,17 +184,17 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         ]}>
             <Head title="Создание проекта" />
 
-            <div className="flex h-full flex-col p-4 max-w-2xl">
-                <h1 className="text-2xl font-bold font-serif mb-6 text-neutral-900 dark:text-neutral-100">Новый проект</h1>
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Новый проект</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-neutral-500 font-normal">Наименование проекта</Label>
+                        <Label htmlFor="name" className="text-gray-500 font-normal">Наименование проекта</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Название проекта"
                             autoFocus
                         />
@@ -196,12 +202,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="company_name" className="text-neutral-500 font-normal">Компания</Label>
+                        <Label htmlFor="company_name" className="text-gray-500 font-normal">Компания</Label>
                         <Input
                             id="company_name"
                             value={data.company_name}
                             onChange={(e) => setData('company_name', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             placeholder="Название компании"
                         />
                         {errors.company_name && <span className="text-sm text-red-500">{errors.company_name}</span>}
@@ -209,7 +215,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-neutral-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -218,7 +224,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                 }}
                                 disabled={isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -232,13 +238,13 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-neutral-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId || isDistrictScoped}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите район" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -260,12 +266,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="project_type_id" className="text-neutral-500 font-normal">Тип проекта</Label>
+                            <Label htmlFor="project_type_id" className="text-gray-500 font-normal">Тип проекта</Label>
                             <Select
                                 value={data.project_type_id}
                                 onValueChange={(value) => setData('project_type_id', value)}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите тип" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -280,8 +286,8 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="sector" className="text-neutral-500 font-normal">Сектор</Label>
-                            <div className="border border-neutral-200 rounded-md p-4 space-y-3 max-h-64 overflow-y-auto">
+                            <Label htmlFor="sector" className="text-gray-500 font-normal">Сектор</Label>
+                            <div className="border border-gray-200 rounded-md p-4 space-y-3 max-h-64 overflow-y-auto">
                                 {!data.region_id ? (
                                     <p className="text-sm text-gray-400 text-center py-2">
                                         Сначала выберите район
@@ -305,7 +311,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                                         id={value}
                                                                         checked={data.sector.includes(value)}
                                                                         onCheckedChange={(checked) => handleSectorChange(value, checked as boolean)}
-                                                                        className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                                        className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
                                                                     />
                                                                     <Label htmlFor={value} className="font-normal cursor-pointer">
                                                                         {sez.name}
@@ -326,7 +332,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                                         id={value}
                                                                         checked={data.sector.includes(value)}
                                                                         onCheckedChange={(checked) => handleSectorChange(value, checked as boolean)}
-                                                                        className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                                        className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
                                                                     />
                                                                     <Label htmlFor={value} className="font-normal cursor-pointer">
                                                                         {iz.name}
@@ -347,26 +353,26 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_investment" className="text-neutral-500 font-normal">Общий объем инвестиций (млн)</Label>
+                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Общий объем инвестиций (млн)</Label>
                             <Input
                                 id="total_investment"
                                 type="number"
                                 step="0.01"
                                 value={data.total_investment}
                                 onChange={(e) => setData('total_investment', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                                 placeholder="0.00"
                             />
                             {errors.total_investment && <span className="text-sm text-red-500">{errors.total_investment}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="status" className="text-neutral-500 font-normal">Статус</Label>
+                            <Label htmlFor="status" className="text-gray-500 font-normal">Статус</Label>
                             <Select
                                 value={data.status}
                                 onValueChange={(value) => setData('status', value)}
                             >
-                                <SelectTrigger className="shadow-none border-neutral-200 focus:ring-0 focus:border-neutral-900 h-10 w-full">
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
                                     <SelectValue placeholder="Выберите статус" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -382,44 +388,44 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="start_date" className="text-neutral-500 font-normal">Дата начала</Label>
+                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Дата начала</Label>
                             <Input
                                 id="start_date"
                                 type="date"
                                 value={data.start_date}
                                 onChange={(e) => setData('start_date', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.start_date && <span className="text-sm text-red-500">{errors.start_date}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="end_date" className="text-neutral-500 font-normal">Дата окончания</Label>
+                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Дата окончания</Label>
                             <Input
                                 id="end_date"
                                 type="date"
                                 value={data.end_date}
                                 onChange={(e) => setData('end_date', e.target.value)}
-                                className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 h-10 bg-transparent"
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.end_date && <span className="text-sm text-red-500">{errors.end_date}</span>}
                         </div>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Исполнители</Label>
-                        <div className="border border-neutral-200 rounded-md p-4 max-h-64 overflow-y-auto">
+                        <Label className="text-gray-500 font-normal">Исполнители</Label>
+                        <div className="border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
                             {!selectedOblastId ? (
-                                <p className="text-sm text-neutral-400">
+                                <p className="text-sm text-gray-400">
                                     Выберите область для отображения исполнителей
                                 </p>
                             ) : (
                                 <>
                                     {data.region_id && (
                                         <div className="mb-3">
-                                            <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Управление района</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Управление района</p>
                                             {districtUsers.length === 0 ? (
-                                                <p className="text-sm text-neutral-400 ml-1">Нет районного управления</p>
+                                                <p className="text-sm text-gray-400 ml-1">Нет районного управления</p>
                                             ) : (
                                                 <div className="space-y-2">
                                                     {districtUsers.map((user) => (
@@ -428,12 +434,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                                 id={`user-${user.id}`}
                                                                 checked={data.executor_ids.includes(user.id.toString())}
                                                                 onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                                                className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                                className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
                                                             />
                                                             <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
                                                                 <span>{user.full_name}</span>
                                                                 {user.position && (
-                                                                    <span className="text-neutral-400"> — {user.position}</span>
+                                                                    <span className="text-gray-400"> — {user.position}</span>
                                                                 )}
                                                             </Label>
                                                         </div>
@@ -442,10 +448,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                             )}
                                         </div>
                                     )}
-                                    <div className={data.region_id ? 'border-t border-neutral-200 pt-3' : ''}>
-                                        <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide mb-2">Управление области</p>
+                                    <div className={data.region_id ? 'border-t border-gray-200 pt-3' : ''}>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Управление области</p>
                                         {oblastUsers.length === 0 ? (
-                                            <p className="text-sm text-neutral-400 ml-1">Нет областного управления</p>
+                                            <p className="text-sm text-gray-400 ml-1">Нет областного управления</p>
                                         ) : (
                                             <div className="space-y-2">
                                                 {oblastUsers.map((user) => (
@@ -454,12 +460,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                             id={`user-${user.id}`}
                                                             checked={data.executor_ids.includes(user.id.toString())}
                                                             onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                                            className="border-neutral-200 data-[state=checked]:bg-neutral-900 data-[state=checked]:border-neutral-900"
+                                                            className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
                                                         />
                                                         <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
                                                             <span>{user.full_name}</span>
                                                             {user.position && (
-                                                                <span className="text-neutral-400"> — {user.position}</span>
+                                                                <span className="text-gray-400"> — {user.position}</span>
                                                             )}
                                                         </Label>
                                                     </div>
@@ -476,19 +482,19 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-neutral-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
                         <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
-                            className="shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 bg-transparent min-h-[120px]"
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
                             placeholder="Описание проекта..."
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
@@ -502,8 +508,61 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-neutral-500 font-normal">Документы</Label>
-                        <div className="border border-neutral-200 border-dashed rounded-md p-4 bg-gray-50">
+                        <Label className="text-gray-500 font-normal">Инфрақұрылым қажеттілігі</Label>
+                        <div className="border border-gray-200 rounded-md p-4 space-y-4">
+                            {[
+                                { key: 'gas', label: 'Газ', unit: 'м³/час' },
+                                { key: 'water', label: 'Су (Водоснабжение)', unit: 'м³/сут' },
+                                { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
+                                { key: 'land', label: 'Жер телімі', unit: 'га' },
+                            ].map((item) => (
+                                <div key={item.key} className="flex items-center gap-4">
+                                    <div className="flex items-center space-x-2 w-48">
+                                        <Checkbox
+                                            id={`infra-${item.key}`}
+                                            checked={data.infrastructure[item.key]?.needed || false}
+                                            onCheckedChange={(checked) => {
+                                                setData('infrastructure', {
+                                                    ...data.infrastructure,
+                                                    [item.key]: {
+                                                        ...data.infrastructure[item.key],
+                                                        needed: checked as boolean,
+                                                    },
+                                                });
+                                            }}
+                                            className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
+                                        />
+                                        <Label htmlFor={`infra-${item.key}`} className="font-normal cursor-pointer">
+                                            {item.label}
+                                        </Label>
+                                    </div>
+                                    {data.infrastructure[item.key]?.needed && (
+                                        <div className="flex items-center gap-2 flex-1">
+                                            <Input
+                                                value={data.infrastructure[item.key]?.capacity || ''}
+                                                onChange={(e) => {
+                                                    setData('infrastructure', {
+                                                        ...data.infrastructure,
+                                                        [item.key]: {
+                                                            ...data.infrastructure[item.key],
+                                                            capacity: e.target.value,
+                                                        },
+                                                    });
+                                                }}
+                                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
+                                                placeholder={`Көлемі (${item.unit})`}
+                                            />
+                                            <span className="text-xs text-gray-400">{item.unit}</span>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label className="text-gray-500 font-normal">Документы</Label>
+                        <div className="border border-gray-200 border-dashed rounded-md p-4 bg-gray-50">
                             <div className="flex items-start gap-3">
                                 <Info className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
                                 <div className="flex-1">
@@ -521,10 +580,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="shadow-none">
+                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Сохранить
                         </Button>
-                        <Link href={investmentProjects.index.url()} className="text-sm text-neutral-500 hover:text-neutral-900 hover:underline">
+                        <Link href={investmentProjects.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Отмена
                         </Link>
                     </div>

@@ -10,7 +10,6 @@ class Sez extends Model
         'name',
         'region_id',
         'total_area',
-        'investment_total',
         'status',
         'infrastructure',
         'location',
@@ -21,7 +20,6 @@ class Sez extends Model
     {
         return [
             'total_area' => 'decimal:2',
-            'investment_total' => 'decimal:2',
             'infrastructure' => 'array',
             'location' => 'array',
             'geometry' => 'array',

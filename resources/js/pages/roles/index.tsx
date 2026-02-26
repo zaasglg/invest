@@ -45,20 +45,20 @@ export default function Index({ roles }: Props) {
         ]}>
             <Head title="Роли" />
 
-            <div className="flex h-full flex-col p-4">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold font-serif text-neutral-900 dark:text-neutral-100">
+            <div className="flex h-full flex-col space-y-5 p-6">
+                <div className="flex items-center justify-between">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Роли пользователей
                     </h1>
                     <Link href={rolesRoutes.create.url()}>
-                        <Button className="shadow-none">
+                        <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             <Plus className="h-4 w-4 mr-2" />
                             Создать роль
                         </Button>
                     </Link>
                 </div>
 
-                <div>
+                <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
                             <TableRow>
@@ -73,14 +73,14 @@ export default function Index({ roles }: Props) {
                         <TableBody>
                             {roles.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="text-center text-neutral-500">
+                                    <TableCell colSpan={6} className="py-12 text-center text-gray-400">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
                             ) : (
                                 roles.data.map((role) => (
                                     <TableRow key={role.id}>
-                                        <TableCell className="font-medium">
+                                        <TableCell className="font-medium text-gray-400">
                                             #{role.id}
                                         </TableCell>
                                         <TableCell className="font-mono text-sm">{role.name}</TableCell>
@@ -90,17 +90,18 @@ export default function Index({ roles }: Props) {
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Link href={rolesRoutes.edit.url(role.id)}>
-                                                    <Button variant="ghost" size="icon">
+                                                    <Button variant="ghost" size="icon" className="hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]">
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
+                                                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
                                                     onClick={() => handleDelete(role.id, role.users_count)}
                                                     disabled={role.users_count > 0}
                                                 >
-                                                    <Trash2 className={`h-4 w-4 ${role.users_count > 0 ? 'text-neutral-300' : 'text-red-500'}`} />
+                                                    <Trash2 className={`h-4 w-4 ${role.users_count > 0 ? 'text-neutral-300' : ''}`} />
                                                 </Button>
                                             </div>
                                         </TableCell>
