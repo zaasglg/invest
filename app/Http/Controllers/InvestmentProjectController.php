@@ -795,8 +795,8 @@ class InvestmentProjectController extends Controller
         };
 
         $taskStatusLabels = [
-            'new' => 'Новая', 'in_progress' => 'В работе',
-            'done' => 'Выполнено', 'rejected' => 'Отклонено',
+            'new' => 'Новая', 'in_progress' => 'Исполняется',
+            'done' => 'Выполнено', 'rejected' => 'Время прошло',
         ];
 
         $fillSlide($slide, $white);
@@ -886,7 +886,7 @@ class InvestmentProjectController extends Controller
         $yLeft += 22;
 
         $tasks = $project->tasks->sortBy('created_at')
-            ->reject(fn($task) => $task->status === 'done');
+            ->reject(fn($task) => in_array($task->status, ['done', 'new']));
 
         // Calculate available space: leave ~160px for stats + description at bottom
         $maxTasksY = 520;
