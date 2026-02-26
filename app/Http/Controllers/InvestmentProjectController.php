@@ -9,6 +9,7 @@ use App\Models\Region;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use App\Services\GeminiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -765,6 +766,8 @@ class InvestmentProjectController extends Controller
      */
     protected function buildProjectSlide($slide, InvestmentProject $project): void
     {
+        $gemini = app(GeminiService::class);
+
         $white    = 'FFFFFF';
         $darkGray = '333333';
         $midGray  = '666666';
@@ -848,25 +851,30 @@ class InvestmentProjectController extends Controller
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
             ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жобаның қуаттылығы', $project->description ? mb_substr($project->description, 0, 120) : '—'],
+            ['Жобаның қуаттылығы', $project->description ? $gemini->summarizeForSlide($project->description, 120) : '—'],
             ['Жұмыс орындары', '—'],
             ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
             ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
         ];
 
+        // Approximate characters per line at font size 11 within $leftW
+        $charsPerLine = 55;
+        $singleLineH = 18; // height of one line of text at size 11
+
         foreach ($infoItems as $item) {
             $fullText = $item[0] . ': ' . $item[1];
-            $lineHeight = mb_strlen($fullText) > 70 ? 32 : 22;
+            $lines = max(1, (int) ceil(mb_strlen($fullText) / $charsPerLine));
+            $rowH = $lines * $singleLineH + 4;
 
             $row = $slide->createRichTextShape();
-            $row->setHeight($lineHeight)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+            $row->setHeight($rowH)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
             $row->getActiveParagraph()->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                 ->setVertical(Alignment::VERTICAL_TOP);
             $row->setAutoFit(RichText::AUTOFIT_NORMAL);
             $addText($row, $item[0] . ': ', 11, $darkGray, true);
             $addText($row, $item[1], 11, $darkGray, false);
-            $yLeft += $lineHeight;
+            $yLeft += $rowH;
         }
 
         $yLeft += 8;
@@ -1008,10 +1016,56 @@ class InvestmentProjectController extends Controller
             $yRight += 52; // header row (24) + value row (24) + spacing (4)
         }
 
+        // ── AI STATISTICS — task analysis ─────────────────────
+        $statsY = max($yLeft, $yRight) + 10;
+
+        $totalTasks = $project->tasks->count();
+        $doneTasks = $project->tasks->where('status', 'done')->count();
+        $inProgressTasks = $project->tasks->where('status', 'in_progress')->count();
+        $newTasks = $project->tasks->where('status', 'new')->count();
+        $rejectedTasks = $project->tasks->where('status', 'rejected')->count();
+        $donePercent = $totalTasks > 0 ? round(($doneTasks / $totalTasks) * 100) : 0;
+
+        // Try AI-powered analysis first
+        $aiStats = $gemini->generateProjectStats([
+            'project_name' => $project->name,
+            'total_tasks' => $totalTasks,
+            'done' => $doneTasks,
+            'in_progress' => $inProgressTasks,
+            'new' => $newTasks,
+            'rejected' => $rejectedTasks,
+            'done_percent' => $donePercent,
+            'total_investment' => $project->total_investment,
+            'start_date' => $project->start_date?->format('Y-m-d'),
+            'end_date' => $project->end_date?->format('Y-m-d'),
+        ]);
+
+        // Fallback to manual stats if AI is unavailable
+        if (! $aiStats) {
+            $statusText = $donePercent >= 70 ? 'жақсы' : ($donePercent >= 40 ? 'орташа' : 'нашар');
+            $aiStats = "Жалпы тапсырмалар: {$totalTasks} | Орындалды: {$doneTasks} ({$donePercent}%) | Орындалмады: " . ($totalTasks - $doneTasks) . " | Жағдайы: {$statusText}";
+        }
+
+        if ($statsY < 680 && $totalTasks > 0) {
+            $statsHeader = $slide->createRichTextShape();
+            $statsHeader->setHeight(24)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
+            $addText($statsHeader, 'ЖОБА СТАТИСТИКАСЫ (AI)', 12, $blue, true);
+            $statsY += 26;
+
+            $statsShape = $slide->createRichTextShape();
+            $statsShape->setHeight(50)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
+            $statsShape->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_TOP);
+            $statsShape->setAutoFit(RichText::AUTOFIT_NORMAL);
+            $addText($statsShape, $aiStats, 10, $darkGray, false);
+            $statsY += 54;
+        }
+
         // ── DESCRIPTION — full-width at bottom ───────────────────
-        $descY = max($yLeft, $yRight) + 10;
+        $descY = $statsY + 6;
         if ($project->description && $descY < 700) {
-            $descText = $project->description;
+            $descText = $gemini->summarizeForSlide($project->description, 300);
             $descAvailH = 720 - $descY - 10;
             $descH = min($descAvailH, max(40, (int)(mb_strlen($descText) / 3)));
 
