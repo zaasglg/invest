@@ -881,14 +881,36 @@ class InvestmentProjectController extends Controller
 
         // ── АҒЫМДАҒЫ ЖАҒДАЙЫ ────────────────────────────────────
         $roadmapHeader = $slide->createRichTextShape();
-        $roadmapHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($roadmapHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЫ', 12, $blue, true);
-        $yLeft += 26;
+        $roadmapHeader->setHeight(20)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+        $addText($roadmapHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЫ', 11, $blue, true);
+        $yLeft += 22;
 
-        $tasks = $project->tasks->sortBy('created_at');
+        $tasks = $project->tasks->sortBy('created_at')
+            ->reject(fn($task) => $task->status === 'done');
+
+        // Calculate available space: leave ~160px for stats + description at bottom
+        $maxTasksY = 520;
+        // Auto-scale: use smaller font if many tasks
+        $taskCount = $tasks->count();
+        $taskFontSize = $taskCount > 6 ? 8 : 9;
+        $assigneeFontSize = $taskCount > 6 ? 7 : 8;
+        $taskRowH = $taskCount > 6 ? 14 : 16;
+        $assigneeRowH = $taskCount > 6 ? 12 : 14;
+        $taskGap = $taskCount > 6 ? 2 : 3;
+
         if ($tasks->isNotEmpty()) {
-            foreach ($tasks->take(12) as $task) {
-                if ($yLeft > 640) break;
+            foreach ($tasks as $task) {
+                if ($yLeft > $maxTasksY) {
+                    // Show "and X more..." label
+                    $remaining = $tasks->count() - $tasks->search($task);
+                    if ($remaining > 0) {
+                        $moreShape = $slide->createRichTextShape();
+                        $moreShape->setHeight(14)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
+                        $addText($moreShape, "... тағы {$remaining} тапсырма", $taskFontSize, $midGray, true);
+                        $yLeft += 16;
+                    }
+                    break;
+                }
 
                 $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
                 $statusColor = match($task->status) {
@@ -901,35 +923,35 @@ class InvestmentProjectController extends Controller
                 $taskText = '• ' . $task->title;
 
                 $taskRow = $slide->createRichTextShape();
-                $taskRow->setHeight(20)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
+                $taskRow->setHeight($taskRowH)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
                 $taskRow->getActiveParagraph()->getAlignment()
                     ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                     ->setVertical(Alignment::VERTICAL_TOP);
                 $taskRow->setAutoFit(RichText::AUTOFIT_NORMAL);
-                $addText($taskRow, $taskText, 10, $darkGray, false);
-                $addText($taskRow, '  [' . $statusLabel . ']', 9, $statusColor, true);
-                $yLeft += 20;
+                $addText($taskRow, $taskText, $taskFontSize, $darkGray, false);
+                $addText($taskRow, '  [' . $statusLabel . ']', $taskFontSize - 1, $statusColor, true);
+                $yLeft += $taskRowH;
 
                 if ($task->assignee) {
                     $assigneeText = $task->assignee->position ?? 'Орындаушы';
                     $assigneeName = $task->assignee->full_name ?? $task->assignee->name;
 
                     $assigneeRow = $slide->createRichTextShape();
-                    $assigneeRow->setHeight(16)->setWidth($leftW - 20)->setOffsetX($leftX + 15)->setOffsetY($yLeft);
+                    $assigneeRow->setHeight($assigneeRowH)->setWidth($leftW - 20)->setOffsetX($leftX + 15)->setOffsetY($yLeft);
                     $assigneeRow->getActiveParagraph()->getAlignment()
                         ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                         ->setVertical(Alignment::VERTICAL_CENTER);
-                    $addText($assigneeRow, $assigneeText . ' (' . $assigneeName . ')', 9, $blue, false);
-                    $yLeft += 16;
+                    $addText($assigneeRow, $assigneeText . ' (' . $assigneeName . ')', $assigneeFontSize, $blue, false);
+                    $yLeft += $assigneeRowH;
                 }
 
-                $yLeft += 4;
+                $yLeft += $taskGap;
             }
         } else {
             $noTasks = $slide->createRichTextShape();
-            $noTasks->setHeight(20)->setWidth($leftW)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
-            $addText($noTasks, 'Дорожная карта бос', 10, $midGray, false);
-            $yLeft += 20;
+            $noTasks->setHeight(16)->setWidth($leftW)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
+            $addText($noTasks, 'Дорожная карта бос', 9, $midGray, false);
+            $yLeft += 16;
         }
 
         // ── RIGHT COLUMN ─────────────────────────────────────────
@@ -1017,7 +1039,7 @@ class InvestmentProjectController extends Controller
         }
 
         // ── AI STATISTICS — task analysis ─────────────────────
-        $statsY = max($yLeft, $yRight) + 10;
+        $statsY = max($yLeft, $yRight) + 6;
 
         $totalTasks = $project->tasks->count();
         $doneTasks = $project->tasks->where('status', 'done')->count();
@@ -1046,28 +1068,30 @@ class InvestmentProjectController extends Controller
             $aiStats = "Жалпы тапсырмалар: {$totalTasks} | Орындалды: {$doneTasks} ({$donePercent}%) | Орындалмады: " . ($totalTasks - $doneTasks) . " | Жағдайы: {$statusText}";
         }
 
-        if ($statsY < 680 && $totalTasks > 0) {
+        if ($statsY < 640 && $totalTasks > 0) {
             $statsHeader = $slide->createRichTextShape();
-            $statsHeader->setHeight(24)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
-            $addText($statsHeader, 'ЖОБА СТАТИСТИКАСЫ (AI)', 12, $blue, true);
-            $statsY += 26;
+            $statsHeader->setHeight(18)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
+            $addText($statsHeader, 'ЖОБА СТАТИСТИКАСЫ (AI)', 10, $blue, true);
+            $statsY += 20;
 
             $statsShape = $slide->createRichTextShape();
-            $statsShape->setHeight(50)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
+            $statsShape->setHeight(36)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
             $statsShape->getActiveParagraph()->getAlignment()
                 ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                 ->setVertical(Alignment::VERTICAL_TOP);
             $statsShape->setAutoFit(RichText::AUTOFIT_NORMAL);
-            $addText($statsShape, $aiStats, 10, $darkGray, false);
-            $statsY += 54;
+            $addText($statsShape, $aiStats, 9, $darkGray, false);
+            $statsY += 40;
         }
 
         // ── DESCRIPTION — full-width at bottom ───────────────────
-        $descY = $statsY + 6;
-        if ($project->description && $descY < 700) {
-            $descText = $gemini->summarizeForSlide($project->description, 300);
-            $descAvailH = 720 - $descY - 10;
-            $descH = min($descAvailH, max(40, (int)(mb_strlen($descText) / 3)));
+        $descY = $statsY + 4;
+        if ($project->description && $descY < 680) {
+            // Limit description length based on remaining space
+            $remainingH = 720 - $descY - 10;
+            $maxDescChars = $remainingH > 60 ? 300 : ($remainingH > 30 ? 150 : 80);
+            $descText = $gemini->summarizeForSlide($project->description, $maxDescChars);
+            $descH = min($remainingH, max(30, (int)(mb_strlen($descText) * 0.4)));
 
             $descShape = $slide->createRichTextShape();
             $descShape->setHeight($descH)->setWidth(930)->setOffsetX($leftX)->setOffsetY($descY);
@@ -1075,8 +1099,8 @@ class InvestmentProjectController extends Controller
                 ->setHorizontal(Alignment::HORIZONTAL_LEFT)
                 ->setVertical(Alignment::VERTICAL_TOP);
             $descShape->setAutoFit(RichText::AUTOFIT_NORMAL);
-            $addText($descShape, 'СИПАТТАМАСЫ: ', 10, $blue, true);
-            $addText($descShape, $descText, 10, $darkGray, false);
+            $addText($descShape, 'СИПАТТАМАСЫ: ', 9, $blue, true);
+            $addText($descShape, $descText, 9, $darkGray, false);
         }
     }
 
