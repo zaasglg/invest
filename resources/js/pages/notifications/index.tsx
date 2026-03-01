@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 import type { PaginatedData } from '@/types/pagination';
+import Pagination from '@/components/pagination';
 
 interface CompletionFile {
     id: number;
@@ -288,29 +289,10 @@ export default function NotificationsIndex({ notifications }: Props) {
                         })}
 
                         {/* Pagination */}
-                        {notifications.last_page > 1 && (
-                            <div className="flex items-center justify-center gap-2 pt-4">
-                                {notifications.links.map((link, idx) => (
-                                    <Button
-                                        key={idx}
-                                        variant={
-                                            link.active
-                                                ? 'default'
-                                                : 'outline'
-                                        }
-                                        size="sm"
-                                        disabled={!link.url}
-                                        onClick={() =>
-                                            link.url &&
-                                            router.visit(link.url)
-                                        }
-                                        dangerouslySetInnerHTML={{
-                                            __html: link.label,
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        )}
+                        <Pagination 
+                            paginator={notifications} 
+                            preserveScroll={true} 
+                        />
                     </div>
                 )}
 
