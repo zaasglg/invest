@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\ProjectPhoto;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,42 +13,72 @@ class ProjectPhotoController extends Controller
 {
     public function index(InvestmentProject $investmentProject)
     {
-        // Get ALL gallery photos grouped by date (newest date first)
-        $allGalleryPhotos = $investmentProject->photos()
-            ->where('photo_type', 'gallery')
-            ->latest('gallery_date')
-            ->latest()
-            ->get()
-            ->map(function ($photo) {
-                // Normalize: photos without gallery_date use created_at date
-                $photo->gallery_date = $photo->gallery_date
-                    ? $photo->gallery_date->toDateString()
-                    : $photo->created_at->toDateString();
-                return $photo;
-            });
+        $user = Auth::user();
+        $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        $datedGalleryPhotos = $allGalleryPhotos
-            ->groupBy('gallery_date')
-            ->sortKeysDesc()
-            ->map(function ($photos) {
-                return $photos->values();
-            })
-            ->toArray();
+        // Baskarma who is not involved in the project cannot see photos
+        if ($user->roleModel?->name === 'baskarma' && ! $user->isInvolvedInProject($investmentProject)) {
+            $mainGalleryPhotos = collect();
+            $datedGalleryPhotos = [];
+            $renderPhotos = collect();
+        } else {
+            // Get ALL gallery photos grouped by date (newest date first)
+            $allGalleryPhotos = $investmentProject->photos()
+                ->where('photo_type', 'gallery')
+                ->latest('gallery_date')
+                ->latest()
+                ->get()
+                ->map(function ($photo) {
+                    // Normalize: photos without gallery_date use created_at date
+                    $photo->gallery_date = $photo->gallery_date
+                        ? $photo->gallery_date->toDateString()
+                        : $photo->created_at->toDateString();
+                    return $photo;
+                });
 
-        // mainGallery is empty now since all photos are date-grouped
-        $mainGalleryPhotos = collect();
+            $datedGalleryPhotos = $allGalleryPhotos
+                ->groupBy('gallery_date')
+                ->sortKeysDesc()
+                ->map(function ($photos) {
+                    return $photos->values();
+                })
+                ->toArray();
 
-        $renderPhotos = $investmentProject->photos()
-            ->renderPhotos()
-            ->latest()
-            ->get();
+            // mainGallery is empty now since all photos are date-grouped
+            $mainGalleryPhotos = collect();
+
+            $renderPhotos = $investmentProject->photos()
+                ->renderPhotos()
+                ->latest()
+                ->get();
+        }
 
         return Inertia::render('investment-projects/gallery', [
             'project' => $investmentProject->load(['region', 'projectType']),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
+            'canDownload' => $canDownload,
         ]);
+    }
+
+    public function download(InvestmentProject $investmentProject, ProjectPhoto $photo)
+    {
+        if ($photo->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+
+        if (! $user->canDownloadFromProject($investmentProject)) {
+            abort(403, 'Сізде осы проекттің суреттерін жүктеуге рұқсат жоқ.');
+        }
+
+        if (! Storage::disk('public')->exists($photo->file_path)) {
+            abort(404, 'Файл табылмады.');
+        }
+
+        return Storage::disk('public')->download($photo->file_path);
     }
 
     public function store(Request $request, InvestmentProject $investmentProject)

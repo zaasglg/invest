@@ -65,7 +65,7 @@ class HandleInertiaRequests extends Middleware
         foreach ($roleCandidates as $candidate) {
             $normalized = strtolower(str_replace(' ', '', $candidate));
 
-            if (str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim')) {
+            if (str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim') || str_contains($normalized, 'baskarma')) {
                 return true;
             }
         }

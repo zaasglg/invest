@@ -37,9 +37,10 @@ interface Props {
     project: InvestmentProject;
     completedDocuments: ProjectDocument[];
     documents: ProjectDocument[];
+    canDownload: boolean;
 }
 
-export default function Documents({ project, completedDocuments, documents }: Props) {
+export default function Documents({ project, completedDocuments, documents, canDownload }: Props) {
     const canModify = useCanModify();
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
@@ -272,15 +273,15 @@ export default function Documents({ project, completedDocuments, documents }: Pr
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <a
-                                                        href={`/storage/${document.file_path}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
-                                                        title="Скачать"
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </a>
+                                                    {canDownload && (
+                                                        <a
+                                                            href={`/investment-projects/${project.id}/documents/${document.id}/download`}
+                                                            className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
+                                                            title="Скачать"
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                        </a>
+                                                    )}
                                                     {canModify && (
                                                         <Button
                                                             variant="ghost"
@@ -336,15 +337,15 @@ export default function Documents({ project, completedDocuments, documents }: Pr
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <a
-                                                        href={`/storage/${document.file_path}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
-                                                        title="Скачать"
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </a>
+                                                    {canDownload && (
+                                                        <a
+                                                            href={`/investment-projects/${project.id}/documents/${document.id}/download`}
+                                                            className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
+                                                            title="Скачать"
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                        </a>
+                                                    )}
                                                     {canModify && (
                                                         <Button
                                                             variant="ghost"

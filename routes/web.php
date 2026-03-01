@@ -45,10 +45,12 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
 
     Route::get('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])->name('investment-projects.documents.index');
     Route::post('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])->name('investment-projects.documents.store');
+    Route::get('documents/{document}/download', [\App\Http\Controllers\ProjectDocumentController::class, 'download'])->name('investment-projects.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])->name('investment-projects.documents.destroy');
 
     Route::get('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'index'])->name('investment-projects.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'store'])->name('investment-projects.gallery.store');
+    Route::get('gallery/{photo}/download', [\App\Http\Controllers\ProjectPhotoController::class, 'download'])->name('investment-projects.gallery.download');
     Route::put('gallery/{photo}', [\App\Http\Controllers\ProjectPhotoController::class, 'update'])->name('investment-projects.gallery.update');
     Route::delete('gallery/{photo}', [\App\Http\Controllers\ProjectPhotoController::class, 'destroy'])->name('investment-projects.gallery.destroy');
 

@@ -116,6 +116,42 @@ class User extends Authenticatable
     }
 
     /**
+     * Check if the user is involved in the given project.
+     * Baskarma is "involved" if they are an executor or have tasks assigned.
+     */
+    public function isInvolvedInProject(InvestmentProject $project): bool
+    {
+        // User is an executor of the project
+        if ($project->executors()->where('users.id', $this->id)->exists()) {
+            return true;
+        }
+
+        // User has tasks assigned in this project
+        if ($project->tasks()->where('assigned_to', $this->id)->exists()) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Determine if the user can download files from the given project.
+     * Baskarma can only download from projects they are involved in.
+     */
+    public function canDownloadFromProject(InvestmentProject $project): bool
+    {
+        $roleName = $this->roleModel?->name;
+
+        // Baskarma can only download from involved projects
+        if ($roleName === 'baskarma') {
+            return $this->isInvolvedInProject($project);
+        }
+
+        // All other roles can download
+        return true;
+    }
+
+    /**
      * Append avatar_url to serialization.
      */
     protected $appends = ['avatar_url'];

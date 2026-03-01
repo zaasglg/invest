@@ -407,11 +407,21 @@ class InvestmentProjectController extends Controller
             });
         }
 
+        $canDownload = $user && is_object($project) ? $user->canDownloadFromProject($project) : true;
+
+        // Baskarma who is not involved in the project cannot see photos
+        $roleName = $user?->roleModel?->name;
+        if ($roleName === 'baskarma' && is_object($project) && ! $user->isInvolvedInProject($project)) {
+            $mainGalleryPhotos = collect();
+            $renderPhotos = collect();
+        }
+
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
             'users' => $assignableUsersQuery->get(),
+            'canDownload' => $canDownload,
         ]);
     }
 
@@ -589,6 +599,12 @@ class InvestmentProjectController extends Controller
 
     public function passport(InvestmentProject $investmentProject)
     {
+        // Check download permission for baskarma
+        $user = auth()->user();
+        if ($user && ! $user->canDownloadFromProject($investmentProject)) {
+            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+        }
+
         $investmentProject->load([
             'region',
             'projectType',
@@ -654,6 +670,12 @@ class InvestmentProjectController extends Controller
      */
     public function presentation(InvestmentProject $investmentProject)
     {
+        // Check download permission for baskarma
+        $user = auth()->user();
+        if ($user && ! $user->canDownloadFromProject($investmentProject)) {
+            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+        }
+
         // Load the single project with all relations
         $investmentProject->load([
             'region', 'projectType', 'creator', 'executors',

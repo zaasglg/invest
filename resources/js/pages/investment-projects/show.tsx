@@ -132,9 +132,10 @@ interface Props {
     mainGallery?: Photo[];
     renderPhotos?: Photo[];
     users?: UserOption[];
+    canDownload: boolean;
 }
 
-export default function Show({ project, mainGallery = [], renderPhotos = [], users = [] }: Props) {
+export default function Show({ project, mainGallery = [], renderPhotos = [], users = [], canDownload }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
@@ -457,6 +458,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <CardContent className="p-6">
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                                     {/* Photo */}
+                                    {(!isBaskarma || canDownload) && (
                                     <div className="overflow-hidden rounded-lg md:col-span-2">
                                         {mainGallery.length > 0 && mainGallery[0]?.gallery_date && (
                                             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
@@ -472,9 +474,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         )}
                                         <ProjectGallerySlider photos={mainGallery} />
                                     </div>
+                                    )}
 
                                     {/* Info Cards */}
-                                    <div className="md:col-span-3 grid grid-cols-2 gap-3">
+                                    <div className={`grid grid-cols-2 gap-3 ${(!isBaskarma || canDownload) ? 'md:col-span-3' : 'md:col-span-5'}`}>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <MapPin className="h-3.5 w-3.5" /> Район
@@ -932,6 +935,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         </Button>
                                     </Link>
                                 )}
+                                {(!isBaskarma || canDownload) && (
                                 <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <FileText className="mr-2 h-4 w-4" />
@@ -943,6 +947,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         )}
                                     </Button>
                                 </Link>
+                                )}
+                                {(!isBaskarma || canDownload) && (
                                 <Link href={`/investment-projects/${project.id}/gallery`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <ImageIcon className="mr-2 h-4 w-4" />
@@ -954,6 +960,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         )}
                                     </Button>
                                 </Link>
+                                )}
                                 <Link href={`/investment-projects/${project.id}/issues`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <AlertTriangle className="mr-2 h-4 w-4" />
@@ -969,7 +976,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     href={`/investment-projects/${project.id}/passport`}
                                     className="w-full"
                                 >
-                                    <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]">
+                                    <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
                                         <Download className="mr-2 h-4 w-4" />
                                         Скачать паспорт проекта
                                     </Button>
@@ -978,7 +985,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     href={`/investment-projects/${project.id}/presentation`}
                                     className="w-full"
                                 >
-                                    <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5a] text-white">
+                                    <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5a] text-white" disabled={!canDownload}>
                                         <Presentation className="mr-2 h-4 w-4" />
                                         Скачать презентацию
                                     </Button>
@@ -1362,7 +1369,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         href={`/storage/${file.file_path}`}
                                                         target="_blank"
                                                         rel="noreferrer"
-                                                        className="text-[#0f1b3d] hover:text-[#c8a44e]"
+                                                        className={`text-[#0f1b3d] hover:text-[#c8a44e] ${!canDownload ? 'pointer-events-none opacity-40' : ''}`}
+                                                        onClick={(e) => { if (!canDownload) e.preventDefault(); }}
                                                     >
                                                         <Download className="h-4 w-4" />
                                                     </a>
