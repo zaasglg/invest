@@ -11,7 +11,15 @@ class ProjectDocument extends Model
         'name',
         'file_path',
         'type',
+        'is_completed',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_completed' => 'boolean',
+        ];
+    }
 
     public function project()
     {

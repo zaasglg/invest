@@ -16,7 +16,6 @@ import {
     InputOTPGroup,
     InputOTPSlot,
 } from '@/components/ui/input-otp';
-import { useAppearance } from '@/hooks/use-appearance';
 import { useClipboard } from '@/hooks/use-clipboard';
 import { OTP_MAX_LENGTH } from '@/hooks/use-two-factor-auth';
 import { confirm } from '@/routes/two-factor';
@@ -62,7 +61,6 @@ function TwoFactorSetupStep({
     onNextStep: () => void;
     errors: string[];
 }) {
-    const { resolvedAppearance } = useAppearance();
     const [copiedText, copy] = useClipboard();
     const IconComponent = copiedText === manualSetupKey ? Check : Copy;
 
@@ -81,12 +79,7 @@ function TwoFactorSetupStep({
                                         dangerouslySetInnerHTML={{
                                             __html: qrCodeSvg,
                                         }}
-                                        style={{
-                                            filter:
-                                                resolvedAppearance === 'dark'
-                                                    ? 'invert(1) brightness(1.5)'
-                                                    : undefined,
-                                        }}
+
                                     />
                                 ) : (
                                     <Spinner />
@@ -104,7 +97,7 @@ function TwoFactorSetupStep({
                     <div className="relative flex w-full items-center justify-center">
                         <div className="absolute inset-0 top-1/2 h-px w-full bg-border" />
                         <span className="relative bg-card px-2 py-1">
-                            or, enter the code manually
+                            или введите код вручную
                         </span>
                     </div>
 
@@ -209,7 +202,7 @@ function TwoFactorVerificationStep({
                                 onClick={onBack}
                                 disabled={processing}
                             >
-                                Back
+                                Назад
                             </Button>
                             <Button
                                 type="submit"
@@ -218,7 +211,7 @@ function TwoFactorVerificationStep({
                                     processing || code.length < OTP_MAX_LENGTH
                                 }
                             >
-                                Confirm
+                                Подтвердить
                             </Button>
                         </div>
                     </div>
@@ -261,27 +254,27 @@ export default function TwoFactorSetupModal({
     }>(() => {
         if (twoFactorEnabled) {
             return {
-                title: 'Two-Factor Authentication Enabled',
+                title: 'Двухфакторная аутентификация включена',
                 description:
-                    'Two-factor authentication is now enabled. Scan the QR code or enter the setup key in your authenticator app.',
-                buttonText: 'Close',
+                    'Двухфакторная аутентификация успешно включена. Отсканируйте QR-код или введите ключ настройки в приложении-аутентификаторе.',
+                buttonText: 'Закрыть',
             };
         }
 
         if (showVerificationStep) {
             return {
-                title: 'Verify Authentication Code',
+                title: 'Проверка кода аутентификации',
                 description:
-                    'Enter the 6-digit code from your authenticator app',
-                buttonText: 'Continue',
+                    'Введите 6-значный код из приложения-аутентификатора',
+                buttonText: 'Продолжить',
             };
         }
 
         return {
-            title: 'Enable Two-Factor Authentication',
+            title: 'Включить двухфакторную аутентификацию',
             description:
-                'To finish enabling two-factor authentication, scan the QR code or enter the setup key in your authenticator app',
-            buttonText: 'Continue',
+                'Для включения двухфакторной аутентификации отсканируйте QR-код или введите ключ настройки в приложении-аутентификаторе',
+            buttonText: 'Продолжить',
         };
     }, [twoFactorEnabled, showVerificationStep]);
 

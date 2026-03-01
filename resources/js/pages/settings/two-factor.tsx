@@ -19,7 +19,7 @@ type Props = {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Two-Factor Authentication',
+        title: 'Двухфакторная аутентификация',
         href: show.url(),
     },
 ];
@@ -42,25 +42,29 @@ export default function TwoFactor({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Two-Factor Authentication" />
+            <Head title="Двухфакторная аутентификация" />
 
-            <h1 className="sr-only">Two-Factor Authentication Settings</h1>
+            <h1 className="sr-only">Двухфакторная аутентификация</h1>
 
             <SettingsLayout>
-                <div className="space-y-6">
+                <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Two-Factor Authentication"
-                        description="Manage your two-factor authentication settings"
+                        title="Двухфакторная аутентификация"
+                        description="Управление настройками двухфакторной аутентификации"
                     />
                     {twoFactorEnabled ? (
-                        <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="default">Enabled</Badge>
-                            <p className="text-muted-foreground">
-                                With two-factor authentication enabled, you will
-                                be prompted for a secure, random pin during
-                                login, which you can retrieve from the
-                                TOTP-supported application on your phone.
+                        <div className="mt-4 flex flex-col items-start space-y-4">
+                            <Badge
+                                variant="default"
+                                className="bg-emerald-100 text-emerald-800"
+                            >
+                                Включено
+                            </Badge>
+                            <p className="text-sm text-gray-500">
+                                Двухфакторная аутентификация включена. При входе
+                                в систему вам потребуется ввести одноразовый код
+                                из приложения-аутентификатора на вашем телефоне.
                             </p>
 
                             <TwoFactorRecoveryCodes
@@ -77,29 +81,34 @@ export default function TwoFactor({
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            <ShieldBan /> Disable 2FA
+                                            <ShieldBan /> Отключить 2FA
                                         </Button>
                                     )}
                                 </Form>
                             </div>
                         </div>
                     ) : (
-                        <div className="flex flex-col items-start justify-start space-y-4">
-                            <Badge variant="destructive">Disabled</Badge>
-                            <p className="text-muted-foreground">
-                                When you enable two-factor authentication, you
-                                will be prompted for a secure pin during login.
-                                This pin can be retrieved from a TOTP-supported
-                                application on your phone.
+                        <div className="mt-4 flex flex-col items-start space-y-4">
+                            <Badge
+                                variant="destructive"
+                                className="bg-red-100 text-red-800"
+                            >
+                                Отключено
+                            </Badge>
+                            <p className="text-sm text-gray-500">
+                                Когда вы включите двухфакторную аутентификацию,
+                                при входе в систему вам потребуется ввести
+                                одноразовый код из приложения на телефоне.
                             </p>
 
                             <div>
                                 {hasSetupData ? (
                                     <Button
                                         onClick={() => setShowSetupModal(true)}
+                                        className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
                                         <ShieldCheck />
-                                        Continue Setup
+                                        Продолжить настройку
                                     </Button>
                                 ) : (
                                     <Form
@@ -112,9 +121,10 @@ export default function TwoFactor({
                                             <Button
                                                 type="submit"
                                                 disabled={processing}
+                                                className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                             >
                                                 <ShieldCheck />
-                                                Enable 2FA
+                                                Включить 2FA
                                             </Button>
                                         )}
                                     </Form>
@@ -122,19 +132,19 @@ export default function TwoFactor({
                             </div>
                         </div>
                     )}
-
-                    <TwoFactorSetupModal
-                        isOpen={showSetupModal}
-                        onClose={() => setShowSetupModal(false)}
-                        requiresConfirmation={requiresConfirmation}
-                        twoFactorEnabled={twoFactorEnabled}
-                        qrCodeSvg={qrCodeSvg}
-                        manualSetupKey={manualSetupKey}
-                        clearSetupData={clearSetupData}
-                        fetchSetupData={fetchSetupData}
-                        errors={errors}
-                    />
                 </div>
+
+                <TwoFactorSetupModal
+                    isOpen={showSetupModal}
+                    onClose={() => setShowSetupModal(false)}
+                    requiresConfirmation={requiresConfirmation}
+                    twoFactorEnabled={twoFactorEnabled}
+                    qrCodeSvg={qrCodeSvg}
+                    manualSetupKey={manualSetupKey}
+                    clearSetupData={clearSetupData}
+                    fetchSetupData={fetchSetupData}
+                    errors={errors}
+                />
             </SettingsLayout>
         </AppLayout>
     );

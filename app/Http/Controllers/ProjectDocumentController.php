@@ -12,10 +12,19 @@ class ProjectDocumentController extends Controller
 {
     public function index(InvestmentProject $investmentProject)
     {
-        $documents = $investmentProject->documents()->latest()->get();
+        $completedDocuments = $investmentProject->documents()
+            ->where('is_completed', true)
+            ->latest()
+            ->get();
+
+        $documents = $investmentProject->documents()
+            ->where('is_completed', false)
+            ->latest()
+            ->get();
 
         return Inertia::render('investment-projects/documents', [
             'project' => $investmentProject->load(['region', 'projectType']),
+            'completedDocuments' => $completedDocuments,
             'documents' => $documents,
         ]);
     }
@@ -26,6 +35,7 @@ class ProjectDocumentController extends Controller
             'name' => 'required|string|max:255',
             'file' => 'required|file|max:10240', // 10MB max
             'type' => 'nullable|string|max:100',
+            'is_completed' => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('file')) {
@@ -37,6 +47,7 @@ class ProjectDocumentController extends Controller
                 'name' => $validated['name'],
                 'file_path' => $path,
                 'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
+                'is_completed' => $request->boolean('is_completed', false),
             ]);
         }
 
