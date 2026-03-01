@@ -14,7 +14,7 @@ import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Password settings',
+        title: 'Настройки пароля',
         href: edit().url,
     },
 ];
@@ -25,16 +25,16 @@ export default function Password() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Password settings" />
+            <Head title="Настройки пароля" />
 
-            <h1 className="sr-only">Password Settings</h1>
+            <h1 className="sr-only">Настройки пароля</h1>
 
             <SettingsLayout>
-                <div className="space-y-6">
+                <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Update password"
-                        description="Ensure your account is using a long, random password to stay secure"
+                        title="Изменить пароль"
+                        description="Используйте длинный случайный пароль для безопасности аккаунта"
                     />
 
                     <Form
@@ -57,62 +57,56 @@ export default function Password() {
                                 currentPasswordInput.current?.focus();
                             }
                         }}
-                        className="space-y-6"
+                        className="mt-4 space-y-5"
                     >
                         {({ errors, processing, recentlySuccessful }) => (
                             <>
-                                <div className="grid gap-2">
+                                <div className="grid gap-1.5">
                                     <Label htmlFor="current_password">
-                                        Current password
+                                        Текущий пароль
                                     </Label>
-
                                     <Input
                                         id="current_password"
                                         ref={currentPasswordInput}
                                         name="current_password"
                                         type="password"
-                                        className="mt-1 block w-full"
+                                        className="block w-full"
                                         autoComplete="current-password"
-                                        placeholder="Current password"
+                                        placeholder="Введите текущий пароль"
                                     />
-
                                     <InputError
                                         message={errors.current_password}
                                     />
                                 </div>
 
-                                <div className="grid gap-2">
+                                <div className="grid gap-1.5">
                                     <Label htmlFor="password">
-                                        New password
+                                        Новый пароль
                                     </Label>
-
                                     <Input
                                         id="password"
                                         ref={passwordInput}
                                         name="password"
                                         type="password"
-                                        className="mt-1 block w-full"
+                                        className="block w-full"
                                         autoComplete="new-password"
-                                        placeholder="New password"
+                                        placeholder="Введите новый пароль"
                                     />
-
                                     <InputError message={errors.password} />
                                 </div>
 
-                                <div className="grid gap-2">
+                                <div className="grid gap-1.5">
                                     <Label htmlFor="password_confirmation">
-                                        Confirm password
+                                        Подтвердить пароль
                                     </Label>
-
                                     <Input
                                         id="password_confirmation"
                                         name="password_confirmation"
                                         type="password"
-                                        className="mt-1 block w-full"
+                                        className="block w-full"
                                         autoComplete="new-password"
-                                        placeholder="Confirm password"
+                                        placeholder="Повторите новый пароль"
                                     />
-
                                     <InputError
                                         message={errors.password_confirmation}
                                     />
@@ -122,8 +116,9 @@ export default function Password() {
                                     <Button
                                         disabled={processing}
                                         data-test="update-password-button"
+                                        className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
-                                        Save password
+                                        Сохранить пароль
                                     </Button>
 
                                     <Transition
@@ -133,8 +128,8 @@ export default function Password() {
                                         leave="transition ease-in-out"
                                         leaveTo="opacity-0"
                                     >
-                                        <p className="text-sm text-gray-500">
-                                            Saved
+                                        <p className="text-sm text-green-600">
+                                            Сохранено
                                         </p>
                                     </Transition>
                                 </div>

@@ -28,6 +28,7 @@ class User extends Authenticatable
         'baskarma_type',
         'position',
         'telegram_chat_id',
+        'avatar',
     ];
 
     /**
@@ -112,5 +113,18 @@ class User extends Authenticatable
     public function isRegionalManagement(): bool
     {
         return $this->roleModel?->name === 'baskarma' && $this->baskarma_type === 'oblast';
+    }
+
+    /**
+     * Append avatar_url to serialization.
+     */
+    protected $appends = ['avatar_url'];
+
+    /**
+     * Get the full URL for the user's avatar.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        return $this->avatar ? '/storage/' . $this->avatar : null;
     }
 }

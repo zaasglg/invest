@@ -33,6 +33,7 @@ interface User {
     name?: string;
     full_name?: string;
     position?: string | null;
+    avatar_url?: string | null;
 }
 
 interface Photo {
@@ -206,20 +207,25 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const tasks = project.tasks || [];
 
     // Dot color based on deadline: green=done, red=overdue, amber=pending
+    const isTaskOverdue = (task: ProjectTaskItem): boolean => {
+        if (task.status === 'done') return false;
+        if (!task.due_date) return false;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const due = new Date(task.due_date);
+        due.setHours(0, 0, 0, 0);
+        return due < now;
+    };
+
     const getTaskDotColor = (task: ProjectTaskItem): string => {
         if (task.status === 'done') return 'bg-green-500';
-        if (task.due_date) {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const due = new Date(task.due_date);
-            due.setHours(0, 0, 0, 0);
-            if (due < now) return 'bg-red-500'; // overdue
-        }
+        if (isTaskOverdue(task)) return 'bg-red-500';
         return 'bg-amber-500';
     };
 
     const filteredTasks = tasks.filter((task) => {
         if (taskFilter === 'all') return true;
+        if (taskFilter === 'overdue') return isTaskOverdue(task);
         // When user selects "Исполняется", show all amber (pending) tasks.
         if (taskFilter === 'in_progress') {
             return getTaskDotColor(task) === 'bg-amber-500';
@@ -672,6 +678,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <SelectItem value="rejected">
                                                     Отклонено
                                                 </SelectItem>
+                                                <SelectItem value="overdue">
+                                                    Просроченные
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {canModify && !isBaskarma && (
@@ -755,6 +764,12 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             {task.assignee.full_name || task.assignee.name || '—'}
                                                             {task.assignee.position && ` — ${task.assignee.position}`}
                                                         </p>
+                                                    )}
+                                                    {/* Overdue badge */}
+                                                    {isTaskOverdue(task) && (
+                                                        <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
+                                                            Просроченные
+                                                        </Badge>
                                                     )}
                                                     {/* Status badge for completion */}
                                                     {latestCompletion && (
@@ -855,9 +870,17 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div>
                                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ответственный</p>
                                     <div className="flex items-center gap-3">
-                                        <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0f1b3d] font-bold text-xs">
-                                            {(project.creator?.full_name || project.creator?.name)?.slice(0, 2).toUpperCase() || 'NA'}
-                                        </div>
+                                        {project.creator?.avatar_url ? (
+                                            <img
+                                                src={project.creator.avatar_url}
+                                                alt={project.creator?.full_name || project.creator?.name || ''}
+                                                className="h-8 w-8 rounded-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0f1b3d] font-bold text-xs">
+                                                {(project.creator?.full_name || project.creator?.name)?.slice(0, 2).toUpperCase() || 'NA'}
+                                            </div>
+                                        )}
                                         <div>
                                             <p className="text-sm font-medium text-[#0f1b3d]">{project.creator?.full_name || project.creator?.name || 'Не указан'}</p>
                                             <p className="text-xs text-gray-500">Куратор проекта</p>
@@ -872,9 +895,17 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         <div className="flex flex-col gap-3">
                                             {project.executors.map(executor => (
                                                 <div key={executor.id} className="flex items-center gap-3">
-                                                    <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
-                                                        {(executor.full_name || executor.name)?.slice(0, 2).toUpperCase() || 'NA'}
-                                                    </div>
+                                                    {executor.avatar_url ? (
+                                                        <img
+                                                            src={executor.avatar_url}
+                                                            alt={executor.full_name || executor.name || ''}
+                                                            className="h-7 w-7 rounded-full object-cover"
+                                                        />
+                                                    ) : (
+                                                        <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
+                                                            {(executor.full_name || executor.name)?.slice(0, 2).toUpperCase() || 'NA'}
+                                                        </div>
+                                                    )}
                                                     <div>
                                                         <p className="text-sm text-gray-700">
                                                             {executor.position || 'Исполнитель'}

@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('projects:suspend-expired')->daily();
+Schedule::command('tasks:notify-overdue')->daily();

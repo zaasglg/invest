@@ -55,7 +55,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             <div className="border-b border-white/10 bg-[#0f1b3d]">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Logo */}
-                    <Link href="/" className="mr-4 flex shrink-0 items-center gap-2.5">
+                    <Link href="/dashboard" className="mr-4 flex shrink-0 items-center gap-2.5">
                         <img
                             src="/assets/images/logo-2.png"
                             alt="Turkistan Invest"
@@ -194,7 +194,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 >
                                     <Avatar className="size-7 overflow-hidden rounded-lg">
                                         <AvatarImage
-                                            src={auth.user.avatar as string}
+                                            src={auth.user.avatar_url as string}
                                             alt={auth.user.name as string}
                                         />
                                         <AvatarFallback className="rounded-lg bg-[#c8a44e]/20 text-xs font-semibold text-[#c8a44e]">

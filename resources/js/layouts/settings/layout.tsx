@@ -1,4 +1,5 @@
 import { Link } from '@inertiajs/react';
+import { KeyRound, ShieldCheck, UserCircle } from 'lucide-react';
 import type { PropsWithChildren } from 'react';
 import Heading from '@/components/heading';
 import { Button } from '@/components/ui/button';
@@ -13,21 +14,20 @@ import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
     {
-        title: 'Profile',
+        title: 'Профиль',
         href: edit(),
-        icon: null,
+        icon: UserCircle,
     },
     {
-        title: 'Password',
+        title: 'Пароль',
         href: editPassword(),
-        icon: null,
+        icon: KeyRound,
     },
     {
-        title: 'Two-Factor Auth',
+        title: 'Двухфакторная аутентификация',
         href: show(),
-        icon: null,
+        icon: ShieldCheck,
     },
-
 ];
 
 export default function SettingsLayout({ children }: PropsWithChildren) {
@@ -39,43 +39,49 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     }
 
     return (
-        <div className="px-6 py-6">
+        <div className="mx-auto max-w-7xl px-6 py-6">
             <Heading
                 title="Настройки"
                 description="Управление профилем и настройками аккаунта"
             />
 
-            <div className="flex flex-col lg:flex-row lg:space-x-12">
-                <aside className="w-full max-w-xl lg:w-52">
+            <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+                <aside className="w-full shrink-0 lg:w-56">
                     <nav
-                        className="flex flex-col space-y-1 space-x-0"
+                        className="rounded-xl border border-gray-100 bg-white p-2 shadow-sm"
                         aria-label="Settings"
                     >
-                        {sidebarNavItems.map((item, index) => (
-                            <Button
-                                key={`${toUrl(item.href)}-${index}`}
-                                size="sm"
-                                variant="ghost"
-                                asChild
-                                className={cn('w-full justify-start rounded-lg text-gray-600 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]', {
-                                    'bg-[#0f1b3d]/5 text-[#0f1b3d] font-semibold': isCurrentUrl(item.href),
-                                })}
-                            >
-                                <Link href={item.href}>
-                                    {item.icon && (
-                                        <item.icon className="h-4 w-4" />
+                        <div className="flex flex-col gap-0.5">
+                            {sidebarNavItems.map((item, index) => (
+                                <Button
+                                    key={`${toUrl(item.href)}-${index}`}
+                                    size="sm"
+                                    variant="ghost"
+                                    asChild
+                                    className={cn(
+                                        'w-full justify-start rounded-lg text-gray-500 shadow-none hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]',
+                                        {
+                                            'bg-[#0f1b3d]/5 text-[#0f1b3d] font-semibold':
+                                                isCurrentUrl(item.href),
+                                        },
                                     )}
-                                    {item.title}
-                                </Link>
-                            </Button>
-                        ))}
+                                >
+                                    <Link href={item.href}>
+                                        {item.icon && (
+                                            <item.icon className="h-4 w-4" />
+                                        )}
+                                        {item.title}
+                                    </Link>
+                                </Button>
+                            ))}
+                        </div>
                     </nav>
                 </aside>
 
-                <Separator className="my-6 lg:hidden" />
+                <Separator className="lg:hidden" />
 
-                <div className="flex-1 md:max-w-2xl">
-                    <section className="max-w-xl space-y-12">
+                <div className="min-w-0 flex-1">
+                    <section className="max-w-2xl space-y-6">
                         {children}
                     </section>
                 </div>
