@@ -29,10 +29,10 @@ export default function AuthSimpleLayout({
                         />
                         <div className="flex flex-col leading-none">
                             <span className="text-base font-bold tracking-wider text-white">
-                                TURKISTAN
+                                Туркестанская
                             </span>
                             <span className="text-xs font-medium tracking-[0.25em] text-[#c8a44e]">
-                                INVEST
+                                ОБЛАСТЬ
                             </span>
                         </div>
                     </Link>
@@ -52,14 +52,14 @@ export default function AuthSimpleLayout({
                 </div>
 
                 {/* Back link */}
-                <div className="mt-6 text-center">
+                {/* <div className="mt-6 text-center">
                     <Link
                         href="/"
                         className="text-sm text-white/40 transition-colors hover:text-white/70"
                     >
                         &larr; Back to Home
                     </Link>
-                </div>
+                </div> */}
             </div>
         </div>
     );

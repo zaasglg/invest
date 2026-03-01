@@ -63,10 +63,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         />
                         <div className="hidden flex-col leading-none sm:flex">
                             <span className="text-xs font-bold tracking-wider text-white">
-                                TURKISTAN
+                                Туркестанская
                             </span>
-                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                INVEST
+                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e] pt-0.5">
+                                ОБЛАСТЬ
                             </span>
                         </div>
                     </Link>
