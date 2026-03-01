@@ -6,6 +6,7 @@ import {
     Clock,
     ExternalLink,
     MapPin,
+    Phone,
     User as UserIcon,
 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
@@ -36,9 +37,11 @@ interface TaskItem {
 interface UserInfo {
     id: number;
     full_name: string;
+    phone?: string | null;
     position?: string | null;
     baskarma_type: string;
     region?: string | null;
+    avatar_url?: string | null;
 }
 
 interface Props {
@@ -177,9 +180,17 @@ export default function BaskarmaRatingShow({
                 {/* User info header */}
                 <Card className="shadow-none">
                     <CardContent className="flex flex-wrap items-center gap-6 p-6">
-                        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gray-100">
-                            <UserIcon className="h-7 w-7 text-gray-500" />
-                        </div>
+                        {user.avatar_url ? (
+                            <img
+                                src={user.avatar_url}
+                                alt={user.full_name}
+                                className="h-16 w-16 rounded-full border border-gray-200 object-cover"
+                            />
+                        ) : (
+                            <div className="flex h-16 w-16 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
+                                <UserIcon className="h-8 w-8 text-gray-400" />
+                            </div>
+                        )}
                         <div className="flex-1">
                             <h1 className="text-xl font-bold text-[#0f1b3d]">
                                 {user.full_name}
@@ -197,6 +208,12 @@ export default function BaskarmaRatingShow({
                                     <span className="flex items-center gap-1">
                                         <MapPin className="h-3.5 w-3.5" />
                                         {user.region}
+                                    </span>
+                                )}
+                                {user.phone && (
+                                    <span className="flex items-center gap-1">
+                                        <Phone className="h-3.5 w-3.5" />
+                                        {user.phone}
                                     </span>
                                 )}
                             </div>

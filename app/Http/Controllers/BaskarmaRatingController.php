@@ -41,14 +41,16 @@ class BaskarmaRatingController extends Controller
             }
 
             $total = $tasks->count();
-            $kpd = $total > 0 ? round(($completed / $total) * 100, 1) : 0;
+            $kpd = $total > 0 ? round((1 - ($overdue / $total)) * 100, 1) : 0;
 
             return [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
+                'phone' => $user->phone,
                 'position' => $user->position,
                 'baskarma_type' => $user->baskarma_type,
                 'region' => $user->region?->name,
+                'avatar_url' => $user->avatar_url,
                 'project_count' => $projectCount,
                 'total' => $total,
                 'completed' => $completed,
@@ -114,15 +116,17 @@ class BaskarmaRatingController extends Controller
 
         $projectCount = $tasks->pluck('project_id')->unique()->count();
         $total = $tasks->count();
-        $kpd = $total > 0 ? round((count($completedTasks) / $total) * 100, 1) : 0;
+        $kpd = $total > 0 ? round((1 - (count($overdueTasks) / $total)) * 100, 1) : 0;
 
         return Inertia::render('baskarma-rating/show', [
             'user' => [
                 'id' => $user->id,
                 'full_name' => $user->full_name,
+                'phone' => $user->phone,
                 'position' => $user->position,
                 'baskarma_type' => $user->baskarma_type,
                 'region' => $user->region?->name,
+                'avatar_url' => $user->avatar_url,
             ],
             'projectCount' => $projectCount,
             'kpd' => $kpd,

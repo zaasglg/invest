@@ -3,6 +3,7 @@ import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Camera, Trash2 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
+import AvatarCropper from '@/components/avatar-cropper';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
@@ -36,32 +37,56 @@ export default function Profile({
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+    const [cropperOpen, setCropperOpen] = useState(false);
+    const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
     const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
-        // Show preview
+        // Read file and open cropper
         const reader = new FileReader();
-        reader.onload = () => setAvatarPreview(reader.result as string);
+        reader.onload = () => {
+            setRawImageSrc(reader.result as string);
+            setCropperOpen(true);
+        };
         reader.readAsDataURL(file);
 
-        // Upload
+        // Reset input so same file can be selected again
+        e.target.value = '';
+    };
+
+    const handleCropComplete = (croppedBlob: Blob) => {
+        setCropperOpen(false);
+        setRawImageSrc(null);
+
+        // Show preview
+        const previewUrl = URL.createObjectURL(croppedBlob);
+        setAvatarPreview(previewUrl);
+
+        // Upload cropped image
         setIsUploadingAvatar(true);
         const formData = new FormData();
-        formData.append('avatar', file);
+        formData.append('avatar', croppedBlob, 'avatar.jpg');
 
         router.post('/settings/profile/avatar', formData, {
             forceFormData: true,
             onSuccess: () => {
                 setAvatarPreview(null);
                 setIsUploadingAvatar(false);
+                URL.revokeObjectURL(previewUrl);
             },
             onError: () => {
                 setAvatarPreview(null);
                 setIsUploadingAvatar(false);
+                URL.revokeObjectURL(previewUrl);
             },
         });
+    };
+
+    const handleCropperClose = () => {
+        setCropperOpen(false);
+        setRawImageSrc(null);
     };
 
     const handleDeleteAvatar = () => {
@@ -261,6 +286,16 @@ export default function Profile({
                 </div>
 
                 <DeleteUser />
+
+                {/* Avatar Cropper Modal */}
+                {rawImageSrc && (
+                    <AvatarCropper
+                        open={cropperOpen}
+                        imageSrc={rawImageSrc}
+                        onClose={handleCropperClose}
+                        onCropComplete={handleCropComplete}
+                    />
+                )}
             </SettingsLayout>
         </AppLayout>
     );

@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
-import { Award, BarChart3, Eye } from 'lucide-react';
+import { Award, BarChart3, Eye, Phone, User as UserIcon } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -16,9 +16,11 @@ import {
 interface RatingItem {
     id: number;
     full_name: string;
+    phone?: string | null;
     position?: string | null;
     baskarma_type: string;
     region?: string | null;
+    avatar_url?: string | null;
     project_count: number;
     total: number;
     completed: number;
@@ -133,13 +135,17 @@ function RatingTable({
                         Нет зарегистрированных управлений
                     </div>
                 ) : (
-                    <Table>
+                    <div className="overflow-x-auto">
+                    <Table className="min-w-[900px]">
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-12 text-center">
                                     №
                                 </TableHead>
+                                <TableHead className="w-[72px]" />
                                 <TableHead>ФИО</TableHead>
+                                <TableHead>Телефон</TableHead>
+                                <TableHead>Басқарма</TableHead>
                                 <TableHead className="text-center">
                                     Проекты
                                 </TableHead>
@@ -154,16 +160,39 @@ function RatingTable({
                                     <TableCell className="text-center font-medium text-gray-500">
                                         {index + 1}
                                     </TableCell>
+                                    <TableCell className="px-2">
+                                        {item.avatar_url ? (
+                                            <img
+                                                src={item.avatar_url}
+                                                alt={item.full_name}
+                                                className="h-14 w-14 rounded-full border border-gray-200 object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
+                                                <UserIcon className="h-7 w-7 text-gray-400" />
+                                            </div>
+                                        )}
+                                    </TableCell>
+                                    <TableCell>
+                                        <p className="font-semibold text-[#0f1b3d]">
+                                            {item.full_name}
+                                        </p>
+                                    </TableCell>
+                                    <TableCell>
+                                        {item.phone ? (
+                                            <span className="flex items-center gap-1 text-sm text-gray-600">
+                                                <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                                {item.phone}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm text-gray-400">—</span>
+                                        )}
+                                    </TableCell>
                                     <TableCell>
                                         <div>
-                                            <p className="font-semibold text-[#0f1b3d]">
-                                                {item.full_name}
+                                            <p className="text-sm font-medium text-[#0f1b3d]">
+                                                {item.position || '—'}
                                             </p>
-                                            {item.position && (
-                                                <p className="text-xs text-gray-500">
-                                                    {item.position}
-                                                </p>
-                                            )}
                                             {item.region && (
                                                 <p className="text-xs text-gray-400">
                                                     {item.region}
@@ -202,6 +231,7 @@ function RatingTable({
                             ))}
                         </TableBody>
                     </Table>
+                    </div>
                 )}
             </CardContent>
         </Card>

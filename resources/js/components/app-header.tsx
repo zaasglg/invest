@@ -192,12 +192,13 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     variant="ghost"
                                     className="size-9 rounded-lg p-0 hover:bg-white/10"
                                 >
-                                    <Avatar className="size-7 overflow-hidden rounded-lg">
+                                    <Avatar className="size-7 overflow-hidden rounded-full">
                                         <AvatarImage
                                             src={auth.user.avatar_url as string}
                                             alt={auth.user.name as string}
+                                            className="object-cover"
                                         />
-                                        <AvatarFallback className="rounded-lg bg-[#c8a44e]/20 text-xs font-semibold text-[#c8a44e]">
+                                        <AvatarFallback className="rounded-full bg-[#c8a44e]/20 text-xs font-semibold text-[#c8a44e]">
                                             {getInitials(
                                                 auth.user.name as string,
                                             )}

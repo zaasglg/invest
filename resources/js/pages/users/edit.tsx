@@ -30,6 +30,7 @@ interface User {
     id: number;
     full_name: string;
     email: string;
+    phone: string | null;
     role_id: number | null;
     region_id: number | null;
     baskarma_type: string | null;
@@ -47,6 +48,7 @@ export default function Edit({ user, regions, roles }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         full_name: user.full_name || '',
         email: user.email || '',
+        phone: user.phone || '',
         password: '',
         password_confirmation: '',
         role_id: user.role_id?.toString() || 'none',
@@ -119,6 +121,18 @@ export default function Edit({ user, regions, roles }: Props) {
                             placeholder="user@example.com"
                         />
                         {errors.email && <span className="text-sm text-red-500">{errors.email}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="phone" className="text-gray-500 font-normal">Телефон нөмірі</Label>
+                        <Input
+                            id="phone"
+                            value={data.phone}
+                            onChange={(e) => setData('phone', e.target.value)}
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                            placeholder="+7 (777) 123-45-67"
+                        />
+                        {errors.phone && <span className="text-sm text-red-500">{errors.phone}</span>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -210,8 +224,8 @@ export default function Edit({ user, regions, roles }: Props) {
                         </div>
                     )}
 
-                    {/* Position field for baskarma */}
-                    {isBaskarma && data.baskarma_type && (
+                    {/* Position field for oblast baskarma only */}
+                    {isBaskarma && data.baskarma_type === 'oblast' && (
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="position" className="text-gray-500 font-normal">Лауазымы</Label>
                             <Input
