@@ -886,7 +886,7 @@ class InvestmentProjectController extends Controller
         $yLeft += 22;
 
         $tasks = $project->tasks->sortBy('created_at')
-            ->reject(fn($task) => in_array($task->status, ['done', 'new']));
+            ->reject(fn($task) => $task->status === 'done');
 
         // Calculate available space: leave ~160px for stats + description at bottom
         $maxTasksY = 520;
@@ -912,13 +912,24 @@ class InvestmentProjectController extends Controller
                     break;
                 }
 
-                $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
-                $statusColor = match($task->status) {
-                    'done' => '2E7D32',
-                    'in_progress' => 'F57C00',
-                    'rejected' => 'C62828',
-                    default => $midGray,
-                };
+                if ($task->status === 'new') {
+                    if ($task->due_date && $task->due_date->isPast()) {
+                        $statusLabel = 'Просрочено';
+                        $statusColor = 'C62828';
+                    } else {
+                        $statusLabel = 'Ожидается';
+                        $statusColor = 'F57C00';
+                    }
+                } elseif ($task->status === 'rejected') {
+                    $statusLabel = 'Отклонено';
+                    $statusColor = 'C62828';
+                } else {
+                    $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
+                    $statusColor = match($task->status) {
+                        'in_progress' => 'F57C00',
+                        default => $midGray,
+                    };
+                }
 
                 $taskText = '• ' . $task->title;
 
@@ -1068,7 +1079,7 @@ class InvestmentProjectController extends Controller
             $aiStats = "Жалпы тапсырмалар: {$totalTasks} | Орындалды: {$doneTasks} ({$donePercent}%) | Орындалмады: " . ($totalTasks - $doneTasks) . " | Жағдайы: {$statusText}";
         }
 
-        if ($statsY < 640 && $totalTasks > 0) {
+        if ($statsY < 640) {
             $statsHeader = $slide->createRichTextShape();
             $statsHeader->setHeight(18)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
             $addText($statsHeader, 'ЖОБА СТАТИСТИКАСЫ (AI)', 10, $blue, true);
