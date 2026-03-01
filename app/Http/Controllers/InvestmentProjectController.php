@@ -914,14 +914,14 @@ class InvestmentProjectController extends Controller
 
                 if ($task->status === 'new') {
                     if ($task->due_date && $task->due_date->isPast()) {
-                        $statusLabel = 'Мерзімі өткен';
+                        $statusLabel = 'Просрочено';
                         $statusColor = 'C62828';
                     } else {
-                        $statusLabel = 'Күтілуде';
+                        $statusLabel = 'Ожидается';
                         $statusColor = 'F57C00';
                     }
                 } elseif ($task->status === 'rejected') {
-                    $statusLabel = 'Қабылданбаған';
+                    $statusLabel = 'Отклонено';
                     $statusColor = 'C62828';
                 } else {
                     $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
