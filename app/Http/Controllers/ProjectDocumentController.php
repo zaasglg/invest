@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\ProjectDocument;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
 
@@ -12,21 +13,53 @@ class ProjectDocumentController extends Controller
 {
     public function index(InvestmentProject $investmentProject)
     {
-        $completedDocuments = $investmentProject->documents()
-            ->where('is_completed', true)
-            ->latest()
-            ->get();
+        $user = Auth::user();
+        $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        $documents = $investmentProject->documents()
-            ->where('is_completed', false)
-            ->latest()
-            ->get();
+        // Baskarma who is not involved in the project cannot see documents
+        if ($user->roleModel?->name === 'baskarma' && ! $user->isInvolvedInProject($investmentProject)) {
+            $completedDocuments = collect();
+            $documents = collect();
+        } else {
+            $completedDocuments = $investmentProject->documents()
+                ->where('is_completed', true)
+                ->latest()
+                ->get();
+
+            $documents = $investmentProject->documents()
+                ->where('is_completed', false)
+                ->latest()
+                ->get();
+        }
 
         return Inertia::render('investment-projects/documents', [
             'project' => $investmentProject->load(['region', 'projectType']),
             'completedDocuments' => $completedDocuments,
             'documents' => $documents,
+            'canDownload' => $canDownload,
         ]);
+    }
+
+    public function download(InvestmentProject $investmentProject, ProjectDocument $document)
+    {
+        if ($document->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+
+        if (! $user->canDownloadFromProject($investmentProject)) {
+            abort(403, 'Сізде осы проекттің документтерін жүктеуге рұқсат жоқ.');
+        }
+
+        if (! Storage::disk('public')->exists($document->file_path)) {
+            abort(404, 'Файл табылмады.');
+        }
+
+        return Storage::disk('public')->download(
+            $document->file_path,
+            $document->name . '.' . $document->type
+        );
     }
 
     public function store(Request $request, InvestmentProject $investmentProject)

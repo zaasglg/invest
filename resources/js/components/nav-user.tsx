@@ -16,7 +16,6 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { logout } from '@/routes';
-import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import type { SharedData } from '@/types';
 
@@ -67,12 +66,6 @@ export function NavUser() {
                             <Link className="flex items-center gap-3" href={editProfile()}>
                                 <User className="size-4" />
                                 <span>Профиль</span>
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem asChild className="rounded-lg gap-3 cursor-pointer">
-                            <Link className="flex items-center gap-3" href={editAppearance()}>
-                                <Settings className="size-4" />
-                                <span>Настройки</span>
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1" />

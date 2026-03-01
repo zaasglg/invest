@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\ProjectDocument;
 use App\Models\ProjectTask;
 use App\Models\TaskCompletion;
 use App\Models\TaskCompletionFile;
@@ -134,6 +135,9 @@ class TaskCompletionController extends Controller
             $task->update(['status' => 'done']);
             $notificationType = 'completion_approved';
             $message = "{$reviewerName} принял задание: \"{$task->title}\".";
+
+            // Auto-copy completion document files to project documents as "Законченные документы"
+            $this->copyCompletionDocumentsToProject($completion, $investmentProject, $task);
         } else {
             $task->update(['status' => 'rejected']);
             $notificationType = 'completion_rejected';
@@ -154,5 +158,36 @@ class TaskCompletionController extends Controller
         }
 
         return redirect()->back()->with('success', 'Результат проверки сохранен.');
+    }
+
+    /**
+     * Copy completion document files to the project's documents section
+     * as "Законченные документы" (is_completed = true).
+     */
+    protected function copyCompletionDocumentsToProject(TaskCompletion $completion, InvestmentProject $project, ProjectTask $task): void
+    {
+        $documentFiles = $completion->files()->where('type', 'document')->get();
+
+        foreach ($documentFiles as $file) {
+            if (! Storage::disk('public')->exists($file->file_path)) {
+                continue;
+            }
+
+            // Copy the file to project-documents directory
+            $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
+            $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
+                . '_' . time() . '.' . $extension;
+            $newPath = 'project-documents/' . $project->id . '/' . $newFileName;
+
+            Storage::disk('public')->copy($file->file_path, $newPath);
+
+            ProjectDocument::create([
+                'project_id' => $project->id,
+                'name' => $file->file_name . ' (Тапсырма: ' . $task->title . ')',
+                'file_path' => $newPath,
+                'type' => $extension ?: 'document',
+                'is_completed' => true,
+            ]);
+        }
     }
 }

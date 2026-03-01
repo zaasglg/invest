@@ -35,6 +35,7 @@ export default function Create({ regions, roles }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         full_name: '',
         email: '',
+        phone: '',
         password: '',
         password_confirmation: '',
         role_id: 'none',
@@ -102,6 +103,18 @@ export default function Create({ regions, roles }: Props) {
                             placeholder="user@example.com"
                         />
                         {errors.email && <span className="text-sm text-red-500">{errors.email}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label htmlFor="phone" className="text-gray-500 font-normal">Телефон нөмірі</Label>
+                        <Input
+                            id="phone"
+                            value={data.phone}
+                            onChange={(e) => setData('phone', e.target.value)}
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                            placeholder="+7 (777) 123-45-67"
+                        />
+                        {errors.phone && <span className="text-sm text-red-500">{errors.phone}</span>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
@@ -190,8 +203,8 @@ export default function Create({ regions, roles }: Props) {
                         </div>
                     )}
 
-                    {/* Position field for baskarma */}
-                    {isBaskarma && data.baskarma_type && (
+                    {/* Position field for oblast baskarma only */}
+                    {isBaskarma && data.baskarma_type === 'oblast' && (
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="position" className="text-gray-500 font-normal">Лауазымы</Label>
                             <Input

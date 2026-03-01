@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle, Eye } from 'lucide-react';
+import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle, Eye, Download } from 'lucide-react';
 import PhotoLightbox from '@/components/photo-lightbox';
 import { useCanModify } from '@/hooks/use-can-modify';
 
@@ -47,9 +47,10 @@ interface Props {
     mainGallery: ProjectPhoto[];
     datedGallery: DatedGallery;
     renderPhotos?: ProjectPhoto[];
+    canDownload: boolean;
 }
 
-export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [] }: Props) {
+export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [], canDownload }: Props) {
     const canModify = useCanModify();
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState(new Date().toISOString().split('T')[0]);
@@ -369,6 +370,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
                                                 canModify={canModify}
+                                                canDownload={canDownload}
+                                                projectId={project.id}
                                             />
                                         ))}
                                     </div>
@@ -400,6 +403,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
                                                 canModify={canModify}
+                                                canDownload={canDownload}
+                                                projectId={project.id}
                                             />
                                         ))}
                                     </div>
@@ -436,6 +441,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                         onDelete={handleDelete}
                                                         onOpen={openLightbox}
                                                         canModify={canModify}
+                                                        canDownload={canDownload}
+                                                        projectId={project.id}
                                                     />
                                                 ))}
                                             </div>
@@ -478,9 +485,11 @@ interface PhotoCardProps {
     onDelete: (id: number) => void;
     onOpen: (photos: ProjectPhoto[], index: number) => void;
     canModify: boolean;
+    canDownload: boolean;
+    projectId: number;
 }
 
-function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify }: PhotoCardProps) {
+function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownload, projectId }: PhotoCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     const formatDateTime = (dateStr: string) => {
@@ -532,6 +541,16 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify }: PhotoC
                     >
                         <ImageIcon className="h-4 w-4" />
                     </Button>
+                    {canDownload && (
+                        <a
+                            href={`/investment-projects/${projectId}/gallery/${photo.id}/download`}
+                            onClick={(e) => e.stopPropagation()}
+                            className="inline-flex items-center justify-center h-10 w-10 bg-white/90 hover:bg-white rounded-md transition-colors"
+                            title="Жүктеу"
+                        >
+                            <Download className="h-4 w-4" />
+                        </a>
+                    )}
                     {canModify && (
                         <Button
                             variant="destructive"

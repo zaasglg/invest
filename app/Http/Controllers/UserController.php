@@ -39,6 +39,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
+            'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'role_id' => 'nullable|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
@@ -60,6 +61,14 @@ class UserController extends Controller
         if (!$role || $role->name !== 'baskarma') {
             $validated['baskarma_type'] = null;
             $validated['position'] = null;
+        }
+
+        // For district baskarma, set position to district (region) name
+        if ($role && $role->name === 'baskarma' && ($validated['baskarma_type'] ?? null) === 'district' && !empty($validated['region_id'])) {
+            $region = Region::find($validated['region_id']);
+            if ($region) {
+                $validated['position'] = $region->name;
+            }
         }
 
         $validated['password'] = Hash::make($validated['password']);
@@ -86,6 +95,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
+            'phone' => 'nullable|string|max:20',
             'password' => 'nullable|string|min:8|confirmed',
             'role_id' => 'nullable|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
@@ -107,6 +117,14 @@ class UserController extends Controller
         if (!$role || $role->name !== 'baskarma') {
             $validated['baskarma_type'] = null;
             $validated['position'] = null;
+        }
+
+        // For district baskarma, set position to district (region) name
+        if ($role && $role->name === 'baskarma' && ($validated['baskarma_type'] ?? null) === 'district' && !empty($validated['region_id'])) {
+            $region = Region::find($validated['region_id']);
+            if ($region) {
+                $validated['position'] = $region->name;
+            }
         }
 
         if (! empty($validated['password'])) {

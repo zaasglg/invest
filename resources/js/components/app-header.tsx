@@ -63,10 +63,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         />
                         <div className="hidden flex-col leading-none sm:flex">
                             <span className="text-xs font-bold tracking-wider text-white">
-                                TURKISTAN
+                                Туркестанская
                             </span>
-                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                INVEST
+                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e] pt-0.5">
+                                ОБЛАСТЬ
                             </span>
                         </div>
                     </Link>
@@ -192,12 +192,13 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     variant="ghost"
                                     className="size-9 rounded-lg p-0 hover:bg-white/10"
                                 >
-                                    <Avatar className="size-7 overflow-hidden rounded-lg">
+                                    <Avatar className="size-7 overflow-hidden rounded-full">
                                         <AvatarImage
                                             src={auth.user.avatar_url as string}
                                             alt={auth.user.name as string}
+                                            className="object-cover"
                                         />
-                                        <AvatarFallback className="rounded-lg bg-[#c8a44e]/20 text-xs font-semibold text-[#c8a44e]">
+                                        <AvatarFallback className="rounded-full bg-[#c8a44e]/20 text-xs font-semibold text-[#c8a44e]">
                                             {getInitials(
                                                 auth.user.name as string,
                                             )}
