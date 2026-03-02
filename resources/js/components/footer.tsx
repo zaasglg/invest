@@ -11,7 +11,7 @@ export default function Footer() {
                         className="h-5 shrink-0 opacity-60"
                     />
                     <span className="text-xs font-semibold tracking-wide text-[#0f1b3d]/60">
-                        TURKISTAN INVEST
+                        Туркестанская область
                     </span>
                     <span className="text-xs text-gray-300">
                         © {new Date().getFullYear()}
