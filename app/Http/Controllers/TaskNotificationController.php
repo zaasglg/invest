@@ -20,7 +20,7 @@ class TaskNotificationController extends Controller
                 'completion.files',
             ])
             ->orderByDesc('created_at')
-            ->paginate(20);
+            ->paginate(10);
 
         return Inertia::render('notifications/index', [
             'notifications' => $notifications,

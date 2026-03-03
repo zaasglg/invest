@@ -226,8 +226,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1">
                                             {photoType === 'render'
-                                                ? 'Проекттің болашақтағы көрінісі (рендер)'
-                                                : 'Қазіргі күйдегі фотосуреттер'}
+                                                ? 'Видение будущего проекции'
+                                                : 'Фотографии текущего состояния'}
                                         </p>
                                     </div>
 

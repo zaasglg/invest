@@ -14,6 +14,7 @@ import { Pencil, Plus, Trash2 } from 'lucide-react';
 import * as usersRoutes from '@/routes/users';
 
 import type { PaginatedData } from '@/types';
+import { UserIcon } from 'lucide-react';
 
 interface Region {
     id: number;
@@ -29,6 +30,8 @@ interface User {
     id: number;
     full_name: string;
     email: string;
+    phone: string | null;
+    avatar: string | null;
     region: Region | null;
     role_model: Role | null;
 }
@@ -68,7 +71,9 @@ export default function Index({ users }: Props) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>ID</TableHead>
+                                <TableHead className="w-[72px]" />
                                 <TableHead>ФИО</TableHead>
+                                <TableHead>Номер</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Роль</TableHead>
                                 <TableHead>Регион</TableHead>
@@ -78,7 +83,7 @@ export default function Index({ users }: Props) {
                         <TableBody>
                             {users.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="py-12 text-center text-gray-400">
+                                    <TableCell colSpan={7} className="py-12 text-center text-gray-400">
                                         Нет данных
                                     </TableCell>
                                 </TableRow>
@@ -88,7 +93,21 @@ export default function Index({ users }: Props) {
                                         <TableCell className="font-medium text-gray-400">
                                             #{user.id}
                                         </TableCell>
+                                        <TableCell>
+                                            {user.avatar ? (
+                                                <img
+                                                    src={`storage/${user.avatar}`}
+                                                    alt={user.full_name}
+                                                    className="h-10 w-10 rounded-full"
+                                                />
+                                            ) : (
+                                                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
+                                                    <UserIcon className="h-7 w-7 text-gray-400" />
+                                                </div>
+                                            )}
+                                        </TableCell>
                                         <TableCell className="font-semibold text-[#0f1b3d]">{user.full_name}</TableCell>
+                                        <TableCell className="text-gray-500">{user.phone || '—'}</TableCell>
                                         <TableCell className="text-gray-500">{user.email}</TableCell>
                                         <TableCell>{user.role_model?.display_name || '—'}</TableCell>
                                         <TableCell>{user.region?.name || '—'}</TableCell>

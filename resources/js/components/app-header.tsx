@@ -57,9 +57,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     {/* Logo */}
                     <Link href="/dashboard" className="mr-4 flex shrink-0 items-center gap-2.5">
                         <img
-                            src="/assets/images/logo-2.png"
+                            src="/assets/images/logo-3.png"
                             alt="Turkistan Invest"
-                            className="h-7 shrink-0"
+                            className="h-10 shrink-0"
                         />
                         <div className="hidden flex-col leading-none sm:flex">
                             <span className="text-xs font-bold tracking-wider text-white">
