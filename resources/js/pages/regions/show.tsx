@@ -261,6 +261,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     }, [subsoilUsers, selectedSubsoilStatus]);
 
     const formatCurrency = (amount: number) => {
+        if (Math.abs(amount) >= 1_000_000_000) {
+            const billions = amount / 1_000_000_000;
+            const formatted = new Intl.NumberFormat('ru-RU', {
+                maximumFractionDigits: 1,
+            }).format(billions);
+            return `${formatted} млрд ₸`;
+        }
         if (Math.abs(amount) >= 1_000_000) {
             const millions = amount / 1_000_000;
             const formatted = new Intl.NumberFormat('ru-RU', {

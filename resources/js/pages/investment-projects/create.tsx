@@ -81,6 +81,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         name: '',
         company_name: '',
         description: '',
+        current_status: '',
         region_id: userRegionId ? userRegionId.toString() : '',
         project_type_id: '',
         sector: [] as string[],
@@ -286,7 +287,9 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="sector" className="text-gray-500 font-normal">Сектор</Label>
+                            <Label htmlFor="sector" className="text-gray-500 font-normal">
+                                Сектор <span className="text-xs text-gray-400">(не обязательно)</span>
+                            </Label>
                             <div className="border border-gray-200 rounded-md p-4 space-y-3 max-h-64 overflow-y-auto">
                                 {!data.region_id ? (
                                     <p className="text-sm text-gray-400 text-center py-2">
@@ -296,7 +299,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     <>
                                         {availableSez.length === 0 && availableIndustrialZones.length === 0 ? (
                                             <p className="text-sm text-gray-400 text-center py-2">
-                                                Нет доступных секторов в этом районе
+                                                В этом районе нет доступных секторов. Проект будет создан без сектора.
                                             </p>
                                         ) : (
                                             <>
@@ -494,6 +497,20 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex flex-col gap-2">
+                        <Label htmlFor="current_status" className="text-gray-500 font-normal">
+                            Текущее состояние <span className="text-xs text-gray-400">(необязательно)</span>
+                        </Label>
+                        <Textarea
+                            id="current_status"
+                            value={data.current_status}
+                            onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('current_status', e.target.value)}
+                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
+                            placeholder="Текущее состояние проекта..."
+                        />
+                        {errors.current_status && <span className="text-sm text-red-500">{errors.current_status}</span>}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
                         <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
                         <LocationPicker
                             value={data.geometry}
@@ -508,13 +525,13 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Инфрақұрылым қажеттілігі</Label>
+                        <Label className="text-gray-500 font-normal">Потребность в инфраструктуре</Label>
                         <div className="border border-gray-200 rounded-md p-4 space-y-4">
                             {[
                                 { key: 'gas', label: 'Газ', unit: 'м³/час' },
-                                { key: 'water', label: 'Су (Водоснабжение)', unit: 'м³/сут' },
-                                { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                { key: 'land', label: 'Жер телімі', unit: 'га' },
+                                { key: 'water', label: 'Вода (Водоснабжение)', unit: 'м³/сут' },
+                                { key: 'electricity', label: 'Электрическая мощность', unit: 'МВт' },
+                                { key: 'land', label: 'Земельный участок', unit: 'га' },
                             ].map((item) => (
                                 <div key={item.key} className="flex items-center gap-4">
                                     <div className="flex items-center space-x-2 w-48">

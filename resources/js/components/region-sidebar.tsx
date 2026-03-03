@@ -35,16 +35,18 @@ export function RegionSidebar({
 }: RegionSidebarProps) {
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetTrigger asChild>
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="fixed left-4 top-20 z-[1000] h-10 w-10 rounded-lg border border-white/20 bg-[#0f1b3d]/90 text-white shadow-lg backdrop-blur-sm hover:bg-[#0f1b3d] hover:text-[#c8a44e]"
-                    title="Районы и города"
-                >
-                    <Menu className="h-5 w-5" />
-                </Button>
-            </SheetTrigger>
+            {!open && (
+                <SheetTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="fixed left-13 top-20 z-[1000] h-10 w-10 rounded-lg border border-white/20 bg-[#0f1b3d]/90 text-white shadow-lg backdrop-blur-sm hover:bg-[#0f1b3d] hover:text-[#c8a44e]"
+                        title="Районы и города"
+                    >
+                        <Menu className="h-5 w-5" />
+                    </Button>
+                </SheetTrigger>
+            )}
             <SheetContent
                 side="left"
                 className="w-80 border-r-white/10 bg-[#0f1b3d] p-0"
