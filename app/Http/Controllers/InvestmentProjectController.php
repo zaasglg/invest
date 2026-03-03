@@ -915,9 +915,7 @@ class InvestmentProjectController extends Controller
         // Auto-scale: use smaller font if many tasks
         $taskCount = $tasks->count();
         $taskFontSize = $taskCount > 6 ? 8 : 9;
-        $assigneeFontSize = $taskCount > 6 ? 7 : 8;
         $taskRowH = $taskCount > 6 ? 14 : 16;
-        $assigneeRowH = $taskCount > 6 ? 12 : 14;
         $taskGap = $taskCount > 6 ? 2 : 3;
 
         if ($tasks->isNotEmpty()) {
@@ -964,19 +962,6 @@ class InvestmentProjectController extends Controller
                 $addText($taskRow, $taskText, $taskFontSize, $darkGray, false);
                 $addText($taskRow, '  [' . $statusLabel . ']', $taskFontSize - 1, $statusColor, true);
                 $yLeft += $taskRowH;
-
-                if ($task->assignee) {
-                    $assigneeText = $task->assignee->position ?? 'Орындаушы';
-                    $assigneeName = $task->assignee->full_name ?? $task->assignee->name;
-
-                    $assigneeRow = $slide->createRichTextShape();
-                    $assigneeRow->setHeight($assigneeRowH)->setWidth($leftW - 20)->setOffsetX($leftX + 15)->setOffsetY($yLeft);
-                    $assigneeRow->getActiveParagraph()->getAlignment()
-                        ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                        ->setVertical(Alignment::VERTICAL_CENTER);
-                    $addText($assigneeRow, $assigneeText . ' (' . $assigneeName . ')', $assigneeFontSize, $blue, false);
-                    $yLeft += $assigneeRowH;
-                }
 
                 $yLeft += $taskGap;
             }
