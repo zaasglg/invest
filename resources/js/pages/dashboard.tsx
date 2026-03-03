@@ -1,5 +1,7 @@
 import { Head } from '@inertiajs/react';
+import { useState } from 'react';
 import Map from '@/components/map';
+import { RegionSidebar } from '@/components/region-sidebar';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -54,20 +56,37 @@ export default function Dashboard({
     regionStats,
     sectorSummary,
 }: Props) {
+    const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    const handleRegionSelect = (region: Region) => {
+        setSelectedRegion(region);
+    };
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Статистика" />
-            <Map
-                className="h-[calc(100vh-64px)] w-full"
-                center={[42, 68.5]}
-                zoom={7}
-                regions={regions}
-                regionStats={regionStats}
-                sectorSummary={sectorSummary}
-                showRegionIconsDemo
-                showOutsideRegionClouds
-                interactive
-            />
+            <div className="relative">
+                <Map
+                    className="h-[calc(100vh-64px)] w-full"
+                    center={[42, 68.5]}
+                    zoom={7}
+                    regions={regions}
+                    regionStats={regionStats}
+                    sectorSummary={sectorSummary}
+                    showRegionIconsDemo
+                    showOutsideRegionClouds
+                    interactive
+                    selectedRegion={selectedRegion}
+                />
+                <RegionSidebar
+                    regions={regions}
+                    activeRegionId={selectedRegion?.id ?? null}
+                    onRegionSelect={handleRegionSelect}
+                    open={sidebarOpen}
+                    onOpenChange={setSidebarOpen}
+                />
+            </div>
         </AppLayout>
     );
 }
