@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import AuthLayout from '@/layouts/auth-layout';
 import { login } from '@/routes';
-import { store } from '@/routes/register';
 
 const inputClass =
     'border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#c8a44e]/50 focus-visible:ring-[#c8a44e]/20';
@@ -21,7 +20,8 @@ export default function Register() {
         >
             <Head title="Register" />
             <Form
-                {...store.form()}
+                action="/register"
+                method="post"
                 resetOnSuccess={['password', 'password_confirmation']}
                 disableWhileProcessing
                 className="flex flex-col gap-6"
