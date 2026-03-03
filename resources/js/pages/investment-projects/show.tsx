@@ -320,12 +320,15 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const selectedUser = users.find((u) => u.id === taskAssignedTo);
 
     // Completion submission state (for baskarma)
+    const MAX_COMPLETION_FILE_SIZE = 20 * 1024 * 1024; // 20MB per file (matches backend)
+    const MAX_COMPLETION_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
     const [showCompletionModal, setShowCompletionModal] = useState(false);
     const [completionTaskId, setCompletionTaskId] = useState<number | null>(null);
     const [completionComment, setCompletionComment] = useState('');
     const [completionDocuments, setCompletionDocuments] = useState<File[]>([]);
     const [completionPhotos, setCompletionPhotos] = useState<File[]>([]);
     const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
+    const [completionFileError, setCompletionFileError] = useState<string | null>(null);
     const completionDocRef = useRef<HTMLInputElement>(null);
     const completionPhotoRef = useRef<HTMLInputElement>(null);
 
@@ -341,24 +344,58 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         setCompletionComment('');
         setCompletionDocuments([]);
         setCompletionPhotos([]);
+        setCompletionFileError(null);
         setShowCompletionModal(true);
     };
 
     const handleCompletionDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setCompletionDocuments(Array.from(e.target.files));
+            const files = Array.from(e.target.files);
+            const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
+            if (oversized) {
+                setCompletionFileError(
+                    `Файл "${oversized.name}" тым үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                );
+                setCompletionDocuments([]);
+                if (completionDocRef.current) completionDocRef.current.value = '';
+                return;
+            }
+            setCompletionFileError(null);
+            setCompletionDocuments(files);
         }
     };
 
     const handleCompletionPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
-            setCompletionPhotos(Array.from(e.target.files));
+            const files = Array.from(e.target.files);
+            const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
+            if (oversized) {
+                setCompletionFileError(
+                    `Файл "${oversized.name}" тым үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                );
+                setCompletionPhotos([]);
+                if (completionPhotoRef.current) completionPhotoRef.current.value = '';
+                return;
+            }
+            setCompletionFileError(null);
+            setCompletionPhotos(files);
         }
     };
 
     const handleCompletionSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         if (!completionTaskId) return;
+
+        // Check total size of all files
+        const allFiles = [...completionDocuments, ...completionPhotos];
+        const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
+        if (totalSize > MAX_COMPLETION_TOTAL_SIZE) {
+            setCompletionFileError(
+                `Жалпы файлдар көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) лимиттен асып кетті (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдар таңдаңыз.`,
+            );
+            return;
+        }
+
         setIsSubmittingCompletion(true);
 
         const formData = new FormData();
@@ -1194,10 +1231,17 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </button>
                             </div>
                             <form onSubmit={handleCompletionSubmit} className="p-6 space-y-5">
+                                {completionFileError && (
+                                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                        <AlertTriangle className="mr-1.5 inline h-4 w-4" />
+                                        {completionFileError}
+                                    </div>
+                                )}
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
                                         Документы (файлы)
+                                        <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
                                     </Label>
                                     <input
                                         ref={completionDocRef}
@@ -1217,6 +1261,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
                                         Изображения
+                                        <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
                                     </Label>
                                     <input
                                         ref={completionPhotoRef}
@@ -1250,7 +1295,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <Button
                                         type="submit"
                                         className="bg-emerald-500 hover:bg-emerald-600 px-8"
-                                        disabled={isSubmittingCompletion}
+                                        disabled={isSubmittingCompletion || !!completionFileError}
                                     >
                                         {isSubmittingCompletion ? 'Отправка...' : 'Да'}
                                     </Button>
