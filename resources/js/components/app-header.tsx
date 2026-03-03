@@ -93,16 +93,16 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 <SheetHeader className="flex justify-start border-b border-white/10 px-4 pb-4 text-left">
                                     <div className="flex items-center gap-2.5">
                                         <img
-                                            src="/assets/images/logo-2.png"
+                                            src="/assets/images/logo-3.png"
                                             alt="Turkistan Invest"
                                             className="h-7 shrink-0"
                                         />
                                         <div className="flex flex-col leading-none">
                                             <span className="text-xs font-bold tracking-wider text-white">
-                                                TURKISTAN
+                                                Туркестанская
                                             </span>
                                             <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                                INVEST
+                                                ОБЛАСТЬ
                                             </span>
                                         </div>
                                     </div>
