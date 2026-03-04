@@ -269,7 +269,12 @@ export default function Index({
                                         </TableCell>
                                         <TableCell>
                                             {zone.investment_projects_sum_total_investment
-                                                ? `${Number(zone.investment_projects_sum_total_investment) >= 1000000 ? (Number(zone.investment_projects_sum_total_investment) / 1000000).toFixed(1) + ' млн' : Number(zone.investment_projects_sum_total_investment) >= 1000 ? (Number(zone.investment_projects_sum_total_investment) / 1000000).toFixed(2) + ' млн' : zone.investment_projects_sum_total_investment}`
+                                                ? (() => {
+                                                    const v = Number(zone.investment_projects_sum_total_investment);
+                                                    if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(1) + ' млрд';
+                                                    if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + ' млн';
+                                                    return v.toLocaleString('ru-RU');
+                                                })()
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>

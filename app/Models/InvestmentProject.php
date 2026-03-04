@@ -12,6 +12,7 @@ class InvestmentProject extends Model
         'name',
         'company_name',
         'description',
+    'current_status',
         'region_id',
         'project_type_id',
         'total_investment',

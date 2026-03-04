@@ -9,7 +9,6 @@ use App\Models\Region;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
-use App\Services\GeminiService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -227,6 +226,7 @@ class InvestmentProjectController extends Controller
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'current_status' => 'nullable|string',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -237,7 +237,7 @@ class InvestmentProjectController extends Controller
                 },
             ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => ['required', 'array'],
+            'sector' => ['nullable', 'array'],
             'sector.*' => [
                 'string',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
@@ -504,6 +504,7 @@ class InvestmentProjectController extends Controller
             'name' => 'required|string|max:255',
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
+            'current_status' => 'nullable|string',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -514,7 +515,7 @@ class InvestmentProjectController extends Controller
                 },
             ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => ['required', 'array'],
+            'sector' => ['nullable', 'array'],
             'sector.*' => [
                 'string',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
@@ -788,12 +789,11 @@ class InvestmentProjectController extends Controller
      */
     protected function buildProjectSlide($slide, InvestmentProject $project): void
     {
-        $gemini = app(GeminiService::class);
-
         $white    = 'FFFFFF';
         $darkGray = '333333';
         $midGray  = '666666';
         $blue     = '1565C0';
+        $red      = 'C62828';
 
         $addText = function (RichText $shape, string $text, int $size, string $color, bool $bold = false) {
             $run = $shape->createTextRun($text);
@@ -813,13 +813,17 @@ class InvestmentProjectController extends Controller
 
         $formatCurrency = function ($amount) {
             if (!$amount) return 'Не указано';
-            return number_format((float) $amount, 0, ',', ' ') . ' ₸';
+            $num = (float) $amount;
+            if ($num >= 1_000_000_000) {
+                $val = $num / 1_000_000_000;
+                return number_format($val, 1, ',', ' ') . ' млрд ₸';
+            }
+            if ($num >= 1_000_000) {
+                $val = $num / 1_000_000;
+                return number_format($val, 1, ',', ' ') . ' млн ₸';
+            }
+            return number_format($num, 0, ',', ' ') . ' ₸';
         };
-
-        $taskStatusLabels = [
-            'new' => 'Новая', 'in_progress' => 'Исполняется',
-            'done' => 'Выполнено', 'rejected' => 'Время прошло',
-        ];
 
         $fillSlide($slide, $white);
 
@@ -830,7 +834,6 @@ class InvestmentProjectController extends Controller
 
         // ── HEADER ───────────────────────────────────────────────
         $logoPath = public_path('apple-touch-icon.png');
-        $logoW = 50;
         if (file_exists($logoPath)) {
             try {
                 $logoImg = $slide->createDrawingShape();
@@ -861,7 +864,9 @@ class InvestmentProjectController extends Controller
         $blueLine->setHeight(2)->setWidth(930)->setOffsetX($leftX)->setOffsetY(56);
         $blueLine->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FF' . $blue));
 
-        // ── LEFT COLUMN ──────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════
+        // LEFT COLUMN — top: ЖОБА ТУРАЛЫ, bottom: АҒЫМДАҒЫ ЖАҒДАЙЛАР
+        // ══════════════════════════════════════════════════════════
         $yLeft = 66;
 
         $sectionHeader = $slide->createRichTextShape();
@@ -873,15 +878,14 @@ class InvestmentProjectController extends Controller
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
             ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жобаның қуаттылығы', $project->description ? $gemini->summarizeForSlide($project->description, 120) : '—'],
+            ['Жобаның қуаттылығы', $project->description ? mb_substr($project->description, 0, 120) . (mb_strlen($project->description) > 120 ? '...' : '') : '—'],
             ['Жұмыс орындары', '—'],
             ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
             ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
         ];
 
-        // Approximate characters per line at font size 11 within $leftW
         $charsPerLine = 55;
-        $singleLineH = 18; // height of one line of text at size 11
+        $singleLineH = 18;
 
         foreach ($infoItems as $item) {
             $fullText = $item[0] . ': ' . $item[1];
@@ -899,84 +903,40 @@ class InvestmentProjectController extends Controller
             $yLeft += $rowH;
         }
 
-        $yLeft += 8;
+        // ── АҒЫМДАҒЫ ЖАҒДАЙЛАР (left column, below project info) ──
+        $yLeft += 12;
 
-        // ── АҒЫМДАҒЫ ЖАҒДАЙЫ ────────────────────────────────────
-        $roadmapHeader = $slide->createRichTextShape();
-        $roadmapHeader->setHeight(20)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($roadmapHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЫ', 11, $blue, true);
-        $yLeft += 22;
+        $statusHeader = $slide->createRichTextShape();
+        $statusHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЛАР', 12, $blue, true);
+        $yLeft += 26;
 
-        $tasks = $project->tasks->sortBy('created_at')
-            ->reject(fn($task) => $task->status === 'done');
+        if ($project->current_status) {
+            $maxStatusY = 710;
+            $availableH = max(40, $maxStatusY - $yLeft);
+            $statusText = $project->current_status;
 
-        // Calculate available space: leave ~160px for stats + description at bottom
-        $maxTasksY = 520;
-        // Auto-scale: use smaller font if many tasks
-        $taskCount = $tasks->count();
-        $taskFontSize = $taskCount > 6 ? 8 : 9;
-        $taskRowH = $taskCount > 6 ? 14 : 16;
-        $taskGap = $taskCount > 6 ? 2 : 3;
-
-        if ($tasks->isNotEmpty()) {
-            foreach ($tasks as $task) {
-                if ($yLeft > $maxTasksY) {
-                    // Show "and X more..." label
-                    $remaining = $tasks->count() - $tasks->search($task);
-                    if ($remaining > 0) {
-                        $moreShape = $slide->createRichTextShape();
-                        $moreShape->setHeight(14)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
-                        $addText($moreShape, "... тағы {$remaining} тапсырма", $taskFontSize, $midGray, true);
-                        $yLeft += 16;
-                    }
-                    break;
-                }
-
-                if ($task->status === 'new') {
-                    if ($task->due_date && $task->due_date->isPast()) {
-                        $statusLabel = 'Просрочено';
-                        $statusColor = 'C62828';
-                    } else {
-                        $statusLabel = 'Ожидается';
-                        $statusColor = 'F57C00';
-                    }
-                } elseif ($task->status === 'rejected') {
-                    $statusLabel = 'Отклонено';
-                    $statusColor = 'C62828';
-                } else {
-                    $statusLabel = $taskStatusLabels[$task->status] ?? $task->status;
-                    $statusColor = match($task->status) {
-                        'in_progress' => 'F57C00',
-                        default => $midGray,
-                    };
-                }
-
-                $taskText = '• ' . $task->title;
-
-                $taskRow = $slide->createRichTextShape();
-                $taskRow->setHeight($taskRowH)->setWidth($leftW - 10)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
-                $taskRow->getActiveParagraph()->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                    ->setVertical(Alignment::VERTICAL_TOP);
-                $taskRow->setAutoFit(RichText::AUTOFIT_NORMAL);
-                $addText($taskRow, $taskText, $taskFontSize, $darkGray, false);
-                $addText($taskRow, '  [' . $statusLabel . ']', $taskFontSize - 1, $statusColor, true);
-                $yLeft += $taskRowH;
-
-                $yLeft += $taskGap;
-            }
+            $statusShape = $slide->createRichTextShape();
+            $statusShape->setHeight($availableH)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+            $statusShape->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_TOP);
+            $statusShape->setAutoFit(RichText::AUTOFIT_NORMAL);
+            $addText($statusShape, $statusText, 10, $darkGray, false);
         } else {
-            $noTasks = $slide->createRichTextShape();
-            $noTasks->setHeight(16)->setWidth($leftW)->setOffsetX($leftX + 5)->setOffsetY($yLeft);
-            $addText($noTasks, 'Дорожная карта бос', 9, $midGray, false);
-            $yLeft += 16;
+            $noStatus = $slide->createRichTextShape();
+            $noStatus->setHeight(16)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+            $addText($noStatus, 'Ағымдағы жағдай көрсетілмеген', 9, $midGray, false);
         }
 
-        // ── RIGHT COLUMN ─────────────────────────────────────────
+        // ══════════════════════════════════════════════════════════
+        // RIGHT COLUMN — top: Photo, middle: Infrastructure, bottom: Issues
+        // ══════════════════════════════════════════════════════════
         $yRight = 66;
 
+        // ── PHOTO ────────────────────────────────────────────────
         $imgMaxW = $rightW;
-        $imgMaxH = 280;
+        $imgMaxH = 240;
 
         $renderPhoto = $project->photos->where('photo_type', 'render')->first();
         $actualImgH = 0;
@@ -1001,7 +961,7 @@ class InvestmentProjectController extends Controller
             }
         }
 
-        $yRight += max($actualImgH + 15, 200);
+        $yRight += max($actualImgH + 15, 180);
 
         // ── ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ ─────────────────────────────
         $infrastructure = $project->infrastructure;
@@ -1053,72 +1013,62 @@ class InvestmentProjectController extends Controller
                 $colX += $colW + 4;
             }
 
-            $yRight += 52; // header row (24) + value row (24) + spacing (4)
+            $yRight += 56;
         }
 
-        // ── AI STATISTICS — task analysis ─────────────────────
-        $statsY = max($yLeft, $yRight) + 6;
-
-        $totalTasks = $project->tasks->count();
-        $doneTasks = $project->tasks->where('status', 'done')->count();
-        $inProgressTasks = $project->tasks->where('status', 'in_progress')->count();
-        $newTasks = $project->tasks->where('status', 'new')->count();
-        $rejectedTasks = $project->tasks->where('status', 'rejected')->count();
-        $donePercent = $totalTasks > 0 ? round(($doneTasks / $totalTasks) * 100) : 0;
-
-        // Try AI-powered analysis first
-        $aiStats = $gemini->generateProjectStats([
-            'project_name' => $project->name,
-            'total_tasks' => $totalTasks,
-            'done' => $doneTasks,
-            'in_progress' => $inProgressTasks,
-            'new' => $newTasks,
-            'rejected' => $rejectedTasks,
-            'done_percent' => $donePercent,
-            'total_investment' => $project->total_investment,
-            'start_date' => $project->start_date?->format('Y-m-d'),
-            'end_date' => $project->end_date?->format('Y-m-d'),
-        ]);
-
-        // Fallback to manual stats if AI is unavailable
-        if (! $aiStats) {
-            $statusText = $donePercent >= 70 ? 'жақсы' : ($donePercent >= 40 ? 'орташа' : 'нашар');
-            $aiStats = "Жалпы тапсырмалар: {$totalTasks} | Орындалды: {$doneTasks} ({$donePercent}%) | Орындалмады: " . ($totalTasks - $doneTasks) . " | Жағдайы: {$statusText}";
+        // ── ПРОБЛЕМНЫЕ ВОПРОСЫ ───────────────────────────────────
+        $issues = $project->issues ?? collect();
+        if ($issues instanceof \Illuminate\Database\Eloquent\Collection || is_array($issues)) {
+            $issues = collect($issues);
         }
 
-        if ($statsY < 640) {
-            $statsHeader = $slide->createRichTextShape();
-            $statsHeader->setHeight(18)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
-            $addText($statsHeader, 'ЖОБА СТАТИСТИКАСЫ (AI)', 10, $blue, true);
-            $statsY += 20;
-
-            $statsShape = $slide->createRichTextShape();
-            $statsShape->setHeight(36)->setWidth(930)->setOffsetX($leftX)->setOffsetY($statsY);
-            $statsShape->getActiveParagraph()->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                ->setVertical(Alignment::VERTICAL_TOP);
-            $statsShape->setAutoFit(RichText::AUTOFIT_NORMAL);
-            $addText($statsShape, $aiStats, 9, $darkGray, false);
-            $statsY += 40;
+        $issuesHeader = $slide->createRichTextShape();
+        $issuesHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
+        $addText($issuesHeader, 'ПРОБЛЕМНЫЕ ВОПРОСЫ', 12, $red, true);
+        if ($issues->count() > 0) {
+            $addText($issuesHeader, '  (' . $issues->count() . ')', 11, $red, true);
         }
+        $yRight += 26;
 
-        // ── DESCRIPTION — full-width at bottom ───────────────────
-        $descY = $statsY + 4;
-        if ($project->description && $descY < 680) {
-            // Limit description length based on remaining space
-            $remainingH = 720 - $descY - 10;
-            $maxDescChars = $remainingH > 60 ? 300 : ($remainingH > 30 ? 150 : 80);
-            $descText = $gemini->summarizeForSlide($project->description, $maxDescChars);
-            $descH = min($remainingH, max(30, (int)(mb_strlen($descText) * 0.4)));
+        if ($issues->isNotEmpty()) {
+            $maxIssuesY = 710;
+            $issueFontSize = $issues->count() > 5 ? 8 : 9;
+            $issueRowH = $issues->count() > 5 ? 14 : 16;
 
-            $descShape = $slide->createRichTextShape();
-            $descShape->setHeight($descH)->setWidth(930)->setOffsetX($leftX)->setOffsetY($descY);
-            $descShape->getActiveParagraph()->getAlignment()
-                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
-                ->setVertical(Alignment::VERTICAL_TOP);
-            $descShape->setAutoFit(RichText::AUTOFIT_NORMAL);
-            $addText($descShape, 'СИПАТТАМАСЫ: ', 9, $blue, true);
-            $addText($descShape, $descText, 9, $darkGray, false);
+            foreach ($issues as $issue) {
+                if ($yRight > $maxIssuesY) {
+                    $remaining = $issues->count() - $issues->search($issue);
+                    if ($remaining > 0) {
+                        $moreShape = $slide->createRichTextShape();
+                        $moreShape->setHeight(14)->setWidth($rightW - 10)->setOffsetX($rightX + 5)->setOffsetY($yRight);
+                        $addText($moreShape, "... тағы {$remaining} мәселе", $issueFontSize, $midGray, true);
+                    }
+                    break;
+                }
+
+                $issueTitle = is_array($issue) ? ($issue['title'] ?? '') : ($issue->title ?? '');
+                $issueSeverity = is_array($issue) ? ($issue['severity'] ?? 'medium') : ($issue->severity ?? 'medium');
+
+                $severityColor = match($issueSeverity) {
+                    'critical', 'high' => $red,
+                    'medium' => 'F57C00',
+                    default => $midGray,
+                };
+
+                $issueRow = $slide->createRichTextShape();
+                $issueRow->setHeight($issueRowH)->setWidth($rightW - 10)->setOffsetX($rightX + 5)->setOffsetY($yRight);
+                $issueRow->getActiveParagraph()->getAlignment()
+                    ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                    ->setVertical(Alignment::VERTICAL_TOP);
+                $issueRow->setAutoFit(RichText::AUTOFIT_NORMAL);
+                $addText($issueRow, '• ', $issueFontSize, $severityColor, true);
+                $addText($issueRow, mb_substr($issueTitle, 0, 80), $issueFontSize, $darkGray, false);
+                $yRight += $issueRowH + 2;
+            }
+        } else {
+            $noIssues = $slide->createRichTextShape();
+            $noIssues->setHeight(16)->setWidth($rightW)->setOffsetX($rightX + 5)->setOffsetY($yRight);
+            $addText($noIssues, 'Проблемные вопросы жоқ', 9, $midGray, false);
         }
     }
 

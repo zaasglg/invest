@@ -162,6 +162,7 @@ type Props = {
     selectedEntityId?: number | null;
     selectedEntityType?: 'sez' | 'iz' | 'subsoil' | null;
     selectedProjectId?: number | null;
+    selectedRegion?: Region | null;
     regionStats?: {
         investments: Record<number, number>;
         izProjects: Record<number, number>;
@@ -542,6 +543,7 @@ export default function Map({
     selectedEntityId = null,
     selectedEntityType = null,
     selectedProjectId = null,
+    selectedRegion = null,
     regionStats,
     fitBounds = false,
     showPolygons = true,
@@ -556,6 +558,14 @@ export default function Map({
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
+
+    // Sync external selectedRegion prop with internal activeRegion state
+    useEffect(() => {
+        if (selectedRegion) {
+            setActiveRegion(selectedRegion);
+        }
+    }, [selectedRegion]);
+
     const [isTableCollapsed, setIsTableCollapsed] = useState(false);
     const [popupPosition, setPopupPosition] = useState<[number, number] | null>(
         null,

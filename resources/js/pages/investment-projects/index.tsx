@@ -220,12 +220,15 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     const formatInvestment = (value: string | number | null) => {
         if (!value) return '—';
         const num = Number(value);
-        if (isNaN(num)) return value;
-        
-        const inMillions = num / 1000000;
-        return new Intl.NumberFormat('ru-RU', {
-            maximumFractionDigits: 2,
-        }).format(inMillions) + ' млн ₸';
+        if (isNaN(num)) return String(value);
+
+        if (num >= 1_000_000_000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(num / 1_000_000_000) + ' млрд ₸';
+        }
+        if (num >= 1_000_000) {
+            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(num / 1_000_000) + ' млн ₸';
+        }
+        return new Intl.NumberFormat('ru-RU').format(num) + ' ₸';
     };
 
     const formatTotalInvestment = (value: number) => {

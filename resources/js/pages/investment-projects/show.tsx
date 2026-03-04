@@ -54,6 +54,7 @@ interface InvestmentProject {
     name: string;
     company_name?: string;
     description?: string;
+    current_status?: string;
     region_id: number;
     region?: Region;
     project_type_id: number;
@@ -135,6 +136,42 @@ interface Props {
     canDownload: boolean;
 }
 
+function DescriptionTabs({ description, currentStatus }: { description?: string; currentStatus?: string }) {
+    const [activeTab, setActiveTab] = useState<'description' | 'current_status'>('description');
+
+    return (
+        <div>
+            <div className="mb-4 inline-flex rounded-full bg-gray-100 p-1">
+                <button
+                    onClick={() => setActiveTab('description')}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
+                        activeTab === 'description'
+                            ? 'bg-[#c8a44e] text-white shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                >
+                    Описание
+                </button>
+                <button
+                    onClick={() => setActiveTab('current_status')}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
+                        activeTab === 'current_status'
+                            ? 'bg-[#c8a44e] text-white shadow-sm'
+                            : 'text-gray-600 hover:text-gray-800'
+                    }`}
+                >
+                    Текущее состояние
+                </button>
+            </div>
+            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {activeTab === 'description'
+                    ? (description || 'Описание отсутствует.')
+                    : (currentStatus || 'Текущее состояние отсутствует.')}
+            </div>
+        </div>
+    );
+}
+
 export default function Show({ project, mainGallery = [], renderPhotos = [], users = [], canDownload }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
@@ -187,11 +224,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const sectorDetails = getSectorDetails();
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('kk-KZ', {
-            style: 'currency',
-            currency: 'KZT',
-            maximumFractionDigits: 0,
-        }).format(amount);
+        if (amount >= 1_000_000_000) {
+            return `${(amount / 1_000_000_000).toFixed(1)} млрд ₸`;
+        }
+        if (amount >= 1_000_000) {
+            return `${(amount / 1_000_000).toFixed(1)} млн ₸`;
+        }
+        return new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
     };
 
     // Roadmap state
@@ -310,7 +349,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     };
 
     const handleTaskDelete = (taskId: number) => {
-        if (confirm('Осы этапты өшіргіңіз келе ме?')) {
+        if (confirm('Вы уверены, что хотите удалить этот этап?')) {
             router.delete(
                 `/investment-projects/${project.id}/tasks/${taskId}`,
             );
@@ -354,7 +393,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
             if (oversized) {
                 setCompletionFileError(
-                    `Файл "${oversized.name}" тым үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                    `Файл "${oversized.name}" слишком большой (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionDocuments([]);
                 if (completionDocRef.current) completionDocRef.current.value = '';
@@ -371,7 +410,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
             if (oversized) {
                 setCompletionFileError(
-                    `Файл "${oversized.name}" тым үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                    `Файл "${oversized.name}" слишком большой (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionPhotos([]);
                 if (completionPhotoRef.current) completionPhotoRef.current.value = '';
@@ -391,7 +430,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
         if (totalSize > MAX_COMPLETION_TOTAL_SIZE) {
             setCompletionFileError(
-                `Жалпы файлдар көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) лимиттен асып кетті (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдар таңдаңыз.`,
+                `Общий размер файлов (${(totalSize / 1024 / 1024).toFixed(1)}MB) превышает лимит (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Выберите меньшие файлы.`,
             );
             return;
         }
@@ -567,15 +606,12 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </div>
                             </CardContent>
 
-                            {/* Company & Description */}
+                            {/* Company Name */}
                             <div className="border-t border-gray-200 px-6 py-5">
-                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <Building2 className="h-5 w-5 text-gray-500" />
                                     {project.company_name || 'Компания не указана'}
                                 </h2>
-                                <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                                    {project.description || 'Описание отсутствует.'}
-                                </p>
                             </div>
 
                             {/* Инфрақұрылым қажеттілігі */}
@@ -606,6 +642,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </div>
                                 </div>
                             )}
+
+                            {/* Description & Current Status Tabs */}
+                            <div className="border-t border-gray-200 px-6 py-5">
+                                <DescriptionTabs
+                                    description={project.description}
+                                    currentStatus={project.current_status}
+                                />
+                            </div>
 
                             {/* Issues / Проблемные вопросы */}
                             {project.issues && project.issues.length > 0 && (

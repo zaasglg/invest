@@ -85,8 +85,15 @@ export const adminNavItems: NavItem[] = [
 
 export const headerNavItems: NavItem[] = [
     ...mainNavItems,
+    {
+        title: 'Инвест. проекты',
+        href: investmentProjects.index.url(),
+        icon: Briefcase,
+    },
     ...zoneNavItems,
-    ...projectNavItems,
+    ...projectNavItems.filter(
+        (item) => item.title !== 'Инвест. проекты',
+    ),
     ...adminNavItems,
 ];
 
