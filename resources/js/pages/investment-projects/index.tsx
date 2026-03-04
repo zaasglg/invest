@@ -159,10 +159,10 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     const filteredUsers = useMemo(() => {
         if (!data.region_id) {
-            // Егер аудан/облыс таңдалмаса, тек облыстық басқармаларды көрсетеміз
+            // Если район/область не выбраны, показываем только областные управления
             return users.filter(user => user.baskarma_type === 'oblast');
         }
-        // Егер аудан/облыс таңдалса, облыстық басқармаларды ЖӘНЕ сол аймаққа тиесілі басқармаларды көрсетеміз
+        // Если район/область выбраны, показываем областные управления И управления, привязанные к этому региону
         return users.filter(user => user.baskarma_type === 'oblast' || String(user.region_id) === data.region_id);
     }, [users, data.region_id]);
 

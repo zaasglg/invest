@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class TaskCompletionController extends Controller
 {
     /**
-     * Басқарма submits a task completion (with files and comment).
+     * User submits a task completion (with files and comment).
      */
     public function store(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
     {
@@ -83,7 +83,7 @@ class TaskCompletionController extends Controller
         // Remove current user (submitter) and deduplicate
         $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
 
-        $submitterName = Auth::user()->full_name ?? 'Басқарма';
+        $submitterName = Auth::user()->full_name ?? 'Управление';
         $docCount = count($request->file('documents', []));
         $photoCount = count($request->file('photos', []));
         $fileInfo = [];

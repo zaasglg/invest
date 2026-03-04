@@ -103,7 +103,7 @@ class InvestmentProject extends Model
     }
 
     /**
-     * Аяқталу мерзімі өтіп кеткен жобаны автоматты түрде тоқтату.
+     * Автоматическая приостановка проекта с истекшим сроком.
      */
     public function getIsExpiredAttribute(): bool
     {

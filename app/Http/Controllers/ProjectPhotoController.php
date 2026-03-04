@@ -71,11 +71,11 @@ class ProjectPhotoController extends Controller
         $user = Auth::user();
 
         if (! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің суреттерін жүктеуге рұқсат жоқ.');
+            abort(403, 'У вас нет доступа к фотографиям этого проекта.');
         }
 
         if (! Storage::disk('public')->exists($photo->file_path)) {
-            abort(404, 'Файл табылмады.');
+            abort(404, 'Файл не найден.');
         }
 
         return Storage::disk('public')->download($photo->file_path);

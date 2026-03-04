@@ -282,10 +282,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     });
 
     const taskStatusMap: Record<string, { label: string; dotColor: string }> = {
-        new: { label: 'Жаңа', dotColor: 'bg-amber-500' },
-        in_progress: { label: 'Орындалуда', dotColor: 'bg-amber-500' },
-        done: { label: 'Орындалды', dotColor: 'bg-green-500' },
-        rejected: { label: 'Қабылданбады', dotColor: 'bg-red-500' },
+        new: { label: 'Новый', dotColor: 'bg-amber-500' },
+        in_progress: { label: 'В работе', dotColor: 'bg-amber-500' },
+        done: { label: 'Выполнено', dotColor: 'bg-green-500' },
+        rejected: { label: 'Отклонено', dotColor: 'bg-red-500' },
     };
 
     // Only show baskarma role users in task assignment
@@ -614,19 +614,19 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </h2>
                             </div>
 
-                            {/* Инфрақұрылым қажеттілігі */}
+                            {/* Потребность в инфраструктуре */}
                             {project.infrastructure && Object.values(project.infrastructure).some((v: any) => v?.needed) && (
                                 <div className="border-t border-gray-200 px-6 py-5">
                                     <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <Building2 className="h-5 w-5 text-gray-500" />
-                                        Инфрақұрылым қажеттілігі
+                                        Потребность в инфраструктуре
                                     </h2>
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                         {[
                                             { key: 'gas', label: 'Газ', unit: 'м³/час' },
-                                            { key: 'water', label: 'Су', unit: 'м³/сут' },
-                                            { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                            { key: 'land', label: 'Жер телімі', unit: 'га' },
+                                            { key: 'water', label: 'Вода', unit: 'м³/сут' },
+                                            { key: 'electricity', label: 'Электричество', unit: 'МВт' },
+                                            { key: 'land', label: 'Земельный участок', unit: 'га' },
                                         ].map((item) => {
                                             const infra = (project.infrastructure as any)?.[item.key];
                                             if (!infra?.needed) return null;
@@ -634,7 +634,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <div key={item.key} className="rounded-lg border border-gray-200 p-3">
                                                     <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
                                                     <p className="text-sm font-bold text-[#0f1b3d]">
-                                                        {infra.capacity ? `${infra.capacity} ${item.unit}` : 'Қажет'}
+                                                        {infra.capacity ? `${infra.capacity} ${item.unit}` : 'Требуется'}
                                                     </p>
                                                 </div>
                                             );
@@ -835,7 +835,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                                       year: 'numeric',
                                                                   },
                                                               )
-                                                            : 'Мерзімі белгіленбеген'}
+                                                            : 'Срок не указан'}
                                                     </p>
                                                     {task.assignee && (
                                                         <p className="text-sm text-gray-500 mt-1">
@@ -1210,7 +1210,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     {taskAssignedTo ===
                                                         u.id && (
                                                         <span className="rounded-md bg-cyan-500 px-3 py-1 text-xs font-medium text-white">
-                                                            Таңдау
+                                                            Выбрать
                                                         </span>
                                                     )}
                                                 </div>
@@ -1219,7 +1219,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </div>
                                     {selectedUser && (
                                         <p className="mt-2 text-sm text-cyan-600">
-                                            Таңдалды:{' '}
+                                            Выбрано:{' '}
                                             <span className="font-medium">
                                                 {selectedUser.full_name}
                                             </span>
@@ -1238,7 +1238,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         }
                                     >
                                         {isSubmittingTask
-                                            ? 'Сақталуда...'
+                                            ? 'Сохранение...'
                                             : 'Сохранить'}
                                     </Button>
                                     <Button
@@ -1383,7 +1383,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {reviewTask && (
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Тапсырма
+                                            Задание
                                         </p>
                                         <p className="mt-1 font-semibold text-[#0f1b3d]">
                                             {reviewTask.title}
@@ -1405,7 +1405,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         {reviewCompletion.submitter?.full_name || '—'}
                                     </p>
                                     <p className="text-xs text-gray-500">
-                                        {new Date(reviewCompletion.created_at).toLocaleString('kk-KZ')}
+                                        {new Date(reviewCompletion.created_at).toLocaleString('ru-RU')}
                                     </p>
                                 </div>
 
@@ -1478,7 +1478,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         <textarea
                                             value={reviewComment}
                                             onChange={(e) => setReviewComment(e.target.value)}
-                                            placeholder="Комментарий жазыңыз..."
+                                            placeholder="Напишите комментарий..."
                                             className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                             rows={3}
                                         />

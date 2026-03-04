@@ -603,7 +603,7 @@ class InvestmentProjectController extends Controller
         // Check download permission for baskarma
         $user = auth()->user();
         if ($user && ! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+            abort(403, 'У вас нет доступа к файлам этого проекта.');
         }
 
         $investmentProject->load([
@@ -674,7 +674,7 @@ class InvestmentProjectController extends Controller
         // Check download permission for baskarma
         $user = auth()->user();
         if ($user && ! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+            abort(403, 'У вас нет доступа к файлам этого проекта.');
         }
 
         // Load the single project with all relations
@@ -865,23 +865,23 @@ class InvestmentProjectController extends Controller
         $blueLine->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FF' . $blue));
 
         // ══════════════════════════════════════════════════════════
-        // LEFT COLUMN — top: ЖОБА ТУРАЛЫ, bottom: АҒЫМДАҒЫ ЖАҒДАЙЛАР
+        // LEFT COLUMN — top: О ПРОЕКТЕ, bottom: ТЕКУЩАЯ СИТУАЦИЯ
         // ══════════════════════════════════════════════════════════
         $yLeft = 66;
 
         $sectionHeader = $slide->createRichTextShape();
         $sectionHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($sectionHeader, 'ЖОБА ТУРАЛЫ', 12, $blue, true);
+        $addText($sectionHeader, 'О ПРОЕКТЕ', 12, $blue, true);
         $yLeft += 26;
 
         $infoItems = [
-            ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
-            ['Құны', $formatCurrency($project->total_investment)],
-            ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жобаның қуаттылығы', $project->description ? mb_substr($project->description, 0, 120) . (mb_strlen($project->description) > 120 ? '...' : '') : '—'],
-            ['Жұмыс орындары', '—'],
-            ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
-            ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
+            ['Инициатор проекта', $project->company_name ?? 'Не указано'],
+            ['Стоимость', $formatCurrency($project->total_investment)],
+            ['Отрасль', $project->projectType?->name ?? 'Не указано'],
+            ['Мощность проекта', $project->description ? mb_substr($project->description, 0, 120) . (mb_strlen($project->description) > 120 ? '...' : '') : '—'],
+            ['Рабочие места', '—'],
+            ['Местоположение', $project->region?->name ?? 'Не указано'],
+            ['Срок запуска', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
         ];
 
         $charsPerLine = 55;
@@ -903,12 +903,12 @@ class InvestmentProjectController extends Controller
             $yLeft += $rowH;
         }
 
-        // ── АҒЫМДАҒЫ ЖАҒДАЙЛАР (left column, below project info) ──
+        // ── ТЕКУЩАЯ СИТУАЦИЯ (left column, below project info) ──
         $yLeft += 12;
 
         $statusHeader = $slide->createRichTextShape();
         $statusHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЛАР', 12, $blue, true);
+        $addText($statusHeader, 'ТЕКУЩАЯ СИТУАЦИЯ', 12, $blue, true);
         $yLeft += 26;
 
         if ($project->current_status) {
@@ -926,7 +926,7 @@ class InvestmentProjectController extends Controller
         } else {
             $noStatus = $slide->createRichTextShape();
             $noStatus->setHeight(16)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-            $addText($noStatus, 'Ағымдағы жағдай көрсетілмеген', 9, $midGray, false);
+            $addText($noStatus, 'Текущая ситуация не указана', 9, $midGray, false);
         }
 
         // ══════════════════════════════════════════════════════════
@@ -963,7 +963,7 @@ class InvestmentProjectController extends Controller
 
         $yRight += max($actualImgH + 15, 180);
 
-        // ── ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ ─────────────────────────────
+        // ── ПОТРЕБНОСТЬ В ИНФРАСТРУКТУРЕ ─────────────────────────────
         $infrastructure = $project->infrastructure;
         $hasInfra = $infrastructure && is_array($infrastructure) &&
             collect($infrastructure)->contains(fn($v) => is_array($v) && ($v['needed'] ?? false));
@@ -971,14 +971,14 @@ class InvestmentProjectController extends Controller
         if ($hasInfra) {
             $infraHeader = $slide->createRichTextShape();
             $infraHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
-            $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ', 12, $blue, true);
+            $addText($infraHeader, 'ПОТРЕБНОСТЬ В ИНФРАСТРУКТУРЕ', 12, $blue, true);
             $yRight += 28;
 
             $infraItems = [
                 ['key' => 'gas',         'label' => 'Газ'],
-                ['key' => 'water',       'label' => 'Су'],
-                ['key' => 'electricity', 'label' => 'Электр қуаты'],
-                ['key' => 'land',        'label' => 'Жер телімі'],
+                ['key' => 'water',       'label' => 'Вода'],
+                ['key' => 'electricity', 'label' => 'Электричество'],
+                ['key' => 'land',        'label' => 'Земельный участок'],
             ];
 
             $colCount = count($infraItems);
@@ -1005,7 +1005,7 @@ class InvestmentProjectController extends Controller
                     ->setVertical(Alignment::VERTICAL_CENTER);
 
                 if ($isNeeded) {
-                    $addText($valueCell, ($val['capacity'] ?? '') ?: 'Қажет', 10, $darkGray, false);
+                    $addText($valueCell, ($val['capacity'] ?? '') ?: 'Требуется', 10, $darkGray, false);
                 } else {
                     $addText($valueCell, '—', 10, $midGray, false);
                 }
@@ -1041,7 +1041,7 @@ class InvestmentProjectController extends Controller
                     if ($remaining > 0) {
                         $moreShape = $slide->createRichTextShape();
                         $moreShape->setHeight(14)->setWidth($rightW - 10)->setOffsetX($rightX + 5)->setOffsetY($yRight);
-                        $addText($moreShape, "... тағы {$remaining} мәселе", $issueFontSize, $midGray, true);
+                        $addText($moreShape, "... ещё {$remaining} вопросов", $issueFontSize, $midGray, true);
                     }
                     break;
                 }
@@ -1068,7 +1068,7 @@ class InvestmentProjectController extends Controller
         } else {
             $noIssues = $slide->createRichTextShape();
             $noIssues->setHeight(16)->setWidth($rightW)->setOffsetX($rightX + 5)->setOffsetY($yRight);
-            $addText($noIssues, 'Проблемные вопросы жоқ', 9, $midGray, false);
+            $addText($noIssues, 'Нет проблемных вопросов', 9, $midGray, false);
         }
     }
 
@@ -1085,7 +1085,7 @@ class InvestmentProjectController extends Controller
 
         // Use the helper method
         if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
-            abort(403, 'Вам не разрешено участвовать в этом проекте.');
+            abort(403, 'У вас нет доступа к этому проекту.');
         }
     }
 }

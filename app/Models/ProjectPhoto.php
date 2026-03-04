@@ -32,7 +32,7 @@ class ProjectPhoto extends Model
         return $query->whereNull('gallery_date')->where('photo_type', 'gallery');
     }
 
-    // Область видимости для рендеров (болашақ суреттер)
+    // Область видимости для рендеров (будущий вид)
     public function scopeRenderPhotos($query)
     {
         return $query->where('photo_type', 'render');

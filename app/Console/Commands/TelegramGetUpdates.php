@@ -17,12 +17,12 @@ class TelegramGetUpdates extends Command
         $updates = $telegram->getUpdates();
 
         if (empty($updates)) {
-            $this->warn('Хабарламалар жоқ. Пайдаланушыларға ботқа /start жіберуін айтыңыз.');
+            $this->warn('Сообщений нет. Попросите пользователей отправить /start боту.');
 
             return self::SUCCESS;
         }
 
-        $this->info('Ботқа жазған пайдаланушылар:');
+        $this->info('Пользователи, написавшие боту:');
         $this->newLine();
 
         $seen = [];
@@ -49,13 +49,13 @@ class TelegramGetUpdates extends Command
             $text = $message['text'] ?? '';
 
             $this->line("  Chat ID:    <info>{$chatId}</info>");
-            $this->line("  Аты:        {$firstName} {$lastName}");
+            $this->line("  Имя:        {$firstName} {$lastName}");
             $this->line("  Username:   @{$username}");
-            $this->line("  Хабарлама:  {$text}");
+            $this->line("  Сообщение:  {$text}");
             $this->newLine();
         }
 
-        $this->info('Осы Chat ID-ларды пайдаланушыларға тіркеңіз.');
+        $this->info('Привяжите эти Chat ID к пользователям.');
 
         return self::SUCCESS;
     }

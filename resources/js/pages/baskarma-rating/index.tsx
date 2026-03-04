@@ -32,6 +32,7 @@ interface RatingItem {
 interface Props {
     districtRatings: RatingItem[];
     oblastRatings: RatingItem[];
+    allowedIds: number[] | null;
 }
 
 function StackedTaskBar({
@@ -116,10 +117,12 @@ function RatingTable({
     ratings,
     title,
     icon,
+    allowedIds,
 }: {
     ratings: RatingItem[];
     title: string;
     icon: React.ReactNode;
+    allowedIds?: number[] | null;
 }) {
     return (
         <Card className="rounded-xl border-gray-100 shadow-sm">
@@ -145,7 +148,7 @@ function RatingTable({
                                 <TableHead className="w-[72px]" />
                                 <TableHead>ФИО</TableHead>
                                 <TableHead>Телефон</TableHead>
-                                <TableHead>Басқарма</TableHead>
+                                <TableHead>Управление</TableHead>
                                 <TableHead className="text-center">
                                     Проекты
                                 </TableHead>
@@ -215,6 +218,7 @@ function RatingTable({
                                         <KpdBar kpd={item.kpd} />
                                     </TableCell>
                                     <TableCell>
+                                        {!allowedIds || allowedIds.includes(item.id) ? (
                                         <Link
                                             href={`/baskarma-rating/${item.id}`}
                                         >
@@ -226,6 +230,16 @@ function RatingTable({
                                                 <Eye className="h-4 w-4" />
                                             </Button>
                                         </Link>
+                                        ) : (
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                                            disabled
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -241,6 +255,7 @@ function RatingTable({
 export default function BaskarmaRating({
     districtRatings,
     oblastRatings,
+    allowedIds,
 }: Props) {
     const [tab, setTab] = useState<'district' | 'oblast'>('district');
 
@@ -305,12 +320,14 @@ export default function BaskarmaRating({
                             ratings={districtRatings}
                             title="Районные акиматы"
                             icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
+                            allowedIds={allowedIds}
                         />
                     ) : (
                         <RatingTable
                             ratings={oblastRatings}
                             title="Управления"
                             icon={<BarChart3 className="h-5 w-5 text-purple-600" />}
+                            allowedIds={allowedIds}
                         />
                     )}
                 </div>

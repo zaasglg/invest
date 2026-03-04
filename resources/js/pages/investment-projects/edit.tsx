@@ -446,9 +446,9 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                 <>
                                     {data.region_id && (
                                         <div className="mb-3">
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан басқармасы</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Районное управление</p>
                                             {districtUsers.length === 0 ? (
-                                                <p className="text-sm text-gray-400 ml-1">Аудандық басқарма жоқ</p>
+                                                <p className="text-sm text-gray-400 ml-1">Районное управление отсутствует</p>
                                             ) : (
                                                 <div className="space-y-2">
                                                     {districtUsers.map((user) => (
@@ -472,9 +472,9 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                         </div>
                                     )}
                                     <div className={data.region_id ? 'border-t border-gray-200 pt-3' : ''}>
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс басқармасы</p>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Областное управление</p>
                                         {oblastUsers.length === 0 ? (
-                                            <p className="text-sm text-gray-400 ml-1">Облыстық басқарма жоқ</p>
+                                            <p className="text-sm text-gray-400 ml-1">Областное управление отсутствует</p>
                                         ) : (
                                             <div className="space-y-2">
                                                 {oblastUsers.map((user) => (
@@ -587,7 +587,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                     });
                                                 }}
                                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
-                                                placeholder={`Көлемі (${item.unit})`}
+                                                placeholder={`Объём (${item.unit})`}
                                             />
                                             <span className="text-xs text-gray-400">{item.unit}</span>
                                         </div>

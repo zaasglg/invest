@@ -567,7 +567,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                     });
                                                 }}
                                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
-                                                placeholder={`Көлемі (${item.unit})`}
+                                                placeholder={`Объём (${item.unit})`}
                                             />
                                             <span className="text-xs text-gray-400">{item.unit}</span>
                                         </div>

@@ -132,7 +132,7 @@ export default function Create({ parents }: Props) {
                                 }
                             >
                                 <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                    <SelectValue placeholder="Таңдаңыз" />
+                                    <SelectValue placeholder="Выберите" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="district">
@@ -244,7 +244,7 @@ export default function Create({ parents }: Props) {
                             htmlFor="area"
                             className="font-normal text-gray-500"
                         >
-                            Аумағы (га)
+                            Площадь (га)
                         </Label>
                         <Input
                             id="area"

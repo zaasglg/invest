@@ -614,7 +614,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-100 p-3 rounded-lg z-[400] text-sm space-y-1.5">
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Аудан аймағы</span>
+                                        <span className="font-medium text-gray-600 text-xs">Район</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#8b5cf6' }}></div>

@@ -55,7 +55,7 @@ interface Props {
 
 function formatDate(dateStr?: string | null) {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('kk-KZ', {
+    return new Date(dateStr).toLocaleDateString('ru-RU', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',

@@ -202,7 +202,7 @@ export default function Edit({ region, parents }: Props) {
                                 }
                             >
                                 <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                    <SelectValue placeholder="Таңдаңыз" />
+                                    <SelectValue placeholder="Выберите" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="district">
@@ -326,7 +326,7 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="area"
                             className="font-normal text-gray-500"
                         >
-                            Аумағы (га)
+                            Площадь (га)
                         </Label>
                         <Input
                             id="area"
@@ -362,7 +362,7 @@ export default function Edit({ region, parents }: Props) {
                             )) && (
                             <span className="text-sm text-red-500">
                                 {errors.geometry ||
-                                    'Геолокация деректерінде қате бар. Нүктелерді қайта салыңыз.'}
+                                    'Ошибка в данных геолокации. Перерисуйте точки.'}
                             </span>
                         )}
                     </div>

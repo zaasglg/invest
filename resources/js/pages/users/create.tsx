@@ -106,7 +106,7 @@ export default function Create({ regions, roles }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="phone" className="text-gray-500 font-normal">Телефон нөмірі</Label>
+                        <Label htmlFor="phone" className="text-gray-500 font-normal">Номер телефона</Label>
                         <Input
                             id="phone"
                             value={data.phone}
@@ -175,10 +175,10 @@ export default function Create({ regions, roles }: Props) {
                         {errors.role_id && <span className="text-sm text-red-500">{errors.role_id}</span>}
                     </div>
 
-                    {/* Басқарма type selection */}
+                    {/* Выбор типа управления */}
                     {isBaskarma && (
                         <div className="flex flex-col gap-2">
-                            <Label className="text-gray-500 font-normal">Басқарма түрі</Label>
+                            <Label className="text-gray-500 font-normal">Тип управления</Label>
                             <Select
                                 value={data.baskarma_type}
                                 onValueChange={(value) => {
@@ -192,11 +192,11 @@ export default function Create({ regions, roles }: Props) {
                                 }}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Басқарма түрін таңдаңыз" />
+                                    <SelectValue placeholder="Выберите тип управления" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="oblast">Облыстық басқарма</SelectItem>
-                                    <SelectItem value="district">Аудандық басқарма</SelectItem>
+                                    <SelectItem value="oblast">Областное управление</SelectItem>
+                                    <SelectItem value="district">Районное управление</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.baskarma_type && <span className="text-sm text-red-500">{errors.baskarma_type}</span>}
@@ -212,7 +212,7 @@ export default function Create({ regions, roles }: Props) {
                                 value={data.position}
                                 onChange={(e) => setData('position', e.target.value)}
                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
-                                placeholder="Мысалы: Басқарма басшысы"
+                                placeholder="Например: Руководитель управления"
                             />
                             {errors.position && <span className="text-sm text-red-500">{errors.position}</span>}
                         </div>
@@ -230,7 +230,7 @@ export default function Create({ regions, roles }: Props) {
                                 }}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Облысты таңдаңыз" />
+                                    <SelectValue placeholder="Выберите область" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {oblasts.map((oblast) => (
@@ -243,14 +243,14 @@ export default function Create({ regions, roles }: Props) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Аудан / Қала</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Ауданды таңдаңыз" />
+                                    <SelectValue placeholder="Выберите район" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {districts.map((district) => (
@@ -260,7 +260,7 @@ export default function Create({ regions, roles }: Props) {
                                     ))}
                                     {selectedOblastId && districts.length === 0 && (
                                         <SelectItem value="none" disabled>
-                                            Аудандар жоқ
+                                            Районы отсутствуют
                                         </SelectItem>
                                     )}
                                 </SelectContent>
@@ -273,7 +273,7 @@ export default function Create({ regions, roles }: Props) {
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="telegram_chat_id" className="text-gray-500 font-normal">
                             Telegram Chat ID
-                            <span className="text-xs ml-2 text-gray-400">(міндетті емес)</span>
+                            <span className="text-xs ml-2 text-gray-400">(необязательно)</span>
                         </Label>
                         <Input
                             id="telegram_chat_id"
@@ -283,7 +283,7 @@ export default function Create({ regions, roles }: Props) {
                             placeholder="Мысалы: 123456789"
                         />
                         {errors.telegram_chat_id && <span className="text-sm text-red-500">{errors.telegram_chat_id}</span>}
-                        <p className="text-xs text-gray-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы керек</p>
+                        <p className="text-xs text-gray-400">Пользователь должен отправить /start боту и получить Chat ID</p>
                     </div>
 
                     <div className="flex items-center gap-4">

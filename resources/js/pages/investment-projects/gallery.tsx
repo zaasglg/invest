@@ -386,7 +386,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Eye className="h-5 w-5 text-purple-500" />
-                                        Болашақтағы көрінісі
+                                        Будущий вид
                                         <span className="text-sm font-normal text-gray-500 ml-2">
                                             ({renderPhotos.length})
                                         </span>
@@ -546,7 +546,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownl
                             href={`/investment-projects/${projectId}/gallery/${photo.id}/download`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center h-10 w-10 bg-white/90 hover:bg-white rounded-md transition-colors"
-                            title="Жүктеу"
+                            title="Скачать"
                         >
                             <Download className="h-4 w-4" />
                         </a>

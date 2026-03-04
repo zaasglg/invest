@@ -485,7 +485,7 @@ export default function Gallery({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Eye className="h-5 w-5 text-purple-500" />
-                                        Болашақтағы көрінісі
+                                        Будущий вид
                                         <span className="ml-2 text-sm font-normal text-gray-500">
                                             ({renderPhotos.length})
                                         </span>
