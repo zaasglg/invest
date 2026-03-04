@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -73,6 +74,7 @@ class UserController extends Controller
         }
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['email'] = Str::lower($validated['email']);
 
         User::create($validated);
 
@@ -133,6 +135,8 @@ class UserController extends Controller
         } else {
             unset($validated['password']);
         }
+
+        $validated['email'] = Str::lower($validated['email']);
 
         $user->update($validated);
 

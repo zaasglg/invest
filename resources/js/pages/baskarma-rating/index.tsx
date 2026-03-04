@@ -246,9 +246,9 @@ export default function BaskarmaRating({
 
     return (
             <AppLayout
-            breadcrumbs={[{ title: 'Рейтинг управлений', href: '' }]}
+            breadcrumbs={[{ title: 'Коэффициенты полезной деятельности', href: '' }]}
         >
-            <Head title="Рейтинг управлений" />
+            <Head title="Коэффициенты полезной деятельности" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}
@@ -258,7 +258,7 @@ export default function BaskarmaRating({
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                            Рейтинг управлений
+                            Коэффициенты полезной деятельности
                         </h1>
                         <p className="text-sm text-gray-500">
                             По результатам выполнения задач
@@ -280,7 +280,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Районные ({districtRatings.length})
+                                Районные акиматы ({districtRatings.length})
                             </button>
                             <button
                                 role="tab"
@@ -292,7 +292,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Областные ({oblastRatings.length})
+                                Управления ({oblastRatings.length})
                             </button>
                         </div>
                     </div>
@@ -303,13 +303,13 @@ export default function BaskarmaRating({
                     {tab === 'district' ? (
                         <RatingTable
                             ratings={districtRatings}
-                            title="Районные управления"
+                            title="Районные акиматы"
                             icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
                         />
                     ) : (
                         <RatingTable
                             ratings={oblastRatings}
-                            title="Областные управления"
+                            title="Управления"
                             icon={<BarChart3 className="h-5 w-5 text-purple-600" />}
                         />
                     )}

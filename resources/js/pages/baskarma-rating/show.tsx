@@ -201,8 +201,8 @@ export default function BaskarmaRatingShow({
                                 )}
                                 <Badge className="border-0 bg-blue-100 text-blue-700">
                                     {user.baskarma_type === 'oblast'
-                                        ? 'Областное управление'
-                                        : 'Районное управление'}
+                                        ? 'Управления'
+                                        : 'Районные акиматы'}
                                 </Badge>
                                 {user.region && (
                                     <span className="flex items-center gap-1">
