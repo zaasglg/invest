@@ -262,7 +262,7 @@ class InvestmentProjectController extends Controller
                     }
                 }
             ],
-            'total_investment' => 'nullable|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -540,7 +540,7 @@ class InvestmentProjectController extends Controller
                     }
                 }
             ],
-            'total_investment' => 'nullable|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
