@@ -131,6 +131,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
         formData.append('photo_type', photoType);
 
         router.post(`/investment-projects/${project.id}/gallery`, formData, {
+            preserveState: false,
             onSuccess: () => {
                 clearPhotos();
                 setIsUploading(false);

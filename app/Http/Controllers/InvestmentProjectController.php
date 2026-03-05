@@ -180,7 +180,6 @@ class InvestmentProjectController extends Controller
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
-        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             // Include user's district and its parent oblast
@@ -192,7 +191,6 @@ class InvestmentProjectController extends Controller
             $regionsQuery->whereIn('id', $regionIds);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
-            $subsoilQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -203,7 +201,6 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
-        $subsoilUsers = $subsoilQuery->get();
 
         return Inertia::render('investment-projects/create', [
             'regions' => $regions,
@@ -213,7 +210,6 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
-            'subsoilUsers' => $subsoilUsers,
         ]);
     }
 
@@ -255,10 +251,6 @@ class InvestmentProjectController extends Controller
                         if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
                             $fail("Индустриальный район ({$id}) не находится в вашем районе.");
                         }
-                    } elseif ($type === 'subsoil') {
-                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
-                        }
                     }
                 }
             ],
@@ -282,7 +274,6 @@ class InvestmentProjectController extends Controller
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
-        $subsoilIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -290,8 +281,6 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
-            } elseif ($parsed['type'] === 'subsoil') {
-                $subsoilIds[] = $parsed['id'];
             }
         }
 
@@ -308,7 +297,6 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $project->sezs()->sync($sezIds);
         $project->industrialZones()->sync($izIds);
-        $project->subsoilUsers()->sync($subsoilIds);
 
         return redirect()->route('investment-projects.index')->with('success', 'Проект создан.');
     }
@@ -432,18 +420,16 @@ class InvestmentProjectController extends Controller
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
-        $investmentProject->load(['sezs', 'industrialZones', 'subsoilUsers']);
+        $investmentProject->load(['sezs', 'industrialZones']);
 
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
-        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             $regionsQuery->where('id', $user->region_id);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
-            $subsoilQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -454,7 +440,6 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
-        $subsoilUsers = $subsoilQuery->get();
 
         // Формируем массив sector на основе many-to-many связей
         $sector = [];
@@ -467,11 +452,6 @@ class InvestmentProjectController extends Controller
         // Загружаем все связанные ИЗ
         foreach ($investmentProject->industrialZones as $iz) {
             $sector[] = "industrial_zone-{$iz->id}";
-        }
-        
-        // Загружаем всех недропользователей
-        foreach ($investmentProject->subsoilUsers as $su) {
-            $sector[] = "subsoil-{$su->id}";
         }
 
         $projectData = $investmentProject->load(['region', 'projectType', 'creator', 'executors', 'documents'])
@@ -489,7 +469,6 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
-            'subsoilUsers' => $subsoilUsers,
         ]);
     }
 
@@ -533,10 +512,6 @@ class InvestmentProjectController extends Controller
                         if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
                             $fail("Индустриальный район ({$id}) не находится в вашем районе.");
                         }
-                    } elseif ($type === 'subsoil') {
-                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
-                        }
                     }
                 }
             ],
@@ -554,11 +529,10 @@ class InvestmentProjectController extends Controller
             'infrastructure.land' => 'nullable|array',
         ]);
 
-        // Парсим массив sectors в формате ["sez-1", "industrial_zone-5", "subsoil-3"]
+        // Парсим массив sectors в формате ["sez-1", "industrial_zone-5"]
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
-        $subsoilIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -566,8 +540,6 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
-            } elseif ($parsed['type'] === 'subsoil') {
-                $subsoilIds[] = $parsed['id'];
             }
         }
 
@@ -582,14 +554,13 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $investmentProject->sezs()->sync($sezIds);
         $investmentProject->industrialZones()->sync($izIds);
-        $investmentProject->subsoilUsers()->sync($subsoilIds);
 
         return redirect()->route('investment-projects.index')->with('success', 'Проект обновлен.');
     }
 
     private function parseSector(string $sector): array
     {
-        // Формат: "sez-1", "industrial_zone-5", "subsoil-3"
+        // Формат: "sez-1", "industrial_zone-5"
         if (strpos($sector, '-') !== false) {
             [$type, $id] = explode('-', $sector, 2);
             return ['type' => $type, 'id' => (int)$id];
