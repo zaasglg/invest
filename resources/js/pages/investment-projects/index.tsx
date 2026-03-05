@@ -493,6 +493,9 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">По статусам</h3>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-[#0f1b3d]">
                             <span className="flex items-center gap-1.5">
+                                <span className="h-2 w-2 rounded-full bg-blue-500" /> Планирование: {stats.status_counts.plan}
+                            </span>
+                            <span className="flex items-center gap-1.5">
                                 <span className="h-2 w-2 rounded-full bg-emerald-500" /> Запущенный: {stats.status_counts.launched}
                             </span>
                             <span className="flex items-center gap-1.5">

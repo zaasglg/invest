@@ -57,7 +57,7 @@ class TelegramService
     /**
      * Format a notification message for Telegram.
      */
-    public function formatNotification(string $type, string $message): string
+    public function formatNotification(string $type, string $message, ?int $projectId = null): string
     {
         $emoji = match ($type) {
             'task_assigned' => '📋',
@@ -81,11 +81,17 @@ class TelegramService
             $siteUrl = 'https://' . ltrim($siteUrl, '/');
         }
 
-        // Build notifications URL only if we have a valid site URL.
-        $notificationsUrl = $siteUrl !== '' ? $siteUrl . '/notifications' : '';
+        // Build link to the specific project if available, otherwise to notifications page.
+        if ($siteUrl !== '' && $projectId) {
+            $targetUrl = $siteUrl . '/investment-projects/' . $projectId;
+        } elseif ($siteUrl !== '') {
+            $targetUrl = $siteUrl . '/notifications';
+        } else {
+            $targetUrl = '';
+        }
 
-        $linkPart = $notificationsUrl
-            ? "🔗 <a href=\"{$notificationsUrl}\">Перейти на сайт</a>"
+        $linkPart = $targetUrl
+            ? "🔗 <a href=\"{$targetUrl}\">Перейти на сайт</a>"
             : '🔗 Перейти на сайт';
 
         return "{$emoji} <b>Сообщение</b>\n\n"
