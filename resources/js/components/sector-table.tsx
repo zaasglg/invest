@@ -27,12 +27,12 @@ interface Props {
 const formatInvestment = (value: number) => {
     if (!value) return '0';
     if (value >= 1_000_000_000) {
-        return `${(value / 1_000_000_000).toFixed(1)} млрд тг`;
+        return `${(value / 1_000_000_000).toFixed(1)} млрд ₸`;
     }
     if (value >= 1_000_000) {
-        return `${(value / 1_000_000).toFixed(1)} млн тг`;
+        return `${(value / 1_000_000).toFixed(1)} млн ₸`;
     }
-    return `${value.toLocaleString('ru-RU')} тг`;
+    return `${value.toLocaleString('kk-KZ')} ₸`;
 };
 
 export default function SectorTable({
@@ -46,9 +46,9 @@ export default function SectorTable({
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
         { key: 'invest', label: 'Turkistan Invest', d: data.invest },
-        { key: 'sez', label: 'СЭЗ', d: data.sez },
-        { key: 'iz', label: 'ИЗ', d: data.iz },
-        { key: 'nedro', label: 'Недропользование', d: data.nedro },
+        { key: 'sez', label: 'АЭА', d: data.sez },
+        { key: 'iz', label: 'ИА', d: data.iz },
+        { key: 'nedro', label: 'Жер қойнауын пайдалану', d: data.nedro },
     ];
 
     const maxInvestment = Math.max(...rows.map((r) => r.d.investment));
@@ -63,16 +63,16 @@ export default function SectorTable({
                                 Сектор
                             </th>
                             <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
-                                Инвестиции
+                                Инвестициялар
                             </th>
                             <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
-                                Кол-во проектов
+                                Жобалар саны
                             </th>
                             <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
-                                Проблемные вопросы
+                                Проблемалық мәселелер
                             </th>
                             <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
-                                Организации
+                                Ұйымдар
                             </th>
                         </tr>
                     </thead>

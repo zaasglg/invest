@@ -75,7 +75,7 @@ class SubsoilPhotoController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Фотографии загружены.');
+        return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
 
     public function update(Request $request, SubsoilUser $subsoilUser, SubsoilPhoto $photo)
@@ -91,7 +91,7 @@ class SubsoilPhotoController extends Controller
 
         $photo->update($validated);
 
-        return redirect()->back()->with('success', 'Фото обновлено.');
+        return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
 
     public function destroy(SubsoilUser $subsoilUser, $photo)
@@ -105,6 +105,6 @@ class SubsoilPhotoController extends Controller
 
         $photoModel->delete();
 
-        return redirect()->back()->with('success', 'Фото удалено.');
+        return redirect()->back()->with('success', 'Фото жойылды.');
     }
 }

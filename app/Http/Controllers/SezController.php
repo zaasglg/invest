@@ -79,7 +79,7 @@ class SezController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только добавить СЭЗ в свой район.');
+                        $fail('АЭА-ны тек өз ауданыңызға қосуға болады.');
                     }
                 },
             ],
@@ -92,7 +92,7 @@ class SezController extends Controller
 
         Sez::create($validated);
 
-        return redirect()->route('sezs.index')->with('success', 'СЭЗ создана.');
+        return redirect()->route('sezs.index')->with('success', 'АЭА құрылды.');
     }
 
     public function show(Sez $sez)
@@ -145,7 +145,7 @@ class SezController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только изменить СЭЗ в своем районе.');
+                        $fail('АЭА-ны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },
             ],
@@ -158,13 +158,13 @@ class SezController extends Controller
 
         $sez->update($validated);
 
-        return redirect()->route('sezs.index')->with('success', 'СЭЗ обновлена.');
+        return redirect()->route('sezs.index')->with('success', 'АЭА жаңартылды.');
     }
 
     public function destroy(Sez $sez)
     {
         $sez->delete();
 
-        return redirect()->back()->with('success', 'СЭЗ удалена.');
+        return redirect()->back()->with('success', 'АЭА жойылды.');
     }
 }

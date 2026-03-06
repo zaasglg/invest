@@ -83,14 +83,14 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
             // Check individual file size
             const oversizedFile = files.find(f => f.size > MAX_FILE_SIZE);
             if (oversizedFile) {
-                setUploadError(`Файл "${oversizedFile.name}" слишком большой. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB на фото.`);
+                setUploadError(`"${oversizedFile.name}" файлы өте үлкен. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB әр фотоға.`);
                 return;
             }
 
             // Check total size
             const totalSize = files.reduce((sum, f) => sum + f.size, 0);
             if (totalSize > MAX_TOTAL_SIZE) {
-                setUploadError(`Общий размер файлов (${(totalSize / 1024 / 1024).toFixed(1)}MB) превышает лимит (${MAX_TOTAL_SIZE / 1024 / 1024}MB). Выберите меньше файлов или меньшего размера.`);
+                setUploadError(`Файлдардың жалпы көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдарды таңдаңыз.`);
                 return;
             }
 
@@ -143,14 +143,14 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
     };
 
     const handleDelete = (photoId: number) => {
-        if (confirm('Вы уверены, что хотите удалить это фото?')) {
+        if (confirm('Осы фотоны жоюға сенімдісіз бе?')) {
             router.delete(`/investment-projects/${project.id}/gallery/${photoId}`);
         }
     };
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ru-RU', {
+        return date.toLocaleDateString('kk-KZ', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -167,7 +167,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Проекты', href: '/investment-projects' },
+                { title: 'Жобалар', href: '/investment-projects' },
                 { title: project.name, href: `/investment-projects/${project.id}` },
                 { title: 'Галерея', href: '' },
             ]}
@@ -179,9 +179,9 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                 <div className="flex items-center justify-between">
                     <div>
                         <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] mb-2 transition-colors">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Назад к проекту
+                            <ArrowLeft className="h-4 w-4 mr-1" /> Жобаға қайту
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Галерея проекта</h1>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Жоба галереясы</h1>
                         <p className="text-sm text-gray-500 mt-1">{project.name}</p>
                     </div>
                 </div>
@@ -194,13 +194,13 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Upload className="h-5 w-5 text-gray-500" />
-                                    Загрузить фото
+                                    Фото жүктеу
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <form onSubmit={handleUpload} className="space-y-4">
                                     <div>
-                                        <Label className="block mb-2">Тип фото</Label>
+                                        <Label className="block mb-2">Фото түрі</Label>
                                         <div className="flex gap-2">
                                             <button
                                                 type="button"
@@ -222,18 +222,18 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                         : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
                                                 }`}
                                             >
-                                                Будущее
+                                                Болашақ
                                             </button>
                                         </div>
                                         <p className="text-xs text-gray-500 mt-1">
                                             {photoType === 'render'
-                                                ? 'Видение будущего проекции'
-                                                : 'Фотографии текущего состояния'}
+                                                ? 'Жобаның болашақ көрінісі'
+                                                : 'Ағымдағы жағдай фотолары'}
                                         </p>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="photos" className="block mb-2">Фотографии</Label>
+                                        <Label htmlFor="photos" className="block mb-2">Фотосуреттер</Label>
                                         <div className="relative">
                                             <Input
                                                 id="photos"
@@ -248,8 +248,8 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
                                             >
                                                 <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-                                                <span className="text-sm text-gray-600">Нажмите для выбора</span>
-                                                <span className="text-xs text-gray-400 mt-1">До 5MB на фото, максимум 45MB всего</span>
+                                                <span className="text-sm text-gray-600">Таңдау үшін басыңыз</span>
+                                                <span className="text-xs text-gray-400 mt-1">Әр фотоға 5MB дейін, барлығы 45MB</span>
                                             </label>
                                         </div>
 
@@ -265,13 +265,13 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                         {previewUrls.length > 0 && (
                                             <div className="mt-3 space-y-2">
                                                 <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-gray-600">Выбрано: {previewUrls.length}</span>
+                                                    <span className="text-gray-600">Таңдалды: {previewUrls.length}</span>
                                                     <button
                                                         type="button"
                                                         onClick={clearPhotos}
                                                         className="text-red-600 hover:text-red-700 text-xs"
                                                     >
-                                                        Очистить
+                                                        Тазалау
                                                     </button>
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-2">
@@ -297,7 +297,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="gallery_date" className="block mb-2">Дата галереи (опционально)</Label>
+                                        <Label htmlFor="gallery_date" className="block mb-2">Галерея күні (қосымша)</Label>
                                         <Input
                                             id="gallery_date"
                                             type="date"
@@ -308,18 +308,18 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                         />
                                         <p className="text-xs text-gray-500 mt-1">
                                             {galleryDate
-                                                ? 'Фото будут добавлены к этой дате'
-                                                : 'Автоматически установится сегодняшняя дата'}
+                                                ? 'Фотолар осы күнге қосылады'
+                                                : 'Бүгінгі күн автоматты түрде орнатылады'}
                                         </p>
                                     </div>
 
                                     <div>
-                                        <Label htmlFor="description" className="block mb-2">Описание (опционально)</Label>
+                                        <Label htmlFor="description" className="block mb-2">Сипаттама (қосымша)</Label>
                                         <Textarea
                                             id="description"
                                             value={description}
                                             onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="Краткое описание для всех загружаемых фото"
+                                            placeholder="Жүктелетін фотолар үшін қысқаша сипаттама"
                                             className="min-h-[80px] resize-none"
                                         />
                                     </div>
@@ -329,7 +329,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                         className="w-full"
                                         disabled={!photos || photos.length === 0 || isUploading}
                                     >
-                                        {isUploading ? 'Загрузка...' : `Загрузить ${photos?.length || 0} фото`}
+                                        {isUploading ? 'Жүктелуде...' : `${photos?.length || 0} фото жүктеу`}
                                     </Button>
                                 </form>
                             </CardContent>
@@ -345,7 +345,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <ImageIcon className="h-5 w-5 text-gray-500" />
-                                    Основная галерея
+                                    Негізгі галерея
                                     <span className="text-sm font-normal text-gray-500 ml-2">
                                         ({mainGallery.length})
                                     </span>
@@ -355,9 +355,9 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                 {mainGallery.length === 0 ? (
                                     <div className="text-center py-12">
                                         <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">Нет фотографий</p>
+                                        <p className="text-gray-500">Фотосуреттер жоқ</p>
                                         <p className="text-sm text-gray-400 mt-1">
-                                            Загрузите фотографии, оставив поле даты пустым
+                                            Күн өрісін бос қалдырып фотосуреттерді жүктеңіз
                                         </p>
                                     </div>
                                 ) : (
@@ -387,7 +387,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Eye className="h-5 w-5 text-purple-500" />
-                                        Будущий вид
+                                        Болашақ көрінісі
                                         <span className="text-sm font-normal text-gray-500 ml-2">
                                             ({renderPhotos.length})
                                         </span>
@@ -418,7 +418,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                             <div className="space-y-8">
                                 <h2 className="text-xl font-bold text-[#0f1b3d] flex items-center gap-2">
                                     <Calendar className="h-5 w-5" />
-                                    Ход реализации по датам
+                                    Күндер бойынша іске асыру барысы
                                 </h2>
                                 {Object.entries(sortedDatedGallery).map(([date, photos]) => (
                                     <Card key={date} className="shadow-none">
@@ -456,9 +456,9 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                 <CardContent className="py-12">
                                     <div className="text-center">
                                         <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">Нет фотографий</p>
+                                        <p className="text-gray-500">Фотосуреттер жоқ</p>
                                         <p className="text-sm text-gray-400 mt-1">
-                                            Загрузите фотографии через форму слева
+                                            Сол жақтағы пішін арқылы фотосуреттерді жүктеңіз
                                         </p>
                                     </div>
                                 </CardContent>
@@ -495,7 +495,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownl
 
     const formatDateTime = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ru-RU', {
+        return date.toLocaleDateString('kk-KZ', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',
@@ -511,7 +511,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownl
         >
             <img
                 src={`/storage/${photo.file_path}`}
-                alt={photo.description || 'Фото проекта'}
+                alt={photo.description || 'Жоба фотосы'}
                 className="w-full h-full object-cover"
             />
             {/* Date badge */}
@@ -547,7 +547,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownl
                             href={`/investment-projects/${projectId}/gallery/${photo.id}/download`}
                             onClick={(e) => e.stopPropagation()}
                             className="inline-flex items-center justify-center h-10 w-10 bg-white/90 hover:bg-white rounded-md transition-colors"
-                            title="Скачать"
+                            title="Жүктеу"
                         >
                             <Download className="h-4 w-4" />
                         </a>

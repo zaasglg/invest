@@ -32,7 +32,7 @@ class RoleController extends Controller
 
         Role::create($validated);
 
-        return redirect()->route('roles.index')->with('success', 'Роль создана.');
+        return redirect()->route('roles.index')->with('success', 'Рөл құрылды.');
     }
 
     public function edit(Role $role)
@@ -52,17 +52,17 @@ class RoleController extends Controller
 
         $role->update($validated);
 
-        return redirect()->route('roles.index')->with('success', 'Роль обновлена.');
+        return redirect()->route('roles.index')->with('success', 'Рөл жаңартылды.');
     }
 
     public function destroy(Role $role)
     {
         if ($role->users()->count() > 0) {
-            return redirect()->back()->with('error', 'Невозможно удалить роль, так как она назначена пользователям.');
+            return redirect()->back()->with('error', 'Рөлді жою мүмкін емес, себебі ол пайдаланушыларға тағайындалған.');
         }
 
         $role->delete();
 
-        return redirect()->back()->with('success', 'Роль удалена.');
+        return redirect()->back()->with('success', 'Рөл жойылды.');
     }
 }

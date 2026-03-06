@@ -91,10 +91,10 @@ class TelegramService
         }
 
         $linkPart = $targetUrl
-            ? "🔗 <a href=\"{$targetUrl}\">Перейти на сайт</a>"
-            : '🔗 Перейти на сайт';
+            ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"
+            : '🔗 Сайтқа өту';
 
-        return "{$emoji} <b>Сообщение</b>\n\n"
+        return "{$emoji} <b>Хабарлама</b>\n\n"
             . $message . "\n\n"
             . $linkPart;
     }

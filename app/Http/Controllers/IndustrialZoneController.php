@@ -79,7 +79,7 @@ class IndustrialZoneController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только добавить ИЗ в свой район.');
+                        $fail('ИА-ны тек өз ауданыңызға қосуға болады.');
                     }
                 },
             ],
@@ -92,7 +92,7 @@ class IndustrialZoneController extends Controller
 
         IndustrialZone::create($validated);
 
-        return redirect()->route('industrial-zones.index')->with('success', 'ИЗ создана.');
+        return redirect()->route('industrial-zones.index')->with('success', 'ИА құрылды.');
     }
 
     public function show(IndustrialZone $industrialZone)
@@ -138,7 +138,7 @@ class IndustrialZoneController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только изменить ИЗ в своем районе.');
+                        $fail('ИА-ны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },
             ],
@@ -151,13 +151,13 @@ class IndustrialZoneController extends Controller
 
         $industrialZone->update($validated);
 
-        return redirect()->route('industrial-zones.index')->with('success', 'ИЗ обновлена.');
+        return redirect()->route('industrial-zones.index')->with('success', 'ИА жаңартылды.');
     }
 
     public function destroy(IndustrialZone $industrialZone)
     {
         $industrialZone->delete();
 
-        return redirect()->back()->with('success', 'ИЗ удалена.');
+        return redirect()->back()->with('success', 'ИА жойылды.');
     }
 }

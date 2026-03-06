@@ -23,14 +23,14 @@ export default function DeleteUser() {
         <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
             <Heading
                 variant="small"
-                title="Удаление аккаунта"
-                description="Удалите ваш аккаунт и все связанные данные"
+                title="Аккаунтты жою"
+                description="Аккаунтыңызды және барлық байланысты деректерді жойыңыз"
             />
             <div className="mt-4 space-y-4 rounded-lg border border-red-100 bg-red-50 p-4">
                 <div className="relative space-y-0.5 text-red-600">
-                    <p className="font-medium">Внимание</p>
+                    <p className="font-medium">Абай болыңыз</p>
                     <p className="text-sm">
-                        Пожалуйста, будьте осторожны — это действие необратимо.
+                        Абай болыңыз — бұл әрекет қайтарылмайды.
                     </p>
                 </div>
 
@@ -40,17 +40,17 @@ export default function DeleteUser() {
                             variant="destructive"
                             data-test="delete-user-button"
                         >
-                            Удалить аккаунт
+                            Аккаунтты жою
                         </Button>
                     </DialogTrigger>
                     <DialogContent>
                         <DialogTitle>
-                            Вы уверены, что хотите удалить аккаунт?
+                            Аккаунтты жоюға сенімдісіз бе?
                         </DialogTitle>
                         <DialogDescription>
-                            После удаления аккаунта все ваши данные будут
-                            безвозвратно удалены. Введите пароль, чтобы
-                            подтвердить удаление аккаунта.
+                            Аккаунт жойылғаннан кейін барлық деректеріңіз
+                            қайтарылмастай жойылады. Аккаунтты жоюды
+                            растау үшін құпия сөзді енгізіңіз.
                         </DialogDescription>
 
                         <Form
@@ -69,7 +69,7 @@ export default function DeleteUser() {
                                             htmlFor="password"
                                             className="sr-only"
                                         >
-                                            Пароль
+                                            Құпия сөз
                                         </Label>
 
                                         <Input
@@ -77,7 +77,7 @@ export default function DeleteUser() {
                                             type="password"
                                             name="password"
                                             ref={passwordInput}
-                                            placeholder="Введите пароль"
+                                            placeholder="Құпия сөзді енгізіңіз"
                                             autoComplete="current-password"
                                         />
 
@@ -92,7 +92,7 @@ export default function DeleteUser() {
                                                     resetAndClearErrors()
                                                 }
                                             >
-                                                Отмена
+                                                Болдырмау
                                             </Button>
                                         </DialogClose>
 
@@ -105,7 +105,7 @@ export default function DeleteUser() {
                                                 type="submit"
                                                 data-test="confirm-delete-user-button"
                                             >
-                                                Удалить аккаунт
+                                                Аккаунтты жою
                                             </button>
                                         </Button>
                                     </DialogFooter>

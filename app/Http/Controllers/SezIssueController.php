@@ -31,7 +31,7 @@ class SezIssueController extends Controller
 
         $sez->issues()->create($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос добавлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
 
     public function update(Request $request, Sez $sez, SezIssue $issue)
@@ -46,13 +46,13 @@ class SezIssueController extends Controller
 
         $issue->update($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос обновлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
 
     public function destroy(Sez $sez, SezIssue $issue)
     {
         $issue->delete();
 
-        return redirect()->back()->with('success', 'Проблемный вопрос удален.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }
 }

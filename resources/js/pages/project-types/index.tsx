@@ -28,20 +28,20 @@ interface Props {
 
 export default function Index({ types }: Props) {
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены?')) {
+        if (confirm('Сенімдісіз бе?')) {
             router.delete(projectTypes.destroy.url(id));
         }
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Типы проектов', href: projectTypes.index.url() }]}>
-            <Head title="Типы проектов" />
+        <AppLayout breadcrumbs={[{ title: 'Жоба түрлері', href: projectTypes.index.url() }]}>
+            <Head title="Жоба түрлері" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">Типы проектов</h1>
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">Жоба түрлері</h1>
                     <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                        <Link href={projectTypes.create.url()}>Создать новый</Link>
+                        <Link href={projectTypes.create.url()}>Жаңа қосу</Link>
                     </Button>
                 </div>
 
@@ -50,8 +50,8 @@ export default function Index({ types }: Props) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[80px]">ID</TableHead>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead className="text-right">Действия</TableHead>
+                                <TableHead>Атауы</TableHead>
+                                <TableHead className="text-right">Әрекеттер</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -74,7 +74,7 @@ export default function Index({ types }: Props) {
                             {types.data.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={3} className="py-12 text-center text-gray-400">
-                                        Нет данных. Создайте первый тип проекта.
+                                        Мәлімет жоқ. Бірінші жоба түрін құрыңыз.
                                     </TableCell>
                                 </TableRow>
                             )}

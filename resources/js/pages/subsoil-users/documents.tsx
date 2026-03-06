@@ -91,7 +91,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
     };
 
     const handleDelete = (documentId: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот документ?')) {
+        if (confirm('Бұл құжатты жоюға сенімдісіз бе?')) {
             router.delete(
                 `/subsoil-users/${subsoilUser.id}/documents/${documentId}`,
             );
@@ -149,17 +149,17 @@ export default function Documents({ subsoilUser, documents }: Props) {
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Недропользователи',
+                    title: 'Жер қойнауын пайдаланушылар',
                     href: '/subsoil-users',
                 },
                 {
                     title: subsoilUser.name,
                     href: `/subsoil-users/${subsoilUser.id}`,
                 },
-                { title: 'Документы', href: '' },
+                { title: 'Құжаттар', href: '' },
             ]}
         >
-            <Head title={`Документы - ${subsoilUser.name}`} />
+            <Head title={`Құжаттар - ${subsoilUser.name}`} />
 
             <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-6 p-6">
                 {/* Header */}
@@ -169,10 +169,10 @@ export default function Documents({ subsoilUser, documents }: Props) {
                             href={`/subsoil-users/${subsoilUser.id}`}
                             className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                         >
-                            <ArrowLeft className="mr-1 h-4 w-4" /> Назад
+                            <ArrowLeft className="mr-1 h-4 w-4" /> Артқа
                         </Link>
                         <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
-                            Документы
+                            Құжаттар
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
                             {subsoilUser.name}
@@ -188,7 +188,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Upload className="h-5 w-5 text-gray-500" />
-                                        Загрузить документ
+                                        Құжатты жүктеу
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -209,7 +209,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                             />
                                             {file && (
                                                 <p className="mt-1 text-xs text-gray-500">
-                                                    Выбрано: {file.name} (
+                                                    Таңдалды: {file.name} (
                                                     {formatFileSize(
                                                         file.size,
                                                     )}
@@ -220,7 +220,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
 
                                         <div>
                                             <Label htmlFor="name">
-                                                Название документа
+                                                Құжат атауы
                                             </Label>
                                             <Input
                                                 id="name"
@@ -231,7 +231,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Введите название"
+                                                placeholder="Атауын енгізіңіз"
                                                 className="mt-1"
                                                 required
                                             />
@@ -239,7 +239,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
 
                                         <div>
                                             <Label htmlFor="type">
-                                                Тип документа (опционально)
+                                                Құжат түрі (қосымша)
                                             </Label>
                                             <Input
                                                 id="type"
@@ -250,7 +250,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Например: лицензия, отчет"
+                                                placeholder="Мысалы: лицензия, есеп"
                                                 className="mt-1"
                                             />
                                         </div>
@@ -265,8 +265,8 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                             }
                                         >
                                             {isUploading
-                                                ? 'Загрузка...'
-                                                : 'Загрузить'}
+                                                ? 'Жүктелуде...'
+                                                : 'Жүктеу'}
                                         </Button>
                                     </form>
                                 </CardContent>
@@ -276,17 +276,17 @@ export default function Documents({ subsoilUser, documents }: Props) {
                             <Card className="mt-4 shadow-none">
                                 <CardHeader>
                                     <CardTitle className="text-sm font-medium text-gray-500">
-                                        Информация
+                                        Ақпарат
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="space-y-2 text-sm">
                                     <div>
                                         <span className="text-gray-500">
-                                            Регион:
+                                            Аймақ:
                                         </span>{' '}
                                         <span className="font-medium">
                                             {subsoilUser.region?.name ||
-                                                'Не указан'}
+                                                'Көрсетілмеген'}
                                         </span>
                                     </div>
                                 </CardContent>
@@ -306,7 +306,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <FileText className="h-5 w-5 text-gray-500" />
-                                    Загруженные документы
+                                    Жүктелген құжаттар
                                     <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({documents.length})
                                     </span>
@@ -317,11 +317,11 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                     <div className="py-12 text-center">
                                         <FileText className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                         <p className="text-gray-500">
-                                            Нет загруженных документов
+                                            Жүктелген құжаттар жоқ
                                         </p>
                                         <p className="mt-1 text-sm text-gray-400">
-                                            Загрузите первый документ,
-                                            используя форму слева
+                                            Сол жақтағы пішінді пайдаланып бірінші
+                                            құжатты жүктеңіз
                                         </p>
                                     </div>
                                 ) : (
@@ -342,7 +342,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                                         {new Date(
                                                             document.created_at,
                                                         ).toLocaleDateString(
-                                                            'ru-RU',
+                                                            'kk-KZ',
                                                         )}
                                                     </p>
                                                 </div>
@@ -352,7 +352,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                        title="Скачать"
+                                                        title="Жүктеу"
                                                     >
                                                         <Download className="h-4 w-4" />
                                                     </a>

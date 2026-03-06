@@ -19,7 +19,7 @@ type Props = {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Двухфакторная аутентификация',
+        title: 'Екі факторлы аутентификация',
         href: show.url(),
     },
 ];
@@ -42,16 +42,16 @@ export default function TwoFactor({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Двухфакторная аутентификация" />
+            <Head title="Екі факторлы аутентификация" />
 
-            <h1 className="sr-only">Двухфакторная аутентификация</h1>
+            <h1 className="sr-only">Екі факторлы аутентификация</h1>
 
             <SettingsLayout>
                 <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Двухфакторная аутентификация"
-                        description="Управление настройками двухфакторной аутентификации"
+                        title="Екі факторлы аутентификация"
+                        description="Екі факторлы аутентификация баптауларын басқару"
                     />
                     {twoFactorEnabled ? (
                         <div className="mt-4 flex flex-col items-start space-y-4">
@@ -59,12 +59,12 @@ export default function TwoFactor({
                                 variant="default"
                                 className="bg-emerald-100 text-emerald-800"
                             >
-                                Включено
+                                Қосылған
                             </Badge>
                             <p className="text-sm text-gray-500">
-                                Двухфакторная аутентификация включена. При входе
-                                в систему вам потребуется ввести одноразовый код
-                                из приложения-аутентификатора на вашем телефоне.
+                                Екі факторлы аутентификация қосылған. Жүйеге кіргенде
+                                телефоныңыздағы аутентификация қолданбасынан
+                                бір жолғы код енгізу қажет болады.
                             </p>
 
                             <TwoFactorRecoveryCodes
@@ -81,7 +81,7 @@ export default function TwoFactor({
                                             type="submit"
                                             disabled={processing}
                                         >
-                                            <ShieldBan /> Отключить 2FA
+                                            <ShieldBan /> 2FA өшіру
                                         </Button>
                                     )}
                                 </Form>
@@ -93,12 +93,12 @@ export default function TwoFactor({
                                 variant="destructive"
                                 className="bg-red-100 text-red-800"
                             >
-                                Отключено
+                                Өшірілген
                             </Badge>
                             <p className="text-sm text-gray-500">
-                                Когда вы включите двухфакторную аутентификацию,
-                                при входе в систему вам потребуется ввести
-                                одноразовый код из приложения на телефоне.
+                                Екі факторлы аутентификацияны қосқанда,
+                                жүйеге кіргенде телефоныңыздағы қолданбадан
+                                бір жолғы код енгізу қажет болады.
                             </p>
 
                             <div>
@@ -108,7 +108,7 @@ export default function TwoFactor({
                                         className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
                                         <ShieldCheck />
-                                        Продолжить настройку
+                                        Баптауды жалғастыру
                                     </Button>
                                 ) : (
                                     <Form
@@ -124,7 +124,7 @@ export default function TwoFactor({
                                                 className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                             >
                                                 <ShieldCheck />
-                                                Включить 2FA
+                                                2FA қосу
                                             </Button>
                                         )}
                                     </Form>

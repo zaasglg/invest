@@ -29,7 +29,7 @@ class SubsoilIssueController extends Controller
 
         $subsoilUser->issues()->create($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос добавлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
 
     public function update(Request $request, SubsoilUser $subsoilUser, SubsoilIssue $issue)
@@ -42,13 +42,13 @@ class SubsoilIssueController extends Controller
 
         $issue->update($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос обновлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
 
     public function destroy(SubsoilUser $subsoilUser, SubsoilIssue $issue)
     {
         $issue->delete();
 
-        return redirect()->back()->with('success', 'Проблемный вопрос удален.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }
 }

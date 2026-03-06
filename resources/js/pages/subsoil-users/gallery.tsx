@@ -95,7 +95,7 @@ export default function Gallery({
             const oversizedFile = files.find((f) => f.size > MAX_FILE_SIZE);
             if (oversizedFile) {
                 setUploadError(
-                    `Файл "${oversizedFile.name}" слишком большой. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB на фото.`,
+                    `Файл "${oversizedFile.name}" өте үлкен. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB бір фотоға.`,
                 );
                 return;
             }
@@ -103,7 +103,7 @@ export default function Gallery({
             const totalSize = files.reduce((sum, f) => sum + f.size, 0);
             if (totalSize > MAX_TOTAL_SIZE) {
                 setUploadError(
-                    `Общий размер файлов (${(totalSize / 1024 / 1024).toFixed(1)}MB) превышает лимит (${MAX_TOTAL_SIZE / 1024 / 1024}MB).`,
+                    `Файлдардың жалпы өлшемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_TOTAL_SIZE / 1024 / 1024}MB).`,
                 );
                 return;
             }
@@ -157,7 +157,7 @@ export default function Gallery({
     };
 
     const handleDelete = (photoId: number) => {
-        if (confirm('Вы уверены, что хотите удалить это фото?')) {
+        if (confirm('Бұл фотоны жоюға сенімдісіз бе?')) {
             router.delete(
                 `/subsoil-users/${subsoilUser.id}/gallery/${photoId}`,
             );
@@ -166,7 +166,7 @@ export default function Gallery({
 
     const formatDate = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ru-RU', {
+        return date.toLocaleDateString('kk-KZ', {
             day: 'numeric',
             month: 'long',
             year: 'numeric',
@@ -190,7 +190,7 @@ export default function Gallery({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Недропользователи',
+                    title: 'Жер қойнауын пайдаланушылар',
                     href: '/subsoil-users',
                 },
                 {
@@ -210,7 +210,7 @@ export default function Gallery({
                             href={`/subsoil-users/${subsoilUser.id}`}
                             className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                         >
-                            <ArrowLeft className="mr-1 h-4 w-4" /> Назад
+                            <ArrowLeft className="mr-1 h-4 w-4" /> Артқа
                         </Link>
                         <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
                             Галерея
@@ -229,7 +229,7 @@ export default function Gallery({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Upload className="h-5 w-5 text-gray-500" />
-                                        Загрузить фото
+                                        Фото жүктеу
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -239,7 +239,7 @@ export default function Gallery({
                                     >
                                         <div>
                                             <Label className="mb-2 block">
-                                                Тип фото
+                                                Фото түрі
                                             </Label>
                                             <div className="flex gap-2">
                                                 <button
@@ -266,7 +266,7 @@ export default function Gallery({
                                                             : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
                                                     }`}
                                                 >
-                                                    Будущее
+                                                    Болашақ
                                                 </button>
                                             </div>
                                         </div>
@@ -276,7 +276,7 @@ export default function Gallery({
                                                 htmlFor="photos"
                                                 className="mb-2 block"
                                             >
-                                                Фотографии
+                                                Фотосуреттер
                                             </Label>
                                             <div className="relative">
                                                 <Input
@@ -295,10 +295,10 @@ export default function Gallery({
                                                 >
                                                     <ImageIcon className="mb-2 h-8 w-8 text-gray-400" />
                                                     <span className="text-sm text-gray-600">
-                                                        Нажмите для выбора
+                                                        Таңдау үшін басыңыз
                                                     </span>
                                                     <span className="mt-1 text-xs text-gray-400">
-                                                        До 5MB на фото
+                                                        Бір фотоға 5MB дейін
                                                     </span>
                                                 </label>
                                             </div>
@@ -316,7 +316,7 @@ export default function Gallery({
                                                 <div className="mt-3 space-y-2">
                                                     <div className="flex items-center justify-between text-sm">
                                                         <span className="text-gray-600">
-                                                            Выбрано:{' '}
+                                                            Таңдалды:{' '}
                                                             {
                                                                 previewUrls.length
                                                             }
@@ -328,7 +328,7 @@ export default function Gallery({
                                                             }
                                                             className="text-xs text-red-600 hover:text-red-700"
                                                         >
-                                                            Очистить
+                                                            Тазалау
                                                         </button>
                                                     </div>
                                                     <div className="grid grid-cols-3 gap-2">
@@ -372,7 +372,7 @@ export default function Gallery({
                                                 htmlFor="gallery_date"
                                                 className="mb-2 block"
                                             >
-                                                Дата галереи (опционально)
+                                                Галерея күні (қосымша)
                                             </Label>
                                             <Input
                                                 id="gallery_date"
@@ -390,8 +390,8 @@ export default function Gallery({
                                             />
                                             <p className="mt-1 text-xs text-gray-500">
                                                 {galleryDate
-                                                    ? 'Фото будут добавлены к этой дате'
-                                                    : 'Оставьте пустым для основной галереи'}
+                                                    ? 'Фото осы күнге қосылады'
+                                                    : 'Негізгі галерея үшін бос қалдырыңыз'}
                                             </p>
                                         </div>
 
@@ -400,7 +400,7 @@ export default function Gallery({
                                                 htmlFor="description"
                                                 className="mb-2 block"
                                             >
-                                                Описание (опционально)
+                                                Сипаттама (қосымша)
                                             </Label>
                                             <Textarea
                                                 id="description"
@@ -410,7 +410,7 @@ export default function Gallery({
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Краткое описание"
+                                                placeholder="Қысқаша сипаттама"
                                                 className="min-h-[80px] resize-none"
                                             />
                                         </div>
@@ -425,8 +425,8 @@ export default function Gallery({
                                             }
                                         >
                                             {isUploading
-                                                ? 'Загрузка...'
-                                                : `Загрузить ${photos?.length || 0} фото`}
+                                                ? 'Жүктелуде...'
+                                                : `Жүктеу ${photos?.length || 0} фото`}
                                         </Button>
                                     </form>
                                 </CardContent>
@@ -447,7 +447,7 @@ export default function Gallery({
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <ImageIcon className="h-5 w-5 text-gray-500" />
-                                    Основная галерея
+                                    Негізгі галерея
                                     <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({mainGallery.length})
                                     </span>
@@ -458,7 +458,7 @@ export default function Gallery({
                                     <div className="py-12 text-center">
                                         <ImageIcon className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                         <p className="text-gray-500">
-                                            Нет фотографий
+                                            Фотосуреттер жоқ
                                         </p>
                                     </div>
                                 ) : (
@@ -485,7 +485,7 @@ export default function Gallery({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Eye className="h-5 w-5 text-purple-500" />
-                                        Будущий вид
+                                        Болашақ көрінісі
                                         <span className="ml-2 text-sm font-normal text-gray-500">
                                             ({renderPhotos.length})
                                         </span>
@@ -514,7 +514,7 @@ export default function Gallery({
                             <div className="space-y-8">
                                 <h2 className="flex items-center gap-2 text-xl font-bold text-[#0f1b3d]">
                                     <Calendar className="h-5 w-5" />
-                                    Ход реализации по датам
+                                    Күндер бойынша іске асыру барысы
                                 </h2>
                                 {Object.entries(sortedDatedGallery).map(
                                     ([date, photos]) => (
@@ -595,7 +595,7 @@ function PhotoCard({
 
     const formatDateTime = (dateStr: string) => {
         const date = new Date(dateStr);
-        return date.toLocaleDateString('ru-RU', {
+        return date.toLocaleDateString('kk-KZ', {
             day: 'numeric',
             month: 'short',
             year: 'numeric',

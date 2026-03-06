@@ -84,19 +84,19 @@ export default function Show({
         { label: string; color: string }
     > = {
         active: {
-            label: 'Активная',
+            label: 'Белсенді',
             color: 'bg-green-100 text-green-800',
         },
         expired: {
-            label: 'Истекла',
+            label: 'Мерзімі өткен',
             color: 'bg-gray-100 text-gray-800',
         },
         suspended: {
-            label: 'Приостановлена',
+            label: 'Тоқтатылған',
             color: 'bg-amber-100 text-amber-800',
         },
         illegal: {
-            label: 'Нелегально',
+            label: 'Заңсыз',
             color: 'bg-red-600 text-white',
         },
     };
@@ -107,7 +107,7 @@ export default function Show({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Недропользователи',
+                    title: 'Жер қойнауын пайдаланушылар',
                     href: `/regions/${subsoilUser.region_id}`,
                 },
                 { title: subsoilUser.name, href: '' },
@@ -121,8 +121,8 @@ export default function Show({
                     href={`/regions/${subsoilUser.region_id}`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Назад к
-                    списку
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге
+                    қайту
                 </Link>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -167,36 +167,36 @@ export default function Show({
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Район
+                                                Аудан
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.region?.name ||
-                                                    'Не указан'}
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <FileText className="h-3.5 w-3.5" />{' '}
-                                                БИН
+                                                БСН
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {subsoilUser.bin || 'Не указан'}
+                                                {subsoilUser.bin || 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Layers className="h-3.5 w-3.5" />{' '}
-                                                Полезное ископаемое
+                                                Пайдалы қазба
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.mineral_type ||
-                                                    'Не указано'}
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Activity className="h-3.5 w-3.5" />{' '}
-                                                Статус лицензии
+                                                Лицензия күйі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.license_status
@@ -205,13 +205,13 @@ export default function Show({
                                                               .license_status
                                                       ]?.label ||
                                                       subsoilUser.license_status
-                                                    : 'Не указан'}
+                                                    : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Площадь участка
+                                                Телім аумағы
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.total_area !=
@@ -219,14 +219,14 @@ export default function Show({
                                                 Number(
                                                     subsoilUser.total_area,
                                                 ) > 0
-                                                    ? `${Number(subsoilUser.total_area).toLocaleString('ru-RU')} га`
-                                                    : 'Не указана'}
+                                                    ? `${Number(subsoilUser.total_area).toLocaleString('kk-KZ')} га`
+                                                    : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Calendar className="h-3.5 w-3.5" />{' '}
-                                                Срок лицензии
+                                                Лицензия мерзімі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.license_start
@@ -254,7 +254,7 @@ export default function Show({
                                 </h2>
                                 <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
                                     {subsoilUser.description ||
-                                        'Описание отсутствует.'}
+                                        'Сипаттама жоқ.'}
                                 </p>
                             </div>
                         </Card>
@@ -268,7 +268,7 @@ export default function Show({
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Eye className="h-5 w-5 text-gray-500" />
-                                        Видение будущего
+                                        Болашақ көрінісі
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
@@ -292,7 +292,7 @@ export default function Show({
                                             className="w-full justify-start"
                                         >
                                             <Activity className="mr-2 h-4 w-4" />{' '}
-                                            Редактировать
+                                            Өңдеу
                                         </Button>
                                     </Link>
                                 )}
@@ -305,7 +305,7 @@ export default function Show({
                                         className="w-full justify-start"
                                     >
                                         <FileText className="mr-2 h-4 w-4" />
-                                        Документы
+                                        Құжаттар
                                         {subsoilUser.documents &&
                                             subsoilUser.documents.length >
                                                 0 && (
@@ -344,7 +344,7 @@ export default function Show({
                                         className="w-full justify-start"
                                     >
                                         <AlertTriangle className="mr-2 h-4 w-4" />
-                                        Проблемные вопросы
+                                        Проблемалық мәселелер
                                         {issues.length > 0 && (
                                             <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
                                                 {issues.length}
@@ -361,7 +361,7 @@ export default function Show({
                                         className="w-full justify-start"
                                     >
                                         <Layers className="mr-2 h-4 w-4" />{' '}
-                                        Перейти к району
+                                        Ауданға өту
                                     </Button>
                                 </Link>
                                 <a
@@ -370,7 +370,7 @@ export default function Show({
                                 >
                                     <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]">
                                         <Download className="mr-2 h-4 w-4" />
-                                        Скачать паспорт объекта
+                                        Объект паспортын жүктеу
                                     </Button>
                                 </a>
                             </CardContent>

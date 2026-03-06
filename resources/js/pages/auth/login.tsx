@@ -22,10 +22,10 @@ export default function Login({
 }: Props) {
     return (
         <AuthLayout
-            title="Войдите в свой аккаунт"
-            description="Введите email и пароль для входа"
+            title="Аккаунтыңызға кіріңіз"
+            description="Кіру үшін email мен құпия сөзді енгізіңіз"
         >
-            <Head title="Вход" />
+            <Head title="Кіру" />
 
             <Form
                 {...store.form()}
@@ -37,7 +37,7 @@ export default function Login({
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="email" className="text-white/80">
-                                    Email адрес
+                                    Email мекенжайы
                                 </Label>
                                 <Input
                                     id="email"
@@ -56,7 +56,7 @@ export default function Login({
                             <div className="grid gap-2">
                                 <div className="flex items-center">
                                     <Label htmlFor="password" className="text-white/80">
-                                        Пароль
+                                        Құпия сөз
                                     </Label>
                                     {canResetPassword && (
                                         <TextLink
@@ -64,7 +64,7 @@ export default function Login({
                                             className="ml-auto text-sm text-[#c8a44e]/80 hover:text-[#c8a44e]"
                                             tabIndex={5}
                                         >
-                                            Забыли пароль?
+                                            Құпия сөзді ұмыттыңыз ба?
                                         </TextLink>
                                     )}
                                 </div>
@@ -75,7 +75,7 @@ export default function Login({
                                     required
                                     tabIndex={2}
                                     autoComplete="current-password"
-                                    placeholder="Пароль"
+                                    placeholder="Құпия сөз"
                                     className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#c8a44e]/50 focus-visible:ring-[#c8a44e]/20"
                                 />
                                 <InputError message={errors.password} />
@@ -89,7 +89,7 @@ export default function Login({
                                     className="border-white/20 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
                                 />
                                 <Label htmlFor="remember" className="text-white/60">
-                                    Запомнить меня
+                                    Мені есте сақтау
                                 </Label>
                             </div>
 
@@ -101,7 +101,7 @@ export default function Login({
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
-                                Войти
+                                Кіру
                             </Button>
                         </div>
 

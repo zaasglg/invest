@@ -71,11 +71,11 @@ class ProjectPhotoController extends Controller
         $user = Auth::user();
 
         if (! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'У вас нет доступа к фотографиям этого проекта.');
+            abort(403, 'Сіздің бұл жобаның фотосуреттеріне қол жеткізуіңіз жоқ.');
         }
 
         if (! Storage::disk('public')->exists($photo->file_path)) {
-            abort(404, 'Файл не найден.');
+            abort(404, 'Файл табылмады.');
         }
 
         return Storage::disk('public')->download($photo->file_path);
@@ -107,7 +107,7 @@ class ProjectPhotoController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Фотографии загружены.');
+        return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
 
     public function update(Request $request, InvestmentProject $investmentProject, ProjectPhoto $photo)
@@ -123,7 +123,7 @@ class ProjectPhotoController extends Controller
 
         $photo->update($validated);
 
-        return redirect()->back()->with('success', 'Фото обновлено.');
+        return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
 
     public function destroy(Request $request, InvestmentProject $investmentProject, $photo)
@@ -140,6 +140,6 @@ class ProjectPhotoController extends Controller
         // Delete photo record
         $photoModel->delete();
 
-        return redirect()->back()->with('success', 'Фото удалено.');
+        return redirect()->back()->with('success', 'Фото жойылды.');
     }
 }

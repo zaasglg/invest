@@ -170,7 +170,7 @@ export function FilterPanel({
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-[#0f1b3d]/5 text-[10px] font-bold text-[#0f1b3d]">
                         F
                     </span>
-                    Фильтры
+                    Сүзгілер
                 </span>
                 <ChevronDown
                     className={cn(
@@ -216,7 +216,7 @@ export function DataCard({
 /** Placeholder for empty data. */
 export function EmptyState({
     icon,
-    title = 'Нет данных',
+    title = 'Деректер жоқ',
     description,
     action,
 }: {

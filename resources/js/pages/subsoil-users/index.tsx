@@ -63,10 +63,10 @@ interface Props {
 const getStatusLabel = (
     status: SubsoilUser['license_status'],
 ) => {
-    if (status === 'active') return 'Активна';
-    if (status === 'expired') return 'Истекла';
-    if (status === 'illegal') return 'Нелегально';
-    return 'Приостановлена';
+    if (status === 'active') return 'Белсенді';
+    if (status === 'expired') return 'Мерзімі өткен';
+    if (status === 'illegal') return 'Заңсыз';
+    return 'Тоқтатылған';
 };
 
 const getStatusColor = (
@@ -106,7 +106,7 @@ export default function Index({
     );
 
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены?')) {
+        if (confirm('Сенімдісіз бе?')) {
             router.delete(subsoilUsersRoutes.destroy.url(id));
         }
     };
@@ -128,23 +128,23 @@ export default function Index({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Недропользование',
+                    title: 'Жер қойнауын пайдалану',
                     href: subsoilUsersRoutes.index.url(),
                 },
             ]}
         >
-            <Head title="Недропользование" />
+            <Head title="Жер қойнауын пайдалану" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Недропользование
+                        Жер қойнауын пайдалану
                     </h1>
                     {canModify && (
                         <Link href={subsoilUsersRoutes.create.url()}>
                             <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Создать нового
+                                Жаңасын құру
                             </Button>
                         </Link>
                     )}
@@ -157,7 +157,7 @@ export default function Index({
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
-                        Фильтры
+                        Сүзгілер
                         <ChevronDown
                             className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
@@ -168,7 +168,7 @@ export default function Index({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="search">
-                                        Поиск
+                                        Іздеу
                                     </Label>
                                     <Input
                                         id="search"
@@ -179,11 +179,11 @@ export default function Index({
                                                 e.target.value,
                                             )
                                         }
-                                        placeholder="Название или БИН"
+                                        placeholder="Атауы немесе БСН"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Регион</Label>
+                                    <Label>Аймақ</Label>
                                     <Select
                                         value={data.region_id}
                                         onValueChange={(v) =>
@@ -191,7 +191,7 @@ export default function Index({
                                         }
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все регионы" />
+                                            <SelectValue placeholder="Барлық аймақтар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {regions.map((r) => (
@@ -206,7 +206,7 @@ export default function Index({
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Статус лицензии</Label>
+                                    <Label>Лицензия күйі</Label>
                                     <Select
                                         value={data.license_status}
                                         onValueChange={(v) =>
@@ -214,26 +214,26 @@ export default function Index({
                                         }
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все статусы" />
+                                            <SelectValue placeholder="Барлық күйлер" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="active">
-                                                Активна
+                                                Белсенді
                                             </SelectItem>
                                             <SelectItem value="expired">
-                                                Истекла
+                                                Мерзімі өткен
                                             </SelectItem>
                                             <SelectItem value="suspended">
-                                                Приостановлена
+                                                Тоқтатылған
                                             </SelectItem>
                                             <SelectItem value="illegal">
-                                                Нелегально
+                                                Заңсыз
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Тип минерала</Label>
+                                    <Label>Минерал түрі</Label>
                                     <Select
                                         value={data.mineral_type}
                                         onValueChange={(v) =>
@@ -241,7 +241,7 @@ export default function Index({
                                         }
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все минералы" />
+                                            <SelectValue placeholder="Барлық минералдар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {mineralTypes.map((mt) => (
@@ -261,7 +261,7 @@ export default function Index({
                                     type="submit"
                                     className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                 >
-                                    Применить
+                                    Қолдану
                                 </Button>
                                 <Button
                                     type="button"
@@ -269,7 +269,7 @@ export default function Index({
                                     className="border-gray-200 shadow-none hover:bg-gray-50"
                                     onClick={clearFilters}
                                 >
-                                    Сбросить
+                                    Тазалау
                                 </Button>
                             </div>
                         </form>
@@ -283,14 +283,14 @@ export default function Index({
                                 <TableHead className="w-[80px]">
                                     ID
                                 </TableHead>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead>БИН</TableHead>
-                                <TableHead>Регион</TableHead>
+                                <TableHead>Атауы</TableHead>
+                                <TableHead>БСН</TableHead>
+                                <TableHead>Аймақ</TableHead>
                                 <TableHead>Минерал</TableHead>
                                 <TableHead>Лицензия</TableHead>
-                                <TableHead>Период</TableHead>
+                                <TableHead>Кезең</TableHead>
                                 <TableHead className="text-right">
-                                    Действия
+                                    Әрекеттер
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -301,7 +301,7 @@ export default function Index({
                                         colSpan={8}
                                         className="py-12 text-center text-gray-400"
                                     >
-                                        Нет данных
+                                        Деректер жоқ
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -352,7 +352,7 @@ export default function Index({
                                                     size="icon"
                                                     asChild
                                                     className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                    title="Просмотр"
+                                                    title="Қарау"
                                                 >
                                                     <Link
                                                         href={subsoilUsersRoutes.show.url(
@@ -369,7 +369,7 @@ export default function Index({
                                                             size="icon"
                                                             asChild
                                                             className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                            title="Редактировать"
+                                                            title="Өңдеу"
                                                         >
                                                             <Link
                                                                 href={subsoilUsersRoutes.edit.url(
@@ -388,7 +388,7 @@ export default function Index({
                                                                     user.id,
                                                                 )
                                                             }
-                                                            title="Удалить"
+                                                            title="Жою"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

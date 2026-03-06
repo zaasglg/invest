@@ -32,19 +32,19 @@ export default function Edit({ role }: Props) {
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Роли', href: roles.index.url() },
-            { title: 'Редактирование', href: '#' }
+            { title: 'Рөлдер', href: roles.index.url() },
+            { title: 'Өңдеу', href: '#' }
         ]}>
-            <Head title="Редактирование роли" />
+            <Head title="Рөлді өңдеу" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование роли</h1>
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Рөлді өңдеу</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="name" className="text-gray-500 font-normal">
-                            Системное имя
-                            <span className="text-xs ml-2 text-gray-400">(латиница, без пробелов)</span>
+                            Жүйелік аты
+                            <span className="text-xs ml-2 text-gray-400">(латын әріптері, бос орынсыз)</span>
                         </Label>
                         <Input
                             id="name"
@@ -58,7 +58,7 @@ export default function Edit({ role }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="display_name" className="text-gray-500 font-normal">Отображаемое имя</Label>
+                        <Label htmlFor="display_name" className="text-gray-500 font-normal">Көрсетілетін аты</Label>
                         <Input
                             id="display_name"
                             value={data.display_name}
@@ -70,23 +70,23 @@ export default function Edit({ role }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Сипаттама</Label>
                         <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
-                            placeholder="Описание роли и её полномочий..."
+                            placeholder="Рөл мен оның өкілеттіктерінің сипаттамасы..."
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Сохранить
+                            Сақтау
                         </Button>
                         <Link href={roles.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

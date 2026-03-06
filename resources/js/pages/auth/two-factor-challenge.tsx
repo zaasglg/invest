@@ -24,18 +24,18 @@ export default function TwoFactorChallenge() {
     }>(() => {
         if (showRecoveryInput) {
             return {
-                title: 'Код восстановления',
+                title: 'Қалпына келтіру коды',
                 description:
-                    'Пожалуйста, подтвердите доступ к вашему аккаунту, введя один из ваших аварийных кодов восстановления.',
-                toggleText: 'войти с помощью кода аутентификации',
+                    'Аккаунтыңызға кіруді растау үшін авариялық қалпына келтіру кодтарыңыздың біреуін енгізіңіз.',
+                toggleText: 'аутентификация кодымен кіру',
             };
         }
 
         return {
-            title: 'Код аутентификации',
+            title: 'Аутентификация коды',
             description:
-                'Введите код аутентификации, предоставленный вашим приложением аутентификации.',
-            toggleText: 'войти с помощью кода восстановления',
+                'Аутентификация қолданбаңыз берген кодты енгізіңіз.',
+            toggleText: 'қалпына келтіру кодымен кіру',
         };
     }, [showRecoveryInput]);
 
@@ -50,7 +50,7 @@ export default function TwoFactorChallenge() {
             title={authConfigContent.title}
             description={authConfigContent.description}
         >
-            <Head title="Двухфакторная аутентификация" />
+            <Head title="Екі факторлы аутентификация" />
 
             <div className="space-y-6">
                 <Form
@@ -66,7 +66,7 @@ export default function TwoFactorChallenge() {
                                     <Input
                                         name="recovery_code"
                                         type="text"
-                                        placeholder="Введите код восстановления"
+                                        placeholder="Қалпына келтіру кодын енгізіңіз"
                                         autoFocus={showRecoveryInput}
                                         required
                                     />
@@ -107,11 +107,11 @@ export default function TwoFactorChallenge() {
                                 className="w-full"
                                 disabled={processing}
                             >
-                                Продолжить
+                                Жалғастыру
                             </Button>
 
                             <div className="text-center text-sm text-muted-foreground">
-                                <span>или вы можете </span>
+                                <span>немесе </span>
                                 <button
                                     type="button"
                                     className="cursor-pointer text-foreground underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current! dark:decoration-neutral-500"

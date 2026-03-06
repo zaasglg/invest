@@ -78,7 +78,7 @@ class UserController extends Controller
 
         User::create($validated);
 
-        return redirect()->route('users.index')->with('success', 'Пользователь создан.');
+        return redirect()->route('users.index')->with('success', 'Пайдаланушы құрылды.');
     }
 
     public function edit(User $user)
@@ -140,18 +140,18 @@ class UserController extends Controller
 
         $user->update($validated);
 
-        return redirect()->route('users.index')->with('success', 'Пользователь обновлен.');
+        return redirect()->route('users.index')->with('success', 'Пайдаланушы жаңартылды.');
     }
 
     public function destroy(User $user)
     {
         // Prevent deleting current user
         if ($user->id === auth()->id()) {
-            return redirect()->back()->with('error', 'Вы не можете удалить свой собственный аккаунт.');
+            return redirect()->back()->with('error', 'Өз аккаунтыңызды жоюға болмайды.');
         }
 
         $user->delete();
 
-        return redirect()->back()->with('success', 'Пользователь удален.');
+        return redirect()->back()->with('success', 'Пайдаланушы жойылды.');
     }
 }

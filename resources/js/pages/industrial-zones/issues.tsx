@@ -49,16 +49,16 @@ interface Props {
 }
 
 const severityMap: Record<string, { label: string; color: string }> = {
-    low: { label: 'Низкая', color: 'bg-blue-100 text-blue-800' },
-    medium: { label: 'Средняя', color: 'bg-amber-100 text-amber-800' },
-    high: { label: 'Высокая', color: 'bg-red-100 text-red-800' },
-    critical: { label: 'Критическая', color: 'bg-red-200 text-red-900' },
+    low: { label: 'Төмен', color: 'bg-blue-100 text-blue-800' },
+    medium: { label: 'Орташа', color: 'bg-amber-100 text-amber-800' },
+    high: { label: 'Жоғары', color: 'bg-red-100 text-red-800' },
+    critical: { label: 'Сыни', color: 'bg-red-200 text-red-900' },
 };
 
 const statusMap: Record<string, { label: string; color: string }> = {
-    open: { label: 'Открыт', color: 'bg-red-100 text-red-800' },
-    in_progress: { label: 'В работе', color: 'bg-amber-100 text-amber-800' },
-    resolved: { label: 'Решен', color: 'bg-green-100 text-green-800' },
+    open: { label: 'Ашық', color: 'bg-red-100 text-red-800' },
+    in_progress: { label: 'Жұмыста', color: 'bg-amber-100 text-amber-800' },
+    resolved: { label: 'Шешілді', color: 'bg-green-100 text-green-800' },
 };
 
 export default function Issues({ industrialZone, issues }: Props) {
@@ -95,7 +95,7 @@ export default function Issues({ industrialZone, issues }: Props) {
     };
 
     const handleDelete = (issueId: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот вопрос?')) {
+        if (confirm('Бұл мәселені жоюға сенімдісіз бе?')) {
             router.delete(
                 `/industrial-zones/${industrialZone.id}/issues/${issueId}`,
             );
@@ -134,16 +134,16 @@ export default function Issues({ industrialZone, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Индустриальные зоны', href: '/industrial-zones' },
+                { title: 'Индустриялық аймақтар', href: '/industrial-zones' },
                 {
                     title: industrialZone.name,
                     href: `/industrial-zones/${industrialZone.id}`,
                 },
-                { title: 'Проблемные вопросы', href: '' },
+                { title: 'Проблемалық мәселелер', href: '' },
             ]}
         >
             <Head
-                title={`Проблемные вопросы - ${industrialZone.name}`}
+                title={`Проблемалық мәселелер - ${industrialZone.name}`}
             />
 
             <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-6 p-6">
@@ -152,10 +152,10 @@ export default function Issues({ industrialZone, issues }: Props) {
                         href={`/industrial-zones/${industrialZone.id}`}
                         className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                     >
-                        <ArrowLeft className="mr-1 h-4 w-4" /> Назад к ИЗ
+                        <ArrowLeft className="mr-1 h-4 w-4" /> ИА-ға қайту
                     </Link>
                     <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
-                        Проблемные вопросы
+                        Проблемалық мәселелер
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
                         {industrialZone.name}
@@ -169,7 +169,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2 text-lg">
                                         <Plus className="h-5 w-5 text-gray-500" />
-                                        Добавить вопрос
+                                        Мәселе қосу
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
@@ -179,7 +179,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                     >
                                         <div>
                                             <Label htmlFor="title">
-                                                Заголовок
+                                                Тақырып
                                             </Label>
                                             <Input
                                                 id="title"
@@ -187,14 +187,14 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                 onChange={(e) =>
                                                     setTitle(e.target.value)
                                                 }
-                                                placeholder="Краткое описание проблемы"
+                                                placeholder="Мәселенің қысқаша сипаттамасы"
                                                 className="mt-1"
                                                 required
                                             />
                                         </div>
                                         <div>
                                             <Label htmlFor="description">
-                                                Описание
+                                                Сипаттама
                                             </Label>
                                             <textarea
                                                 id="description"
@@ -204,7 +204,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                         e.target.value,
                                                     )
                                                 }
-                                                placeholder="Подробное описание проблемы"
+                                                placeholder="Мәселенің толық сипаттамасы"
                                                 className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
                                                 rows={3}
                                                 required
@@ -212,7 +212,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                         </div>
                                         <div>
                                             <Label htmlFor="category">
-                                                Категория (опционально)
+                                                Санат (міндетті емес)
                                             </Label>
                                             <Input
                                                 id="category"
@@ -220,12 +220,12 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                 onChange={(e) =>
                                                     setCategory(e.target.value)
                                                 }
-                                                placeholder="Например: инфраструктура"
+                                                placeholder="Мысалы: инфрақұрылым"
                                                 className="mt-1"
                                             />
                                         </div>
                                         <div>
-                                            <Label>Важность</Label>
+                                            <Label>Маңыздылығы</Label>
                                             <Select
                                                 value={severity}
                                                 onValueChange={setSeverity}
@@ -235,22 +235,22 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="low">
-                                                        Низкая
+                                                        Төмен
                                                     </SelectItem>
                                                     <SelectItem value="medium">
-                                                        Средняя
+                                                        Орташа
                                                     </SelectItem>
                                                     <SelectItem value="high">
-                                                        Высокая
+                                                        Жоғары
                                                     </SelectItem>
                                                     <SelectItem value="critical">
-                                                        Критическая
+                                                        Сыни
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
                                         <div>
-                                            <Label>Статус</Label>
+                                            <Label>Күйі</Label>
                                             <Select
                                                 value={status}
                                                 onValueChange={setStatus}
@@ -260,13 +260,13 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="open">
-                                                        Открыт
+                                                        Ашық
                                                     </SelectItem>
                                                     <SelectItem value="in_progress">
-                                                        В работе
+                                                        Жұмыста
                                                     </SelectItem>
                                                     <SelectItem value="resolved">
-                                                        Решен
+                                                        Шешілді
                                                     </SelectItem>
                                                 </SelectContent>
                                             </Select>
@@ -281,8 +281,8 @@ export default function Issues({ industrialZone, issues }: Props) {
                                             }
                                         >
                                             {isSubmitting
-                                                ? 'Сохранение...'
-                                                : 'Добавить'}
+                                                ? 'Сақталуда...'
+                                                : 'Қосу'}
                                         </Button>
                                     </form>
                                 </CardContent>
@@ -299,7 +299,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <AlertTriangle className="h-5 w-5 text-gray-500" />
-                                    Проблемные вопросы
+                                    Проблемалық мәселелер
                                     <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({issues.length})
                                     </span>
@@ -310,7 +310,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                     <div className="py-12 text-center">
                                         <AlertTriangle className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                         <p className="text-gray-500">
-                                            Нет проблемных вопросов
+                                            Проблемалық мәселелер жоқ
                                         </p>
                                     </div>
                                 ) : (
@@ -335,7 +335,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                         .value,
                                                                 })
                                                             }
-                                                            placeholder="Заголовок"
+                                                            placeholder="Тақырып"
                                                         />
                                                         <textarea
                                                             value={
@@ -376,16 +376,16 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="low">
-                                                                        Низкая
+                                                                        Төмен
                                                                     </SelectItem>
                                                                     <SelectItem value="medium">
-                                                                        Средняя
+                                                                        Орташа
                                                                     </SelectItem>
                                                                     <SelectItem value="high">
-                                                                        Высокая
+                                                                        Жоғары
                                                                     </SelectItem>
                                                                     <SelectItem value="critical">
-                                                                        Критическая
+                                                                        Сыни
                                                                     </SelectItem>
                                                                 </SelectContent>
                                                             </Select>
@@ -410,14 +410,13 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     <SelectItem value="open">
-                                                                        Открыт
+                                                                        Ашық
                                                                     </SelectItem>
                                                                     <SelectItem value="in_progress">
-                                                                        В
-                                                                        работе
+                                                                        Жұмыста
                                                                     </SelectItem>
                                                                     <SelectItem value="resolved">
-                                                                        Решен
+                                                                        Шешілді
                                                                     </SelectItem>
                                                                 </SelectContent>
                                                             </Select>
@@ -431,7 +430,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                 }
                                                             >
                                                                 <X className="mr-1 h-4 w-4" />{' '}
-                                                                Отмена
+                                                                Болдырмау
                                                             </Button>
                                                             <Button
                                                                 size="sm"
@@ -442,7 +441,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                 }
                                                             >
                                                                 <Check className="mr-1 h-4 w-4" />{' '}
-                                                                Сохранить
+                                                                Сақтау
                                                             </Button>
                                                         </div>
                                                     </div>
@@ -484,7 +483,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                         </p>
                                                         {issue.category && (
                                                             <p className="mt-1 text-xs text-gray-400">
-                                                                Категория:{' '}
+                                                                Санат:{' '}
                                                                 {issue.category}
                                                             </p>
                                                         )}
@@ -493,7 +492,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                                                                 {new Date(
                                                                     issue.created_at,
                                                                 ).toLocaleDateString(
-                                                                    'ru-RU',
+                                                                    'kk-KZ',
                                                                 )}
                                                             </span>
                                                             {canModify && (

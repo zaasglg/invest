@@ -66,7 +66,7 @@ export default function ProjectGallerySlider({ photos }: ProjectGallerySliderPro
         return (
             <div className="mb-4 rounded-lg overflow-hidden bg-gray-100">
                 <div className="aspect-video flex items-center justify-center">
-                    <p className="text-gray-400">Нет фотографий</p>
+                    <p className="text-gray-400">Фотосуреттер жоқ</p>
                 </div>
             </div>
         );
@@ -81,7 +81,7 @@ export default function ProjectGallerySlider({ photos }: ProjectGallerySliderPro
                 <div className="aspect-video relative">
                     <img
                         src={`/storage/${currentPhoto.file_path}`}
-                        alt={currentPhoto.description || 'Фото проекта'}
+                        alt={currentPhoto.description || 'Жоба фотосы'}
                         className="w-full h-full object-cover transition-opacity duration-300"
                     />
 
@@ -94,7 +94,7 @@ export default function ProjectGallerySlider({ photos }: ProjectGallerySliderPro
                             {(currentPhoto.gallery_date || currentPhoto.created_at) && (
                                 <span className="inline-flex items-center gap-1.5 shrink-0 rounded-full bg-white/20 px-3 py-1 text-xs font-medium text-white backdrop-blur-sm">
                                     <Calendar className="h-3 w-3" />
-                                    {new Date(currentPhoto.gallery_date || currentPhoto.created_at!).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}
+                                    {new Date(currentPhoto.gallery_date || currentPhoto.created_at!).toLocaleDateString('kk-KZ', { day: 'numeric', month: 'long', year: 'numeric' })}
                                 </span>
                             )}
                         </div>
@@ -273,7 +273,7 @@ function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLightboxP
                 <Button variant="ghost" size="icon" onClick={handleZoomIn} disabled={zoom >= 5} className="text-white hover:bg-white/10 h-8 w-8">
                     <span className="text-sm">+</span>
                 </Button>
-                {zoom > 1 && <Button variant="ghost" size="sm" onClick={handleResetZoom} className="text-white hover:bg-white/10 text-xs">Сброс</Button>}
+                {zoom > 1 && <Button variant="ghost" size="sm" onClick={handleResetZoom} className="text-white hover:bg-white/10 text-xs">Қалпына келтіру</Button>}
             </div>
 
             {photos.length > 1 && (
@@ -291,7 +291,7 @@ function PhotoLightbox({ photos, initialIndex, isOpen, onClose }: PhotoLightboxP
             >
                 <img
                     src={`/storage/${currentPhoto.file_path}`}
-                    alt={currentPhoto.description || 'Фото проекта'}
+                    alt={currentPhoto.description || 'Жоба фотосы'}
                     className="max-w-full max-h-full object-contain"
                     style={{
                         transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,

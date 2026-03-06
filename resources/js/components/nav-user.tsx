@@ -60,7 +60,7 @@ export function NavUser() {
                         }
                     >
                         <div className="px-2 py-1.5 mb-1">
-                            <p className="text-xs font-medium text-muted-foreground">Меню</p>
+                            <p className="text-xs font-medium text-muted-foreground">Мәзір</p>
                         </div>
                         <DropdownMenuItem asChild className="rounded-lg gap-3 cursor-pointer">
                             <Link className="flex items-center gap-3" href={editProfile()}>
@@ -77,7 +77,7 @@ export function NavUser() {
                                 onClick={handleLogout}
                             >
                                 <LogOut className="size-4" />
-                                <span>Выйти</span>
+                                <span>Шығу</span>
                             </Link>
                         </DropdownMenuItem>
                     </DropdownMenuContent>

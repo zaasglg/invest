@@ -41,45 +41,45 @@ interface InfraField {
 const INFRA_FIELDS: InfraField[] = [
     {
         key: 'electricity',
-        label: 'Электроснабжение',
+        label: 'Электрмен жабдықтау',
         icon: Zap,
-        detailLabel: 'Мощность',
+        detailLabel: 'Қуаттылық',
         detailPlaceholder: '50 МВт',
     },
     {
         key: 'water',
-        label: 'Водоснабжение',
+        label: 'Сумен жабдықтау',
         icon: Droplets,
-        detailLabel: 'Мощность',
-        detailPlaceholder: '1000 м³/сут',
+        detailLabel: 'Қуаттылық',
+        detailPlaceholder: '1000 м³/тәу',
     },
     {
         key: 'gas',
-        label: 'Газоснабжение',
+        label: 'Газбен жабдықтау',
         icon: Flame,
-        detailLabel: 'Мощность',
-        detailPlaceholder: '500 м³/ч',
+        detailLabel: 'Қуаттылық',
+        detailPlaceholder: '500 м³/сағ',
     },
     {
         key: 'roads',
-        label: 'Дороги',
+        label: 'Жолдар',
         icon: Car,
-        detailLabel: 'Расстояние',
+        detailLabel: 'Қашықтық',
         detailPlaceholder: '5 км',
     },
     {
         key: 'railway',
-        label: 'Ж/Д тупик',
+        label: 'Теміржол тұйығы',
         icon: TrainFront,
-        detailLabel: 'Расстояние',
+        detailLabel: 'Қашықтық',
         detailPlaceholder: '10 км',
     },
     {
         key: 'internet',
         label: 'Интернет',
         icon: Wifi,
-        detailLabel: 'Тип',
-        detailPlaceholder: 'Оптоволокно',
+        detailLabel: 'Түрі',
+        detailPlaceholder: 'Оптикалық талшық',
     },
 ];
 
@@ -137,7 +137,7 @@ export default function InfrastructureForm({
     return (
         <div className="flex flex-col gap-2">
             <Label className="text-neutral-500 font-normal">
-                Инфраструктура
+                Инфрақұрылым
             </Label>
             <div className="rounded-md border border-neutral-200">
                 {INFRA_FIELDS.map((field, idx) => {

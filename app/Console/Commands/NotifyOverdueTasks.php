@@ -10,7 +10,7 @@ class NotifyOverdueTasks extends Command
 {
     protected $signature = 'tasks:notify-overdue';
 
-    protected $description = 'Отправка сообщений пользователям, назначенным по просроченным заданиям (сайт + Telegram)';
+    protected $description = 'Мерзімі өткен тапсырмаларға тағайындалған пайдаланушыларға хабарлама жіберу (сайт + Telegram)';
 
     public function handle(): int
     {
@@ -21,7 +21,7 @@ class NotifyOverdueTasks extends Command
             ->get();
 
         if ($overdueTasks->isEmpty()) {
-            $this->info('Просроченные задания отсутствуют.');
+            $this->info('Мерзімі өткен тапсырмалар жоқ.');
 
             return self::SUCCESS;
         }
@@ -44,15 +44,15 @@ class NotifyOverdueTasks extends Command
                 continue;
             }
 
-            $projectName = $task->project?->name ?? 'Неизвестный проект';
+            $projectName = $task->project?->name ?? 'Белгісіз жоба';
             $dueDate = $task->due_date->format('d.m.Y');
             $daysOverdue = (int) now()->startOfDay()->diffInDays($task->due_date);
 
-            $message = "Срок выполнения задачи истек!\n"
-                . "Проект: {$projectName}\n"
-                . "Задача: {$task->title}\n"
-                . "Срок: {$dueDate}\n"
-                . "Просрочка: {$daysOverdue} дней";
+            $message = "Тапсырманың орындалу мерзімі өтті!\n"
+                . "Жоба: {$projectName}\n"
+                . "Тапсырма: {$task->title}\n"
+                . "Мерзім: {$dueDate}\n"
+                . "Кешігу: {$daysOverdue} күн";
 
             // Creating the notification triggers the TaskNotificationObserver
             // which also sends a Telegram message automatically
@@ -66,7 +66,7 @@ class NotifyOverdueTasks extends Command
             $notifiedCount++;
         }
 
-        $this->info("Сообщения отправлены: {$notifiedCount} задач.");
+        $this->info("Хабарламалар жіберілді: {$notifiedCount} тапсырма.");
 
         return self::SUCCESS;
     }

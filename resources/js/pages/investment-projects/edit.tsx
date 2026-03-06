@@ -192,23 +192,23 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Инвестиционные проекты', href: investmentProjects.index.url() },
-            { title: 'Редактирование', href: '#' }
+            { title: 'Инвестициялық жобалар', href: investmentProjects.index.url() },
+            { title: 'Өңдеу', href: '#' }
         ]}>
-            <Head title="Редактирование проекта" />
+            <Head title="Жобаны өңдеу" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование проекта</h1>
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Жобаны өңдеу</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-gray-500 font-normal">Наименование проекта</Label>
+                        <Label htmlFor="name" className="text-gray-500 font-normal">Жобаның атауы</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
-                            placeholder="Название проекта"
+                            placeholder="Жобаның атауы"
                             autoFocus
                         />
                         {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
@@ -221,14 +221,14 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                             value={data.company_name}
                             onChange={(e) => setData('company_name', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
-                            placeholder="Название компании"
+                            placeholder="Компанияның атауы"
                         />
                         {errors.company_name && <span className="text-sm text-red-500">{errors.company_name}</span>}
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Облыс</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -237,7 +237,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                 }}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите область" />
+                                    <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {oblasts.map((oblast) => (
@@ -250,18 +250,18 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Аудан / Қала</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => {
                                     setData('region_id', value);
-                                    // Очищаем выбранные секторы при смене района
+                                    // Аудан өзгергенде таңдалған секторларды тазалау
                                     setData('sector', []);
                                 }}
                                 disabled={!selectedOblastId}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите район" />
+                                    <SelectValue placeholder="Ауданды таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {districts.map((district) => (
@@ -271,7 +271,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                     ))}
                                     {selectedOblastId && districts.length === 0 && (
                                         <SelectItem value="none" disabled>
-                                            Нет доступных районов
+                                            Қол жетімді аудандар жоқ
                                         </SelectItem>
                                     )}
                                 </SelectContent>
@@ -282,13 +282,13 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="project_type_id" className="text-gray-500 font-normal">Тип проекта</Label>
+                            <Label htmlFor="project_type_id" className="text-gray-500 font-normal">Жобаның түрі</Label>
                             <Select
                                 value={data.project_type_id}
                                 onValueChange={(value) => setData('project_type_id', value)}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите тип" />
+                                    <SelectValue placeholder="Түрді таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {projectTypes.map((type) => (
@@ -303,27 +303,27 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="sector" className="text-gray-500 font-normal">
-                                Сектор <span className="text-xs text-gray-400">(не обязательно)</span>
+                                Сектор <span className="text-xs text-gray-400">(міндетті емес)</span>
                                 {Array.isArray(data.sector) && data.sector.length > 0 && (
-                                    <span className="text-xs text-gray-500 ml-1">({data.sector.length} выбрано)</span>
+                                    <span className="text-xs text-gray-500 ml-1">({data.sector.length} таңдалды)</span>
                                 )}
                             </Label>
                             <div className="border border-gray-200 rounded-md p-4 space-y-3 max-h-64 overflow-y-auto">
                                 {!data.region_id ? (
                                     <p className="text-sm text-gray-400 text-center py-2">
-                                        Сначала выберите район
+                                        Алдымен ауданды таңдаңыз
                                     </p>
                                 ) : (
                                     <>
                                         {availableSez.length === 0 && availableIndustrialZones.length === 0 ? (
                                             <p className="text-sm text-gray-400 text-center py-2">
-                                                В этом районе нет доступных секторов. Проект будет создан без сектора.
+                                                Бұл ауданда қол жетімді секторлар жоқ. Жоба секторсыз жасалады.
                                             </p>
                                         ) : (
                                             <>
                                                 {availableSez.length > 0 && (
                                                     <div className="space-y-2">
-                                                        <p className="text-xs font-medium text-gray-500 uppercase">СЭЗ</p>
+                                                        <p className="text-xs font-medium text-gray-500 uppercase">АЭА</p>
                                                         {availableSez.map((sez) => {
                                                             const value = `sez-${sez.id}`;
                                                             const isChecked = Array.isArray(data.sector) && data.sector.includes(value);
@@ -345,7 +345,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                 )}
                                                 {availableIndustrialZones.length > 0 && (
                                                     <div className="space-y-2">
-                                                        <p className="text-xs font-medium text-gray-500 uppercase">Индустриальные зоны</p>
+                                                        <p className="text-xs font-medium text-gray-500 uppercase">Индустриялық аймақтар</p>
                                                         {availableIndustrialZones.map((iz) => {
                                                             const value = `industrial_zone-${iz.id}`;
                                                             const isChecked = Array.isArray(data.sector) && data.sector.includes(value);
@@ -376,7 +376,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Общий объем инвестиций (млн)</Label>
+                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Жалпы инвестиция көлемі (млн)</Label>
                             <Input
                                 id="total_investment"
                                 type="number"
@@ -390,19 +390,19 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="status" className="text-gray-500 font-normal">Статус</Label>
+                            <Label htmlFor="status" className="text-gray-500 font-normal">Мәртебесі</Label>
                             <Select
                                 value={data.status}
                                 onValueChange={(value) => setData('status', value)}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите статус" />
+                                    <SelectValue placeholder="Мәртебені таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="plan">Планирование</SelectItem>
-                                    <SelectItem value="implementation">Реализация</SelectItem>
-                                    <SelectItem value="launched">Запущен</SelectItem>
-                                    <SelectItem value="suspended">Приостановлен</SelectItem>
+                                    <SelectItem value="plan">Жоспарлау</SelectItem>
+                                    <SelectItem value="implementation">Іске асыру</SelectItem>
+                                    <SelectItem value="launched">Іске қосылған</SelectItem>
+                                    <SelectItem value="suspended">Тоқтатылған</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.status && <span className="text-sm text-red-500">{errors.status}</span>}
@@ -411,7 +411,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Дата начала</Label>
+                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу күні</Label>
                             <Input
                                 id="start_date"
                                 type="date"
@@ -423,7 +423,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Дата окончания</Label>
+                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу күні</Label>
                             <Input
                                 id="end_date"
                                 type="date"
@@ -436,19 +436,19 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Исполнители</Label>
+                        <Label className="text-gray-500 font-normal">Орындаушылар</Label>
                         <div className="border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
                             {!selectedOblastId ? (
                                 <p className="text-sm text-gray-400">
-                                    Выберите область для отображения исполнителей
+                                    Орындаушыларды көрсету үшін облысты таңдаңыз
                                 </p>
                             ) : (
                                 <>
                                     {data.region_id && (
                                         <div className="mb-3">
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Районное управление</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан басқармасы</p>
                                             {districtUsers.length === 0 ? (
-                                                <p className="text-sm text-gray-400 ml-1">Районное управление отсутствует</p>
+                                                <p className="text-sm text-gray-400 ml-1">Аудан басқармасы жоқ</p>
                                             ) : (
                                                 <div className="space-y-2">
                                                     {districtUsers.map((user) => (
@@ -472,9 +472,9 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                         </div>
                                     )}
                                     <div className={data.region_id ? 'border-t border-gray-200 pt-3' : ''}>
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Областное управление</p>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс басқармасы</p>
                                         {oblastUsers.length === 0 ? (
-                                            <p className="text-sm text-gray-400 ml-1">Областное управление отсутствует</p>
+                                            <p className="text-sm text-gray-400 ml-1">Облыс басқармасы жоқ</p>
                                         ) : (
                                             <div className="space-y-2">
                                                 {oblastUsers.map((user) => (
@@ -505,33 +505,33 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Сипаттама</Label>
                         <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
-                            placeholder="Описание проекта..."
+                            placeholder="Жоба сипаттамасы..."
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">
                         <Label htmlFor="current_status" className="text-gray-500 font-normal">
-                            Текущее состояние <span className="text-xs text-gray-400">(необязательно)</span>
+                            Ағымдағы жағдайы <span className="text-xs text-gray-400">(міндетті емес)</span>
                         </Label>
                         <Textarea
                             id="current_status"
                             value={data.current_status}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('current_status', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
-                            placeholder="Текущее состояние проекта..."
+                            placeholder="Жобаның ағымдағы жағдайы..."
                         />
                         {errors.current_status && <span className="text-sm text-red-500">{errors.current_status}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Орналасу (полигон)</Label>
                         <LocationPicker
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
@@ -545,13 +545,13 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Потребность в инфраструктуре</Label>
+                        <Label className="text-gray-500 font-normal">Инфрақұрылымға қажеттілік</Label>
                         <div className="border border-gray-200 rounded-md p-4 space-y-4">
                             {[
-                                { key: 'gas', label: 'Газ', unit: 'м³/час' },
-                                { key: 'water', label: 'Вода (Водоснабжение)', unit: 'м³/сут' },
-                                { key: 'electricity', label: 'Электрическая мощность', unit: 'МВт' },
-                                { key: 'land', label: 'Земельный участок', unit: 'га' },
+                                { key: 'gas', label: 'Газ', unit: 'м³/сағ' },
+                                { key: 'water', label: 'Су (Сумен қамтамасыз ету)', unit: 'м³/тәу' },
+                                { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
+                                { key: 'land', label: 'Жер учаскесі', unit: 'га' },
                             ].map((item) => (
                                 <div key={item.key} className="flex items-center gap-4">
                                     <div className="flex items-center space-x-2 w-48">
@@ -587,7 +587,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                     });
                                                 }}
                                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
-                                                placeholder={`Объём (${item.unit})`}
+                                                placeholder={`Көлемі (${item.unit})`}
                                             />
                                             <span className="text-xs text-gray-400">{item.unit}</span>
                                         </div>
@@ -599,12 +599,12 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                     <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between">
-                            <Label className="text-gray-500 font-normal">Документы</Label>
+                            <Label className="text-gray-500 font-normal">Құжаттар</Label>
                             <Link
                                 href={documentsRoutes.index.url(project.id)}
                                 className="text-sm text-[#0f1b3d] hover:text-[#c8a44e] flex items-center gap-1"
                             >
-                                Управление документами
+                                Құжаттарды басқару
                                 <ExternalLink className="h-3 w-3" />
                             </Link>
                         </div>
@@ -627,14 +627,14 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                 rel="noopener noreferrer"
                                                 className="text-xs text-[#0f1b3d] hover:text-[#c8a44e] flex-shrink-0"
                                             >
-                                                Скачать
+                                                Жүктеу
                                             </a>
                                         </div>
                                     ))}
                                 </div>
                             ) : (
                                 <p className="text-sm text-gray-400 text-center py-2">
-                                    Нет загруженных документов
+                                    Жүктелген құжаттар жоқ
                                 </p>
                             )}
                         </div>
@@ -647,7 +647,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                 href={`/investment-projects/${project.id}/gallery`}
                                 className="text-sm text-[#0f1b3d] hover:text-[#c8a44e] flex items-center gap-1"
                             >
-                                Управление галереей
+                                Галереяны басқару
                                 <ExternalLink className="h-3 w-3" />
                             </Link>
                         </div>
@@ -657,16 +657,16 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                     <ImageIcon className="h-10 w-10 text-gray-300 flex-shrink-0" />
                                     <div>
                                         <p className="text-sm font-medium text-gray-700">
-                                            Загружено фотографий: {project.photos_count}
+                                            Жүктелген фотосуреттер: {project.photos_count}
                                         </p>
                                         <p className="text-xs text-gray-500">
-                                            Основная галерея и фото по датам
+                                            Негізгі галерея және күндер бойынша фотолар
                                         </p>
                                     </div>
                                 </div>
                             ) : (
                                 <p className="text-sm text-gray-400 text-center py-2">
-                                    Нет загруженных фотографий
+                                    Жүктелген фотосуреттер жоқ
                                 </p>
                             )}
                         </div>
@@ -674,10 +674,10 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Сохранить
+                            Сақтау
                         </Button>
                         <Link href={investmentProjects.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

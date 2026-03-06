@@ -93,7 +93,7 @@ class SubsoilUserController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только добавить Недропользователь в свой район.');
+                        $fail('Жер қойнауын пайдаланушыны тек өз ауданыңызға қосуға болады.');
                     }
                 },
             ],
@@ -108,7 +108,7 @@ class SubsoilUserController extends Controller
 
         SubsoilUser::create($validated);
 
-        return redirect()->route('subsoil-users.index')->with('success', 'Недропользователь создан.');
+        return redirect()->route('subsoil-users.index')->with('success', 'Жер қойнауын пайдаланушы құрылды.');
     }
 
     public function show(SubsoilUser $subsoilUser)
@@ -164,7 +164,7 @@ class SubsoilUserController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете только изменить Недропользователь в своем районе.');
+                        $fail('Жер қойнауын пайдаланушыны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },
             ],
@@ -179,7 +179,7 @@ class SubsoilUserController extends Controller
 
         $subsoilUser->update($validated);
 
-        return redirect()->route('subsoil-users.index')->with('success', 'Недропользователь обновлен.');
+        return redirect()->route('subsoil-users.index')->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
     }
 
     public function passport(SubsoilUser $subsoilUser)
@@ -191,7 +191,7 @@ class SubsoilUserController extends Controller
         $path = storage_path('app/private/' . $zipFileName);
 
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            abort(500, 'Не удалось создать архив.');
+            abort(500, 'Мұрағатты құру мүмкін болмады.');
         }
 
         // Add documents
@@ -203,7 +203,7 @@ class SubsoilUserController extends Controller
                 if ($extension && !str_ends_with(mb_strtolower($docName), '.' . mb_strtolower($extension))) {
                     $docName .= '.' . $extension;
                 }
-                $zip->addFile($filePath, 'Документы/' . $docName);
+                $zip->addFile($filePath, 'Құжаттар/' . $docName);
             }
         }
 
@@ -223,12 +223,12 @@ class SubsoilUserController extends Controller
         if ($zip->count() === 0) {
             $zip->close();
             @unlink($path);
-            abort(404, 'Нет файлов для скачивания.');
+            abort(404, 'Жүктеуге файлдар жоқ.');
         }
 
         $zip->close();
 
-        $downloadName = 'Паспорт_Недропользователь_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name) . '.zip';
+        $downloadName = 'Төлқұжат_Жер_қойнауын_пайдаланушы_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name) . '.zip';
 
         return response()->download($path, $downloadName)->deleteFileAfterSend(true);
     }
@@ -237,6 +237,6 @@ class SubsoilUserController extends Controller
     {
         $subsoilUser->delete();
 
-        return redirect()->back()->with('success', 'Недропользователь удален.');
+        return redirect()->back()->with('success', 'Жер қойнауын пайдаланушы жойылды.');
     }
 }

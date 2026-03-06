@@ -31,7 +31,7 @@ class IndustrialZoneIssueController extends Controller
 
         $industrialZone->issues()->create($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос добавлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
 
     public function update(Request $request, IndustrialZone $industrialZone, IndustrialZoneIssue $issue)
@@ -46,13 +46,13 @@ class IndustrialZoneIssueController extends Controller
 
         $issue->update($validated);
 
-        return redirect()->back()->with('success', 'Проблемный вопрос обновлен.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
 
     public function destroy(IndustrialZone $industrialZone, IndustrialZoneIssue $issue)
     {
         $issue->delete();
 
-        return redirect()->back()->with('success', 'Проблемный вопрос удален.');
+        return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }
 }

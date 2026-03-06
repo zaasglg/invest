@@ -72,7 +72,7 @@ export default function Index({
     );
 
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены?')) {
+        if (confirm('Сенімдісіз бе?')) {
             router.delete(sezs.destroy.url(id));
         }
     };
@@ -91,7 +91,7 @@ export default function Index({
     };
 
     const getStatusLabel = (status: string) => {
-        return status === 'active' ? 'Активная' : 'Развивающаяся';
+        return status === 'active' ? 'Белсенді' : 'Дамушы';
     };
 
     const getStatusColor = (status: string) => {
@@ -102,20 +102,20 @@ export default function Index({
 
     return (
         <AppLayout
-            breadcrumbs={[{ title: 'СЭЗ', href: sezs.index.url() }]}
+            breadcrumbs={[{ title: 'АЭА', href: sezs.index.url() }]}
         >
-            <Head title="СЭЗ" />
+            <Head title="АЭА" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Специальные экономические зоны
+                        Арнайы экономикалық аймақтар
                     </h1>
                     {canModify && (
                         <Link href={sezs.create.url()}>
                             <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Создать новую
+                                Жаңа қосу
                             </Button>
                         </Link>
                     )}
@@ -128,7 +128,7 @@ export default function Index({
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
-                        Фильтры
+                        Сүзгілер
                         <ChevronDown
                             className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
@@ -139,7 +139,7 @@ export default function Index({
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div className="space-y-1.5">
                                     <Label htmlFor="search">
-                                        Поиск
+                                        Іздеу
                                     </Label>
                                     <Input
                                         id="search"
@@ -147,11 +147,11 @@ export default function Index({
                                         onChange={(e) =>
                                             setData('search', e.target.value)
                                         }
-                                        placeholder="Название СЭЗ"
+                                        placeholder="АЭА атауы"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Регион</Label>
+                                    <Label>Аймақ</Label>
                                     <Select
                                         value={data.region_id}
                                         onValueChange={(v) =>
@@ -159,7 +159,7 @@ export default function Index({
                                         }
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все регионы" />
+                                            <SelectValue placeholder="Барлық аймақтар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {regions.map((r) => (
@@ -174,7 +174,7 @@ export default function Index({
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Статус</Label>
+                                    <Label>Күйі</Label>
                                     <Select
                                         value={data.status}
                                         onValueChange={(v) =>
@@ -182,14 +182,14 @@ export default function Index({
                                         }
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все статусы" />
+                                            <SelectValue placeholder="Барлық күйлер" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="active">
-                                                Активная
+                                                Белсенді
                                             </SelectItem>
                                             <SelectItem value="developing">
-                                                Развивающаяся
+                                                Дамушы
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -200,7 +200,7 @@ export default function Index({
                                     type="submit"
                                     className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                 >
-                                    Применить
+                                    Қолдану
                                 </Button>
                                 <Button
                                     type="button"
@@ -208,7 +208,7 @@ export default function Index({
                                     className="border-gray-200 shadow-none hover:bg-gray-50"
                                     onClick={clearFilters}
                                 >
-                                    Сбросить
+                                    Тазалау
                                 </Button>
                             </div>
                         </form>
@@ -222,13 +222,13 @@ export default function Index({
                                 <TableHead className="w-[80px]">
                                     ID
                                 </TableHead>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead>Регион</TableHead>
-                                <TableHead>Площадь (га)</TableHead>
-                                <TableHead>Инвестиции</TableHead>
-                                <TableHead>Статус</TableHead>
+                                <TableHead>Атауы</TableHead>
+                                <TableHead>Аймақ</TableHead>
+                                <TableHead>Аумағы (га)</TableHead>
+                                <TableHead>Инвестициялар</TableHead>
+                                <TableHead>Күйі</TableHead>
                                 <TableHead className="text-right">
-                                    Действия
+                                    Әрекеттер
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -239,7 +239,7 @@ export default function Index({
                                         colSpan={7}
                                         className="py-12 text-center text-gray-400"
                                     >
-                                        Нет данных
+                                        Деректер жоқ
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -270,7 +270,7 @@ export default function Index({
                                                     const v = Number(sez.investment_projects_sum_total_investment);
                                                     if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(1) + ' млрд';
                                                     if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + ' млн';
-                                                    return v.toLocaleString('ru-RU');
+                                                    return v.toLocaleString('kk-KZ');
                                                 })()
                                                 : '—'}
                                         </TableCell>
@@ -290,7 +290,7 @@ export default function Index({
                                                     size="icon"
                                                     asChild
                                                     className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                    title="Просмотр"
+                                                    title="Қарау"
                                                 >
                                                     <Link
                                                         href={sezs.show.url(
@@ -307,7 +307,7 @@ export default function Index({
                                                             size="icon"
                                                             asChild
                                                             className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                            title="Редактировать"
+                                                            title="Өңдеу"
                                                         >
                                                             <Link
                                                                 href={sezs.edit.url(
@@ -326,7 +326,7 @@ export default function Index({
                                                                     sez.id,
                                                                 )
                                                             }
-                                                            title="Удалить"
+                                                            title="Жою"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

@@ -53,7 +53,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         <>
             {/* ── Main nav bar ── */}
             <div className="border-b border-white/10 bg-[#0f1b3d]">
-                <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
+                <div className="mx-auto flex h-16 items-center md:max-w-7xl">
                     {/* Logo */}
                     <Link href="/dashboard" className="mr-4 flex shrink-0 items-center gap-2.5">
                         <img
@@ -63,10 +63,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         />
                         <div className="hidden flex-col leading-none sm:flex">
                             <span className="text-xs font-bold tracking-wider text-white">
-                                Туркестанская
+                                Түркістан
                             </span>
                             <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e] pt-0.5">
-                                ОБЛАСТЬ
+                                ОБЛЫСЫ
                             </span>
                         </div>
                     </Link>
@@ -88,7 +88,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 className="flex h-full w-72 flex-col items-stretch justify-between border-r-white/10 bg-[#0f1b3d]"
                             >
                                 <SheetTitle className="sr-only">
-                                    Меню навигации
+                                    Навигация мәзірі
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start border-b border-white/10 px-4 pb-4 text-left">
                                     <div className="flex items-center gap-2.5">
@@ -99,10 +99,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         />
                                         <div className="flex flex-col leading-none">
                                             <span className="text-xs font-bold tracking-wider text-white">
-                                                Туркестанская
+                                                Түркістан
                                             </span>
                                             <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                                ОБЛАСТЬ
+                                                ОБЛЫСЫ
                                             </span>
                                         </div>
                                     </div>
@@ -130,8 +130,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     {/* Desktop Navigation */}
-                    <div className="ml-2 hidden h-full items-center lg:flex">
-                        <NavigationMenu className="flex h-full items-stretch">
+                    <div className="ml-2 hidden h-full min-w-0 flex-1 items-center overflow-hidden lg:flex">
+                        <NavigationMenu className="flex h-full items-stretch max-w-full">
                             <NavigationMenuList className="flex h-full items-stretch gap-0.5">
                                 {filteredHeaderNavItems.map((item, index) => (
                                     <NavigationMenuItem
@@ -142,7 +142,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             href={item.href}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
-                                                'h-9 cursor-pointer rounded-lg bg-transparent px-3 text-sm font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
+                                                'h-9 cursor-pointer rounded-lg bg-transparent px-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
                                                 isCurrentUrl(item.href) &&
                                                     'text-white',
                                             )}
@@ -182,7 +182,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         )}
                                     </Link>
                                 </TooltipTrigger>
-                                <TooltipContent>Уведомления</TooltipContent>
+                                <TooltipContent>Хабарламалар</TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
 

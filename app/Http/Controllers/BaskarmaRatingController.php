@@ -104,12 +104,12 @@ class BaskarmaRatingController extends Controller
 
         // Baskarma can only see their own page
         if ($roleName === 'baskarma' && $currentUser->id !== $user->id) {
-            abort(403, 'У вас нет доступа к этой странице.');
+            abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
         }
 
         // Ispolnitel can only view baskarma from their own region
         if ($roleName === 'ispolnitel' && $user->region_id !== $currentUser->region_id) {
-            abort(403, 'У вас нет доступа к этой странице.');
+            abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
         }
 
         $user->load('region', 'roleModel');

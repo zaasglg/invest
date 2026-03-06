@@ -30,7 +30,7 @@ class ProjectTypeController extends Controller
 
         ProjectType::create($validated);
 
-        return redirect()->route('project-types.index')->with('success', 'Тип проекта создан.');
+        return redirect()->route('project-types.index')->with('success', 'Жоба түрі құрылды.');
     }
 
     public function edit(ProjectType $projectType)
@@ -49,13 +49,13 @@ class ProjectTypeController extends Controller
 
         $projectType->update($validated);
 
-        return redirect()->route('project-types.index')->with('success', 'Тип проекта обновлен.');
+        return redirect()->route('project-types.index')->with('success', 'Жоба түрі жаңартылды.');
     }
 
     public function destroy(ProjectType $projectType)
     {
         $projectType->delete();
 
-        return redirect()->back()->with('success', 'Тип проекта удален.');
+        return redirect()->back()->with('success', 'Жоба түрі жойылды.');
     }
 }

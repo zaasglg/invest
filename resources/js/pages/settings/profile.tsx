@@ -20,7 +20,7 @@ import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Настройки профиля',
+        title: 'Профиль баптаулары',
         href: edit().url,
     },
 ];
@@ -98,17 +98,17 @@ export default function Profile({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Настройки профиля" />
+            <Head title="Профиль баптаулары" />
 
-            <h1 className="sr-only">Настройки профиля</h1>
+            <h1 className="sr-only">Профиль баптаулары</h1>
 
             <SettingsLayout>
                 {/* Avatar Section */}
                 <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Фото профиля"
-                        description="Загрузите свою фотографию. Она будет отображаться в шапке сайта и на страницах проектов."
+                        title="Профиль фотосы"
+                        description="Фотосуретіңізді жүктеңіз. Ол сайт тақырыбында және жоба беттерінде көрсетіледі."
                     />
 
                     <div className="mt-4 flex items-center gap-6">
@@ -153,8 +153,8 @@ export default function Profile({
                                 className="border-gray-200 shadow-none hover:bg-gray-50"
                             >
                                 {isUploadingAvatar
-                                    ? 'Загрузка...'
-                                    : 'Загрузить фото'}
+                                    ? 'Жүктелуде...'
+                                    : 'Фото жүктеу'}
                             </Button>
                             {auth.user.avatar && (
                                 <Button
@@ -165,13 +165,13 @@ export default function Profile({
                                     className="text-red-500 hover:bg-red-50 hover:text-red-700"
                                 >
                                     <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                    Удалить
+                                    Жою
                                 </Button>
                             )}
                         </div>
                     </div>
                     <p className="mt-3 text-xs text-gray-400">
-                        JPG, PNG или WebP. Максимум 2 МБ.
+                        JPG, PNG немесе WebP. Максимум 2 МБ.
                     </p>
                 </div>
 
@@ -179,8 +179,8 @@ export default function Profile({
                 <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Личные данные"
-                        description="Обновите имя и адрес электронной почты"
+                        title="Жеке мәліметтер"
+                        description="Атыңызды және электрондық поштаңызды жаңартыңыз"
                     />
 
                     <Form
@@ -193,7 +193,7 @@ export default function Profile({
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="name">Имя</Label>
+                                    <Label htmlFor="name">Аты</Label>
                                     <Input
                                         id="name"
                                         className="block w-full"
@@ -204,7 +204,7 @@ export default function Profile({
                                         name="name"
                                         required
                                         autoComplete="name"
-                                        placeholder="Ваше полное имя"
+                                        placeholder="Толық атыңыз"
                                     />
                                     <InputError
                                         className="mt-1"
@@ -214,7 +214,7 @@ export default function Profile({
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="email">
-                                        Электронная почта
+                                        Электрондық пошта
                                     </Label>
                                     <Input
                                         id="email"
@@ -224,7 +224,7 @@ export default function Profile({
                                         name="email"
                                         required
                                         autoComplete="username"
-                                        placeholder="Адрес электронной почты"
+                                        placeholder="Электрондық пошта мекенжайы"
                                     />
                                     <InputError
                                         className="mt-1"
@@ -236,24 +236,23 @@ export default function Profile({
                                     auth.user.email_verified_at === null && (
                                         <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
                                             <p className="text-sm text-amber-700">
-                                                Ваш адрес электронной почты не
-                                                подтвержден.{' '}
+                                                Электрондық пошта
+                                                мекенжайыңыз расталмаған.{' '}
                                                 <Link
                                                     href={send()}
                                                     as="button"
                                                     className="font-medium text-amber-800 underline underline-offset-4 transition-colors hover:text-amber-900"
                                                 >
-                                                    Нажмите, чтобы отправить
-                                                    письмо для подтверждения.
+                                                    Растау хатын
+                                                    жіберу үшін басыңыз.
                                                 </Link>
                                             </p>
 
                                             {status ===
                                                 'verification-link-sent' && (
                                                 <div className="mt-2 text-sm font-medium text-green-600">
-                                                    Новая ссылка для
-                                                    подтверждения отправлена на
-                                                    вашу почту.
+                                                    Растау сілтемесі
+                                                    поштаңызға жіберілді.
                                                 </div>
                                             )}
                                         </div>
@@ -265,7 +264,7 @@ export default function Profile({
                                         data-test="update-profile-button"
                                         className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
-                                        Сохранить
+                                        Сақтау
                                     </Button>
 
                                     <Transition
@@ -276,7 +275,7 @@ export default function Profile({
                                         leaveTo="opacity-0"
                                     >
                                         <p className="text-sm text-green-600">
-                                            Сохранено
+                                            Сақталды
                                         </p>
                                     </Transition>
                                 </div>

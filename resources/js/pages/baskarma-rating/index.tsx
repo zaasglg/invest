@@ -135,7 +135,7 @@ function RatingTable({
             <CardContent className="p-0">
                 {ratings.length === 0 ? (
                     <div className="px-6 pb-6 pt-2 text-center text-gray-400">
-                        Нет зарегистрированных управлений
+                        Тіркелген басқармалар жоқ
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -146,13 +146,13 @@ function RatingTable({
                                     №
                                 </TableHead>
                                 <TableHead className="w-[72px]" />
-                                <TableHead>ФИО</TableHead>
+                                <TableHead>АТА</TableHead>
                                 <TableHead>Телефон</TableHead>
-                                <TableHead>Управление</TableHead>
+                                <TableHead>Басқарма</TableHead>
                                 <TableHead className="text-center">
-                                    Проекты
+                                    Жобалар
                                 </TableHead>
-                                <TableHead>Задачи</TableHead>
+                                <TableHead>Тапсырмалар</TableHead>
                                 <TableHead>КПД</TableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
@@ -261,9 +261,9 @@ export default function BaskarmaRating({
 
     return (
             <AppLayout
-            breadcrumbs={[{ title: 'Коэффициенты полезной деятельности', href: '' }]}
+            breadcrumbs={[{ title: 'Пайдалы қызмет коэффициенттері', href: '' }]}
         >
-            <Head title="Коэффициенты полезной деятельности" />
+            <Head title="Пайдалы қызмет коэффициенттері" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}
@@ -273,10 +273,10 @@ export default function BaskarmaRating({
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                            Коэффициенты полезной деятельности
+                            Пайдалы қызмет коэффициенттері
                         </h1>
                         <p className="text-sm text-gray-500">
-                            По результатам выполнения задач
+                            Тапсырмаларды орындау нәтижелері бойынша
                         </p>
                     </div>
                 </div>
@@ -295,7 +295,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Районные акиматы ({districtRatings.length})
+                                Аудандық әкімдіктер ({districtRatings.length})
                             </button>
                             <button
                                 role="tab"
@@ -307,7 +307,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Управления ({oblastRatings.length})
+                                Басқармалар ({oblastRatings.length})
                             </button>
                         </div>
                     </div>
@@ -318,14 +318,14 @@ export default function BaskarmaRating({
                     {tab === 'district' ? (
                         <RatingTable
                             ratings={districtRatings}
-                            title="Районные акиматы"
+                            title="Аудандық әкімдіктер"
                             icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
                             allowedIds={allowedIds}
                         />
                     ) : (
                         <RatingTable
                             ratings={oblastRatings}
-                            title="Управления"
+                            title="Басқармалар"
                             icon={<BarChart3 className="h-5 w-5 text-purple-600" />}
                             allowedIds={allowedIds}
                         />

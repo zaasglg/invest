@@ -252,7 +252,7 @@ export default function LocationPicker({ value = [], onChange, className, region
                     size="icon"
                     onClick={handleUndo}
                     disabled={points.length === 0}
-                    title="Отменить последнюю точку"
+                    title="Соңғы нүктені болдырмау"
                 >
                     <Undo2 className="h-4 w-4" />
                 </Button>
@@ -262,14 +262,14 @@ export default function LocationPicker({ value = [], onChange, className, region
                     size="icon"
                     onClick={handleClear}
                     disabled={points.length === 0}
-                    title="Очистить"
+                    title="Тазалау"
                 >
                     <Trash2 className="h-4 w-4" />
                 </Button>
             </div>
 
             <div className="absolute bottom-2 left-2 bg-white/90 p-2 rounded text-xs z-[400] pointer-events-none">
-                {points.length === 0 ? 'Кликните по карте, чтобы добавить точки полигона' : `Точек: ${points.length}`}
+                {points.length === 0 ? 'Полигон нүктелерін қосу үшін картаға басыңыз' : `Нүктелер: ${points.length}`}
             </div>
         </div>
     );

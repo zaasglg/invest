@@ -29,10 +29,10 @@ export default function AuthSimpleLayout({
                         />
                         <div className="flex flex-col leading-none">
                             <span className="text-base font-bold tracking-wider text-white">
-                                Туркестанская
+                                ТҮРКІСТАН
                             </span>
                             <span className="text-xs font-medium tracking-[0.25em] text-[#c8a44e]">
-                                ОБЛАСТЬ
+                                ОБЛЫСЫ
                             </span>
                         </div>
                     </Link>

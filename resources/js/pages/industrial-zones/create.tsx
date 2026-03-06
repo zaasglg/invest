@@ -76,23 +76,23 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Индустриальные зоны', href: industrialZones.index.url() },
-            { title: 'Создание', href: '#' }
+            { title: 'Индустриялық аймақтар', href: industrialZones.index.url() },
+            { title: 'Құру', href: '#' }
         ]}>
-            <Head title="Создание ИЗ" />
+            <Head title="ИА құру" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Новая ИЗ</h1>
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Жаңа ИА</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="name" className="text-gray-500 font-normal">Наименование</Label>
+                        <Label htmlFor="name" className="text-gray-500 font-normal">Атауы</Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
-                            placeholder="Например: ИЗ Шымкент"
+                            placeholder="Мысалы: ИА Шымкент"
                             autoFocus
                         />
                         {errors.name && <span className="text-sm text-red-500">{errors.name}</span>}
@@ -100,7 +100,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Облыс</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -110,7 +110,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                 disabled={isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите область" />
+                                    <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {oblasts.map((oblast) => (
@@ -123,14 +123,14 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Аудан / Қала</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId || isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите район" />
+                                    <SelectValue placeholder="Ауданды таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {districts.map((district) => (
@@ -140,7 +140,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                     ))}
                                     {selectedOblastId && districts.length === 0 && (
                                         <SelectItem value="none" disabled>
-                                            Нет доступных районов
+                                            Қолжетімді аудандар жоқ
                                         </SelectItem>
                                     )}
                                 </SelectContent>
@@ -150,7 +150,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="total_area" className="text-gray-500 font-normal">Общая площадь (га)</Label>
+                        <Label htmlFor="total_area" className="text-gray-500 font-normal">Жалпы аумағы (га)</Label>
                         <Input
                             id="total_area"
                             type="number"
@@ -164,30 +164,30 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="status" className="text-gray-500 font-normal">Статус</Label>
+                        <Label htmlFor="status" className="text-gray-500 font-normal">Күйі</Label>
                         <Select
                             value={data.status}
                             onValueChange={(value) => setData('status', value)}
                         >
                             <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                <SelectValue placeholder="Выберите статус" />
+                                <SelectValue placeholder="Күйін таңдаңыз" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="active">Активная</SelectItem>
-                                <SelectItem value="developing">Развивающаяся</SelectItem>
+                                <SelectItem value="active">Белсенді</SelectItem>
+                                <SelectItem value="developing">Дамушы</SelectItem>
                             </SelectContent>
                         </Select>
                         {errors.status && <span className="text-sm text-red-500">{errors.status}</span>}
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Сипаттама</Label>
                         <Textarea
                             id="description"
                             value={data.description}
                             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] bg-transparent min-h-[120px]"
-                            placeholder="Описание ИЗ..."
+                            placeholder="ИА сипаттамасы..."
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
@@ -198,7 +198,7 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                     />
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Орналасу (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
@@ -212,10 +212,10 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Сохранить
+                            Сақтау
                         </Button>
                         <Link href={industrialZones.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

@@ -48,16 +48,19 @@ interface User {
 interface Sez {
     id: number;
     name: string;
+    region_id: number;
 }
 
 interface IndustrialZone {
     id: number;
     name: string;
+    region_id: number;
 }
 
 interface SubsoilUser {
     id: number;
     name: string;
+    region_id: number;
 }
 
 interface InvestmentProject {
@@ -139,30 +142,33 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     );
 
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот проект?')) {
+        if (confirm('Бұл жобаны жойғыңыз келетініне сенімдісіз бе?')) {
             router.delete(investmentProjectsRoutes.destroy.url(id));
         }
     };
 
     const sectorOptions = useMemo(() => {
+        const regionId = data.region_id ? Number(data.region_id) : null;
         if (data.sector_type === 'sez') {
-            return sezs.map(sez => ({ value: String(sez.id), label: sez.name }));
+            const filtered = regionId ? sezs.filter(s => s.region_id === regionId) : sezs;
+            return filtered.map(sez => ({ value: String(sez.id), label: sez.name }));
         }
         if (data.sector_type === 'industrial_zone') {
-            return industrialZones.map(iz => ({ value: String(iz.id), label: iz.name }));
+            const filtered = regionId ? industrialZones.filter(iz => iz.region_id === regionId) : industrialZones;
+            return filtered.map(iz => ({ value: String(iz.id), label: iz.name }));
         }
         if (data.sector_type === 'subsoil') {
-            return subsoilUsers.map(su => ({ value: String(su.id), label: su.name }));
+            const filtered = regionId ? subsoilUsers.filter(su => su.region_id === regionId) : subsoilUsers;
+            return filtered.map(su => ({ value: String(su.id), label: su.name }));
         }
         return [];
-    }, [data.sector_type, sezs, industrialZones, subsoilUsers]);
+    }, [data.sector_type, data.region_id, sezs, industrialZones, subsoilUsers]);
 
+    // Егер аймақ не сектор түрі өзгерсе, сектор мәнін тазалау
     const filteredUsers = useMemo(() => {
         if (!data.region_id) {
-            // Если район/область не выбраны, показываем только областные управления
             return users.filter(user => user.baskarma_type === 'oblast');
         }
-        // Если район/область выбраны, показываем областные управления И управления, привязанные к этому региону
         return users.filter(user => user.baskarma_type === 'oblast' || String(user.region_id) === data.region_id);
     }, [users, data.region_id]);
 
@@ -183,15 +189,15 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         const sectors = [];
         
         if (project.sezs && project.sezs.length > 0) {
-            sectors.push(...project.sezs.map(s => `СЭЗ: ${s.name}`));
+            sectors.push(...project.sezs.map(s => `АЭА: ${s.name}`));
         }
         
         if (project.industrial_zones && project.industrial_zones.length > 0) {
-            sectors.push(...project.industrial_zones.map(iz => `ИЗ: ${iz.name}`));
+            sectors.push(...project.industrial_zones.map(iz => `ИА: ${iz.name}`));
         }
         
         if (project.subsoil_users && project.subsoil_users.length > 0) {
-            sectors.push(...project.subsoil_users.map(su => `Недропользование: ${su.name}`));
+            sectors.push(...project.subsoil_users.map(su => `Жер қойнауын пайдалану: ${su.name}`));
         }
         
         return sectors.length > 0 ? sectors.join(', ') : '—';
@@ -199,10 +205,10 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     const getStatusLabel = (status: string) => {
         const labels: Record<string, string> = {
-            plan: 'Планирование',
-            implementation: 'Реализация',
-            launched: 'Запущен',
-            suspended: 'Приостановлен',
+            plan: 'Жоспарлау',
+            implementation: 'Іске асыру',
+            launched: 'Іске қосылған',
+            suspended: 'Тоқтатылған',
         };
         return labels[status] || status;
     };
@@ -223,24 +229,24 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         if (isNaN(num)) return String(value);
 
         if (num >= 1_000_000_000) {
-            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(num / 1_000_000_000) + ' млрд ₸';
+            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 1 }).format(num / 1_000_000_000) + ' млрд ₸';
         }
         if (num >= 1_000_000) {
-            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 1 }).format(num / 1_000_000) + ' млн ₸';
+            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 1 }).format(num / 1_000_000) + ' млн ₸';
         }
-        return new Intl.NumberFormat('ru-RU').format(num) + ' ₸';
+        return new Intl.NumberFormat('kk-KZ').format(num) + ' ₸';
     };
 
     const formatTotalInvestment = (value: number) => {
         if (!value) return '0 ₸';
         if (value >= 1000000000000) {
-            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000000) + ' трлн ₸';
+            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000000000) + ' трлн ₸';
         } else if (value >= 1000000000) {
-            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000000) + ' млрд ₸';
+            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000000) + ' млрд ₸';
         } else if (value >= 1000000) {
-            return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value / 1000000) + ' млн ₸';
+            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000) + ' млн ₸';
         }
-        return new Intl.NumberFormat('ru-RU').format(value) + ' ₸';
+        return new Intl.NumberFormat('kk-KZ').format(value) + ' ₸';
     };
 
     const toNormalCase = (str: string) => {
@@ -253,20 +259,20 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Инвестиционные проекты', href: investmentProjectsRoutes.index.url() }
+            { title: 'Инвестициялық жобалар', href: investmentProjectsRoutes.index.url() }
         ]}>
-            <Head title="Инвестиционные проекты" />
+            <Head title="Инвестициялық жобалар" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Инвестиционные проекты
+                        Инвестициялық жобалар
                     </h1>
                     {canModify && (
                         <Link href={investmentProjectsRoutes.create.url()}>
                             <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                 <Plus className="mr-2 h-4 w-4" />
-                                Создать проект
+                                Жоба құру
                             </Button>
                         </Link>
                     )}
@@ -279,7 +285,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         onClick={() => setFiltersOpen((prev) => !prev)}
                         aria-expanded={filtersOpen}
                     >
-                        Фильтры
+                        Сүзгілер
                         <ChevronDown
                             className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
                         />
@@ -289,22 +295,25 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         <form onSubmit={submitFilters} className="mt-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="search">Поиск</Label>
+                                    <Label htmlFor="search">Іздеу</Label>
                                     <Input
                                         id="search"
                                         value={data.search}
                                         onChange={(event) => setData('search', event.target.value)}
-                                        placeholder="Название или компания"
+                                        placeholder="Атауы немесе компания"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Регион</Label>
+                                    <Label>Аймақ</Label>
                                     <Select
                                         value={data.region_id}
-                                        onValueChange={(value) => setData('region_id', value)}
+                                        onValueChange={(value) => {
+                                            setData('region_id', value);
+                                            setData('sector_id', '');
+                                        }}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все регионы" />
+                                            <SelectValue placeholder="Барлық аймақтар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {regions.map((region) => (
@@ -316,13 +325,13 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Тип проекта</Label>
+                                    <Label>Жоба түрі</Label>
                                     <Select
                                         value={data.project_type_id}
                                         onValueChange={(value) => setData('project_type_id', value)}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все типы" />
+                                            <SelectValue placeholder="Барлық түрлер" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {projectTypes.map((type) => (
@@ -334,30 +343,30 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Статус</Label>
+                                    <Label>Мәртебесі</Label>
                                     <Select
                                         value={data.status}
                                         onValueChange={(value) => setData('status', value)}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все статусы" />
+                                            <SelectValue placeholder="Барлық мәртебелер" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="plan">Планирование</SelectItem>
-                                            <SelectItem value="implementation">Реализация</SelectItem>
-                                            <SelectItem value="launched">Запущен</SelectItem>
-                                            <SelectItem value="suspended">Приостановлен</SelectItem>
+                                            <SelectItem value="plan">Жоспарлау</SelectItem>
+                                            <SelectItem value="implementation">Іске асыру</SelectItem>
+                                            <SelectItem value="launched">Іске қосылған</SelectItem>
+                                            <SelectItem value="suspended">Тоқтатылған</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Исполнитель</Label>
+                                    <Label>Орындаушы</Label>
                                     <Select
                                         value={data.executor_id}
                                         onValueChange={(value) => setData('executor_id', value)}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Все исполнители" />
+                                            <SelectValue placeholder="Барлық орындаушылар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {filteredUsers.map((user) => (
@@ -369,7 +378,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label>Тип сектора</Label>
+                                    <Label>Сектор түрі</Label>
                                     <Select
                                         value={data.sector_type}
                                         onValueChange={(value) => {
@@ -378,11 +387,11 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         }}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder="Любой" />
+                                            <SelectValue placeholder="Кез келген" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="sez">СЭЗ</SelectItem>
-                                            <SelectItem value="industrial_zone">ИЗ</SelectItem>
+                                            <SelectItem value="sez">АЭА</SelectItem>
+                                            <SelectItem value="industrial_zone">ИА</SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -394,7 +403,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         disabled={!data.sector_type}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder={data.sector_type ? 'Все' : 'Выберите тип'} />
+                                            <SelectValue placeholder={data.sector_type ? 'Барлығы' : 'Түрін таңдаңыз'} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {sectorOptions.map((option) => (
@@ -406,7 +415,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="min_investment">Инвестиции от</Label>
+                                    <Label htmlFor="min_investment">Инвестиция бастап</Label>
                                     <Input
                                         id="min_investment"
                                         type="number"
@@ -417,7 +426,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="max_investment">Инвестиции до</Label>
+                                    <Label htmlFor="max_investment">Инвестиция дейін</Label>
                                     <Input
                                         id="max_investment"
                                         type="number"
@@ -428,7 +437,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_from">Старт с</Label>
+                                    <Label htmlFor="start_date_from">Басталуы бастап</Label>
                                     <Input
                                         id="start_date_from"
                                         type="date"
@@ -437,7 +446,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_to">Старт по</Label>
+                                    <Label htmlFor="start_date_to">Басталуы дейін</Label>
                                     <Input
                                         id="start_date_to"
                                         type="date"
@@ -446,7 +455,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_from">Завершение с</Label>
+                                    <Label htmlFor="end_date_from">Аяқталуы бастап</Label>
                                     <Input
                                         id="end_date_from"
                                         type="date"
@@ -455,7 +464,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_to">Завершение по</Label>
+                                    <Label htmlFor="end_date_to">Аяқталуы дейін</Label>
                                     <Input
                                         id="end_date_to"
                                         type="date"
@@ -466,10 +475,10 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                             </div>
                             <div className="mt-4 flex flex-wrap gap-2">
                                 <Button type="submit" className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]">
-                                    Применить
+                                    Қолдану
                                 </Button>
                                 <Button type="button" variant="outline" className="border-gray-200 shadow-none hover:bg-gray-50" onClick={clearFilters}>
-                                    Сбросить
+                                    Тазалау
                                 </Button>
                             </div>
                         </form>
@@ -478,31 +487,31 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Количество проектов</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Жобалар саны</h3>
                         <p className="mt-2 text-2xl font-bold text-[#0f1b3d]">
                             {stats.total_projects}
                         </p>
                     </div>
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Объём инвестиций</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Инвестиция көлемі</h3>
                         <p className="mt-2 text-2xl font-bold text-[#c8a44e]">
                             {formatTotalInvestment(stats.total_investment)}
                         </p>
                     </div>
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">По статусам</h3>
+                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Мәртебесі бойынша</h3>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-[#0f1b3d]">
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-blue-500" /> Планирование: {stats.status_counts.plan}
+                                <span className="h-2 w-2 rounded-full bg-blue-500" /> Жоспарлау: {stats.status_counts.plan}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Запущенный: {stats.status_counts.launched}
+                                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Іске қосылған: {stats.status_counts.launched}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-amber-500" /> Реализуются: {stats.status_counts.implementation}
+                                <span className="h-2 w-2 rounded-full bg-amber-500" /> Іске асырылуда: {stats.status_counts.implementation}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-red-500" /> Приостановлено: {stats.status_counts.suspended}
+                                <span className="h-2 w-2 rounded-full bg-red-500" /> Тоқтатылған: {stats.status_counts.suspended}
                             </span>
                         </div>
                     </div>
@@ -512,21 +521,21 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead>Наименование / Компания</TableHead>
-                                <TableHead>Регион</TableHead>
-                                <TableHead>Тип проекта</TableHead>
+                                <TableHead>Атауы / Компания</TableHead>
+                                <TableHead>Аймақ</TableHead>
+                                <TableHead>Жоба түрі</TableHead>
                                 <TableHead>Сектор</TableHead>
-                                <TableHead>Инвестиции</TableHead>
-                                <TableHead>Исполнители</TableHead>
-                                <TableHead>Статус</TableHead>
-                                <TableHead className="text-right">Действия</TableHead>
+                                <TableHead>Инвестиция</TableHead>
+                                <TableHead>Орындаушылар</TableHead>
+                                <TableHead>Мәртебесі</TableHead>
+                                <TableHead className="text-right">Әрекеттер</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {projects.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={8} className="py-12 text-center text-gray-400">
-                                        Нет данных
+                                        Деректер жоқ
                                     </TableCell>
                                 </TableRow>
                             ) : (
@@ -563,14 +572,14 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
-                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Просмотр">
+                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Қарау">
                                                     <Link href={investmentProjectsRoutes.show.url(project.id)}>
                                                         <Eye className="h-4 w-4" />
                                                     </Link>
                                                 </Button>
                                                 {canModify && (
                                                     <>
-                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Редактировать">
+                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Өңдеу">
                                                             <Link href={investmentProjectsRoutes.edit.url(project.id)}>
                                                                 <Pencil className="h-4 w-4" />
                                                             </Link>
@@ -580,7 +589,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                             size="icon"
                                                             className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
                                                             onClick={() => handleDelete(project.id)}
-                                                            title="Удалить"
+                                                            title="Жою"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

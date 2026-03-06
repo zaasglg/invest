@@ -11,7 +11,7 @@ export default function Footer() {
                         className="h-5 shrink-0 opacity-60"
                     />
                     <span className="text-xs font-semibold tracking-wide text-[#0f1b3d]/60">
-                        Туркестанская область
+                        Түркістан облысы
                     </span>
                     <span className="text-xs text-gray-300">
                         © {new Date().getFullYear()}
@@ -22,7 +22,7 @@ export default function Footer() {
                             href="/investment-projects"
                             className="text-xs font-medium text-gray-400 transition-colors hover:text-[#0f1b3d]"
                         >
-                            О проекте
+                            Жоба туралы
                         </Link>
                     {/* <Link
                         href="#"

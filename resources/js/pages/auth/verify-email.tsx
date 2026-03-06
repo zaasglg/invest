@@ -10,15 +10,15 @@ import { send } from '@/routes/verification';
 export default function VerifyEmail({ status }: { status?: string }) {
     return (
         <AuthLayout
-            title="Подтверждение электронной почты"
-            description="Пожалуйста, подтвердите свой адрес электронной почты, перейдя по ссылке, которую мы только что отправили вам."
+            title="Электрондық поштаны растау"
+            description="Біз жіберген сілтеме арқылы электрондық пошта мекенжайыңызды растаңыз."
         >
-            <Head title="Подтверждение электронной почты" />
+            <Head title="Электрондық поштаны растау" />
 
             {status === 'verification-link-sent' && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    Новую ссылку для подтверждения был отправлен на адрес электронной почты 
-                    который вы указали при регистрации.
+                    Растау сілтемесі тіркелу кезінде көрсетілген 
+                    электрондық пошта мекенжайына жіберілді.
                 </div>
             )}
 
@@ -27,14 +27,14 @@ export default function VerifyEmail({ status }: { status?: string }) {
                     <>
                         <Button disabled={processing} variant="secondary">
                             {processing && <Spinner />}
-                            Повторно отправить письмо с подтверждением
+                            Растау хатын қайта жіберу
                         </Button>
 
                         <TextLink
                             href={logout()}
                             className="mx-auto block text-sm"
                         >
-                            Выйти
+                            Шығу
                         </TextLink>
                     </>
                 )}

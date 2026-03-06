@@ -55,7 +55,7 @@ interface Props {
 
 function formatDate(dateStr?: string | null) {
     if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('ru-RU', {
+    return new Date(dateStr).toLocaleDateString('kk-KZ', {
         day: 'numeric',
         month: 'long',
         year: 'numeric',
@@ -98,10 +98,10 @@ function TaskTable({
                                 <TableHead className="w-12 text-center">
                                     №
                                 </TableHead>
-                                <TableHead>Задание</TableHead>
-                                <TableHead>Проект</TableHead>
-                                <TableHead>Дата начала</TableHead>
-                                <TableHead>Срок</TableHead>
+                                <TableHead>Тапсырма</TableHead>
+                                <TableHead>Жоба</TableHead>
+                                <TableHead>Басталу күні</TableHead>
+                                <TableHead>Мерзімі</TableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
                         </TableHeader>
@@ -162,11 +162,11 @@ export default function BaskarmaRatingShow({
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Рейтинг управлений', href: '/baskarma-rating' },
+                { title: 'Басқармалар рейтингі', href: '/baskarma-rating' },
                 { title: user.full_name, href: '' },
             ]}
         >
-            <Head title={`${user.full_name} — Отчет`} />
+            <Head title={`${user.full_name} — Есеп`} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Back */}
@@ -174,7 +174,7 @@ export default function BaskarmaRatingShow({
                     href="/baskarma-rating"
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Вернуться к рейтингу
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Рейтингке қайту
                 </Link>
 
                 {/* User info header */}
@@ -201,8 +201,8 @@ export default function BaskarmaRatingShow({
                                 )}
                                 <Badge className="border-0 bg-blue-100 text-blue-700">
                                     {user.baskarma_type === 'oblast'
-                                        ? 'Управления'
-                                        : 'Районные акиматы'}
+                                        ? 'Басқармалар'
+                                        : 'Аудандық әкімдіктер'}
                                 </Badge>
                                 {user.region && (
                                     <span className="flex items-center gap-1">
@@ -226,7 +226,7 @@ export default function BaskarmaRatingShow({
                                     {projectCount}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                    Проекты
+                                    Жобалар
                                 </p>
                             </div>
                             <div className="rounded-lg border border-gray-200 px-4 py-2 text-center">
@@ -234,7 +234,7 @@ export default function BaskarmaRatingShow({
                                     {totalTasks}
                                 </p>
                                 <p className="text-xs text-gray-500">
-                                    Задачи
+                                    Тапсырмалар
                                 </p>
                             </div>
                             <div
@@ -267,30 +267,30 @@ export default function BaskarmaRatingShow({
                 <div className="space-y-6">
                     <TaskTable
                         tasks={activeTasks}
-                        title="Активные задачи"
+                        title="Белсенді тапсырмалар"
                         icon={<Clock className="h-5 w-5 text-amber-500" />}
                         color="bg-amber-100 text-amber-700"
-                        emptyText="Активных задач нет"
+                        emptyText="Белсенді тапсырмалар жоқ"
                     />
 
                     <TaskTable
                         tasks={completedTasks}
-                        title="Выполненные задачи"
+                        title="Орындалған тапсырмалар"
                         icon={
                             <CheckCircle className="h-5 w-5 text-green-500" />
                         }
                         color="bg-green-100 text-green-700"
-                        emptyText="Выполненных задач нет"
+                        emptyText="Орындалған тапсырмалар жоқ"
                     />
 
                     <TaskTable
                         tasks={overdueTasks}
-                        title="Просроченные задачи"
+                        title="Мерзімі өткен тапсырмалар"
                         icon={
                             <AlertTriangle className="h-5 w-5 text-red-500" />
                         }
                         color="bg-red-100 text-red-700"
-                        emptyText="Просроченных задач нет"
+                        emptyText="Мерзімі өткен тапсырмалар жоқ"
                     />
                 </div>
             </div>

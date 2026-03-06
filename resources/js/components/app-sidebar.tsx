@@ -32,10 +32,10 @@ export function AppSidebar() {
     const filteredProjects = filterNavItemsByRole(projectNavItems, auth.user);
     const filteredAdmin = filterNavItemsByRole(adminNavItems, auth.user);
     const sections = [
-        { label: 'Обзор', items: filteredMain },
-        { label: 'Зоны', items: filteredZones },
-        { label: 'Проекты', items: filteredProjects },
-        { label: 'Администрирование', items: filteredAdmin },
+        { label: 'Шолу', items: filteredMain },
+        { label: 'Аймақтар', items: filteredZones },
+        { label: 'Жобалар', items: filteredProjects },
+        { label: 'Басқару', items: filteredAdmin },
     ].filter((section) => section.items.length > 0);
 
     return (

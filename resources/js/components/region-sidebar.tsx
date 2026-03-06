@@ -41,7 +41,7 @@ export function RegionSidebar({
                         variant="ghost"
                         size="icon"
                         className="fixed left-13 top-20 z-[1000] h-10 w-10 rounded-lg border border-white/20 bg-[#0f1b3d]/90 text-white shadow-lg backdrop-blur-sm hover:bg-[#0f1b3d] hover:text-[#c8a44e]"
-                        title="Районы и города"
+                        title="Аудандар мен қалалар"
                     >
                         <Menu className="h-5 w-5" />
                     </Button>
@@ -52,18 +52,18 @@ export function RegionSidebar({
                 className="w-80 border-r-white/10 bg-[#0f1b3d] p-0"
             >
                 <SheetTitle className="sr-only">
-                    Районы и города
+                    Аудандар мен қалалар
                 </SheetTitle>
                 <SheetHeader className="border-b border-white/10 px-5 py-4">
                     <div className="flex items-center gap-2">
                         <MapPin className="h-5 w-5 text-[#c8a44e]" />
                         <h2 className="text-base font-semibold text-white">
-                            Районы и города
+                            Аудандар мен қалалар
                         </h2>
                     </div>
                 </SheetHeader>
                 <div className="flex flex-col gap-1 overflow-y-auto p-3">
-                    {regions.map((region) => (
+                    {[...regions].sort((a, b) => a.name.localeCompare(b.name, 'kk')).map((region) => (
                         <button
                             key={region.id}
                             onClick={() => {
