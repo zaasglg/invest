@@ -10,21 +10,21 @@ import { store } from '@/routes/password/confirm';
 export default function ConfirmPassword() {
     return (
         <AuthLayout
-            title="Подтвердите свой пароль"
-            description="Это защищенная область приложения. Пожалуйста, подтвердите свой пароль, прежде чем продолжить."
+            title="Құпия сөзіңізді растаңыз"
+            description="Бұл қолданбаның қорғалған аймағы. Жалғастыру үшін құпия сөзіңізді растаңыз."
         >
-            <Head title="Подтвердите свой пароль" />
+            <Head title="Құпия сөзіңізді растаңыз" />
 
             <Form {...store.form()} resetOnSuccess={['password']}>
                 {({ processing, errors }) => (
                     <div className="space-y-6">
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Пароль</Label>
+                            <Label htmlFor="password">Құпия сөз</Label>
                             <Input
                                 id="password"
                                 type="password"
                                 name="password"
-                                placeholder="Пароль"
+                                placeholder="Құпия сөз"
                                 autoComplete="current-password"
                                 autoFocus
                             />
@@ -39,7 +39,7 @@ export default function ConfirmPassword() {
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                Подтвердите пароль
+                                Құпия сөзді растаңыз
                             </Button>
                         </div>
                     </div>

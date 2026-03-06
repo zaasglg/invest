@@ -19,12 +19,12 @@ const sidebarNavItems: NavItem[] = [
         icon: UserCircle,
     },
     {
-        title: 'Пароль',
+        title: 'Құпия сөз',
         href: editPassword(),
         icon: KeyRound,
     },
     {
-        title: 'Двухфакторная аутентификация',
+        title: 'Екі факторлы аутентификация',
         href: show(),
         icon: ShieldCheck,
     },
@@ -41,8 +41,8 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
     return (
         <div className="mx-auto max-w-7xl px-6 py-6">
             <Heading
-                title="Настройки"
-                description="Управление профилем и настройками аккаунта"
+                title="Баптаулар"
+                description="Профиль мен аккаунт баптауларын басқару"
             />
 
             <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">

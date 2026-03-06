@@ -41,7 +41,7 @@ class DashboardController extends Controller
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($sezProjectsInvestment > 0) {
-                $data[] = ['name' => 'СЭЗ', 'value' => (float) $sezProjectsInvestment];
+                $data[] = ['name' => 'АЭА', 'value' => (float) $sezProjectsInvestment];
             }
 
             // Projects linked to Industrial Zones
@@ -49,7 +49,7 @@ class DashboardController extends Controller
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($izProjectsInvestment > 0) {
-                $data[] = ['name' => 'ИЗ', 'value' => (float) $izProjectsInvestment];
+                $data[] = ['name' => 'ИА', 'value' => (float) $izProjectsInvestment];
             }
 
             // Projects linked to Subsoil Users
@@ -57,7 +57,7 @@ class DashboardController extends Controller
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($subsoilProjectsInvestment > 0) {
-                $data[] = ['name' => 'Недропользование', 'value' => (float) $subsoilProjectsInvestment];
+                $data[] = ['name' => 'Жер қойнауын пайдалану', 'value' => (float) $subsoilProjectsInvestment];
             }
 
             // Other projects (not linked to any entity)
@@ -67,7 +67,7 @@ class DashboardController extends Controller
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($otherProjectsInvestment > 0) {
-                $data[] = ['name' => 'Прочие проекты', 'value' => (float) $otherProjectsInvestment];
+                $data[] = ['name' => 'Басқа жобалар', 'value' => (float) $otherProjectsInvestment];
             }
 
             // Sort by value
@@ -79,10 +79,10 @@ class DashboardController extends Controller
         // Projects by status
         $projectsByStatus = Cache::remember('dashboard.projects_by_status', 300, function () {
             return [
-                ['name' => 'Планирование', 'value' => InvestmentProject::where('status', 'plan')->count()],
-                ['name' => 'Реализация', 'value' => InvestmentProject::where('status', 'implementation')->count()],
-                ['name' => 'Запущен', 'value' => InvestmentProject::where('status', 'launched')->count()],
-                ['name' => 'Приостановлен', 'value' => InvestmentProject::where('status', 'suspended')->count()],
+                ['name' => 'Жоспарлау', 'value' => InvestmentProject::where('status', 'plan')->count()],
+                ['name' => 'Іске асыру', 'value' => InvestmentProject::where('status', 'implementation')->count()],
+                ['name' => 'Іске қосылған', 'value' => InvestmentProject::where('status', 'launched')->count()],
+                ['name' => 'Тоқтатылған', 'value' => InvestmentProject::where('status', 'suspended')->count()],
             ];
         });
 

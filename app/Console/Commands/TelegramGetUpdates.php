@@ -17,7 +17,7 @@ class TelegramGetUpdates extends Command
         $updates = $telegram->getUpdates();
 
         if (empty($updates)) {
-            $this->warn('Хабарламалар жоқ. Пайдаланушыларға ботқа /start жіберуін айтыңыз.');
+            $this->warn('Хабарламалар жоқ. Пайдаланушылардан ботқа /start жіберуді сұраңыз.');
 
             return self::SUCCESS;
         }
@@ -55,7 +55,7 @@ class TelegramGetUpdates extends Command
             $this->newLine();
         }
 
-        $this->info('Осы Chat ID-ларды пайдаланушыларға тіркеңіз.');
+        $this->info('Осы Chat ID-ларды пайдаланушыларға байлаңыз.');
 
         return self::SUCCESS;
     }

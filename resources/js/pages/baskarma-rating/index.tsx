@@ -32,6 +32,7 @@ interface RatingItem {
 interface Props {
     districtRatings: RatingItem[];
     oblastRatings: RatingItem[];
+    allowedIds: number[] | null;
 }
 
 function StackedTaskBar({
@@ -116,10 +117,12 @@ function RatingTable({
     ratings,
     title,
     icon,
+    allowedIds,
 }: {
     ratings: RatingItem[];
     title: string;
     icon: React.ReactNode;
+    allowedIds?: number[] | null;
 }) {
     return (
         <Card className="rounded-xl border-gray-100 shadow-sm">
@@ -132,7 +135,7 @@ function RatingTable({
             <CardContent className="p-0">
                 {ratings.length === 0 ? (
                     <div className="px-6 pb-6 pt-2 text-center text-gray-400">
-                        Нет зарегистрированных управлений
+                        Тіркелген басқармалар жоқ
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -143,13 +146,13 @@ function RatingTable({
                                     №
                                 </TableHead>
                                 <TableHead className="w-[72px]" />
-                                <TableHead>ФИО</TableHead>
+                                <TableHead>АТА</TableHead>
                                 <TableHead>Телефон</TableHead>
                                 <TableHead>Басқарма</TableHead>
                                 <TableHead className="text-center">
-                                    Проекты
+                                    Жобалар
                                 </TableHead>
-                                <TableHead>Задачи</TableHead>
+                                <TableHead>Тапсырмалар</TableHead>
                                 <TableHead>КПД</TableHead>
                                 <TableHead className="w-12" />
                             </TableRow>
@@ -215,6 +218,7 @@ function RatingTable({
                                         <KpdBar kpd={item.kpd} />
                                     </TableCell>
                                     <TableCell>
+                                        {!allowedIds || allowedIds.includes(item.id) ? (
                                         <Link
                                             href={`/baskarma-rating/${item.id}`}
                                         >
@@ -226,6 +230,16 @@ function RatingTable({
                                                 <Eye className="h-4 w-4" />
                                             </Button>
                                         </Link>
+                                        ) : (
+                                        <Button
+                                            variant="outline"
+                                            size="icon"
+                                            className="h-8 w-8 cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                                            disabled
+                                        >
+                                            <Eye className="h-4 w-4" />
+                                        </Button>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}
@@ -241,14 +255,15 @@ function RatingTable({
 export default function BaskarmaRating({
     districtRatings,
     oblastRatings,
+    allowedIds,
 }: Props) {
     const [tab, setTab] = useState<'district' | 'oblast'>('district');
 
     return (
             <AppLayout
-            breadcrumbs={[{ title: 'Рейтинг управлений', href: '' }]}
+            breadcrumbs={[{ title: 'Пайдалы қызмет коэффициенттері', href: '' }]}
         >
-            <Head title="Рейтинг управлений" />
+            <Head title="Пайдалы қызмет коэффициенттері" />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6">
                 {/* Header */}
@@ -258,10 +273,10 @@ export default function BaskarmaRating({
                     </div>
                     <div>
                         <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                            Рейтинг управлений
+                            Пайдалы қызмет коэффициенттері
                         </h1>
                         <p className="text-sm text-gray-500">
-                            По результатам выполнения задач
+                            Тапсырмаларды орындау нәтижелері бойынша
                         </p>
                     </div>
                 </div>
@@ -280,7 +295,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Районные ({districtRatings.length})
+                                Аудандық әкімдіктер ({districtRatings.length})
                             </button>
                             <button
                                 role="tab"
@@ -292,7 +307,7 @@ export default function BaskarmaRating({
                                         : 'text-gray-600 hover:bg-gray-50'
                                 }`}
                             >
-                                Областные ({oblastRatings.length})
+                                Басқармалар ({oblastRatings.length})
                             </button>
                         </div>
                     </div>
@@ -303,14 +318,16 @@ export default function BaskarmaRating({
                     {tab === 'district' ? (
                         <RatingTable
                             ratings={districtRatings}
-                            title="Районные управления"
+                            title="Аудандық әкімдіктер"
                             icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
+                            allowedIds={allowedIds}
                         />
                     ) : (
                         <RatingTable
                             ratings={oblastRatings}
-                            title="Областные управления"
+                            title="Басқармалар"
                             icon={<BarChart3 className="h-5 w-5 text-purple-600" />}
+                            allowedIds={allowedIds}
                         />
                     )}
                 </div>

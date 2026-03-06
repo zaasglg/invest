@@ -72,18 +72,18 @@ class CheckRoleAccess
         // Read-only roles (akim/zamakim): blocked sections + no writes
         if ($this->isReadOnlyRole($roleName)) {
             if ($this->isMatchingRoute($request, $this->readOnlyBlockedRoutes)) {
-                abort(403, 'У вас нет доступа к этому разделу.');
+                abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
 
             if ($this->isWriteAction($request)) {
-                abort(403, 'У вас нет прав на изменение данных.');
+                abort(403, 'Сізде деректерді өзгерту құқығы жоқ.');
             }
         }
 
         // Limited roles (ispolnitel/baskarma): blocked from admin-only sections + regions
         if ($this->isLimitedRole($roleName)) {
             if ($this->isMatchingRoute($request, $this->adminOnlyRoutes)) {
-                abort(403, 'У вас нет доступа к этому разделу.');
+                abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
 
             $routeName = $request->route()?->getName();
@@ -92,7 +92,7 @@ class CheckRoleAccess
             // but allowed to view their own district (regions.show)
             if ($roleName === 'ispolnitel') {
                 if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
-                    abort(403, 'У вас нет доступа к этому разделу.');
+                    abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
             }
 
@@ -103,14 +103,14 @@ class CheckRoleAccess
                 if ($routeName === 'regions.index' || $routeName === 'regions.create'
                     || $routeName === 'regions.store' || $routeName === 'regions.edit'
                     || $routeName === 'regions.update' || $routeName === 'regions.destroy') {
-                    abort(403, 'У вас нет доступа к этому разделу.');
+                    abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
 
                 // Block write actions on SEZ, IZ, Subsoil, Projects
                 if ($this->isWriteAction($request)) {
                     $baskarmaReadOnly = ['sezs', 'industrial-zones', 'subsoil-users', 'investment-projects'];
                     if ($this->isMatchingRoute($request, $baskarmaReadOnly)) {
-                        abort(403, 'У вас нет прав на изменение данных.');
+                        abort(403, 'Сізде деректерді өзгерту құқығы жоқ.');
                     }
                 }
             }
@@ -219,7 +219,7 @@ class CheckRoleAccess
         if (str_starts_with($routeName, 'sezs.')) {
             $sez = $request->route('sez');
             if ($sez && is_object($sez) && $sez->region_id !== $user->region_id) {
-                abort(403, 'Вам не разрешено входить в этот СЭЗ.');
+                abort(403, 'Сізге бұл АЭА-ға кіруге рұқсат етілмеген.');
             }
         }
 
@@ -227,7 +227,7 @@ class CheckRoleAccess
         if (str_starts_with($routeName, 'industrial-zones.')) {
             $iz = $request->route('industrialZone') ?? $request->route('industrial_zone');
             if ($iz && is_object($iz) && $iz->region_id !== $user->region_id) {
-                abort(403, 'Вам не разрешено входить в этот ИЗ.');
+                abort(403, 'Сізге бұл ИА-ға кіруге рұқсат етілмеген.');
             }
         }
 
@@ -235,7 +235,7 @@ class CheckRoleAccess
         if (str_starts_with($routeName, 'subsoil-users.')) {
             $su = $request->route('subsoilUser') ?? $request->route('subsoil_user');
             if ($su && is_object($su) && $su->region_id !== $user->region_id) {
-                abort(403, 'Вам не разрешено входить в этот Недропользователь.');
+                abort(403, 'Сізге бұл жер қойнауын пайдаланушыға кіруге рұқсат етілмеген.');
             }
         }
 
@@ -243,7 +243,7 @@ class CheckRoleAccess
         if ($routeName === 'regions.show') {
             $region = $request->route('region');
             if ($region && is_object($region) && $region->id !== $user->region_id) {
-                abort(403, 'Вам не разрешено входить в этот район.');
+                abort(403, 'Сізге бұл ауданға кіруге рұқсат етілмеген.');
             }
         }
     }

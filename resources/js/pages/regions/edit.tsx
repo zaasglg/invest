@@ -113,15 +113,15 @@ export default function Edit({ region, parents }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Регионы', href: regions.index.url() },
-                { title: 'Редактирование', href: '#' },
+                { title: 'Аймақтар', href: regions.index.url() },
+                { title: 'Өңдеу', href: '#' },
             ]}
         >
-            <Head title="Редактирование региона" />
+            <Head title="Аймақты өңдеу" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <h1 className="mb-6 text-2xl font-bold text-[#0f1b3d]">
-                    Редактирование региона
+                    Аймақты өңдеу
                 </h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
@@ -130,18 +130,18 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="type"
                             className="font-normal text-gray-500"
                         >
-                            Тип региона
+                            Аймақ түрі
                         </Label>
                         <Select
                             value={data.type}
                             onValueChange={(value) => setData('type', value)}
                         >
                             <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                <SelectValue placeholder="Выберите тип" />
+                                <SelectValue placeholder="Түрін таңдаңыз" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="oblast">Область</SelectItem>
-                                <SelectItem value="district">Район</SelectItem>
+                                <SelectItem value="oblast">Облыс</SelectItem>
+                                <SelectItem value="district">Аудан</SelectItem>
                             </SelectContent>
                         </Select>
                         {errors.type && (
@@ -157,7 +157,7 @@ export default function Edit({ region, parents }: Props) {
                                 htmlFor="parent_id"
                                 className="font-normal text-gray-500"
                             >
-                                Родительский регион (Область)
+                                Ата аймақ (Облыс)
                             </Label>
                             <Select
                                 value={data.parent_id}
@@ -166,7 +166,7 @@ export default function Edit({ region, parents }: Props) {
                                 }
                             >
                                 <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                    <SelectValue placeholder="Выберите область" />
+                                    <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {parents.map((parent) => (
@@ -193,7 +193,7 @@ export default function Edit({ region, parents }: Props) {
                                 htmlFor="subtype"
                                 className="font-normal text-gray-500"
                             >
-                                Район / Город
+                                Аудан / Қала
                             </Label>
                             <Select
                                 value={data.subtype}
@@ -206,10 +206,10 @@ export default function Edit({ region, parents }: Props) {
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="district">
-                                        Район
+                                        Аудан
                                     </SelectItem>
                                     <SelectItem value="city">
-                                        Город
+                                        Қала
                                     </SelectItem>
                                 </SelectContent>
                             </Select>
@@ -226,14 +226,14 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="name"
                             className="font-normal text-gray-500"
                         >
-                            Наименование
+                            Атауы
                         </Label>
                         <Input
                             id="name"
                             value={data.name}
                             onChange={(e) => setData('name', e.target.value)}
                             className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                            placeholder="Например: Сауран"
+                            placeholder="Мысалы: Сауран"
                             autoFocus
                         />
                         {errors.name && (
@@ -248,7 +248,7 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="color"
                             className="font-normal text-gray-500"
                         >
-                            Цвет региона
+                            Аймақ түсі
                         </Label>
                         <div className="flex items-center gap-2">
                             <Input
@@ -284,7 +284,7 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="icon_file"
                             className="font-normal text-gray-500"
                         >
-                            Загрузить новую иконку (PNG, JPG, WEBP, SVG)
+                            Жаңа белгіше жүктеу (PNG, JPG, WEBP, SVG)
                         </Label>
                         <Input
                             id="icon_file"
@@ -302,17 +302,17 @@ export default function Edit({ region, parents }: Props) {
                             <div className="flex items-center gap-2 rounded-md border border-gray-200 p-2">
                                 <img
                                     src={existingIconPath}
-                                    alt="Текущая иконка региона"
+                                    alt="Аймақтың ағымдағы белгішесі"
                                     className="h-8 w-8 object-contain"
                                 />
                                 <span className="text-xs text-gray-500">
-                                    Текущая загруженная иконка
+                                    Ағымдағы жүктелген белгіше
                                 </span>
                             </div>
                         )}
                         <p className="text-xs text-gray-500">
-                            Если файл не загрузить, текущая иконка останется без
-                            изменений.
+                            Файл жүктелмесе, ағымдағы белгіше
+                            өзгеріссіз қалады.
                         </p>
                         {errors.icon_file && (
                             <span className="text-sm text-red-500">
@@ -326,7 +326,7 @@ export default function Edit({ region, parents }: Props) {
                             htmlFor="area"
                             className="font-normal text-gray-500"
                         >
-                            Аумағы (га)
+                            Ауданы (га)
                         </Label>
                         <Input
                             id="area"
@@ -336,7 +336,7 @@ export default function Edit({ region, parents }: Props) {
                             value={data.area}
                             onChange={(e) => setData('area', e.target.value)}
                             className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                            placeholder="Например: 120.50"
+                            placeholder="Мысалы: 120.50"
                         />
                         {errors.area && (
                             <span className="text-sm text-red-500">
@@ -347,7 +347,7 @@ export default function Edit({ region, parents }: Props) {
 
                     <div className="flex flex-col gap-2">
                         <Label className="font-normal text-gray-500">
-                            Геолокация (полигон)
+                            Орналасу (полигон)
                         </Label>
                         <LocationPicker
                             value={data.geometry}
@@ -362,20 +362,20 @@ export default function Edit({ region, parents }: Props) {
                             )) && (
                             <span className="text-sm text-red-500">
                                 {errors.geometry ||
-                                    'Геолокация деректерінде қате бар. Нүктелерді қайта салыңыз.'}
+                                    'Орналасу мәліметтерінде қате. Нүктелерді қайта салыңыз.'}
                             </span>
                         )}
                     </div>
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Обновить
+                            Жаңарту
                         </Button>
                         <Link
                             href={regions.index.url()}
                             className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]"
                         >
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

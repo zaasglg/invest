@@ -165,9 +165,9 @@ class InvestmentProjectController extends Controller
             'regions' => Region::select('id', 'name')->orderBy('name')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
-            'sezs' => Sez::select('id', 'name')->orderBy('name')->get(),
-            'industrialZones' => IndustrialZone::select('id', 'name')->orderBy('name')->get(),
-            'subsoilUsers' => SubsoilUser::select('id', 'name')->orderBy('name')->get(),
+            'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
+            'industrialZones' => IndustrialZone::select('id', 'name', 'region_id')->orderBy('name')->get(),
+            'subsoilUsers' => SubsoilUser::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'filters' => $filters,
         ]);
     }
@@ -180,7 +180,6 @@ class InvestmentProjectController extends Controller
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
-        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             // Include user's district and its parent oblast
@@ -192,7 +191,6 @@ class InvestmentProjectController extends Controller
             $regionsQuery->whereIn('id', $regionIds);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
-            $subsoilQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -203,7 +201,6 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
-        $subsoilUsers = $subsoilQuery->get();
 
         return Inertia::render('investment-projects/create', [
             'regions' => $regions,
@@ -213,7 +210,6 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
-            'subsoilUsers' => $subsoilUsers,
         ]);
     }
 
@@ -232,7 +228,7 @@ class InvestmentProjectController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Вы можете добавить проект только в свой район.');
+                        $fail('Жобаны тек өз ауданыңызға қосуға болады.');
                     }
                 },
             ],
@@ -249,20 +245,16 @@ class InvestmentProjectController extends Controller
 
                     if ($type === 'sez') {
                         if (!Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("СЭЗ ({$id}) не находится в вашем районе.");
+                            $fail("АЭА ({$id}) сіздің ауданыңызда емес.");
                         }
                     } elseif ($type === 'industrial_zone') {
                         if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Индустриальный район ({$id}) не находится в вашем районе.");
-                        }
-                    } elseif ($type === 'subsoil') {
-                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
+                            $fail("ИА ({$id}) сіздің ауданыңызда емес.");
                         }
                     }
                 }
             ],
-            'total_investment' => 'nullable|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -282,7 +274,6 @@ class InvestmentProjectController extends Controller
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
-        $subsoilIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -290,8 +281,6 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
-            } elseif ($parsed['type'] === 'subsoil') {
-                $subsoilIds[] = $parsed['id'];
             }
         }
 
@@ -308,9 +297,8 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $project->sezs()->sync($sezIds);
         $project->industrialZones()->sync($izIds);
-        $project->subsoilUsers()->sync($subsoilIds);
 
-        return redirect()->route('investment-projects.index')->with('success', 'Проект создан.');
+        return redirect()->route('investment-projects.index')->with('success', 'Жоба құрылды.');
     }
 
     public function show($id)
@@ -369,11 +357,11 @@ class InvestmentProjectController extends Controller
             // Demo fallback data
             $project = [
                 'id' => (int) $id,
-                'name' => 'Демо проект ' . $id,
+                'name' => 'Демо жоба ' . $id,
                 'company_name' => 'Demo Company Ltd.',
-                'description' => 'Это демонстрационный проект, сгенерированный автоматически, так как запись в базе данных не найдена. Здесь будет подробное описание инвестиционного проекта, его целей, задач и ожидаемых результатов.',
-                'region' => ['name' => 'Туркестанская область'],
-                'project_type' => ['name' => 'Производство'],
+                'description' => 'Бұл дерекқорда жазба табылмағандықтан автоматты түрде жасалған демонстрациялық жоба. Мұнда инвестициялық жобаның толық сипаттамасы, мақсаттары, міндеттері және күтілетін нәтижелері болады.',
+                'region' => ['name' => 'Түркістан облысы'],
+                'project_type' => ['name' => 'Өндіріс'],
                 'sector' => 'industrial_zone',
                 'total_investment' => 150000000,
                 'status' => 'plan',
@@ -432,18 +420,16 @@ class InvestmentProjectController extends Controller
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
-        $investmentProject->load(['sezs', 'industrialZones', 'subsoilUsers']);
+        $investmentProject->load(['sezs', 'industrialZones']);
 
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
-        $subsoilQuery = SubsoilUser::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             $regionsQuery->where('id', $user->region_id);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
-            $subsoilQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -454,7 +440,6 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
-        $subsoilUsers = $subsoilQuery->get();
 
         // Формируем массив sector на основе many-to-many связей
         $sector = [];
@@ -467,11 +452,6 @@ class InvestmentProjectController extends Controller
         // Загружаем все связанные ИЗ
         foreach ($investmentProject->industrialZones as $iz) {
             $sector[] = "industrial_zone-{$iz->id}";
-        }
-        
-        // Загружаем всех недропользователей
-        foreach ($investmentProject->subsoilUsers as $su) {
-            $sector[] = "subsoil-{$su->id}";
         }
 
         $projectData = $investmentProject->load(['region', 'projectType', 'creator', 'executors', 'documents'])
@@ -489,7 +469,6 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
-            'subsoilUsers' => $subsoilUsers,
         ]);
     }
 
@@ -510,7 +489,7 @@ class InvestmentProjectController extends Controller
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
-                        $fail('Изменить проект можно только в своем районе.');
+                        $fail('Жобаны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },
             ],
@@ -527,20 +506,16 @@ class InvestmentProjectController extends Controller
 
                     if ($type === 'sez') {
                         if (!Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("СЭЗ ({$id}) не находится в вашем районе.");
+                            $fail("АЭА ({$id}) сіздің ауданыңызда емес.");
                         }
                     } elseif ($type === 'industrial_zone') {
                         if (!IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Индустриальный район ({$id}) не находится в вашем районе.");
-                        }
-                    } elseif ($type === 'subsoil') {
-                        if (!SubsoilUser::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Недропользователь ({$id}) не находится в вашем районе.");
+                            $fail("ИА ({$id}) сіздің ауданыңызда емес.");
                         }
                     }
                 }
             ],
-            'total_investment' => 'nullable|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -554,11 +529,10 @@ class InvestmentProjectController extends Controller
             'infrastructure.land' => 'nullable|array',
         ]);
 
-        // Парсим массив sectors в формате ["sez-1", "industrial_zone-5", "subsoil-3"]
+        // Парсим массив sectors в формате ["sez-1", "industrial_zone-5"]
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
-        $subsoilIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -566,8 +540,6 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
-            } elseif ($parsed['type'] === 'subsoil') {
-                $subsoilIds[] = $parsed['id'];
             }
         }
 
@@ -582,14 +554,13 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $investmentProject->sezs()->sync($sezIds);
         $investmentProject->industrialZones()->sync($izIds);
-        $investmentProject->subsoilUsers()->sync($subsoilIds);
 
-        return redirect()->route('investment-projects.index')->with('success', 'Проект обновлен.');
+        return redirect()->route('investment-projects.index')->with('success', 'Жоба жаңартылды.');
     }
 
     private function parseSector(string $sector): array
     {
-        // Формат: "sez-1", "industrial_zone-5", "subsoil-3"
+        // Формат: "sez-1", "industrial_zone-5"
         if (strpos($sector, '-') !== false) {
             [$type, $id] = explode('-', $sector, 2);
             return ['type' => $type, 'id' => (int)$id];
@@ -603,7 +574,7 @@ class InvestmentProjectController extends Controller
         // Check download permission for baskarma
         $user = auth()->user();
         if ($user && ! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+            abort(403, 'Сіздің бұл жобаның файлдарына қол жеткізуіңіз жоқ.');
         }
 
         $investmentProject->load([
@@ -623,7 +594,7 @@ class InvestmentProjectController extends Controller
         $zipPath = storage_path('app/private/' . $zipFileName);
 
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
-            abort(500, 'Не удалось создать архив.');
+            abort(500, 'Мұрағатты құру мүмкін болмады.');
         }
 
         // Add documents
@@ -635,7 +606,7 @@ class InvestmentProjectController extends Controller
                 if ($extension && !str_ends_with(mb_strtolower($docName), '.' . mb_strtolower($extension))) {
                     $docName .= '.' . $extension;
                 }
-                $zip->addFile($filePath, 'Документы/' . $docName);
+                $zip->addFile($filePath, 'Құжаттар/' . $docName);
             }
         }
 
@@ -655,12 +626,12 @@ class InvestmentProjectController extends Controller
         if ($zip->count() === 0) {
             $zip->close();
             @unlink($zipPath);
-            abort(404, 'Нет файлов для скачивания.');
+            abort(404, 'Жүктеуге файлдар жоқ.');
         }
 
         $zip->close();
 
-        $downloadName = 'Паспорт_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $investmentProject->name) . '.zip';
+        $downloadName = 'Төлқұжат_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $investmentProject->name) . '.zip';
 
         return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
     }
@@ -674,7 +645,7 @@ class InvestmentProjectController extends Controller
         // Check download permission for baskarma
         $user = auth()->user();
         if ($user && ! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің файлдарын жүктеуге рұқсат жоқ.');
+            abort(403, 'Сіздің бұл жобаның файлдарына қол жеткізуіңіз жоқ.');
         }
 
         // Load the single project with all relations
@@ -688,7 +659,7 @@ class InvestmentProjectController extends Controller
         $pptx->getDocumentProperties()
             ->setCreator('Turkistan Invest')
             ->setTitle($investmentProject->name)
-            ->setSubject('Инвестиционный проект');
+            ->setSubject('Инвестициялық жоба');
 
         $slide = $pptx->getActiveSlide();
         $this->buildProjectSlide($slide, $investmentProject);
@@ -711,7 +682,7 @@ class InvestmentProjectController extends Controller
 
         $investmentProject->delete();
 
-        return redirect()->back()->with('success', 'Проект удален.');
+        return redirect()->back()->with('success', 'Жоба жойылды.');
     }
 
     /**
@@ -732,13 +703,13 @@ class InvestmentProjectController extends Controller
         ])->whereIn('id', $projectIds)->get();
 
         if ($projects->isEmpty()) {
-            abort(404, 'Проекты не найдены.');
+            abort(404, 'Жобалар табылмады.');
         }
 
         $pptx = new PhpPresentation();
         $pptx->getDocumentProperties()
             ->setCreator('Turkistan Invest')
-            ->setTitle('Презентации проектов');
+            ->setTitle('Жобалар презентациялары');
 
         $isFirst = true;
         foreach ($projects as $project) {
@@ -757,7 +728,7 @@ class InvestmentProjectController extends Controller
         $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
         $writer->save($filePath);
 
-        $downloadName = 'Презентации_проектов.pptx';
+        $downloadName = 'Жобалар_презентациялары.pptx';
 
         return response()->download($filePath, $downloadName)->deleteFileAfterSend(true);
     }
@@ -865,7 +836,7 @@ class InvestmentProjectController extends Controller
         $blueLine->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FF' . $blue));
 
         // ══════════════════════════════════════════════════════════
-        // LEFT COLUMN — top: ЖОБА ТУРАЛЫ, bottom: АҒЫМДАҒЫ ЖАҒДАЙЛАР
+        // LEFT COLUMN — top: О ПРОЕКТЕ, bottom: ТЕКУЩАЯ СИТУАЦИЯ
         // ══════════════════════════════════════════════════════════
         $yLeft = 66;
 
@@ -877,8 +848,8 @@ class InvestmentProjectController extends Controller
         $infoItems = [
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
-            ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жобаның қуаттылығы', $project->description ? mb_substr($project->description, 0, 120) . (mb_strlen($project->description) > 120 ? '...' : '') : '—'],
+            ['Сала', $project->projectType?->name ?? 'Көрсетілмеген'],
+            ['Жоба қуаты', $project->description ? mb_substr($project->description, 0, 120) . (mb_strlen($project->description) > 120 ? '...' : '') : '—'],
             ['Жұмыс орындары', '—'],
             ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
             ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—') . '-' . ($project->end_date?->format('Y') ?? '—')],
@@ -903,12 +874,12 @@ class InvestmentProjectController extends Controller
             $yLeft += $rowH;
         }
 
-        // ── АҒЫМДАҒЫ ЖАҒДАЙЛАР (left column, below project info) ──
+        // ── ТЕКУЩАЯ СИТУАЦИЯ (left column, below project info) ──
         $yLeft += 12;
 
         $statusHeader = $slide->createRichTextShape();
         $statusHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЛАР', 12, $blue, true);
+        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙ', 12, $blue, true);
         $yLeft += 26;
 
         if ($project->current_status) {
@@ -963,7 +934,7 @@ class InvestmentProjectController extends Controller
 
         $yRight += max($actualImgH + 15, 180);
 
-        // ── ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ ─────────────────────────────
+        // ── ПОТРЕБНОСТЬ В ИНФРАСТРУКТУРЕ ─────────────────────────────
         $infrastructure = $project->infrastructure;
         $hasInfra = $infrastructure && is_array($infrastructure) &&
             collect($infrastructure)->contains(fn($v) => is_array($v) && ($v['needed'] ?? false));
@@ -971,14 +942,14 @@ class InvestmentProjectController extends Controller
         if ($hasInfra) {
             $infraHeader = $slide->createRichTextShape();
             $infraHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
-            $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ', 12, $blue, true);
+            $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМҒА ҚАЖЕТТІЛІК', 12, $blue, true);
             $yRight += 28;
 
             $infraItems = [
                 ['key' => 'gas',         'label' => 'Газ'],
                 ['key' => 'water',       'label' => 'Су'],
                 ['key' => 'electricity', 'label' => 'Электр қуаты'],
-                ['key' => 'land',        'label' => 'Жер телімі'],
+                ['key' => 'land',        'label' => 'Жер учаскесі'],
             ];
 
             $colCount = count($infraItems);
@@ -1024,7 +995,7 @@ class InvestmentProjectController extends Controller
 
         $issuesHeader = $slide->createRichTextShape();
         $issuesHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
-        $addText($issuesHeader, 'ПРОБЛЕМНЫЕ ВОПРОСЫ', 12, $red, true);
+        $addText($issuesHeader, 'ПРОБЛЕМАЛЫҚ МӘСЕЛЕЛЕР', 12, $red, true);
         if ($issues->count() > 0) {
             $addText($issuesHeader, '  (' . $issues->count() . ')', 11, $red, true);
         }
@@ -1068,7 +1039,7 @@ class InvestmentProjectController extends Controller
         } else {
             $noIssues = $slide->createRichTextShape();
             $noIssues->setHeight(16)->setWidth($rightW)->setOffsetX($rightX + 5)->setOffsetY($yRight);
-            $addText($noIssues, 'Проблемные вопросы жоқ', 9, $midGray, false);
+            $addText($noIssues, 'Проблемалық мәселелер жоқ', 9, $midGray, false);
         }
     }
 
@@ -1085,7 +1056,7 @@ class InvestmentProjectController extends Controller
 
         // Use the helper method
         if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
-            abort(403, 'Вам не разрешено участвовать в этом проекте.');
+            abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
         }
     }
 }

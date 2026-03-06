@@ -23,9 +23,11 @@ class TaskNotificationObserver
         // Dispatch to queue or send immediately
         try {
             $telegram = app(TelegramService::class);
+            $projectId = $notification->task?->project_id;
             $formattedMessage = $telegram->formatNotification(
                 $notification->type,
                 $notification->message,
+                $projectId,
             );
             $telegram->sendMessage($user->telegram_chat_id, $formattedMessage);
         } catch (\Throwable $e) {

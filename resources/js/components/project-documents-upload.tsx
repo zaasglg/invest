@@ -79,7 +79,7 @@ export default function ProjectDocumentsUpload({
     };
 
     const handleDeleteExisting = (documentId: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот документ?')) {
+        if (confirm('Бұл құжатты жоюға сенімдісіз бе?')) {
             router.delete(`/investment-projects/${projectId}/documents/${documentId}`);
         }
     };
@@ -89,7 +89,7 @@ export default function ProjectDocumentsUpload({
             {/* Existing Documents */}
             {existingDocuments.length > 0 && (
                 <div className="flex flex-col gap-2">
-                    <Label className="text-neutral-500 font-normal">Загруженные документы</Label>
+                    <Label className="text-neutral-500 font-normal">Жүктелген құжаттар</Label>
                     <div className="border border-neutral-200 rounded-md p-3 space-y-2">
                         {existingDocuments.map((doc) => (
                             <div
@@ -107,7 +107,7 @@ export default function ProjectDocumentsUpload({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
-                                        title="Скачать"
+                                        title="Жүктеу"
                                     >
                                         <Download className="h-4 w-4" />
                                     </a>
@@ -131,13 +131,13 @@ export default function ProjectDocumentsUpload({
             {!readOnly && (
                 <div className="flex flex-col gap-2">
                     <Label className="text-neutral-500 font-normal">
-                        {projectId ? 'Добавить документы' : 'Документы (будут загружены после сохранения)'}
+                        {projectId ? 'Құжаттар қосу' : 'Құжаттар (сақтағаннан кейін жүктеледі)'}
                     </Label>
                     <div className="border border-neutral-200 border-dashed rounded-md p-4">
                         <div className="flex items-center justify-center gap-3 mb-3">
                             <label className="cursor-pointer flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                                 <Upload className="h-4 w-4" />
-                                <span>Выбрать файл</span>
+                                <span>Файл таңдау</span>
                                 <input
                                     type="file"
                                     className="hidden"
@@ -146,7 +146,7 @@ export default function ProjectDocumentsUpload({
                                 />
                             </label>
                             <span className="text-xs text-gray-400">
-                                PDF, DOC, XLS, изображения до 10MB
+                                PDF, DOC, XLS, суреттер 10MB дейін
                             </span>
                         </div>
 
@@ -161,26 +161,26 @@ export default function ProjectDocumentsUpload({
                                         <div className="flex-1 grid grid-cols-2 gap-2">
                                             <div>
                                                 <Label htmlFor={`doc-name-${index}`} className="text-xs text-gray-500">
-                                                    Название
+                                                    Атауы
                                                 </Label>
                                                 <Input
                                                     id={`doc-name-${index}`}
                                                     value={doc.name}
                                                     onChange={(e) => updateDocumentName(index, e.target.value)}
                                                     className="h-8 text-sm"
-                                                    placeholder="Название документа"
+                                                    placeholder="Құжат атауы"
                                                 />
                                             </div>
                                             <div>
                                                 <Label htmlFor={`doc-type-${index}`} className="text-xs text-gray-500">
-                                                    Тип (опционально)
+                                                    Түрі (қосымша)
                                                 </Label>
                                                 <Input
                                                     id={`doc-type-${index}`}
                                                     value={doc.type || ''}
                                                     onChange={(e) => updateDocumentType(index, e.target.value)}
                                                     className="h-8 text-sm"
-                                                    placeholder="Например: договор"
+                                                    placeholder="Мысалы: келісімшарт"
                                                 />
                                             </div>
                                         </div>
@@ -200,7 +200,7 @@ export default function ProjectDocumentsUpload({
 
                         {documents.length === 0 && existingDocuments.length === 0 && (
                             <p className="text-center text-sm text-gray-400 py-2">
-                                Нет загруженных документов
+                                Жүктелген құжаттар жоқ
                             </p>
                         )}
                     </div>

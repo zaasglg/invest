@@ -14,7 +14,7 @@ import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Настройки пароля',
+        title: 'Құпия сөз баптаулары',
         href: edit().url,
     },
 ];
@@ -25,16 +25,16 @@ export default function Password() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Настройки пароля" />
+            <Head title="Құпия сөз баптаулары" />
 
-            <h1 className="sr-only">Настройки пароля</h1>
+            <h1 className="sr-only">Құпия сөз баптаулары</h1>
 
             <SettingsLayout>
                 <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
                     <Heading
                         variant="small"
-                        title="Изменить пароль"
-                        description="Используйте длинный случайный пароль для безопасности аккаунта"
+                        title="Құпия сөзді өзгерту"
+                        description="Аккаунт қауіпсіздігі үшін ұзын күрделі құпия сөз қолданыңыз"
                     />
 
                     <Form
@@ -63,7 +63,7 @@ export default function Password() {
                             <>
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="current_password">
-                                        Текущий пароль
+                                        Ағымдағы құпия сөз
                                     </Label>
                                     <Input
                                         id="current_password"
@@ -72,7 +72,7 @@ export default function Password() {
                                         type="password"
                                         className="block w-full"
                                         autoComplete="current-password"
-                                        placeholder="Введите текущий пароль"
+                                        placeholder="Ағымдағы құпия сөзді енгізіңіз"
                                     />
                                     <InputError
                                         message={errors.current_password}
@@ -81,7 +81,7 @@ export default function Password() {
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="password">
-                                        Новый пароль
+                                        Жаңа құпия сөз
                                     </Label>
                                     <Input
                                         id="password"
@@ -90,14 +90,14 @@ export default function Password() {
                                         type="password"
                                         className="block w-full"
                                         autoComplete="new-password"
-                                        placeholder="Введите новый пароль"
+                                        placeholder="Жаңа құпия сөзді енгізіңіз"
                                     />
                                     <InputError message={errors.password} />
                                 </div>
 
                                 <div className="grid gap-1.5">
                                     <Label htmlFor="password_confirmation">
-                                        Подтвердить пароль
+                                        Құпия сөзді растаңыз
                                     </Label>
                                     <Input
                                         id="password_confirmation"
@@ -105,7 +105,7 @@ export default function Password() {
                                         type="password"
                                         className="block w-full"
                                         autoComplete="new-password"
-                                        placeholder="Повторите новый пароль"
+                                        placeholder="Жаңа құпия сөзді қайталаңыз"
                                     />
                                     <InputError
                                         message={errors.password_confirmation}
@@ -118,7 +118,7 @@ export default function Password() {
                                         data-test="update-password-button"
                                         className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
-                                        Сохранить пароль
+                                        Құпия сөзді сақтау
                                     </Button>
 
                                     <Transition
@@ -129,7 +129,7 @@ export default function Password() {
                                         leaveTo="opacity-0"
                                     >
                                         <p className="text-sm text-green-600">
-                                            Сохранено
+                                            Сақталды
                                         </p>
                                     </Transition>
                                 </div>

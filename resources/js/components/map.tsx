@@ -842,12 +842,12 @@ export default function Map({
     const formatInvestment = (value: number) => {
         if (!value) return '0';
         if (value >= 1_000_000_000) {
-            return `${(value / 1_000_000_000).toFixed(1)} млрд тг`;
+            return `${(value / 1_000_000_000).toFixed(1)} млрд ₸`;
         }
         if (value >= 1_000_000) {
-            return `${(value / 1_000_000).toFixed(1)} млн тг`;
+            return `${(value / 1_000_000).toFixed(1)} млн ₸`;
         }
-        return `${value.toLocaleString('ru-RU')} тг`;
+        return `${value.toLocaleString('kk-KZ')} ₸`;
     };
 
     const formatCount = (value: number | null | undefined) => {
@@ -855,7 +855,7 @@ export default function Map({
             return '—';
         }
 
-        return value.toLocaleString('ru-RU');
+        return value.toLocaleString('kk-KZ');
     };
 
     useEffect(() => {
@@ -1417,7 +1417,7 @@ export default function Map({
                     {/* Header */}
                     <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
                         <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Район</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Аудан</p>
                             <h3 className="mt-0.5 text-lg font-bold leading-tight text-white break-words">
                                 {activeRegion.name}
                             </h3>
@@ -1442,25 +1442,25 @@ export default function Map({
                             return (
                                 <div className="divide-y divide-gray-100">
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Объем инвестиций</span>
+                                        <span className="text-sm text-gray-500">Инвестиция көлемі</span>
                                         <span className="text-lg font-bold text-[#c8a44e]">
                                             {formatInvestment(stats.investments)}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Проектов в ИЗ</span>
+                                        <span className="text-sm text-gray-500">ИА-дағы жобалар</span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.izProjects}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Проектов в СЭЗ</span>
+                                        <span className="text-sm text-gray-500">АЭА-дағы жобалар</span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.sezProjects}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Недропользователи</span>
+                                        <span className="text-sm text-gray-500">Жер қойнауын пайдаланушылар</span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.subsoilUsers}
                                         </span>
@@ -1480,7 +1480,7 @@ export default function Map({
                                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0f1b3d] text-sm font-semibold text-white shadow-none hover:bg-[#1a2d5a]"
                                 size="sm"
                             >
-                                Подробнее о районе
+                                Аудан туралы толығырақ
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </Link>
@@ -1497,9 +1497,9 @@ export default function Map({
                     {/* Header */}
                     <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
                         <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Проект</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Жоба</p>
                             <h3 className="mt-0.5 text-base font-bold leading-tight text-white break-words">
-                                {activePlot.name || 'Инвестиционный проект'}
+                                {activePlot.name || 'Инвестициялық жоба'}
                             </h3>
                             {activePlot.companyName && (
                                 <p className="mt-0.5 text-xs text-white/60 break-words">
@@ -1520,11 +1520,11 @@ export default function Map({
                     {/* Content */}
                     <div className="flex-1 overflow-y-auto overscroll-contain">
                         <div className="divide-y divide-gray-100">
-                            {/* Статус */}
+                            {/* Күйі */}
                             {activePlot.statusRaw && (
                                 <div className="flex items-center justify-between px-5 py-3">
                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Статус
+                                        Күйі
                                     </p>
                                         <span
                                             className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
@@ -1543,27 +1543,27 @@ export default function Map({
                                             }`}
                                         >
                                             {activePlot.statusRaw === 'plan'
-                                                ? 'Планирование'
+                                                ? 'Жоспарлау'
                                                 : activePlot.statusRaw ===
                                                     'implementation'
-                                                  ? 'Реализация'
+                                                  ? 'Іске асыру'
                                                   : activePlot.statusRaw ===
                                                       'launched'
-                                                    ? 'Запущен'
+                                                    ? 'Іске қосылған'
                                                     : activePlot.statusRaw ===
                                                         'suspended'
-                                                      ? 'Приостановлен'
+                                                      ? 'Тоқтатылған'
                                                       : activePlot.statusRaw}
                                         </span>
                                     </div>
                                 )}
 
-                            {/* Инвестиции */}
+                            {/* Инвестициялар */}
                             {activePlot.totalInvestment !== undefined &&
                                 activePlot.totalInvestment !== null && (
                                     <div className="flex items-center justify-between px-5 py-3">
                                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                            Инвестиции
+                                            Инвестициялар
                                         </p>
                                         <p className="text-sm font-bold text-[#c8a44e]">
                                             {formatInvestment(
@@ -1575,11 +1575,11 @@ export default function Map({
                                     </div>
                                 )}
 
-                            {/* Тип проекта */}
+                            {/* Жоба түрі */}
                             {activePlot.projectTypeName && (
                                 <div className="flex items-center justify-between px-5 py-3">
                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Тип проекта
+                                        Жоба түрі
                                     </p>
                                     <p className="text-sm font-medium text-[#0f1b3d]">
                                         {activePlot.projectTypeName}
@@ -1587,35 +1587,35 @@ export default function Map({
                                 </div>
                             )}
 
-                            {/* Сроки */}
+                            {/* Мерзімдері */}
                             {(activePlot.startDate ||
                                 activePlot.endDate) && (
                                 <div className="flex items-center justify-between px-5 py-3">
                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Сроки
+                                        Мерзімдері
                                     </p>
                                     <p className="text-sm font-medium text-[#0f1b3d]">
                                             {activePlot.startDate
                                                 ? new Date(
                                                       activePlot.startDate,
-                                                  ).toLocaleDateString('ru-RU')
+                                                  ).toLocaleDateString('kk-KZ')
                                                 : '—'}
                                             {' — '}
                                             {activePlot.endDate
                                                 ? new Date(
                                                       activePlot.endDate,
-                                                  ).toLocaleDateString('ru-RU')
+                                                  ).toLocaleDateString('kk-KZ')
                                                 : '—'}
                                         </p>
                                     </div>
                                 )}
 
-                            {/* Исполнители */}
+                            {/* Орындаушылар */}
                             {activePlot.executorNames &&
                                 activePlot.executorNames.length > 0 && (
                                     <div className="px-5 py-3">
                                         <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                            Исполнители
+                                            Орындаушылар
                                         </p>
                                         <div className="flex flex-wrap gap-1">
                                             {activePlot.executorNames.map(
@@ -1632,7 +1632,7 @@ export default function Map({
                                     </div>
                                 )}
 
-                            {/* Секторы: СЭЗ, ИЗ, Недропользователи */}
+                            {/* Секторлар: АЭА, ИА, Жер қойнауын пайдаланушылар */}
                             {((activePlot.sezNames &&
                                 activePlot.sezNames.length > 0) ||
                                 (activePlot.izNames &&
@@ -1642,7 +1642,7 @@ export default function Map({
                                         0)) && (
                                 <div className="px-5 py-3">
                                     <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Секторы
+                                        Секторлар
                                     </p>
                                         <div className="flex flex-wrap gap-1">
                                             {activePlot.sezNames?.map(
@@ -1651,7 +1651,7 @@ export default function Map({
                                                         key={`sez-${i}`}
                                                         className="inline-flex items-center rounded-full bg-[#c8a44e]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#c8a44e]"
                                                     >
-                                                        СЭЗ: {name}
+                                                        АЭА: {name}
                                                     </span>
                                                 ),
                                             )}
@@ -1661,7 +1661,7 @@ export default function Map({
                                                         key={`iz-${i}`}
                                                         className="inline-flex items-center rounded-full bg-[#0f1b3d]/8 px-2.5 py-0.5 text-[10px] font-medium text-[#0f1b3d]"
                                                     >
-                                                        ИЗ: {name}
+                                                        ИА: {name}
                                                     </span>
                                                 ),
                                             )}
@@ -1671,7 +1671,7 @@ export default function Map({
                                                         key={`su-${i}`}
                                                         className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
                                                     >
-                                                        Недропользование: {name}
+                                                        Жер қойнауын пайдалану: {name}
                                                     </span>
                                                 ),
                                             )}
@@ -1679,11 +1679,11 @@ export default function Map({
                                     </div>
                                 )}
 
-                            {/* Описание */}
+                            {/* Сипаттама */}
                             {activePlot.description && (
                                 <div className="px-5 py-3">
                                     <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-                                        Описание
+                                        Сипаттама
                                     </p>
                                     <p className="line-clamp-3 text-sm leading-snug text-gray-600">
                                         {activePlot.description}
@@ -1700,7 +1700,7 @@ export default function Map({
                             className="w-full"
                         >
                             <Button className="h-10 w-full rounded-xl bg-[#c8a44e] text-sm font-semibold text-white shadow-none hover:bg-[#b8943e]">
-                                Подробнее о проекте
+                                Жоба туралы толығырақ
                             </Button>
                         </Link>
                     </div>
@@ -1723,11 +1723,11 @@ export default function Map({
                                 label: 'Turkistan Invest',
                                 d: data.invest,
                             },
-                            { key: 'sez', label: 'СЭЗ', d: data.sez },
-                            { key: 'iz', label: 'ИЗ', d: data.iz },
+                            { key: 'sez', label: 'АЭА', d: data.sez },
+                            { key: 'iz', label: 'ИА', d: data.iz },
                             {
                                 key: 'nedro',
-                                label: 'Недропользование',
+                                label: 'Жер қойнауын пайдалану',
                                 d: data.nedro,
                             },
                         ];
@@ -1740,9 +1740,9 @@ export default function Map({
                                     className="flex w-full items-center justify-center gap-1.5 border-b border-gray-200/50 bg-[#0f1b3d]/5 px-4 py-2 text-xs font-semibold text-[#0f1b3d] transition-colors hover:bg-[#0f1b3d]/10"
                                 >
                                     {isTableCollapsed ? (
-                                        <><ChevronUp className="h-3.5 w-3.5" /> Показать таблицу</>
+                                        <><ChevronUp className="h-3.5 w-3.5" /> Кестені көрсету</>
                                     ) : (
-                                        <><ChevronDown className="h-3.5 w-3.5" /> Свернуть таблицу</>
+                                        <><ChevronDown className="h-3.5 w-3.5" /> Кестені жасыру</>
                                     )}
                                 </button>
                                 {!isTableCollapsed && <div className="custom-scrollbar overflow-x-auto">
@@ -1753,16 +1753,16 @@ export default function Map({
                                                     Сектор
                                                 </th>
                                                 <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Инвестиции
+                                                    Инвестициялар
                                                 </th>
                                                 <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Кол-во проектов
+                                                    Жобалар саны
                                                 </th>
                                                 <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Проблемные вопросы
+                                                    Проблемалық мәселелер
                                                 </th>
                                                 <th className="px-5 py-2.5 text-center">
-                                                    Организации
+                                                    Ұйымдар
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1819,7 +1819,7 @@ export default function Map({
                         onProjectSelect?.(null);
                         setResetTrigger((t) => t + 1);
                     }}
-                    title="Сбросить карту"
+                    title="Картаны қалпына келтіру"
                 >
                      <Navigation className="h-6 w-6 text-[#0f1b3d]" />
                 </Button>

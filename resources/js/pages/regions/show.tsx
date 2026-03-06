@@ -263,25 +263,25 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const formatCurrency = (amount: number) => {
         if (Math.abs(amount) >= 1_000_000_000) {
             const billions = amount / 1_000_000_000;
-            const formatted = new Intl.NumberFormat('ru-RU', {
+            const formatted = new Intl.NumberFormat('kk-KZ', {
                 maximumFractionDigits: 1,
             }).format(billions);
             return `${formatted} млрд ₸`;
         }
         if (Math.abs(amount) >= 1_000_000) {
             const millions = amount / 1_000_000;
-            const formatted = new Intl.NumberFormat('ru-RU', {
+            const formatted = new Intl.NumberFormat('kk-KZ', {
                 maximumFractionDigits: 1,
             }).format(millions);
             return `${formatted} млн ₸`;
         }
-        return new Intl.NumberFormat('ru-RU', {
+        return new Intl.NumberFormat('kk-KZ', {
             maximumFractionDigits: 0,
         }).format(amount) + ' ₸';
     };
 
     const formatArea = (area: number) => {
-        return new Intl.NumberFormat('ru-RU', {
+        return new Intl.NumberFormat('kk-KZ', {
             maximumFractionDigits: 2,
         }).format(area);
     };
@@ -301,7 +301,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return (
             <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
                 <span className="text-xs text-gray-500">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} из {totalItems}
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} / {totalItems}
                 </span>
                 <div className="flex items-center gap-1">
                     <Button
@@ -354,15 +354,15 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         const sectors: string[] = [];
 
         if (project.sezs && project.sezs.length > 0) {
-            sectors.push(...project.sezs.map(sez => `СЭЗ: ${sez.name}`));
+            sectors.push(...project.sezs.map(sez => `АЭА: ${sez.name}`));
         }
 
         if (project.industrial_zones && project.industrial_zones.length > 0) {
-            sectors.push(...project.industrial_zones.map(iz => `ИЗ: ${iz.name}`));
+            sectors.push(...project.industrial_zones.map(iz => `ИА: ${iz.name}`));
         }
 
         if (project.subsoil_users && project.subsoil_users.length > 0) {
-            sectors.push(...project.subsoil_users.map(su => `Недропользование: ${su.name}`));
+            sectors.push(...project.subsoil_users.map(su => `Жер қойнауын пайдалану: ${su.name}`));
         }
 
         return sectors.length > 0 ? sectors.join(', ') : '—';
@@ -370,10 +370,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     const getStatusLabel = (status: string) => {
         const labels: Record<string, string> = {
-            plan: 'Планирование',
-            implementation: 'Реализация',
-            launched: 'Запущен',
-            suspended: 'Приостановлен',
+            plan: 'Жоспарлау',
+            implementation: 'Іске асыру',
+            launched: 'Іске қосылған',
+            suspended: 'Тоқтатылған',
         };
 
         return labels[status] || status;
@@ -391,21 +391,21 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     };
 
     const licenseStatusMap: Record<string, { label: string; color?: string }> = {
-        active: { label: 'Активная', color: 'bg-green-100 text-green-800' },
-        expired: { label: 'Истекла', color: 'bg-gray-100 text-gray-800' },
-        suspended: { label: 'Приостановлена', color: 'bg-amber-100 text-amber-800' },
-        illegal: { label: 'Нелегально', color: 'bg-red-600 text-white' },
+        active: { label: 'Белсенді', color: 'bg-green-100 text-green-800' },
+        expired: { label: 'Мерзімі өткен', color: 'bg-gray-100 text-gray-800' },
+        suspended: { label: 'Тоқтатылған', color: 'bg-amber-100 text-amber-800' },
+        illegal: { label: 'Заңсыз', color: 'bg-red-600 text-white' },
     };
 
     const renderInfrastructureCard = (title: string, data?: InfrastructureData | null) => {
         if (!data) return null;
 
         const items = [
-            { key: 'electricity', name: "Электроснабжение", icon: Zap, val: data.electricity, unit: 'МВт' },
-            { key: 'gas', name: "Газ", icon: Flame, val: data.gas, unit: 'м³/час' },
-            { key: 'water', name: "Водоснабжение", icon: Droplets, val: data.water, unit: 'м³/сут' },
-            { key: 'roads', name: "Дороги", icon: Car, val: data.roads, unit: 'км' },
-            { key: 'railway', name: "Ж/Д тупик", icon: TrainFront, val: data.railway, unit: 'км' },
+            { key: 'electricity', name: "Электрмен жабдықтау", icon: Zap, val: data.electricity, unit: 'МВт' },
+            { key: 'gas', name: "Газ", icon: Flame, val: data.gas, unit: 'м³/сағ' },
+            { key: 'water', name: "Сумен жабдықтау", icon: Droplets, val: data.water, unit: 'м³/тәу' },
+            { key: 'roads', name: "Жолдар", icon: Car, val: data.roads, unit: 'км' },
+            { key: 'railway', name: "Теміржол тұйығы", icon: TrainFront, val: data.railway, unit: 'км' },
             { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet, unit: '' },
         ].filter(i => i.val && i.val.available !== undefined);
 
@@ -435,7 +435,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             ${active ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-100'}
                                             font-medium mb-0.5 border text-[10px] px-1.5 py-0 h-5
                                         `}>
-                                            {active ? 'Доступно' : 'Нет'}
+                                            {active ? 'Қолжетімді' : 'Жоқ'}
                                         </Badge>
                                         {detail && (
                                             <div className="text-[10px] text-gray-400 font-medium mt-0.5">
@@ -561,24 +561,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Площадь:</span>
+                                <span className="text-gray-400">Аумағы:</span>
                                 <span className="text-[#0f1b3d]">{formatArea(stats.totalArea)} га</span>
                             </div>
                             {/* <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Статус:</span>
-                                <span className="text-[#0f1b3d]">Действует</span>
+                                <span className="text-gray-400">Күйі:</span>
+                                <span className="text-[#0f1b3d]">Жұмыс істеуде</span>
                             </div> */}
                             <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Область:</span>
+                                <span className="text-gray-400">Облыс:</span>
                                 <span className="text-[#0f1b3d] flex items-center cursor-pointer hover:underline">
-                                    <Link href="/dashboard">Туркестанская область</Link> <ChevronRight className="h-4 w-4" />
+                                    <Link href="/dashboard">Түркістан облысы</Link> <ChevronRight className="h-4 w-4" />
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-3">
                         <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md border border-green-200 text-sm font-medium">
-                            <CheckCircle2 className="h-4 w-4" /> Статус: Действует
+                            <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс істеуде
                         </div>
                     </div>
                 </div>
@@ -614,38 +614,38 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-100 p-3 rounded-lg z-[400] text-sm space-y-1.5">
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Аудан аймағы</span>
+                                        <span className="font-medium text-gray-600 text-xs">Аудан</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#8b5cf6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">СЭЗ</span>
+                                        <span className="font-medium text-gray-600 text-xs">АЭА</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#f59e0b' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Индустриальная зона</span>
+                                        <span className="font-medium text-gray-600 text-xs">Индустриялық аймақ</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#4b5563' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Недропользователь</span>
+                                        <span className="font-medium text-gray-600 text-xs">Жер қойнауын пайдаланушы</span>
                                     </div>
                                     <div className="border-t border-gray-200 pt-1.5 mt-1">
-                                        <span className="font-semibold text-gray-700 text-[10px] uppercase tracking-wide">Инвестиционные проекттер</span>
+                                        <span className="font-semibold text-gray-700 text-[10px] uppercase tracking-wide">Инвестициялық жобалар</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Планирование</span>
+                                        <span className="font-medium text-gray-600 text-xs">Жоспарлау</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#22c55e' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Запущен</span>
+                                        <span className="font-medium text-gray-600 text-xs">Іске қосылған</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#eab308' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Реализация</span>
+                                        <span className="font-medium text-gray-600 text-xs">Іске асыру</span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
                                         <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#ef4444' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Приостановлен</span>
+                                        <span className="font-medium text-gray-600 text-xs">Тоқтатылған</span>
                                     </div>
                                 </div>
 
@@ -656,7 +656,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         className="absolute top-4 right-4 z-[400] flex items-center gap-1.5 rounded-lg bg-white/90 backdrop-blur-sm border border-gray-200 px-3 py-2 text-xs font-medium text-gray-700 shadow-sm hover:bg-white hover:text-[#0f1b3d] transition-colors"
                                     >
                                         <Maximize2 className="h-3.5 w-3.5" />
-                                        Показать всю карту
+                                        Картаны толық көрсету
                                     </button>
                                 )} */}
                             </div>
@@ -666,15 +666,15 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 <TabsContent value="all" className="mt-0 space-y-4">
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
-                                            {mapSelectedEntityType === 'sez' ? `Проекты в СЭЗ` :
-                                             mapSelectedEntityType === 'iz' ? `Проекты в ИЗ` :
-                                             mapSelectedEntityType === 'subsoil' ? `Проекты недропользователя` :
-                                             'Инвестиционные проекты'}
+                                            {mapSelectedEntityType === 'sez' ? `АЭА жобалары` :
+                                             mapSelectedEntityType === 'iz' ? `ИА жобалары` :
+                                             mapSelectedEntityType === 'subsoil' ? `Жер қойнауын пайдаланушы жобалары` :
+                                             'Инвестициялық жобалар'}
                                         </h2>
                                         <div className="flex items-center gap-2">
                                             {mapSelectedEntityType && (
                                                 <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setMapSelectedEntityId(null); setMapSelectedEntityType(null); }}>
-                                                    Сбросить фильтр
+                                                    Сүзгіні қалпына келтіру
                                                 </Button>
                                             )}
                                             <Button
@@ -698,7 +698,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             </Button>
                                             {/* <Link href="/investment-projects" className="text-[#0f1b3d] hover:text-[#c8a44e] hover:underline text-sm">
                                                 <Button variant="ghost" className="text-[#0f1b3d] hover:text-[#c8a44e] hover:bg-[#0f1b3d]/5 text-sm h-auto py-1 px-2">
-                                                    Все проекты <ChevronRight className="ml-1 h-3 w-3" />
+                                                    Барлық жобалар <ChevronRight className="ml-1 h-3 w-3" />
                                                 </Button>
                                             </Link> */}
                                         </div>
@@ -707,11 +707,11 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
-                                                    <TableHead>Проект</TableHead>
-                                                    <TableHead>Отрасль</TableHead>
-                                                    <TableHead>Статус</TableHead>
-                                                    <TableHead>Объем</TableHead>
-                                                    <TableHead className="text-right">Инвестиции</TableHead>
+                                                    <TableHead>Жоба</TableHead>
+                                                    <TableHead>Сала</TableHead>
+                                                    <TableHead>Күйі</TableHead>
+                                                    <TableHead>Көлемі</TableHead>
+                                                    <TableHead className="text-right">Инвестициялар</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -731,7 +731,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             onClick={() => handleProjectSelect(project.id)}
                                                         >
                                                             <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                                {project.name}
+                                                                <Link
+                                                                    href={`/investment-projects/${project.id}`}
+                                                                    className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                    onClick={(e) => e.stopPropagation()}
+                                                                >
+                                                                    {project.name}
+                                                                </Link>
                                                             </TableCell>
                                                             <TableCell className="text-gray-500 text-sm py-3">
                                                                 {getSectorDisplay(project)}
@@ -756,7 +762,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     )) : (
                                                         <TableRow>
                                                             <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                                                                Нет данных о проектах
+                                                                Жобалар туралы деректер жоқ
                                                             </TableCell>
                                                         </TableRow>
                                                     );
@@ -780,12 +786,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSezId
-                                                ? `Проекты: ${sezs.find(s => s.id === selectedSezId)?.name || 'СЭЗ'}`
-                                                : 'Проекты СЭЗ'}
+                                                ? `Жобалар: ${sezs.find(s => s.id === selectedSezId)?.name || 'АЭА'}`
+                                                : 'АЭА жобалары'}
                                         </h2>
                                         {selectedSezId && (
                                             <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSezId(null); setSelectedEntityId(null); setSelectedEntityType(null); }}>
-                                                Сбросить фильтр
+                                                Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                         <Button
@@ -803,10 +809,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
-                                                    <TableHead>Проект</TableHead>
-                                                    <TableHead>Отрасль</TableHead>
-                                                    <TableHead>Статус</TableHead>
-                                                    <TableHead className="text-right">Инвестиции</TableHead>
+                                                    <TableHead>Жоба</TableHead>
+                                                    <TableHead>Сала</TableHead>
+                                                    <TableHead>Күйі</TableHead>
+                                                    <TableHead className="text-right">Инвестициялар</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -817,7 +823,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
                                                         <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                            {project.name}
+                                                            <Link
+                                                                href={`/investment-projects/${project.id}`}
+                                                                className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {project.name}
+                                                            </Link>
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
                                                             {getSectorDisplay(project)}
@@ -839,7 +851,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 )) : (
                                                     <TableRow>
                                                         <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Нет проектов
+                                                            Жобалар жоқ
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
@@ -853,12 +865,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedIzId
-                                                ? `Проекты: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИЗ'}`
-                                                : 'Проекты ИЗ'}
+                                                ? `Жобалар: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИА'}`
+                                                : 'ИА жобалары'}
                                         </h2>
                                         {selectedIzId && (
                                             <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedIzId(null); setSelectedEntityId(null); setSelectedEntityType(null); }}>
-                                                Сбросить фильтр
+                                                Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                         <Button
@@ -876,10 +888,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
-                                                    <TableHead>Проект</TableHead>
-                                                    <TableHead>Отрасль</TableHead>
-                                                    <TableHead>Статус</TableHead>
-                                                    <TableHead className="text-right">Инвестиции</TableHead>
+                                                    <TableHead>Жоба</TableHead>
+                                                    <TableHead>Сала</TableHead>
+                                                    <TableHead>Күйі</TableHead>
+                                                    <TableHead className="text-right">Инвестициялар</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -890,7 +902,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         onClick={() => handleProjectSelect(project.id)}
                                                     >
                                                         <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                            {project.name}
+                                                            <Link
+                                                                href={`/investment-projects/${project.id}`}
+                                                                className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                onClick={(e) => e.stopPropagation()}
+                                                            >
+                                                                {project.name}
+                                                            </Link>
                                                         </TableCell>
                                                         <TableCell className="text-gray-500 text-sm py-3">
                                                             {getSectorDisplay(project)}
@@ -912,7 +930,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 )) : (
                                                     <TableRow>
                                                         <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Нет проектов
+                                                            Жобалар жоқ
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
@@ -926,12 +944,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <div className="flex items-center justify-between mb-4">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSubsoilStatus
-                                                ? `Недропользователи: ${licenseStatusMap[selectedSubsoilStatus]?.label || selectedSubsoilStatus}`
-                                                : 'Недропользователи'}
+                                                ? `Жер қойнауын пайдаланушылар: ${licenseStatusMap[selectedSubsoilStatus]?.label || selectedSubsoilStatus}`
+                                                : 'Жер қойнауын пайдаланушылар'}
                                         </h2>
                                         {selectedSubsoilStatus && (
                                             <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSubsoilStatus(null); }}>
-                                                Сбросить фильтр
+                                                Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                     </div>
@@ -939,10 +957,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
-                                                    <TableHead>Наименование</TableHead>
-                                                    <TableHead>Тип минерала</TableHead>
-                                                    <TableHead>Статус лицензии</TableHead>
-                                                    <TableHead className="text-right">Площадь (га)</TableHead>
+                                                    <TableHead>Атауы</TableHead>
+                                                    <TableHead>Минерал түрі</TableHead>
+                                                    <TableHead>Лицензия күйі</TableHead>
+                                                    <TableHead className="text-right">Аумағы (га)</TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
@@ -991,7 +1009,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 )) : (
                                                     <TableRow>
                                                         <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Нет недропользователей
+                                                            Жер қойнауын пайдаланушылар жоқ
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
@@ -1006,9 +1024,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                         {/* Right Column (Sidebar) */}
                         <div className="lg:col-span-4 space-y-6">
                             <TabsList className="bg-gray-100 p-1 rounded-lg w-full justify-start h-12">
-                                <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm">Все</TabsTrigger>
+                                <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm">Барлығы</TabsTrigger>
                                 <TabsTrigger value="sez" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${stats.sezIssuesCount > 0 ? '' : ''}`}>
-                                    <Building2 className={`w-4 h-4 ${stats.sezIssuesCount > 0 ? '' : ''}`} /> СЭЗ
+                                    <Building2 className={`w-4 h-4 ${stats.sezIssuesCount > 0 ? '' : ''}`} /> АЭА
                                     {stats.sezIssuesCount > 0 && (
                                         <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
                                             {stats.sezIssuesCount}
@@ -1016,7 +1034,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     )}
                                 </TabsTrigger>
                                 <TabsTrigger value="iz" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${stats.izIssuesCount > 0 ? '' : ''}`}>
-                                    <Factory className={`w-4 h-4 ${stats.izIssuesCount > 0 ? '' : ''}`} /> ИЗ
+                                    <Factory className={`w-4 h-4 ${stats.izIssuesCount > 0 ? '' : ''}`} /> ИА
                                     {stats.izIssuesCount > 0 && (
                                         <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
                                             {stats.izIssuesCount}
@@ -1037,26 +1055,26 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="all" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Ключевые показатели</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Негізгі көрсеткіштер</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                             <div >
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectsCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Количество проектов</div>
+                                                <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(stats.totalArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Общая площадь</div>
+                                                <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
                                             </div>
                                             
                                             <div>
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(stats.totalInvestment)}</div>
-                                                <div className="text-xs font-medium text-gray-500">Инвестиции</div>
+                                                <div className="text-xs font-medium text-gray-500">Инвестициялар</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1069,8 +1087,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardHeader className="pb-4 border-b border-gray-100">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedSezId
-                                                ? `Показатели: ${sezs.find(s => s.id === selectedSezId)?.name || 'СЭЗ'}`
-                                                : 'Показатели СЭЗ'}
+                                                ? `Көрсеткіштер: ${sezs.find(s => s.id === selectedSezId)?.name || 'АЭА'}`
+                                                : 'АЭА көрсеткіштері'}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
@@ -1084,19 +1102,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Количество зон</div>
+                                                        <div className="text-xs font-medium text-gray-500">Аймақтар саны</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                        <div className="text-xs font-medium text-gray-500">Общая площадь</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
                                                     </div>
                                                     <div>
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жоспарланған инвестициялар</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                        <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
                                                     </div>
                                                 </div>
                                             );
@@ -1107,7 +1125,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* SEZ List */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Список СЭЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">АЭА тізімі</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {sezs.length > 0 ? (
@@ -1155,20 +1173,20 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             >
                                                                 <ExternalLink className="h-3.5 w-3.5" />
                                                             </Link>
-                                                            <Badge variant="secondary" className="text-[10px]">{sez.status === 'active' ? 'Активная' : 'Развивающаяся'}</Badge>
+                                                            <Badge variant="secondary" className="text-[10px]">{sez.status === 'active' ? 'Белсенді' : 'Дамушы'}</Badge>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="p-4 text-center text-sm text-gray-500">Нет СЭЗ</p>
+                                            <p className="p-4 text-center text-sm text-gray-500">АЭА жоқ</p>
                                         )}
                                     </CardContent>
                                 </Card>
 
                                 {selectedSezId && (() => {
                                     const sez = sezs.find(s => s.id === selectedSezId);
-                                    return sez ? renderInfrastructureCard(`Инфраструктура: ${sez.name}`, sez.infrastructure) : null;
+                                    return sez ? renderInfrastructureCard(`Инфрақұрылым: ${sez.name}`, sez.infrastructure) : null;
                                 })()}
                             </TabsContent>
 
@@ -1178,8 +1196,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardHeader className="pb-4 border-b border-gray-100">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedIzId
-                                                ? `Показатели: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИЗ'}`
-                                                : 'Показатели ИЗ'}
+                                                ? `Көрсеткіштер: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИА'}`
+                                                : 'ИА көрсеткіштері'}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
@@ -1193,19 +1211,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Количество зон</div>
+                                                        <div className="text-xs font-medium text-gray-500">Аймақтар саны</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                        <div className="text-xs font-medium text-gray-500">Общая площадь</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
                                                     </div>
                                                     <div>
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Запланировано инвестиций</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жоспарланған инвестициялар</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                        <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
                                                     </div>
                                                 </div>
                                             );
@@ -1216,7 +1234,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* IZ List */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Список ИЗ</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">ИА тізімі</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {industrialZones.length > 0 ? (
@@ -1235,9 +1253,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 >
                                                     <div className="flex items-center gap-2 min-w-0">
                                                         <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                        <span className="text-sm font-medium text-[#0f1b3d]">Все</span>
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">Барлығы</span>
                                                     </div>
-                                                    <Badge variant="secondary" className="text-[10px]">{industrialZones.length} зон</Badge>
+                                                    <Badge variant="secondary" className="text-[10px]">{industrialZones.length} аймақ</Badge>
                                                 </div>
                                                 {industrialZones.map((iz) => (
                                                     <div
@@ -1264,20 +1282,20 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                             >
                                                                 <ExternalLink className="h-3.5 w-3.5" />
                                                             </Link>
-                                                            <Badge variant="secondary" className="text-[10px]">{iz.status === 'active' ? 'Активная' : 'Развивающаяся'}</Badge>
+                                                            <Badge variant="secondary" className="text-[10px]">{iz.status === 'active' ? 'Белсенді' : 'Дамушы'}</Badge>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="p-4 text-center text-sm text-gray-500">Нет ИЗ</p>
+                                            <p className="p-4 text-center text-sm text-gray-500">ИА жоқ</p>
                                         )}
                                     </CardContent>
                                 </Card>
 
                                 {selectedIzId && (() => {
                                     const iz = industrialZones.find(z => z.id === selectedIzId);
-                                    return iz ? renderInfrastructureCard(`Инфраструктура: ${iz.name}`, iz.infrastructure) : null;
+                                    return iz ? renderInfrastructureCard(`Инфрақұрылым: ${iz.name}`, iz.infrastructure) : null;
                                 })()}
                             </TabsContent>
 
@@ -1285,7 +1303,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             <TabsContent value="subsoil" className="space-y-6 mt-0">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Показатели недропользования</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Жер қойнауын пайдалану көрсеткіштері</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-3 gap-x-4">
@@ -1293,15 +1311,15 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">
                                                     {selectedSubsoilStatus ? filteredSubsoilUsers.length : subsoilUsers.length}
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-500">Количество проектов</div>
+                                                <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(totalSubsoilArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Площадь</div>
+                                                <div className="text-xs font-medium text-gray-500">Аумағы</div>
                                             </div>
                                             <div className="pl-4 border-l border-gray-100">
                                                 <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.subsoilIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемные вопросы</div>
+                                                <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1310,7 +1328,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 {/* Status Filter */}
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Статус лицензии</CardTitle>
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Лицензия күйі</CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-gray-100">
@@ -1324,15 +1342,15 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             >
                                                 <div className="flex items-center gap-2 min-w-0">
                                                     <Pickaxe className="h-4 w-4 text-gray-500 shrink-0" />
-                                                    <span className="text-sm font-medium text-[#0f1b3d]">Все статусы</span>
+                                                    <span className="text-sm font-medium text-[#0f1b3d]">Барлық күйлер</span>
                                                 </div>
                                                 <Badge variant="secondary" className="text-[10px]">{subsoilUsers.length}</Badge>
                                             </div>
                                             {[
-                                                { key: 'active', label: 'Активная', color: 'text-green-700', bg: 'bg-green-50', border: 'border-l-green-500', icon: 'bg-green-100' },
-                                                { key: 'expired', label: 'Истекла', color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-l-gray-500', icon: 'bg-gray-300' },
-                                                { key: 'suspended', label: 'Приостановлена', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-l-amber-500', icon: 'bg-amber-100' },
-                                                { key: 'illegal', label: 'Нелегально', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-600', icon: 'bg-red-600' },
+                                                { key: 'active', label: 'Белсенді', color: 'text-green-700', bg: 'bg-green-50', border: 'border-l-green-500', icon: 'bg-green-100' },
+                                                { key: 'expired', label: 'Мерзімі өткен', color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-l-gray-500', icon: 'bg-gray-300' },
+                                                { key: 'suspended', label: 'Тоқтатылған', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-l-amber-500', icon: 'bg-amber-100' },
+                                                { key: 'illegal', label: 'Заңсыз', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-600', icon: 'bg-red-600' },
                                             ].map((status) => (
                                                 <div
                                                     key={status.key}

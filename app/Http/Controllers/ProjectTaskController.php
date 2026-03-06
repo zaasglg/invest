@@ -13,31 +13,12 @@ class ProjectTaskController extends Controller
 {
     public function store(Request $request, InvestmentProject $investmentProject)
     {
-        $user = auth()->user();
-        $isDistrictScoped = $user && $user->isDistrictScoped();
-
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'assigned_to' => [
                 'required',
                 'exists:users,id',
-                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if ($isDistrictScoped) {
-                        $assignedUser = User::find($value);
-                        if (!$assignedUser) return;
-                        
-                        $isRegional = $assignedUser->isRegionalManagement();
-                        $isSameRegion = $assignedUser->region_id === $user->region_id;
-                        
-                        // Can assign to:
-                        // 1. Users in same region
-                        // 2. Regional management
-                        if (!($isSameRegion || $isRegional)) {
-                            $fail('Вы можете только поручить своему району или областному управлению.');
-                        }
-                    }
-                },
             ],
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
@@ -49,17 +30,20 @@ class ProjectTaskController extends Controller
 
         $task = ProjectTask::create($validated);
 
+        // Auto-attach the assigned user as a project executor
+        $investmentProject->executors()->syncWithoutDetaching([$validated['assigned_to']]);
+
         // Send notification to assigned user (baskarma)
         if ($validated['assigned_to'] != Auth::id()) {
             TaskNotification::create([
                 'user_id' => $validated['assigned_to'],
                 'task_id' => $task->id,
                 'type' => 'task_assigned',
-                'message' => "Вам дали новое задание: \"{$task->title}\" (Проект: {$investmentProject->name})",
+                'message' => "Сізге жаңа тапсырма берілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
             ]);
         }
 
-        return redirect()->back()->with('success', 'Этап добавлен.');
+        return redirect()->back()->with('success', 'Кезең қосылды.');
     }
 
     public function update(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
@@ -79,7 +63,7 @@ class ProjectTaskController extends Controller
 
         $task->update($validated);
 
-        return redirect()->back()->with('success', 'Этап обновлен.');
+        return redirect()->back()->with('success', 'Кезең жаңартылды.');
     }
 
     public function destroy(InvestmentProject $investmentProject, ProjectTask $task)
@@ -90,6 +74,6 @@ class ProjectTaskController extends Controller
 
         $task->delete();
 
-        return redirect()->back()->with('success', 'Этап удален.');
+        return redirect()->back()->with('success', 'Кезең жойылды.');
     }
 }

@@ -15,10 +15,10 @@ const inputClass =
 export default function Register() {
     return (
         <AuthLayout
-            title="Create an account"
-            description="Enter your details below to create your account"
+            title="Аккаунт құру"
+            description="Аккаунт құру үшін мәліметтеріңізді енгізіңіз"
         >
-            <Head title="Register" />
+            <Head title="Тіркелу" />
             <Form
                 action="/register"
                 method="post"
@@ -31,7 +31,7 @@ export default function Register() {
                         <div className="grid gap-6">
                             <div className="grid gap-2">
                                 <Label htmlFor="name" className="text-white/80">
-                                    Name
+                                    Аты-жөні
                                 </Label>
                                 <Input
                                     id="name"
@@ -41,7 +41,7 @@ export default function Register() {
                                     tabIndex={1}
                                     autoComplete="name"
                                     name="name"
-                                    placeholder="Full name"
+                                    placeholder="Толық атыңыз"
                                     className={inputClass}
                                 />
                                 <InputError
@@ -52,7 +52,7 @@ export default function Register() {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="email" className="text-white/80">
-                                    Email address
+                                    Email мекенжайы
                                 </Label>
                                 <Input
                                     id="email"
@@ -69,7 +69,7 @@ export default function Register() {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="password" className="text-white/80">
-                                    Password
+                                    Құпия сөз
                                 </Label>
                                 <Input
                                     id="password"
@@ -78,7 +78,7 @@ export default function Register() {
                                     tabIndex={3}
                                     autoComplete="new-password"
                                     name="password"
-                                    placeholder="Password"
+                                    placeholder="Құпия сөз"
                                     className={inputClass}
                                 />
                                 <InputError message={errors.password} />
@@ -89,7 +89,7 @@ export default function Register() {
                                     htmlFor="password_confirmation"
                                     className="text-white/80"
                                 >
-                                    Confirm password
+                                    Құпия сөзді растаңыз
                                 </Label>
                                 <Input
                                     id="password_confirmation"
@@ -98,7 +98,7 @@ export default function Register() {
                                     tabIndex={4}
                                     autoComplete="new-password"
                                     name="password_confirmation"
-                                    placeholder="Confirm password"
+                                    placeholder="Құпия сөзді растаңыз"
                                     className={inputClass}
                                 />
                                 <InputError
@@ -113,18 +113,18 @@ export default function Register() {
                                 data-test="register-user-button"
                             >
                                 {processing && <Spinner />}
-                                Create account
+                                Аккаунт құру
                             </Button>
                         </div>
 
                         <div className="text-center text-sm text-white/50">
-                            Already have an account?{' '}
+                            Аккаунтыңыз бар ма?{' '}
                             <TextLink
                                 href={login()}
                                 tabIndex={6}
                                 className="text-[#c8a44e]/80 hover:text-[#c8a44e]"
                             >
-                                Log in
+                                Кіру
                             </TextLink>
                         </div>
                     </>

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Storage;
 class TaskCompletionController extends Controller
 {
     /**
-     * Басқарма submits a task completion (with files and comment).
+     * User submits a task completion (with files and comment).
      */
     public function store(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
     {
@@ -87,7 +87,7 @@ class TaskCompletionController extends Controller
         $docCount = count($request->file('documents', []));
         $photoCount = count($request->file('photos', []));
         $fileInfo = [];
-        if ($docCount > 0) $fileInfo[] = "{$docCount} документ";
+        if ($docCount > 0) $fileInfo[] = "{$docCount} құжат";
         if ($photoCount > 0) $fileInfo[] = "{$photoCount} фото";
         $fileStr = count($fileInfo) > 0 ? ' (' . implode(', ', $fileInfo) . ')' : '';
 
@@ -97,11 +97,11 @@ class TaskCompletionController extends Controller
                 'task_id' => $task->id,
                 'completion_id' => $completion->id,
                 'type' => 'completion_submitted',
-                'message' => "{$submitterName} выполнил задание: \"{$task->title}\"{$fileStr}. Проверить.",
+                'message' => "{$submitterName} тапсырманы орындады: \"{$task->title}\"{$fileStr}. Тексеру.",
             ]);
         }
 
-        return redirect()->back()->with('success', 'Задание выполнено и отправлено.');
+        return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
     }
 
     /**
@@ -129,21 +129,21 @@ class TaskCompletionController extends Controller
             'reviewed_at' => now(),
         ]);
 
-        $reviewerName = Auth::user()->full_name ?? 'Исполнитель';
+        $reviewerName = Auth::user()->full_name ?? 'Орындаушы';
 
         if ($request->input('status') === 'approved') {
             $task->update(['status' => 'done']);
             $notificationType = 'completion_approved';
-            $message = "{$reviewerName} принял задание: \"{$task->title}\".";
+            $message = "{$reviewerName} тапсырманы қабылдады: \"{$task->title}\".";
 
-            // Auto-copy completion document files to project documents as "Законченные документы"
+            // Auto-copy completion document files to project documents as "Аяқталған құжаттар"
             $this->copyCompletionDocumentsToProject($completion, $investmentProject, $task);
         } else {
             $task->update(['status' => 'rejected']);
             $notificationType = 'completion_rejected';
             $reviewerComment = $request->input('reviewer_comment');
-            $commentStr = $reviewerComment ? " Причина: {$reviewerComment}" : '';
-            $message = "{$reviewerName} отклонил задание: \"{$task->title}\". Повторите выполнение.{$commentStr}";
+            $commentStr = $reviewerComment ? " Себебі: {$reviewerComment}" : '';
+            $message = "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\". Қайта орындаңыз.{$commentStr}";
         }
 
         // Notify the baskarma who submitted the completion
@@ -157,12 +157,12 @@ class TaskCompletionController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Результат проверки сохранен.');
+        return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
     }
 
     /**
      * Copy completion document files to the project's documents section
-     * as "Законченные документы" (is_completed = true).
+     * as "Аяқталған құжаттар" (is_completed = true).
      */
     protected function copyCompletionDocumentsToProject(TaskCompletion $completion, InvestmentProject $project, ProjectTask $task): void
     {

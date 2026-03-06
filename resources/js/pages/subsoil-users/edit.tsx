@@ -82,18 +82,18 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Недропользование', href: subsoilUsersRoutes.index.url() },
-            { title: 'Редактирование', href: '#' }
+            { title: 'Жер қойнауын пайдалану', href: subsoilUsersRoutes.index.url() },
+            { title: 'Өңдеу', href: '#' }
         ]}>
-            <Head title="Редактирование недропользователя" />
+            <Head title="Жер қойнауын пайдаланушыны өңдеу" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Редактирование</h1>
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Өңдеу</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="name" className="text-gray-500 font-normal">Наименование</Label>
+                            <Label htmlFor="name" className="text-gray-500 font-normal">Атауы</Label>
                             <Input
                                 id="name"
                                 value={data.name}
@@ -105,7 +105,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="bin" className="text-gray-500 font-normal">БИН</Label>
+                            <Label htmlFor="bin" className="text-gray-500 font-normal">БСН</Label>
                             <Input
                                 id="bin"
                                 value={data.bin}
@@ -118,7 +118,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Область</Label>
+                            <Label htmlFor="oblast" className="text-gray-500 font-normal">Облыс</Label>
                             <Select
                                 value={selectedOblastId}
                                 onValueChange={(value) => {
@@ -128,7 +128,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                                 disabled={isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите область" />
+                                    <SelectValue placeholder="Облысты таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {oblasts.map((oblast) => (
@@ -141,14 +141,14 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Район / Город</Label>
+                            <Label htmlFor="region_id" className="text-gray-500 font-normal">Аудан / Қала</Label>
                             <Select
                                 value={data.region_id}
                                 onValueChange={(value) => setData('region_id', value)}
                                 disabled={!selectedOblastId || isDistrictScoped}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите район" />
+                                    <SelectValue placeholder="Ауданды таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {districts.map((district) => (
@@ -158,7 +158,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                                     ))}
                                     {selectedOblastId && districts.length === 0 && (
                                         <SelectItem value="none" disabled>
-                                            Нет доступных районов
+                                            Қолжетімді аудандар жоқ
                                         </SelectItem>
                                     )}
                                 </SelectContent>
@@ -169,7 +169,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="mineral_type" className="text-gray-500 font-normal">Тип минерала</Label>
+                            <Label htmlFor="mineral_type" className="text-gray-500 font-normal">Минерал түрі</Label>
                             <Input
                                 id="mineral_type"
                                 value={data.mineral_type}
@@ -180,7 +180,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_area" className="text-gray-500 font-normal">Площадь (га)</Label>
+                            <Label htmlFor="total_area" className="text-gray-500 font-normal">Аумағы (га)</Label>
                             <Input
                                 id="total_area"
                                 type="number"
@@ -195,13 +195,13 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="description" className="text-gray-500 font-normal">Описание</Label>
+                        <Label htmlFor="description" className="text-gray-500 font-normal">Сипаттама</Label>
                         <textarea
                             id="description"
                             value={data.description}
                             onChange={(e) => setData('description', e.target.value)}
                             className="min-h-[100px] w-full resize-none rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-[#0f1b3d] focus:outline-none focus-visible:ring-0"
-                            placeholder="Описание деятельности недропользователя"
+                            placeholder="Жер қойнауын пайдаланушы қызметінің сипаттамасы"
                         />
                         {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
                     </div>
@@ -209,19 +209,19 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                     <div className="grid grid-cols-2 gap-4">
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_status" className="text-gray-500 font-normal">Статус лицензии</Label>
+                            <Label htmlFor="license_status" className="text-gray-500 font-normal">Лицензия күйі</Label>
                             <Select
                                 value={data.license_status}
                                 onValueChange={(value) => setData('license_status', value as 'active' | 'expired' | 'suspended' | 'illegal')}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Выберите статус" />
+                                    <SelectValue placeholder="Күйді таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="active">Активна</SelectItem>
-                                    <SelectItem value="expired">Истекла</SelectItem>
-                                    <SelectItem value="suspended">Приостановлена</SelectItem>
-                                    <SelectItem value="illegal">Нелегально</SelectItem>
+                                    <SelectItem value="active">Белсенді</SelectItem>
+                                    <SelectItem value="expired">Мерзімі өткен</SelectItem>
+                                    <SelectItem value="suspended">Тоқтатылған</SelectItem>
+                                    <SelectItem value="illegal">Заңсыз</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.license_status && <span className="text-sm text-red-500">{errors.license_status}</span>}
@@ -230,7 +230,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_start" className="text-gray-500 font-normal">Дата начала лицензии</Label>
+                            <Label htmlFor="license_start" className="text-gray-500 font-normal">Лицензия басталу күні</Label>
                             <Input
                                 id="license_start"
                                 type="date"
@@ -242,7 +242,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="license_end" className="text-gray-500 font-normal">Дата окончания лицензии</Label>
+                            <Label htmlFor="license_end" className="text-gray-500 font-normal">Лицензия аяқталу күні</Label>
                             <Input
                                 id="license_end"
                                 type="date"
@@ -255,7 +255,7 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label className="text-gray-500 font-normal">Геолокация (полигон)</Label>
+                        <Label className="text-gray-500 font-normal">Орналасу (полигон)</Label>
                         <LocationPicker
                             value={data.location}
                             onChange={(val) => setData('location', val)}
@@ -269,10 +269,10 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Сохранить
+                            Сақтау
                         </Button>
                         <Link href={subsoilUsersRoutes.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

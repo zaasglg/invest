@@ -23,7 +23,7 @@ import type { NavItem, User } from '@/types';
 
 export const mainNavItems: NavItem[] = [
     {
-        title: 'Дашборд',
+        title: 'Басқару тақтасы',
         href: dashboard.url(),
         icon: LayoutDashboard,
     },
@@ -31,22 +31,22 @@ export const mainNavItems: NavItem[] = [
 
 export const zoneNavItems: NavItem[] = [
     {
-        title: 'СЭЗ',
+        title: 'АЭА',
         href: sezs.index.url(),
         icon: Folder,
     },
     {
-        title: 'ИЗ',
+        title: 'ИА',
         href: industrialZones.index.url(),
         icon: Factory,
     },
     {
-        title: 'Недропользование',
+        title: 'Жер қойнауын пайдалану',
         href: subsoilUsers.index.url(),
         icon: Layers,
     },
     {
-        title: 'Регионы',
+        title: 'Аймақтар',
         href: regions.index.url(),
         icon: MapIcon,
     },
@@ -54,12 +54,12 @@ export const zoneNavItems: NavItem[] = [
 
 export const projectNavItems: NavItem[] = [
     {
-        title: 'Инвест. проекты',
+        title: 'Инвест. жобалар',
         href: investmentProjects.index.url(),
         icon: Briefcase,
     },
     {
-        title: 'Типы проектов',
+        title: 'Жоба түрлері',
         href: projectTypes.index.url(),
         icon: Tags,
     },
@@ -72,12 +72,12 @@ export const projectNavItems: NavItem[] = [
 
 export const adminNavItems: NavItem[] = [
     {
-        title: 'Роли',
+        title: 'Рөлдер',
         href: roles.index.url(),
         icon: Shield,
     },
     {
-        title: 'Пользователи',
+        title: 'Пайдаланушылар',
         href: usersRoutes.index.url(),
         icon: Users,
     },
@@ -86,41 +86,41 @@ export const adminNavItems: NavItem[] = [
 export const headerNavItems: NavItem[] = [
     ...mainNavItems,
     {
-        title: 'Инвест. проекты',
+        title: 'Инвест. жобалар',
         href: investmentProjects.index.url(),
         icon: Briefcase,
     },
     ...zoneNavItems,
     ...projectNavItems.filter(
-        (item) => item.title !== 'Инвест. проекты',
+        (item) => item.title !== 'Инвест. жобалар',
     ),
     ...adminNavItems,
 ];
 
 const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     akim: new Set([
-        'Регионы',
-        'Типы проектов',
-        'Роли',
-        'Пользователи',
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рөлдер',
+        'Пайдаланушылар',
     ]),
     zamakim: new Set([
-        'Регионы',
-        'Типы проектов',
-        'Роли',
-        'Пользователи',
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рөлдер',
+        'Пайдаланушылар',
     ]),
     ispolnitel: new Set([
-        'Регионы',
-        'Типы проектов',
-        'Роли',
-        'Пользователи',
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рөлдер',
+        'Пайдаланушылар',
     ]),
     baskarma: new Set([
-        'Регионы',
-        'Типы проектов',
-        'Роли',
-        'Пользователи',
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рөлдер',
+        'Пайдаланушылар',
     ]),
 };
 

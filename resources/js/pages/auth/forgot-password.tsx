@@ -13,10 +13,10 @@ import { email } from '@/routes/password';
 export default function ForgotPassword({ status }: { status?: string }) {
     return (
         <AuthLayout
-            title="Забыли пароль"
-            description="Введите свой адрес электронной почты, чтобы получить ссылку для сброса пароля"
+            title="Құпия сөзді ұмыттыңыз ба"
+            description="Құпия сөзді қалпына келтіру сілтемесін алу үшін электрондық пошта мекенжайыңызды енгізіңіз"
         >
-            <Head title="Забыли пароль" />
+            <Head title="Құпия сөзді ұмыттыңыз ба" />
 
             {status && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
@@ -29,7 +29,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Адрес электронной почты</Label>
+                                <Label htmlFor="email">Электрондық пошта мекенжайы</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -51,7 +51,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     {processing && (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                     )}
-                                    Отправить ссылку для сброса пароля
+                                    Құпия сөзді қалпына келтіру сілтемесін жіберу
                                 </Button>
                             </div>
                         </>
@@ -59,8 +59,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                 </Form>
 
                 <div className="space-x-1 text-center text-sm text-muted-foreground">
-                    <span>Или вернуться к</span>
-                    <TextLink href={login()}>входу</TextLink>
+                    <span>Немесе </span>
+                    <TextLink href={login()}>кіру бетіне</TextLink><span> оралу</span>
                 </div>
             </div>
         </AuthLayout>

@@ -40,7 +40,7 @@ class SubsoilDocumentController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Документ загружен.');
+        return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
 
     public function destroy(SubsoilUser $subsoilUser, SubsoilDocument $document)
@@ -55,6 +55,6 @@ class SubsoilDocumentController extends Controller
 
         $document->delete();
 
-        return redirect()->back()->with('success', 'Документ удален.');
+        return redirect()->back()->with('success', 'Құжат жойылды.');
     }
 }

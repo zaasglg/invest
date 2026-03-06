@@ -70,23 +70,23 @@ export default function Create({ regions, roles }: Props) {
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Пользователи', href: users.index.url() },
-            { title: 'Создание', href: '#' }
+            { title: 'Пайдаланушылар', href: users.index.url() },
+            { title: 'Құру', href: '#' }
         ]}>
-            <Head title="Создание пользователя" />
+            <Head title="Пайдаланушы құру" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Новый пользователь</h1>
+                <h1 className="text-2xl font-bold mb-6 text-[#0f1b3d]">Жаңа пайдаланушы</h1>
 
                 <form onSubmit={submit} className="flex flex-col gap-6">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="full_name" className="text-gray-500 font-normal">ФИО</Label>
+                        <Label htmlFor="full_name" className="text-gray-500 font-normal">АТЖ</Label>
                         <Input
                             id="full_name"
                             value={data.full_name}
                             onChange={(e) => setData('full_name', e.target.value)}
                             className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
-                            placeholder="Иванов Иван Иванович"
+                            placeholder="Есенов Есен Есенұлы"
                             autoFocus
                         />
                         {errors.full_name && <span className="text-sm text-red-500">{errors.full_name}</span>}
@@ -119,7 +119,7 @@ export default function Create({ regions, roles }: Props) {
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="password" className="text-gray-500 font-normal">Пароль</Label>
+                            <Label htmlFor="password" className="text-gray-500 font-normal">Құпия сөз</Label>
                             <Input
                                 id="password"
                                 type="password"
@@ -132,7 +132,7 @@ export default function Create({ regions, roles }: Props) {
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="password_confirmation" className="text-gray-500 font-normal">Подтверждение пароля</Label>
+                            <Label htmlFor="password_confirmation" className="text-gray-500 font-normal">Құпия сөзді растау</Label>
                             <Input
                                 id="password_confirmation"
                                 type="password"
@@ -146,7 +146,7 @@ export default function Create({ regions, roles }: Props) {
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="role_id" className="text-gray-500 font-normal">Роль</Label>
+                        <Label htmlFor="role_id" className="text-gray-500 font-normal">Рөл</Label>
                         <Select
                             value={data.role_id}
                             onValueChange={(value) => {
@@ -161,10 +161,10 @@ export default function Create({ regions, roles }: Props) {
                             }}
                         >
                             <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                <SelectValue placeholder="Выберите роль" />
+                                <SelectValue placeholder="Рөлді таңдаңыз" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="none">Без роли</SelectItem>
+                                <SelectItem value="none">Рөлсіз</SelectItem>
                                 {roles.map((role) => (
                                     <SelectItem key={role.id} value={role.id.toString()}>
                                         {role.display_name}
@@ -175,10 +175,10 @@ export default function Create({ regions, roles }: Props) {
                         {errors.role_id && <span className="text-sm text-red-500">{errors.role_id}</span>}
                     </div>
 
-                    {/* Басқарма type selection */}
+                    {/* Басқару түрін таңдау */}
                     {isBaskarma && (
                         <div className="flex flex-col gap-2">
-                            <Label className="text-gray-500 font-normal">Басқарма түрі</Label>
+                            <Label className="text-gray-500 font-normal">Басқару түрі</Label>
                             <Select
                                 value={data.baskarma_type}
                                 onValueChange={(value) => {
@@ -192,7 +192,7 @@ export default function Create({ regions, roles }: Props) {
                                 }}
                             >
                                 <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
-                                    <SelectValue placeholder="Басқарма түрін таңдаңыз" />
+                                    <SelectValue placeholder="Басқару түрін таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value="oblast">Облыстық басқарма</SelectItem>
@@ -283,15 +283,15 @@ export default function Create({ regions, roles }: Props) {
                             placeholder="Мысалы: 123456789"
                         />
                         {errors.telegram_chat_id && <span className="text-sm text-red-500">{errors.telegram_chat_id}</span>}
-                        <p className="text-xs text-gray-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы керек</p>
+                        <p className="text-xs text-gray-400">Пайдаланушы ботқа /start жіберіп, Chat ID алуы қажет</p>
                     </div>
 
                     <div className="flex items-center gap-4">
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            Сохранить
+                            Сақтау
                         </Button>
                         <Link href={users.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
-                            Отмена
+                            Болдырмау
                         </Link>
                     </div>
                 </form>

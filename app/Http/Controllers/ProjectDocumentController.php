@@ -49,7 +49,7 @@ class ProjectDocumentController extends Controller
         $user = Auth::user();
 
         if (! $user->canDownloadFromProject($investmentProject)) {
-            abort(403, 'Сізде осы проекттің документтерін жүктеуге рұқсат жоқ.');
+            abort(403, 'Сіздің бұл жобаның құжаттарына қол жеткізуіңіз жоқ.');
         }
 
         if (! Storage::disk('public')->exists($document->file_path)) {
@@ -84,7 +84,7 @@ class ProjectDocumentController extends Controller
             ]);
         }
 
-        return redirect()->back()->with('success', 'Документ загружен.');
+        return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
 
     public function destroy(InvestmentProject $investmentProject, ProjectDocument $document)
@@ -100,6 +100,6 @@ class ProjectDocumentController extends Controller
 
         $document->delete();
 
-        return redirect()->back()->with('success', 'Документ удален.');
+        return redirect()->back()->with('success', 'Құжат жойылды.');
     }
 }

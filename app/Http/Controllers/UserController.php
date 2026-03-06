@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -73,10 +74,11 @@ class UserController extends Controller
         }
 
         $validated['password'] = Hash::make($validated['password']);
+        $validated['email'] = Str::lower($validated['email']);
 
         User::create($validated);
 
-        return redirect()->route('users.index')->with('success', 'Пользователь создан.');
+        return redirect()->route('users.index')->with('success', 'Пайдаланушы құрылды.');
     }
 
     public function edit(User $user)
@@ -134,20 +136,22 @@ class UserController extends Controller
             unset($validated['password']);
         }
 
+        $validated['email'] = Str::lower($validated['email']);
+
         $user->update($validated);
 
-        return redirect()->route('users.index')->with('success', 'Пользователь обновлен.');
+        return redirect()->route('users.index')->with('success', 'Пайдаланушы жаңартылды.');
     }
 
     public function destroy(User $user)
     {
         // Prevent deleting current user
         if ($user->id === auth()->id()) {
-            return redirect()->back()->with('error', 'Вы не можете удалить свой собственный аккаунт.');
+            return redirect()->back()->with('error', 'Өз аккаунтыңызды жоюға болмайды.');
         }
 
         $user->delete();
 
-        return redirect()->back()->with('success', 'Пользователь удален.');
+        return redirect()->back()->with('success', 'Пайдаланушы жойылды.');
     }
 }

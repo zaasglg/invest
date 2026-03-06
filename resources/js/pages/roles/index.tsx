@@ -30,30 +30,30 @@ interface Props {
 export default function Index({ roles }: Props) {
     const handleDelete = (id: number, usersCount: number) => {
         if (usersCount > 0) {
-            alert('Невозможно удалить роль, так как она назначена пользователям.');
+            alert('Рөл пайдаланушыларға тағайындалғандықтан, жою мүмкін емес.');
             return;
         }
 
-        if (confirm('Вы уверены, что хотите удалить эту роль?')) {
+        if (confirm('Бұл рөлді жоюға сенімдісіз бе?')) {
             router.delete(rolesRoutes.destroy.url(id));
         }
     };
 
     return (
         <AppLayout breadcrumbs={[
-            { title: 'Роли', href: '#' }
+            { title: 'Рөлдер', href: '#' }
         ]}>
-            <Head title="Роли" />
+            <Head title="Рөлдер" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Роли пользователей
+                        Пайдаланушы рөлдері
                     </h1>
                     <Link href={rolesRoutes.create.url()}>
                         <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             <Plus className="h-4 w-4 mr-2" />
-                            Создать роль
+                            Рөл құру
                         </Button>
                     </Link>
                 </div>
@@ -63,18 +63,18 @@ export default function Index({ roles }: Props) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead>ID</TableHead>
-                                <TableHead>Системное имя</TableHead>
-                                <TableHead>Отображаемое имя</TableHead>
-                                <TableHead>Описание</TableHead>
-                                <TableHead>Пользователей</TableHead>
-                                <TableHead className="text-right">Действия</TableHead>
+                                <TableHead>Жүйелік аты</TableHead>
+                                <TableHead>Көрсетілетін аты</TableHead>
+                                <TableHead>Сипаттама</TableHead>
+                                <TableHead>Пайдаланушылар</TableHead>
+                                <TableHead className="text-right">Әрекеттер</TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {roles.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell colSpan={6} className="py-12 text-center text-gray-400">
-                                        Нет данных
+                                        Мәлімет жоқ
                                     </TableCell>
                                 </TableRow>
                             ) : (

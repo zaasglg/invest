@@ -150,7 +150,7 @@ function DescriptionTabs({ description, currentStatus }: { description?: string;
                             : 'text-gray-600 hover:text-gray-800'
                     }`}
                 >
-                    Описание
+                    Сипаттама
                 </button>
                 <button
                     onClick={() => setActiveTab('current_status')}
@@ -160,13 +160,13 @@ function DescriptionTabs({ description, currentStatus }: { description?: string;
                             : 'text-gray-600 hover:text-gray-800'
                     }`}
                 >
-                    Текущее состояние
+                    Ағымдағы жағдайы
                 </button>
             </div>
             <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {activeTab === 'description'
-                    ? (description || 'Описание отсутствует.')
-                    : (currentStatus || 'Текущее состояние отсутствует.')}
+                    ? (description || 'Сипаттама жоқ.')
+                    : (currentStatus || 'Ағымдағы жағдайы жоқ.')}
             </div>
         </div>
     );
@@ -182,10 +182,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         : (project.photos_count as any)?.photos_count || 0;
 
     const statusMap: Record<string, { label: string; color: string }> = {
-        plan: { label: 'Планирование', color: 'bg-blue-100 text-blue-800' },
-        implementation: { label: 'Реализация', color: 'bg-amber-100 text-amber-800' },
-        launched: { label: 'Запущен', color: 'bg-green-100 text-green-800' },
-        suspended: { label: 'Приостановлен', color: 'bg-red-100 text-red-800' },
+        plan: { label: 'Жоспарлау', color: 'bg-blue-100 text-blue-800' },
+        implementation: { label: 'Іске асыру', color: 'bg-amber-100 text-amber-800' },
+        launched: { label: 'Іске қосылған', color: 'bg-green-100 text-green-800' },
+        suspended: { label: 'Тоқтатылған', color: 'bg-red-100 text-red-800' },
     };
 
     const getSectorDetails = () => {
@@ -193,7 +193,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
         const sezList = project.sezs?.length ? project.sezs : [];
         if (sezList.length > 0) {
-            details.push(`СЭЗ: ${sezList.map((item) => item.name).join(', ')}`);
+            details.push(`АЭА: ${sezList.map((item) => item.name).join(', ')}`);
         }
 
         const industrialZonesList = project.industrial_zones?.length
@@ -201,7 +201,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             : [];
         if (industrialZonesList.length > 0) {
             details.push(
-                `Индустриальные зоны: ${industrialZonesList
+                `Индустриялық аймақтар: ${industrialZonesList
                     .map((item) => item.name)
                     .join(', ')}`
             );
@@ -212,7 +212,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             : [];
         if (subsoilUsersList.length > 0) {
             details.push(
-                `Недропользование: ${subsoilUsersList
+                `Жер қойнауын пайдалану: ${subsoilUsersList
                     .map((item) => item.name)
                     .join(', ')}`
             );
@@ -230,7 +230,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         if (amount >= 1_000_000) {
             return `${(amount / 1_000_000).toFixed(1)} млн ₸`;
         }
-        return new Intl.NumberFormat('ru-RU').format(amount) + ' ₸';
+        return new Intl.NumberFormat('kk-KZ').format(amount) + ' ₸';
     };
 
     // Roadmap state
@@ -289,18 +289,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     };
 
     // Only show baskarma role users in task assignment
-    // Oblast baskarma → available for all projects
-    // District baskarma → only for projects in their district
     const baskarmaUsers = users.filter((u) => {
         const roleName = (u.role_model?.name || '').toLowerCase();
-        if (roleName !== 'baskarma') return false;
-        // Oblast baskarma can be assigned to any project
-        if (u.baskarma_type === 'oblast') return true;
-        // District baskarma can only be assigned to their own district's projects
-        if (u.baskarma_type === 'district' && u.region_id) {
-            return u.region_id === project.region_id;
-        }
-        return true;
+        return roleName === 'baskarma';
     });
 
     const filteredUsers = baskarmaUsers.filter((u) => {
@@ -349,7 +340,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     };
 
     const handleTaskDelete = (taskId: number) => {
-        if (confirm('Вы уверены, что хотите удалить этот этап?')) {
+        if (confirm('Осы кезеңді жоюға сенімдісіз бе?')) {
             router.delete(
                 `/investment-projects/${project.id}/tasks/${taskId}`,
             );
@@ -393,7 +384,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
             if (oversized) {
                 setCompletionFileError(
-                    `Файл "${oversized.name}" слишком большой (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                    `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionDocuments([]);
                 if (completionDocRef.current) completionDocRef.current.value = '';
@@ -410,7 +401,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
             if (oversized) {
                 setCompletionFileError(
-                    `Файл "${oversized.name}" слишком большой (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                    `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionPhotos([]);
                 if (completionPhotoRef.current) completionPhotoRef.current.value = '';
@@ -430,7 +421,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
         if (totalSize > MAX_COMPLETION_TOTAL_SIZE) {
             setCompletionFileError(
-                `Общий размер файлов (${(totalSize / 1024 / 1024).toFixed(1)}MB) превышает лимит (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Выберите меньшие файлы.`,
+                `Файлдардың жалпы көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдарды таңдаңыз.`,
             );
             return;
         }
@@ -492,7 +483,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Проекты', href: '/investment-projects' },
+                { title: 'Жобалар', href: '/investment-projects' },
                 { title: project.name, href: '' },
             ]}
         >
@@ -508,7 +499,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                     onClick={() => window.history.back()}
                     className='inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors'
                 >
-                    <ArrowLeft className='h-4 w-4 mr-1' /> Назад к списку
+                    <ArrowLeft className='h-4 w-4 mr-1' /> Тізімге қайту
                 </button>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
@@ -521,7 +512,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="flex items-center gap-2 text-white">
                                         <Activity className="h-5 w-5" />
                                         <h1 className="text-xl font-bold">
-                                            Проект № {project.id} - {project.name}
+                                            Жоба № {project.id} - {project.name}
                                         </h1>
                                     </div>
                                     <Badge className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} px-3 py-1 text-sm font-medium border-0`}>
@@ -540,7 +531,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Calendar className="h-3.5 w-3.5" />
                                                 <span>
-                                                    {new Date(mainGallery[0].gallery_date).toLocaleDateString('ru-RU', {
+                                                    {new Date(mainGallery[0].gallery_date).toLocaleDateString('kk-KZ', {
                                                         day: 'numeric',
                                                         month: 'long',
                                                         year: 'numeric',
@@ -556,33 +547,33 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className={`grid grid-cols-2 gap-3 ${(!isBaskarma || canDownload) ? 'md:col-span-3' : 'md:col-span-5'}`}>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" /> Район
+                                                <MapPin className="h-3.5 w-3.5" /> Аудан
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.region?.name || 'Не указан'}
+                                                {project.region?.name || 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <FileText className="h-3.5 w-3.5" /> Тип проекта
+                                                <FileText className="h-3.5 w-3.5" /> Жоба түрі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.project_type?.name || 'Не указан'}
+                                                {project.project_type?.name || 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Building2 className="h-3.5 w-3.5" /> Сумма инвестиций
+                                                <Building2 className="h-3.5 w-3.5" /> Инвестиция сомасы
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.total_investment
                                                     ? formatCurrency(project.total_investment)
-                                                    : 'Не указана'}
+                                                    : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Calendar className="h-3.5 w-3.5" /> Даты реализации
+                                                <Calendar className="h-3.5 w-3.5" /> Іске асыру мерзімдері
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.start_date
@@ -599,7 +590,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <Users className="h-3.5 w-3.5" /> Куратор
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.creator?.full_name || project.creator?.name || 'Не указан'}
+                                                {project.creator?.full_name || project.creator?.name || 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                     </div>
@@ -610,23 +601,23 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="border-t border-gray-200 px-6 py-5">
                                 <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <Building2 className="h-5 w-5 text-gray-500" />
-                                    {project.company_name || 'Компания не указана'}
+                                    {project.company_name || 'Компания көрсетілмеген'}
                                 </h2>
                             </div>
 
-                            {/* Инфрақұрылым қажеттілігі */}
+                            {/* Инфрақұрылымға қажеттілік */}
                             {project.infrastructure && Object.values(project.infrastructure).some((v: any) => v?.needed) && (
                                 <div className="border-t border-gray-200 px-6 py-5">
                                     <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <Building2 className="h-5 w-5 text-gray-500" />
-                                        Инфрақұрылым қажеттілігі
+                                        Инфрақұрылымға қажеттілік
                                     </h2>
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                         {[
-                                            { key: 'gas', label: 'Газ', unit: 'м³/час' },
-                                            { key: 'water', label: 'Су', unit: 'м³/сут' },
+                                            { key: 'gas', label: 'Газ', unit: 'м³/сағ' },
+                                            { key: 'water', label: 'Су', unit: 'м³/тәу' },
                                             { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                            { key: 'land', label: 'Жер телімі', unit: 'га' },
+                                            { key: 'land', label: 'Жер учаскесі', unit: 'га' },
                                         ].map((item) => {
                                             const infra = (project.infrastructure as any)?.[item.key];
                                             if (!infra?.needed) return null;
@@ -651,12 +642,12 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 />
                             </div>
 
-                            {/* Issues / Проблемные вопросы */}
+                            {/* Проблемалық мәселелер */}
                             {project.issues && project.issues.length > 0 && (
                                 <div className="border-t border-gray-200 px-6 py-5">
                                     <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <AlertTriangle className="h-5 w-5 text-red-500" />
-                                        Проблемные вопросы
+                                        Проблемалық мәселелер
                                         <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
                                             {project.issues.length}
                                         </span>
@@ -670,10 +661,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 critical: 'border-red-300 bg-red-100',
                                             };
                                             const severityLabels: Record<string, string> = {
-                                                high: 'Высокий',
-                                                medium: 'Средний',
-                                                low: 'Низкий',
-                                                critical: 'Критический',
+                                                high: 'Жоғары',
+                                                medium: 'Орта',
+                                                low: 'Төмен',
+                                                critical: 'Сыни жағдай',
                                             };
                                             const severityDot: Record<string, string> = {
                                                 high: 'bg-red-500',
@@ -682,9 +673,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 critical: 'bg-red-600',
                                             };
                                             const statusLabels: Record<string, string> = {
-                                                open: 'Открыт',
-                                                in_progress: 'В работе',
-                                                resolved: 'Решён',
+                                                open: 'Ашық',
+                                                in_progress: 'Орындалуда',
+                                                resolved: 'Шешілді',
                                             };
                                             const style = severityStyles[issue.severity || ''] || 'border-gray-200 bg-gray-50';
                                             return (
@@ -721,7 +712,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             href={`/investment-projects/${project.id}/issues`}
                                             className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] hover:text-[#c8a44e] transition-colors"
                                         >
-                                            Все проблемные вопросы →
+                                            Барлық проблемалық мәселелер →
                                         </Link>
                                     </div>
                                 </div>
@@ -735,7 +726,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="flex items-center gap-2 text-white">
                                         <Flag className="h-5 w-5" />
                                         <h2 className="text-lg font-bold">
-                                            Дорожная карта
+                                            Жол картасы
                                         </h2>
                                     </div>
                                     <div className="flex items-center gap-2">
@@ -748,22 +739,22 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             </SelectTrigger>
                                             <SelectContent>
                                                 <SelectItem value="all">
-                                                    Все этапы
+                                                    Барлық кезеңдер
                                                 </SelectItem>
                                                 <SelectItem value="new">
-                                                    Новый
+                                                    Жаңа
                                                 </SelectItem>
                                                 <SelectItem value="in_progress">
-                                                    Исполняется
+                                                    Орындалуда
                                                 </SelectItem>
                                                 <SelectItem value="done">
-                                                    Выполнено
+                                                    Орындалды
                                                 </SelectItem>
                                                 <SelectItem value="rejected">
-                                                    Отклонено
+                                                    Қабылданбады
                                                 </SelectItem>
                                                 <SelectItem value="overdue">
-                                                    Просроченные
+                                                    Мерзімі өткен
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
@@ -786,10 +777,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="py-12 text-center">
                                         <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                         <p className="text-gray-500">
-                                            Нет этапов
+                                            Кезеңдер жоқ
                                         </p>
                                         <p className="mt-1 text-sm text-gray-400">
-                                            Нажмите +, чтобы добавить новый этап
+                                            Жаңа кезең қосу үшін + басыңыз
                                         </p>
                                     </div>
                                 ) : (
@@ -816,7 +807,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     <p className="text-sm text-gray-500">
                                                         {task.start_date && (
                                                             <>
-                                                                {new Date(task.start_date).toLocaleDateString('ru-RU', {
+                                                                {new Date(task.start_date).toLocaleDateString('kk-KZ', {
                                                                     day: 'numeric',
                                                                     month: 'long',
                                                                     year: 'numeric',
@@ -828,21 +819,21 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             ? new Date(
                                                                   task.due_date,
                                                               ).toLocaleDateString(
-                                                                  'ru-RU',
+                                                                  'kk-KZ',
                                                                   {
                                                                       day: 'numeric',
                                                                       month: 'long',
                                                                       year: 'numeric',
                                                                   },
                                                               )
-                                                            : 'Мерзімі белгіленбеген'}
+                                                            : 'Мерзімі көрсетілмеген'}
                                                     </p>
                                                     {task.assignee && (
                                                         <p className="text-sm text-gray-500 mt-1">
                                                             {task.assignee.baskarma_type === 'oblast'
-                                                                ? 'Областной:'
+                                                                ? 'Облыстық:'
                                                                 : task.assignee.baskarma_type === 'district'
-                                                                    ? 'Районная:'
+                                                                    ? 'Аудандық:'
                                                                     : ''}
                                                             {' '}
                                                             {task.assignee.full_name || task.assignee.name || '—'}
@@ -852,7 +843,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     {/* Overdue badge */}
                                                     {isTaskOverdue(task) && (
                                                         <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
-                                                            Просроченные
+                                                            Мерзімі өткен
                                                         </Badge>
                                                     )}
                                                     {/* Status badge for completion */}
@@ -863,13 +854,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                                 latestCompletion.status === 'rejected' ? 'bg-red-100 text-red-700' :
                                                                 'bg-amber-100 text-amber-700'
                                                             }`}>
-                                                                {latestCompletion.status === 'approved' ? 'Принято' :
-                                                                 latestCompletion.status === 'rejected' ? 'Отклонено' :
-                                                                 'На проверке'}
+                                                                {latestCompletion.status === 'approved' ? 'Қабылданды' :
+                                                                 latestCompletion.status === 'rejected' ? 'Қабылданбады' :
+                                                                 'Тексеруде'}
                                                             </Badge>
                                                             {latestCompletion.status === 'rejected' && latestCompletion.reviewer_comment && (
                                                                 <p className="mt-1 text-xs text-red-600">
-                                                                    <span className="font-semibold">Потому что:</span> {latestCompletion.reviewer_comment}
+                                                                    <span className="font-semibold">Себебі:</span> {latestCompletion.reviewer_comment}
                                                                 </p>
                                                             )}
                                                         </div>
@@ -886,7 +877,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             onClick={() => handleOpenCompletionModal(task.id)}
                                                         >
                                                             <Upload className="mr-1 h-3.5 w-3.5" />
-                                                            Отправить
+                                                            Жіберу
                                                         </Button>
                                                     )}
                                                     {/* Исполнитель: review pending completion */}
@@ -898,7 +889,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             onClick={() => handleOpenReview(task, pendingCompletion)}
                                                         >
                                                             <Eye className="mr-1 h-3.5 w-3.5" />
-                                                            Проверить
+                                                            Тексеру
                                                         </Button>
                                                     )}
                                                     {canModify && !isBaskarma && (
@@ -933,7 +924,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <CardHeader>
                                     <CardTitle className="text-lg flex items-center gap-2">
                                         <Eye className="h-5 w-5 text-gray-500" />
-                                        Видение будущего
+                                        Болашақ көрінісі
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
@@ -947,12 +938,12 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <CardHeader>
                                 <CardTitle className="text-lg flex items-center gap-2">
                                     <Users className="h-5 w-5 text-gray-500" />
-                                    Участники
+                                    Қатысушылар
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Ответственный</p>
+                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Жауапты</p>
                                     <div className="flex items-center gap-3">
                                         {project.creator?.avatar_url ? (
                                             <img
@@ -966,8 +957,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             </div>
                                         )}
                                         <div>
-                                            <p className="text-sm font-medium text-[#0f1b3d]">{project.creator?.full_name || project.creator?.name || 'Не указан'}</p>
-                                            <p className="text-xs text-gray-500">Куратор проекта</p>
+                                            <p className="text-sm font-medium text-[#0f1b3d]">{project.creator?.full_name || project.creator?.name || 'Көрсетілмеген'}</p>
+                                            <p className="text-xs text-gray-500">Жоба кураторы</p>
                                         </div>
                                     </div>
                                 </div>
@@ -975,7 +966,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {project.executors && project.executors.length > 0 && (
                                     <div>
                                         <div className="h-px bg-gray-100 my-4"></div>
-                                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Исполнители</p>
+                                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Орындаушылар</p>
                                         <div className="flex flex-col gap-3">
                                             {project.executors.map(executor => (
                                                 <div key={executor.id} className="flex items-center gap-3">
@@ -992,7 +983,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     )}
                                                     <div>
                                                         <p className="text-sm text-gray-700">
-                                                            {executor.position || 'Исполнитель'}
+                                                            {executor.position || 'Орындаушы'}
                                                         </p>
                                                         <p className="text-xs text-gray-400">
                                                             ({executor.full_name || executor.name || '—'})
@@ -1012,7 +1003,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {canModify && (
                                     <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
                                         <Button variant="outline" className="w-full justify-start">
-                                            <Activity className="mr-2 h-4 w-4" /> Редактировать проект
+                                            <Activity className="mr-2 h-4 w-4" /> Жобаны өңдеу
                                         </Button>
                                     </Link>
                                 )}
@@ -1020,7 +1011,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <FileText className="mr-2 h-4 w-4" />
-                                        Документы
+                                        Құжаттар
                                         {project.documents && project.documents.length > 0 && (
                                             <span className="ml-auto bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
                                                 {project.documents.length}
@@ -1045,7 +1036,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <Link href={`/investment-projects/${project.id}/issues`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <AlertTriangle className="mr-2 h-4 w-4" />
-                                        Проблемные вопросы
+                                        Проблемалық мәселелер
                                         {project.issues && project.issues.length > 0 && (
                                             <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs">
                                                 {project.issues.length}
@@ -1059,7 +1050,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 >
                                     <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
                                         <Download className="mr-2 h-4 w-4" />
-                                        Скачать паспорт проекта
+                                        Жоба паспортын жүктеу
                                     </Button>
                                 </a>
                                 <a
@@ -1068,7 +1059,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 >
                                     <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5a] text-white" disabled={!canDownload}>
                                         <Presentation className="mr-2 h-4 w-4" />
-                                        Скачать презентацию
+                                        Презентацияны жүктеу
                                     </Button>
                                 </a>
                             </CardContent>
@@ -1083,7 +1074,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Flag className="h-5 w-5" />
-                                    Добавить этап к проекту
+                                    Жобаға кезең қосу
                                 </h3>
                                 <button
                                     type="button"
@@ -1099,14 +1090,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             >
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                        Название темы (модуля)
+                                    Тақырыптың (модульдің) атауы
                                     </Label>
                                     <Input
                                         value={taskTitle}
                                         onChange={(e) =>
                                             setTaskTitle(e.target.value)
                                         }
-                                        placeholder="Тема"
+                                        placeholder="Тақырып"
                                         className="mt-1.5"
                                         required
                                     />
@@ -1114,14 +1105,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                        Описание
+                                        Сипаттама
                                     </Label>
                                     <textarea
                                         value={taskDescription}
                                         onChange={(e) =>
                                             setTaskDescription(e.target.value)
                                         }
-                                        placeholder="Описание"
+                                        placeholder="Сипаттама"
                                         className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                         rows={3}
                                     />
@@ -1130,7 +1121,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                            Дата начала
+                                            Басталу күні
                                         </Label>
                                         <Input
                                             type="date"
@@ -1145,7 +1136,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </div>
                                     <div>
                                         <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                            Дата окончания
+                                            Аяқталу күні
                                         </Label>
                                         <Input
                                             type="date"
@@ -1160,7 +1151,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                        Назначить ответственного
+                                        Жауаптыны тағайындау
                                     </Label>
                                     <div className="relative mt-1.5">
                                         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -1169,14 +1160,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             onChange={(e) =>
                                                 setUserSearch(e.target.value)
                                             }
-                                            placeholder="Поиск"
+                                            placeholder="Іздеу"
                                             className="pl-9"
                                         />
                                     </div>
                                     <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200">
                                         {filteredUsers.length === 0 ? (
                                             <p className="px-4 py-3 text-sm text-gray-400">
-                                               Пользователи не найдены
+                                               Пайдаланушылар табылмады
                                             </p>
                                         ) : (
                                             filteredUsers.map((u, idx) => (
@@ -1201,8 +1192,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         </span>
                                                         {u.baskarma_type ===
                                                         'oblast'
-                                                            ? 'Областной'
-                                                            : 'Районная'}
+                                                            ? 'Облыстық'
+                                                            : 'Аудандық'}
                                                         : {u.full_name || '—'}
                                                         {u.position &&
                                                             ` — ${u.position}`}
@@ -1239,7 +1230,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     >
                                         {isSubmittingTask
                                             ? 'Сақталуда...'
-                                            : 'Сохранить'}
+                                            : 'Сақтау'}
                                     </Button>
                                     <Button
                                         type="button"
@@ -1249,7 +1240,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             setShowTaskModal(false)
                                         }
                                     >
-                                        Отмена
+                                        Болдырмау
                                     </Button>
                                 </div>
                             </form>
@@ -1264,7 +1255,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Upload className="h-5 w-5" />
-                                    Подтвердите выполнение задачи!
+                                    Тапсырманың орындалуын растаңыз!
                                 </h3>
                                 <button
                                     type="button"
@@ -1284,7 +1275,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
-                                        Документы (файлы)
+                                        Құжаттар (файлдар)
                                         <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
                                     </Label>
                                     <input
@@ -1296,7 +1287,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     />
                                     {completionDocuments.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
-                                            {completionDocuments.length} документ выбран
+                                            {completionDocuments.length} құжат таңдалды
                                         </p>
                                     )}
                                 </div>
@@ -1304,7 +1295,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
-                                        Изображения
+                                        Суреттер
                                         <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
                                     </Label>
                                     <input
@@ -1317,19 +1308,19 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     />
                                     {completionPhotos.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
-                                            {completionPhotos.length} изображение выбрано
+                                            {completionPhotos.length} сурет таңдалды
                                         </p>
                                     )}
                                 </div>
 
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                        Комментарий
+                                        Пікір
                                     </Label>
                                     <textarea
                                         value={completionComment}
                                         onChange={(e) => setCompletionComment(e.target.value)}
-                                        placeholder="Введите комментарий..."
+                                        placeholder="Пікір енгізіңіз..."
                                         className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                         rows={4}
                                     />
@@ -1341,7 +1332,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         className="bg-emerald-500 hover:bg-emerald-600 px-8"
                                         disabled={isSubmittingCompletion || !!completionFileError}
                                     >
-                                        {isSubmittingCompletion ? 'Отправка...' : 'Да'}
+                                        {isSubmittingCompletion ? 'Жіберілуде...' : 'Иә'}
                                     </Button>
                                     <Button
                                         type="button"
@@ -1363,7 +1354,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Eye className="h-5 w-5" />
-                                    Проверить задание
+                                    Тапсырманы тексеру
                                 </h3>
                                 <button
                                     type="button"
@@ -1413,7 +1404,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {reviewCompletion.comment && (
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Комментарий
+                                            Пікір
                                         </p>
                                         <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
                                             {reviewCompletion.comment}
@@ -1425,7 +1416,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {reviewCompletion.files && reviewCompletion.files.length > 0 && (
                                     <div>
                                         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Файлы
+                                            Файлдар
                                         </p>
                                         <div className="space-y-2">
                                             {reviewCompletion.files.map((file) => (
@@ -1451,7 +1442,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             {file.file_name}
                                                         </p>
                                                         <p className="text-xs text-gray-400">
-                                                            {file.type === 'photo' ? 'Изображение' : 'Документ'}
+                                                            {file.type === 'photo' ? 'Сурет' : 'Құжат'}
                                                         </p>
                                                     </div>
                                                     <a
@@ -1473,12 +1464,12 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div className="space-y-4 border-t border-gray-200 pt-4">
                                     <div>
                                         <label className="text-sm font-semibold text-[#0f1b3d]">
-                                            Комментарий
+                                            Пікір
                                         </label>
                                         <textarea
                                             value={reviewComment}
                                             onChange={(e) => setReviewComment(e.target.value)}
-                                            placeholder="Комментарий жазыңыз..."
+                                            placeholder="Пікір жазыңыз..."
                                             className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                             rows={3}
                                         />
@@ -1490,7 +1481,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             disabled={isReviewing}
                                         >
                                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                                            Да
+                                            Иә
                                         </Button>
                                         <Button
                                             onClick={() => handleReview('rejected')}
@@ -1498,7 +1489,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             disabled={isReviewing}
                                         >
                                             <XCircle className="mr-2 h-4 w-4" />
-                                            Нет
+                                            Жоқ
                                         </Button>
                                     </div>
                                 </div>

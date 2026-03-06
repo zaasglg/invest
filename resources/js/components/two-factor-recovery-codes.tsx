@@ -57,11 +57,11 @@ export default function TwoFactorRecoveryCodes({
             <CardHeader>
                 <CardTitle className="flex gap-3">
                     <LockKeyhole className="size-4" aria-hidden="true" />
-                    2FA коды восстановления
+                    2FA қалпына келтіру кодтары
                 </CardTitle>
                 <CardDescription>
-                    Коды восстановления позволяют войти в аккаунт, если вы
-                    потеряли доступ к устройству 2FA. Храните их в надежном месте.
+                    Қалпына келтіру кодтары 2FA құрылғысына қол жеткізу
+                    мүмкін болмаған жағдайда аккаунтқа кіруге мүмкіндік береді. Оларды қауіпсіз жерде сақтаңыз.
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -76,7 +76,7 @@ export default function TwoFactorRecoveryCodes({
                             className="size-4"
                             aria-hidden="true"
                         />
-                        {codesAreVisible ? 'Скрыть' : 'Показать'} коды
+                        {codesAreVisible ? 'Жасыру' : 'Көрсету'} кодтар
                     </Button>
 
                     {canRegenerateCodes && (
@@ -92,7 +92,7 @@ export default function TwoFactorRecoveryCodes({
                                     disabled={processing}
                                     aria-describedby="regenerate-warning"
                                 >
-                                    <RefreshCw /> Перегенерировать коды
+                                    <RefreshCw /> Кодтарды қайта генерациялау
                                 </Button>
                             )}
                         </Form>
@@ -145,14 +145,14 @@ export default function TwoFactorRecoveryCodes({
 
                                 <div className="text-xs text-muted-foreground select-none">
                                     <p id="regenerate-warning">
-                                        Каждый код можно использовать только
-                                        один раз для входа в аккаунт. После
-                                        использования он будет удален. Для
-                                        получения новых нажмите{' '}
+                                        Әрбір кодты аккаунтқа кіру үшін тек
+                                        бір рет пайдалануға болады.
+                                        Пайдаланғаннан кейін ол жойылады. Жаңа
+                                        кодтар алу үшін жоғарыдағы{' '}
                                         <span className="font-bold">
-                                            Перегенерировать коды
+                                            Кодтарды қайта генерациялау
                                         </span>{' '}
-                                        выше.
+                                        батырмасын басыңыз.
                                     </p>
                                 </div>
                             </>

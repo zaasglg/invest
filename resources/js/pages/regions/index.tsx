@@ -52,24 +52,24 @@ function resolveRegionIconPath(icon: string | null | undefined): string | null {
 
 export default function Index({ regions: regionsData }: Props) {
     const handleDelete = (id: number) => {
-        if (confirm('Вы уверены?')) {
+        if (confirm('Сенімдісіз бе?')) {
             router.delete(regions.destroy.url(id));
         }
     };
 
     return (
         <AppLayout
-            breadcrumbs={[{ title: 'Регионы', href: regions.index.url() }]}
+            breadcrumbs={[{ title: 'Аймақтар', href: regions.index.url() }]}
         >
-            <Head title="Регионы" />
+            <Head title="Аймақтар" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Регионы
+                        Аймақтар
                     </h1>
                     <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                        <Link href={regions.create.url()}>Создать новый</Link>
+                        <Link href={regions.create.url()}>Жаңа қосу</Link>
                     </Button>
                 </div>
 
@@ -78,12 +78,12 @@ export default function Index({ regions: regionsData }: Props) {
                         <TableHeader>
                             <TableRow>
                                 <TableHead className="w-[80px]">ID</TableHead>
-                                <TableHead>Наименование</TableHead>
-                                <TableHead>Тип</TableHead>
-                                <TableHead>Цвет</TableHead>
-                                <TableHead>Иконка</TableHead>
+                                <TableHead>Атауы</TableHead>
+                                <TableHead>Түрі</TableHead>
+                                <TableHead>Түсі</TableHead>
+                                <TableHead>Белгіше</TableHead>
                                 <TableHead className="text-right">
-                                    Действия
+                                    Әрекеттер
                                 </TableHead>
                             </TableRow>
                         </TableHeader>
@@ -99,8 +99,8 @@ export default function Index({ regions: regionsData }: Props) {
                                             {region.type === 'oblast'
                                                 ? 'Облыс'
                                                 : region.subtype === 'city'
-                                                  ? 'Город'
-                                                  : 'Район'}
+                                                  ? 'Қала'
+                                                  : 'Аудан'}
                                         </span>
                                     </TableCell>
                                     <TableCell>
@@ -130,7 +130,7 @@ export default function Index({ regions: regionsData }: Props) {
                                                     {iconPath && (
                                                         <img
                                                             src={iconPath}
-                                                            alt={`Иконка ${region.name}`}
+                                                            alt={`${region.name} белгішесі`}
                                                             className="h-5 w-5 object-contain"
                                                         />
                                                     )}
@@ -176,7 +176,7 @@ export default function Index({ regions: regionsData }: Props) {
                                         colSpan={6}
                                         className="py-12 text-center text-gray-400"
                                     >
-                                        Нет данных. Создайте первый регион.
+                                        Мәлімет жоқ. Бірінші аймақты құрыңыз.
                                     </TableCell>
                                 </TableRow>
                             )}

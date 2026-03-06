@@ -12,6 +12,10 @@ class BaskarmaRatingController extends Controller
 {
     public function index(Request $request)
     {
+        $currentUser = $request->user();
+        $currentUser->load('roleModel');
+        $roleName = $currentUser->roleModel?->name;
+
         // Get all baskarma users with their region
         $baskarmaUsers = User::where('role_id', 6)
             ->with('region')
@@ -71,14 +75,43 @@ class BaskarmaRatingController extends Controller
             ->sortByDesc('kpd')
             ->values();
 
+        // For baskarma/ispolnitel: collect IDs they are allowed to view
+        $allowedIds = null;
+        if ($roleName === 'baskarma') {
+            // Baskarma can only view their own show page
+            $allowedIds = [$currentUser->id];
+        } elseif ($roleName === 'ispolnitel') {
+            // Ispolnitel can view baskarma from their own region
+            $allowedIds = $baskarmaUsers
+                ->filter(fn (User $u) => $u->region_id === $currentUser->region_id)
+                ->pluck('id')
+                ->values()
+                ->toArray();
+        }
+
         return Inertia::render('baskarma-rating/index', [
             'districtRatings' => $districtRatings,
             'oblastRatings' => $oblastRatings,
+            'allowedIds' => $allowedIds,
         ]);
     }
 
     public function show(User $user)
     {
+        $currentUser = request()->user();
+        $currentUser->load('roleModel');
+        $roleName = $currentUser->roleModel?->name;
+
+        // Baskarma can only see their own page
+        if ($roleName === 'baskarma' && $currentUser->id !== $user->id) {
+            abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
+        }
+
+        // Ispolnitel can only view baskarma from their own region
+        if ($roleName === 'ispolnitel' && $user->region_id !== $currentUser->region_id) {
+            abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
+        }
+
         $user->load('region', 'roleModel');
 
         $now = now()->startOfDay();

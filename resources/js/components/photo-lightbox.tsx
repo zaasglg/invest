@@ -109,7 +109,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
             <button
                 onClick={onClose}
                 className="absolute top-4 right-4 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
-                aria-label="Закрыть"
+                aria-label="Жабу"
             >
                 <X className="h-6 w-6" />
             </button>
@@ -120,14 +120,14 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
                     <button
                         onClick={goToPrevious}
                         className="absolute left-4 top-1/2 -translate-y-1/2 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
-                        aria-label="Предыдущее фото"
+                        aria-label="Алдыңғы фото"
                     >
                         <ChevronLeft className="h-8 w-8" />
                     </button>
                     <button
                         onClick={goToNext}
                         className="absolute right-4 top-1/2 -translate-y-1/2 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
-                        aria-label="Следующее фото"
+                        aria-label="Келесі фото"
                     >
                         <ChevronRight className="h-8 w-8" />
                     </button>
@@ -164,7 +164,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
                         onClick={handleResetZoom}
                         className="text-white hover:bg-white/10 text-xs"
                     >
-                        Сброс
+                        Қалпына келтіру
                     </Button>
                 )}
             </div>
@@ -190,7 +190,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
             >
                 <img
                     src={`/storage/${currentPhoto.file_path}`}
-                    alt={currentPhoto.description || 'Фото проекта'}
+                    alt={currentPhoto.description || 'Жоба фотосы'}
                     className="max-w-full max-h-full object-contain transition-transform"
                     style={{
                         transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,

@@ -96,29 +96,29 @@ export default function Show({ industrialZone }: Props) {
 
     const statusMap: Record<string, { label: string; color: string }> = {
         active: {
-            label: 'Активная',
+            label: 'Белсенді',
             color: 'bg-green-100 text-green-800',
         },
         developing: {
-            label: 'Развивающаяся',
+            label: 'Дамушы',
             color: 'bg-amber-100 text-amber-800',
         },
     };
 
     const severityMap: Record<string, { label: string; color: string }> = {
-        low: { label: 'Низкая', color: 'bg-blue-100 text-blue-800' },
-        medium: { label: 'Средняя', color: 'bg-amber-100 text-amber-800' },
-        high: { label: 'Высокая', color: 'bg-red-100 text-red-800' },
+        low: { label: 'Төмен', color: 'bg-blue-100 text-blue-800' },
+        medium: { label: 'Орташа', color: 'bg-amber-100 text-amber-800' },
+        high: { label: 'Жоғары', color: 'bg-red-100 text-red-800' },
     };
 
     const issueStatusMap: Record<string, { label: string; color: string }> = {
-        open: { label: 'Открыт', color: 'bg-red-100 text-red-800' },
+        open: { label: 'Ашық', color: 'bg-red-100 text-red-800' },
         in_progress: {
-            label: 'В работе',
+            label: 'Жұмыста',
             color: 'bg-amber-100 text-amber-800',
         },
         resolved: {
-            label: 'Решён',
+            label: 'Шешілді',
             color: 'bg-green-100 text-green-800',
         },
     };
@@ -126,31 +126,31 @@ export default function Show({ industrialZone }: Props) {
     const projectStatusMap: Record<string, { label: string; color: string }> =
         {
             plan: {
-                label: 'Планирование',
+                label: 'Жоспарлау',
                 color: 'bg-blue-100 text-blue-800',
             },
             implementation: {
-                label: 'Реализация',
+                label: 'Іске асыру',
                 color: 'bg-amber-100 text-amber-800',
             },
             launched: {
-                label: 'Запущен',
+                label: 'Іске қосылған',
                 color: 'bg-green-100 text-green-800',
             },
             suspended: {
-                label: 'Приостановлен',
+                label: 'Тоқтатылған',
                 color: 'bg-yellow-100 text-yellow-800',
             },
         };
 
     const formatCurrency = (amount: number) => {
         if (amount >= 1_000_000_000) {
-            return `${(amount / 1_000_000_000).toFixed(1)} млрд тг`;
+            return `${(amount / 1_000_000_000).toFixed(1)} млрд ₸`;
         }
         if (amount >= 1_000_000) {
-            return `${(amount / 1_000_000).toFixed(1)} млн тг`;
+            return `${(amount / 1_000_000).toFixed(1)} млн ₸`;
         }
-        return `${amount.toLocaleString('ru-RU')} тг`;
+        return `${amount.toLocaleString('kk-KZ')} ₸`;
     };
 
     const projects = industrialZone.investment_projects ?? [];
@@ -159,7 +159,7 @@ export default function Show({ industrialZone }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Индустриальные зоны', href: `/regions/${industrialZone.region_id}` },
+                { title: 'Индустриялық аймақтар', href: `/regions/${industrialZone.region_id}` },
                 { title: industrialZone.name, href: '' },
             ]}
         >
@@ -171,7 +171,7 @@ export default function Show({ industrialZone }: Props) {
                     href={`/regions/${industrialZone.region_id}`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Назад к списку
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
                 </Link>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -201,15 +201,15 @@ export default function Show({ industrialZone }: Props) {
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" /> Район
+                                            <MapPin className="h-3.5 w-3.5" /> Аудан
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {industrialZone.region?.name || 'Не указан'}
+                                            {industrialZone.region?.name || 'Көрсетілмеген'}
                                         </p>
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Activity className="h-3.5 w-3.5" /> Статус
+                                            <Activity className="h-3.5 w-3.5" /> Күйі
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
                                             {statusMap[industrialZone.status]?.label || industrialZone.status}
@@ -217,20 +217,20 @@ export default function Show({ industrialZone }: Props) {
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" /> Площадь
+                                            <MapPin className="h-3.5 w-3.5" /> Аумағы
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {industrialZone.total_area ? `${industrialZone.total_area} га` : 'Не указана'}
+                                            {industrialZone.total_area ? `${industrialZone.total_area} га` : 'Көрсетілмеген'}
                                         </p>
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Building2 className="h-3.5 w-3.5" /> Объем инвестиций
+                                            <Building2 className="h-3.5 w-3.5" /> Инвестиция көлемі
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
                                             {(() => {
                                                 const sum = projects.reduce((acc, p) => acc + Number(p.total_investment || 0), 0);
-                                                return sum > 0 ? formatCurrency(sum) : 'Не указан';
+                                                return sum > 0 ? formatCurrency(sum) : 'Көрсетілмеген';
                                             })()}
                                         </p>
                                     </div>
@@ -239,11 +239,11 @@ export default function Show({ industrialZone }: Props) {
                                 {/* Infrastructure */}
                                 {industrialZone.infrastructure && (() => {
                                     const infraItems = [
-                                        { key: 'electricity', name: 'Электроснабжение', icon: Zap, val: industrialZone.infrastructure.electricity, unit: 'МВт' },
-                                        { key: 'gas', name: 'Газ', icon: Flame, val: industrialZone.infrastructure.gas, unit: 'м³/час' },
-                                        { key: 'water', name: 'Водоснабжение', icon: Droplets, val: industrialZone.infrastructure.water, unit: 'м³/сут' },
-                                        { key: 'roads', name: 'Дороги', icon: Car, val: industrialZone.infrastructure.roads, unit: 'км' },
-                                        { key: 'railway', name: 'Ж/Д тупик', icon: TrainFront, val: industrialZone.infrastructure.railway, unit: 'км' },
+                                        { key: 'electricity', name: 'Электрмен жабдықтау', icon: Zap, val: industrialZone.infrastructure.electricity, unit: 'МВт' },
+                                        { key: 'gas', name: 'Газ', icon: Flame, val: industrialZone.infrastructure.gas, unit: 'м³/сағ' },
+                                        { key: 'water', name: 'Сумен жабдықтау', icon: Droplets, val: industrialZone.infrastructure.water, unit: 'м³/тәу' },
+                                        { key: 'roads', name: 'Жолдар', icon: Car, val: industrialZone.infrastructure.roads, unit: 'км' },
+                                        { key: 'railway', name: 'Теміржол тұйығы', icon: TrainFront, val: industrialZone.infrastructure.railway, unit: 'км' },
                                         { key: 'internet', name: 'Интернет', icon: Wifi, val: industrialZone.infrastructure.internet, unit: '' },
                                     ].filter(i => i.val && i.val.available !== undefined);
 
@@ -252,7 +252,7 @@ export default function Show({ industrialZone }: Props) {
                                     return (
                                         <div className="mt-6">
                                             <p className="mb-2 text-sm font-medium text-gray-500">
-                                                Инфраструктура
+                                                Инфрақұрылым
                                             </p>
                                             <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
                                                 {infraItems.map((item) => {
@@ -271,7 +271,7 @@ export default function Show({ industrialZone }: Props) {
                                                                     ${active ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'}
                                                                     h-5 border px-1.5 py-0 text-[10px] font-medium
                                                                 `}>
-                                                                    {active ? 'Доступно' : 'Нет'}
+                                                                    {active ? 'Қолжетімді' : 'Жоқ'}
                                                                 </Badge>
                                                                 {detail && (
                                                                     <div className="mt-0.5 text-[10px] font-medium text-gray-400">
@@ -295,7 +295,7 @@ export default function Show({ industrialZone }: Props) {
                                     {industrialZone.name}
                                 </h2> */}
                                 <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
-                                    {industrialZone.description || 'Описание отсутствует.'}
+                                    {industrialZone.description || 'Сипаттама жоқ.'}
                                 </p>
                             </div>
                         </Card>
@@ -305,7 +305,7 @@ export default function Show({ industrialZone }: Props) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <Building2 className="h-5 w-5 text-gray-500" />
-                                    Инвестиционные проекты
+                                    Инвестициялық жобалар
                                     {projects.length > 0 && (
                                         <Badge
                                             variant="secondary"
@@ -322,15 +322,15 @@ export default function Show({ industrialZone }: Props) {
                                         <TableHeader>
                                             <TableRow>
                                                 <TableHead>
-                                                    Название
+                                                    Атауы
                                                 </TableHead>
                                                 <TableHead>
                                                     Компания
                                                 </TableHead>
                                                 <TableHead>
-                                                    Инвестиции
+                                                    Инвестициялар
                                                 </TableHead>
-                                                <TableHead>Статус</TableHead>
+                                                <TableHead>Күйі</TableHead>
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
@@ -374,7 +374,7 @@ export default function Show({ industrialZone }: Props) {
                                     </Table>
                                 ) : (
                                     <p className="py-4 text-center text-sm text-gray-500">
-                                        Нет привязанных проектов
+                                        Байланыстырылған жобалар жоқ
                                     </p>
                                 )}
                             </CardContent>
@@ -396,7 +396,7 @@ export default function Show({ industrialZone }: Props) {
                                             className="w-full justify-start"
                                         >
                                             <Activity className="mr-2 h-4 w-4" />{' '}
-                                            Редактировать
+                                            Өңдеу
                                         </Button>
                                     </Link>
                                 )}
@@ -409,7 +409,7 @@ export default function Show({ industrialZone }: Props) {
                                         className="w-full justify-start"
                                     >
                                         <Layers className="mr-2 h-4 w-4" />{' '}
-                                        Перейти к району
+                                        Ауданға өту
                                     </Button>
                                 </Link>
                                 <Link
@@ -421,7 +421,7 @@ export default function Show({ industrialZone }: Props) {
                                         className="w-full justify-start"
                                     >
                                         <AlertTriangle className="mr-2 h-4 w-4" />{' '}
-                                        Управление вопросами
+                                        Мәселелерді басқару
                                         {issues.length > 0 && (
                                             <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
                                                 {issues.length}
@@ -437,7 +437,7 @@ export default function Show({ industrialZone }: Props) {
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <AlertTriangle className="h-5 w-5 text-gray-500" />
-                                    Проблемные вопросы
+                                    Проблемалық мәселелер
                                     {issues.length > 0 && (
                                         <Badge
                                             variant="secondary"
@@ -494,7 +494,7 @@ export default function Show({ industrialZone }: Props) {
                                     </div>
                                 ) : (
                                     <p className="py-2 text-center text-sm text-gray-500">
-                                        Нет проблемных вопросов
+                                        Проблемалық мәселелер жоқ
                                     </p>
                                 )}
                             </CardContent>

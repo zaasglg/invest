@@ -60,7 +60,7 @@ class RegionController extends Controller
         Region::create($validated);
         $this->clearDashboardRegionCache();
 
-        return redirect()->route('regions.index')->with('success', 'Регион создан.');
+        return redirect()->route('regions.index')->with('success', 'Аймақ құрылды.');
     }
 
     public function show(Region $region)
@@ -179,7 +179,7 @@ class RegionController extends Controller
         $region->update($validated);
         $this->clearDashboardRegionCache();
 
-        return redirect()->route('regions.index')->with('success', 'Регион обновлен.');
+        return redirect()->route('regions.index')->with('success', 'Аймақ жаңартылды.');
     }
 
     public function destroy(Region $region)
@@ -191,7 +191,7 @@ class RegionController extends Controller
         $region->delete();
         $this->clearDashboardRegionCache();
 
-        return redirect()->back()->with('success', 'Регион удален.');
+        return redirect()->back()->with('success', 'Аймақ жойылды.');
     }
 
     private function clearDashboardRegionCache(): void

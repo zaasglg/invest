@@ -9,7 +9,7 @@ class SuspendExpiredProjects extends Command
 {
     protected $signature = 'projects:suspend-expired';
 
-    protected $description = 'Автоматическое изменение статуса проектов с истекшим сроком завершения на "Приостановлен" ';
+    protected $description = 'Мерзімі өткен жобалардың күйін "Тоқтатылған" деп автоматты өзгерту';
 
     public function handle(): int
     {
@@ -18,7 +18,7 @@ class SuspendExpiredProjects extends Command
             ->where('end_date', '<', now()->startOfDay())
             ->update(['status' => 'suspended']);
 
-        $this->info("Приостановлено проектов: {$count}");
+        $this->info("Тоқтатылған жобалар: {$count}");
 
         return self::SUCCESS;
     }
