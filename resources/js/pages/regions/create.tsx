@@ -32,7 +32,7 @@ export default function Create({ parents }: Props) {
         type: 'district',
         subtype: 'district',
         parent_id: '',
-        geometry: [] as { lat: number; lng: number }[],
+        geometry: [[]] as { lat: number; lng: number }[][],
     });
 
     const submit: FormEventHandler = (e) => {
@@ -268,6 +268,8 @@ export default function Create({ parents }: Props) {
                             Орналасу (полигон)
                         </Label>
                         <LocationPicker
+                            multiPolygon
+                            mapStyle="standard"
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
                             className="w-full"

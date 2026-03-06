@@ -31,7 +31,7 @@ interface Region {
     name: string;
     color?: string | null;
     icon?: string | null;
-    geometry: { lat: number; lng: number }[] | null;
+    geometry: any;
 }
 
 interface RegionStats {
@@ -413,13 +413,10 @@ function MapController({
             options.maxZoom = 16;
         } else if (
             activeRegion &&
-            activeRegion.geometry &&
-            activeRegion.geometry.length > 0
+            activeRegion.geometry
         ) {
             // Priority 2: Active Region
-            const points = activeRegion.geometry
-                .map((p) => getLatLng(p))
-                .filter((p): p is { lat: number; lng: number } => p !== null)
+            const points = getRegionAllPoints(activeRegion.geometry)
                 .map((p) => [p.lat, p.lng] as [number, number]);
             if (points.length > 0) {
                 bounds = L.latLngBounds(points);
@@ -428,14 +425,9 @@ function MapController({
             // Priority 3: Fit All Regions
             const allPoints: [number, number][] = [];
             regions.forEach((r) => {
-                if (r.geometry) {
-                    r.geometry.forEach((p) => {
-                        const pt = getLatLng(p);
-                        if (pt) {
-                            allPoints.push([pt.lat, pt.lng]);
-                        }
-                    });
-                }
+                getRegionAllPoints(r.geometry).forEach((pt) => {
+                    allPoints.push([pt.lat, pt.lng]);
+                });
             });
 
             if (allPoints.length > 0) {
@@ -491,6 +483,31 @@ function getLatLng(point: any): { lat: number; lng: number } | null {
         return { lat, lng };
     }
     return null;
+}
+
+// Normalize region geometry to array of polygons (multi-polygon support)
+// Old format: [{lat,lng}, ...] -> [[{lat,lng}, ...]]
+// New format: [[{lat,lng}, ...], [{lat,lng}, ...]] -> as-is
+function getRegionPolygons(geometry: any): { lat: number; lng: number }[][] {
+    if (!geometry || !Array.isArray(geometry) || geometry.length === 0) return [];
+    // Detect multi-polygon: first element is an array (not a point object)
+    if (Array.isArray(geometry[0])) {
+        return geometry.map((polygon: any[]) =>
+            polygon
+                .map((p) => getLatLng(p))
+                .filter((p): p is { lat: number; lng: number } => p !== null),
+        ).filter((poly: any[]) => poly.length > 0);
+    }
+    // Single polygon: array of point objects
+    const points = geometry
+        .map((p: any) => getLatLng(p))
+        .filter((p: any): p is { lat: number; lng: number } => p !== null);
+    return points.length > 0 ? [points] : [];
+}
+
+// Get all points from a region's geometry (flattened, for bounds calculation)
+function getRegionAllPoints(geometry: any): { lat: number; lng: number }[] {
+    return getRegionPolygons(geometry).flat();
 }
 
 function getRegionIconCenter(
@@ -583,15 +600,12 @@ export default function Map({
         }
 
         const regionPolygons = regions
-            .map((region) =>
-                (
-                    region.geometry
-                        ?.map((point) => getLatLng(point))
-                        .filter(
-                            (point): point is { lat: number; lng: number } =>
-                                point !== null,
-                        ) ?? []
-                ).map((point) => [point.lat, point.lng] as [number, number]),
+            .flatMap((region) =>
+                getRegionPolygons(region.geometry).map((polygon) =>
+                    polygon.map(
+                        (point) => [point.lat, point.lng] as [number, number],
+                    ),
+                ),
             )
             .filter(
                 (polygon): polygon is [number, number][] => polygon.length >= 3,
@@ -617,20 +631,20 @@ export default function Map({
 
         const iconCandidates = regions
             .map((region, index) => {
-                const points =
-                    region.geometry
-                        ?.map((point) => getLatLng(point))
-                        .filter(
-                            (point): point is { lat: number; lng: number } =>
-                                point !== null,
-                        ) ?? [];
+                const polygons = getRegionPolygons(region.geometry);
 
-                if (points.length === 0) {
+                if (polygons.length === 0) {
                     return null;
                 }
 
-                const center = getRegionIconCenter(points);
-                const areaScore = getRegionAreaScore(points);
+                // Find the largest polygon by area score
+                const largestPolygon = polygons.reduce((best, poly) => {
+                    const score = getRegionAreaScore(poly);
+                    return score > best.score ? { points: poly, score } : best;
+                }, { points: polygons[0], score: getRegionAreaScore(polygons[0]) });
+
+                const center = getRegionIconCenter(largestPolygon.points);
+                const areaScore = largestPolygon.score;
 
                 return {
                     id: region.id,
@@ -916,33 +930,36 @@ export default function Map({
                 {/* Region polygons */}
                 {showPolygons &&
                     regions.map((region, regionIndex) => {
-                        const positions =
-                            region.geometry
-                                ?.map((p) => {
-                                    const pt = getLatLng(p);
-                                    return pt ? [pt.lat, pt.lng] : null;
-                                })
-                                .filter(
-                                    (p): p is [number, number] => p !== null,
-                                ) || [];
+                        const multiPolygon = getRegionPolygons(region.geometry);
 
-                        if (positions.length === 0) return null;
+                        if (multiPolygon.length === 0) return null;
+
+                        const allPositions = multiPolygon.map((polygon) =>
+                            polygon.map(
+                                (p) => [p.lat, p.lng] as [number, number],
+                            ),
+                        );
+
                         const regionColor = getRegionColor(region, regionIndex);
 
                         // Single region (region show page) — simple dashed outline
                         if (regions.length === 1) {
                             return (
-                                <Polygon
-                                    key={region.id}
-                                    positions={positions}
-                                    pathOptions={{
-                                        color: '#1d4ed8',
-                                        fillColor: 'transparent',
-                                        fillOpacity: 0,
-                                        weight: 2,
-                                        dashArray: '6, 4',
-                                    }}
-                                />
+                                <React.Fragment key={region.id}>
+                                    {allPositions.map((positions, pIdx) => (
+                                        <Polygon
+                                            key={`${region.id}-${pIdx}`}
+                                            positions={positions}
+                                            pathOptions={{
+                                                color: '#1d4ed8',
+                                                fillColor: 'transparent',
+                                                fillOpacity: 0,
+                                                weight: 2,
+                                                dashArray: '6, 4',
+                                            }}
+                                        />
+                                    ))}
+                                </React.Fragment>
                             );
                         }
 
@@ -952,93 +969,100 @@ export default function Map({
                         const shouldMute = hasSelection && !isActive;
 
                         const shadowOffset = 0.002;
-                        const shadowPositions = positions.map(
-                            ([lat, lng]) =>
-                                [lat + shadowOffset, lng + shadowOffset] as [
-                                    number,
-                                    number,
-                                ],
-                        );
 
                         return (
                             <React.Fragment key={region.id}>
-                                {isActive && (
-                                    <Polygon
-                                        positions={shadowPositions}
-                                        interactive={false}
-                                        pathOptions={{
-                                            color: 'transparent',
-                                            fillColor: '#1e293b',
-                                            fillOpacity: 0.3,
-                                            weight: 0,
-                                        }}
-                                    />
-                                )}
-                                {isActive && (
-                                    <Polygon
-                                        positions={positions}
-                                        interactive={false}
-                                        pathOptions={{
-                                            color: '#60a5fa',
-                                            weight: 11,
-                                            opacity: 0.35,
-                                            fillOpacity: 0,
-                                            className:
-                                                'map-live-halo map-live-halo--region',
-                                        }}
-                                    />
-                                )}
-                                <Polygon
-                                    positions={positions}
-                                    pathOptions={{
-                                        fillColor: regionColor,
-                                        weight: isActive
-                                            ? 4
-                                            : isHovered
-                                              ? 2.4
-                                              : hasSelection
-                                                ? 1.2
-                                                : 1.1,
-                                        opacity: 1,
-                                        color: isActive
-                                            ? '#1d4ed8'
-                                            : isHovered
-                                              ? '#64748b'
-                                              : hasSelection
-                                                ? '#cbd5e1'
-                                                : '#1d3b6f',
-                                        dashArray:
-                                            isActive || isHovered
-                                                ? ''
-                                                : hasSelection
-                                                  ? '2, 5'
-                                                  : '3',
-                                        fillOpacity: isActive
-                                            ? 0.7
-                                            : isHovered
-                                              ? 0.64
-                                              : hasSelection
-                                                ? 0.42
-                                                : 0.56,
-                                        className: cx(
-                                            'cursor-pointer map-region-polygon',
-                                            isActive &&
-                                                'map-live-focus map-live-focus--region',
-                                            shouldMute && 'map-live-muted',
-                                        ),
-                                    }}
-                                    eventHandlers={{
-                                        click: () => {
-                                            setActiveRegion(region);
-                                            setActivePlot(null);
-                                            setActiveEntity(null);
-                                        },
-                                        mouseover: () =>
-                                            setHoveredRegionId(region.id),
-                                        mouseout: () =>
-                                            setHoveredRegionId(null),
-                                    }}
-                                />
+                                {allPositions.map((positions, pIdx) => {
+                                    const shadowPositions = positions.map(
+                                        ([lat, lng]) =>
+                                            [lat + shadowOffset, lng + shadowOffset] as [
+                                                number,
+                                                number,
+                                            ],
+                                    );
+
+                                    return (
+                                        <React.Fragment key={`${region.id}-${pIdx}`}>
+                                            {isActive && (
+                                                <Polygon
+                                                    positions={shadowPositions}
+                                                    interactive={false}
+                                                    pathOptions={{
+                                                        color: 'transparent',
+                                                        fillColor: '#1e293b',
+                                                        fillOpacity: 0.3,
+                                                        weight: 0,
+                                                    }}
+                                                />
+                                            )}
+                                            {isActive && (
+                                                <Polygon
+                                                    positions={positions}
+                                                    interactive={false}
+                                                    pathOptions={{
+                                                        color: '#60a5fa',
+                                                        weight: 11,
+                                                        opacity: 0.35,
+                                                        fillOpacity: 0,
+                                                        className:
+                                                            'map-live-halo map-live-halo--region',
+                                                    }}
+                                                />
+                                            )}
+                                            <Polygon
+                                                positions={positions}
+                                                pathOptions={{
+                                                    fillColor: regionColor,
+                                                    weight: isActive
+                                                        ? 4
+                                                        : isHovered
+                                                          ? 2.4
+                                                          : hasSelection
+                                                            ? 1.2
+                                                            : 1.1,
+                                                    opacity: 1,
+                                                    color: isActive
+                                                        ? '#1d4ed8'
+                                                        : isHovered
+                                                          ? '#64748b'
+                                                          : hasSelection
+                                                            ? '#cbd5e1'
+                                                            : '#1d3b6f',
+                                                    dashArray:
+                                                        isActive || isHovered
+                                                            ? ''
+                                                            : hasSelection
+                                                              ? '2, 5'
+                                                              : '3',
+                                                    fillOpacity: isActive
+                                                        ? 0.7
+                                                        : isHovered
+                                                          ? 0.64
+                                                          : hasSelection
+                                                            ? 0.42
+                                                            : 0.56,
+                                                    className: cx(
+                                                        'cursor-pointer map-region-polygon',
+                                                        isActive &&
+                                                            'map-live-focus map-live-focus--region',
+                                                        shouldMute && 'map-live-muted',
+                                                    ),
+                                                }}
+                                                eventHandlers={{
+                                                    click: () => {
+                                                        setActiveRegion(region);
+                                                        setActivePlot(null);
+                                                        setActiveEntity(null);
+                                                    },
+                                                    mouseover: () =>
+                                                        setHoveredRegionId(region.id),
+                                                    mouseout: () =>
+                                                        setHoveredRegionId(null),
+                                                }}
+                                            />
+                                        </React.Fragment>
+                                    );
+                                })}
                             </React.Fragment>
                         );
                     })}

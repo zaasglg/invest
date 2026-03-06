@@ -40,8 +40,9 @@ class RegionController extends Controller
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'nullable|exists:regions,id',
             'geometry' => 'nullable|array',
-            'geometry.*.lat' => 'required|numeric',
-            'geometry.*.lng' => 'required|numeric',
+            'geometry.*' => 'array',
+            'geometry.*.*.lat' => 'required|numeric',
+            'geometry.*.*.lng' => 'required|numeric',
         ]);
 
         // Clear subtype if type is oblast
@@ -157,8 +158,9 @@ class RegionController extends Controller
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'nullable|exists:regions,id',
             'geometry' => 'nullable|array',
-            'geometry.*.lat' => 'required|numeric',
-            'geometry.*.lng' => 'required|numeric',
+            'geometry.*' => 'array',
+            'geometry.*.*.lat' => 'required|numeric',
+            'geometry.*.*.lng' => 'required|numeric',
         ]);
 
         // Clear subtype if type is oblast

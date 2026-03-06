@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { FormEventHandler } from 'react';
 import * as regions from '@/routes/regions';
-import LocationPicker from '@/components/location-picker';
+import LocationPicker, { normalizeToMultiPolygon } from '@/components/location-picker';
 
 interface Region {
     id: number;
@@ -23,7 +23,7 @@ interface Region {
     type: string;
     subtype: string | null;
     parent_id: number | null;
-    geometry?: { lat: number; lng: number }[];
+    geometry?: { lat: number; lng: number }[][] | { lat: number; lng: number }[];
 }
 
 interface Props {
@@ -100,7 +100,9 @@ export default function Edit({ region, parents }: Props) {
         type: region.type || 'district',
         subtype: region.subtype || 'district',
         parent_id: region.parent_id ? region.parent_id.toString() : '',
-        geometry: normalizeGeometry(region.geometry),
+        geometry: normalizeToMultiPolygon(region.geometry).map((polygon) =>
+            normalizeGeometry(polygon),
+        ),
     });
 
     const submit: FormEventHandler = (e) => {
@@ -350,6 +352,8 @@ export default function Edit({ region, parents }: Props) {
                             Орналасу (полигон)
                         </Label>
                         <LocationPicker
+                            multiPolygon
+                            mapStyle="standard"
                             value={data.geometry}
                             onChange={(val) => setData('geometry', val)}
                             className="w-full"

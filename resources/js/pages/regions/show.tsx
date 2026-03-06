@@ -481,14 +481,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return null;
     }
 
-    // Calculate map center
+    // Calculate map center (supports multi-polygon)
     let mapCenter: [number, number] | undefined = undefined;
-    if (region.geometry && region.geometry.length > 0) {
-        const points = region.geometry.map(p => getLatLng(p)).filter(p => p !== null) as { lat: number, lng: number }[];
+    if (region.geometry && Array.isArray(region.geometry) && region.geometry.length > 0) {
+        // Flatten multi-polygon or single polygon to all points
+        const allGeo = Array.isArray(region.geometry[0]) ? region.geometry : [region.geometry];
+        const points = (allGeo as any[][])
+            .flat()
+            .map((p: any) => getLatLng(p))
+            .filter((p: any): p is { lat: number; lng: number } => p !== null);
         if (points.length > 0) {
             mapCenter = [
-                points.reduce((sum, p) => sum + p.lat, 0) / points.length,
-                points.reduce((sum, p) => sum + p.lng, 0) / points.length
+                points.reduce((sum: number, p: { lat: number }) => sum + p.lat, 0) / points.length,
+                points.reduce((sum: number, p: { lng: number }) => sum + p.lng, 0) / points.length
             ];
         }
     }
