@@ -145,15 +145,12 @@ export default function Create({ regions, projectTypes, users, sezList, industri
     }, [data.sector, sezList, industrialZones]);
 
     const districtUsers = useMemo(() => {
-        if (!data.region_id) return [];
-        const regionId = parseInt(data.region_id);
-        return users.filter((u) => u.region_id === regionId);
-    }, [users, data.region_id]);
+        return users.filter((u) => u.region_id && u.baskarma_type !== 'oblast');
+    }, [users]);
 
     const oblastUsers = useMemo(() => {
-        if (!selectedOblastId) return [];
         return users.filter((u) => u.baskarma_type === 'oblast');
-    }, [users, selectedOblastId]);
+    }, [users]);
 
     const handleExecutorChange = (userId: string, checked: boolean) => {
         const currentIds = data.executor_ids;
@@ -418,44 +415,33 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                     <div className="flex flex-col gap-2">
                         <Label className="text-gray-500 font-normal">Орындаушылар</Label>
                         <div className="border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
-                            {!selectedOblastId ? (
-                                <p className="text-sm text-gray-400">
-                                    Орындаушыларды көрсету үшін облысты таңдаңыз
-                                </p>
-                            ) : (
                                 <>
-                                    {data.region_id && (
+                                    {districtUsers.length > 0 && (
                                         <div className="mb-3">
                                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан басқармасы</p>
-                                            {districtUsers.length === 0 ? (
-                                                <p className="text-sm text-gray-400 ml-1">Аудан басқармасы жоқ</p>
-                                            ) : (
-                                                <div className="space-y-2">
-                                                    {districtUsers.map((user) => (
-                                                        <div key={user.id} className="flex items-center space-x-2">
-                                                            <Checkbox
-                                                                id={`user-${user.id}`}
-                                                                checked={data.executor_ids.includes(user.id.toString())}
-                                                                onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                                                className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
-                                                            />
-                                                            <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
-                                                                <span>{user.full_name}</span>
-                                                                {user.position && (
-                                                                    <span className="text-gray-400"> — {user.position}</span>
-                                                                )}
-                                                            </Label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            )}
+                                            <div className="space-y-2">
+                                                {districtUsers.map((user) => (
+                                                    <div key={user.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`user-${user.id}`}
+                                                            checked={data.executor_ids.includes(user.id.toString())}
+                                                            onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
+                                                            className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
+                                                        />
+                                                        <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
+                                                            <span>{user.full_name}</span>
+                                                            {user.position && (
+                                                                <span className="text-gray-400"> — {user.position}</span>
+                                                            )}
+                                                        </Label>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
-                                    <div className={data.region_id ? 'border-t border-gray-200 pt-3' : ''}>
+                                    {oblastUsers.length > 0 && (
+                                    <div className={districtUsers.length > 0 ? 'border-t border-gray-200 pt-3' : ''}>
                                         <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс басқармасы</p>
-                                        {oblastUsers.length === 0 ? (
-                                            <p className="text-sm text-gray-400 ml-1">Облыс басқармасы жоқ</p>
-                                        ) : (
                                             <div className="space-y-2">
                                                 {oblastUsers.map((user) => (
                                                     <div key={user.id} className="flex items-center space-x-2">
@@ -474,10 +460,9 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                     </div>
                                                 ))}
                                             </div>
-                                        )}
                                     </div>
+                                    )}
                                 </>
-                            )}
                         </div>
                         {/* 
                             // @ts-ignore */}
