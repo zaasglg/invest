@@ -1048,6 +1048,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                 </TabsTrigger>
                                 <TabsTrigger value="subsoil" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600 bg-red-100 data-[state=active]:bg-red-200' : ''}`}>
                                     <Pickaxe className={`w-4 h-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`} />
+                                    Недро
                                     {subsoilStatusCounts.illegal > 0 && (
                                         <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
                                             {subsoilStatusCounts.illegal}
@@ -1208,15 +1209,14 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardContent className="p-6">
                                         {(() => {
                                             const selectedIz = selectedIzId ? industrialZones.find(z => z.id === selectedIzId) : null;
-                                            const displayZones = selectedIz ? 1 : industrialZones.length;
                                             const displayArea = selectedIz ? Number(selectedIz.total_area) : totalIzArea;
                                             const displayInvestment = izProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedIz ? (selectedIz.issues_count ?? 0) : stats.izIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Аймақтар саны</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{izProjects.length}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
