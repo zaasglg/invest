@@ -1100,15 +1100,14 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     <CardContent className="p-6">
                                         {(() => {
                                             const selectedSez = selectedSezId ? sezs.find(s => s.id === selectedSezId) : null;
-                                            const displayZones = selectedSez ? 1 : sezs.length;
                                             const displayArea = selectedSez ? Number(selectedSez.total_area) : totalSezArea;
                                             const displayInvestment = sezProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
                                             const displayIssues = selectedSez ? (selectedSez.issues_count ?? 0) : stats.sezIssuesCount;
                                             return (
                                                 <div className="grid grid-cols-2 gap-y-8 gap-x-4">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayZones}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Аймақтар саны</div>
+                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{sezProjects.length}</div>
+                                                        <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
                                                     </div>
                                                     <div className="pl-4 border-l border-gray-100">
                                                         <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
