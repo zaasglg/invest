@@ -23,6 +23,10 @@ Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::cl
 Route::resource('regions', \App\Http\Controllers\RegionController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::post('regions/{region}/projects/reorder', [\App\Http\Controllers\RegionController::class, 'reorderProjects'])
+    ->middleware(['auth', 'verified'])
+    ->name('regions.projects.reorder');
+
 Route::resource('sezs', \App\Http\Controllers\SezController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 

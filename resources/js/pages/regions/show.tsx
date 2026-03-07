@@ -1,7 +1,24 @@
 import Map from '@/components/map';
 import AppLayout from '@/layouts/app-layout';
 import React, { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import {
+    DndContext,
+    type DragEndEvent,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    arrayMove,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +36,7 @@ import {
     ChevronRight,
     ExternalLink,
     Globe,
+    GripVertical,
     Zap,
     Flame,
     Droplets,
@@ -127,7 +145,60 @@ interface Props {
     stats: Stats;
 }
 
+function SortableProjectRow({
+    id,
+    isSelected,
+    canReorder,
+    onClick,
+    children,
+}: {
+    id: number;
+    isSelected: boolean;
+    canReorder: boolean;
+    onClick: () => void;
+    children: React.ReactNode;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    return (
+        <tr
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
+                opacity: isDragging ? 0.4 : 1,
+                position: isDragging ? 'relative' : undefined,
+                zIndex: isDragging ? 10 : undefined,
+            }}
+            className={`border-b cursor-pointer transition-colors ${
+                isSelected ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'
+            }`}
+            onClick={onClick}
+        >
+            <td className="w-6 py-3 pl-3 pr-0">
+                <button
+                    {...attributes}
+                    {...listeners}
+                    className={`touch-none ${
+                        canReorder
+                            ? 'cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500'
+                            : 'cursor-default text-gray-200 pointer-events-none'
+                    }`}
+                    onClick={(e) => e.stopPropagation()}
+                    tabIndex={-1}
+                    disabled={!canReorder}
+                >
+                    <GripVertical className="h-4 w-4" />
+                </button>
+            </td>
+            {children}
+        </tr>
+    );
+}
+
 export default function Show({ region, projects, sezs, industrialZones, subsoilUsers, stats }: Props) {
+    const { auth } = usePage().props;
+    const isSuperAdmin = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'superadmin';
+
     const [activeTab, setActiveTab] = useState('all');
     const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
     const [selectedEntityType, setSelectedEntityType] = useState<'sez' | 'iz' | 'subsoil' | null>(null);
@@ -147,6 +218,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const [sezPage, setSezPage] = useState(1);
     const [izPage, setIzPage] = useState(1);
     const [subsoilPage, setSubsoilPage] = useState(1);
+
+    // Local ordered copy of projects for drag-and-drop reordering
+    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(projects);
 
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
@@ -208,24 +282,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     // Filtered projects for each tab
     const sezProjects = React.useMemo(() => {
         if (selectedSezId) {
-            return projects.filter(p => p.sezs?.some(s => s.id === selectedSezId));
+            return orderedProjects.filter(p => p.sezs?.some(s => s.id === selectedSezId));
         }
-        return projects.filter(p => p.sezs && p.sezs.length > 0);
-    }, [projects, selectedSezId]);
+        return orderedProjects.filter(p => p.sezs && p.sezs.length > 0);
+    }, [orderedProjects, selectedSezId]);
 
     const izProjects = React.useMemo(() => {
         if (selectedIzId) {
-            return projects.filter(p => p.industrial_zones?.some(z => z.id === selectedIzId));
+            return orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === selectedIzId));
         }
-        return projects.filter(p => p.industrial_zones && p.industrial_zones.length > 0);
-    }, [projects, selectedIzId]);
+        return orderedProjects.filter(p => p.industrial_zones && p.industrial_zones.length > 0);
+    }, [orderedProjects, selectedIzId]);
 
     const subsoilProjects = React.useMemo(() => {
         if (selectedSubsoilId) {
-            return projects.filter(p => p.subsoil_users?.some(s => s.id === selectedSubsoilId));
+            return orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === selectedSubsoilId));
         }
-        return projects.filter(p => p.subsoil_users && p.subsoil_users.length > 0);
-    }, [projects, selectedSubsoilId]);
+        return orderedProjects.filter(p => p.subsoil_users && p.subsoil_users.length > 0);
+    }, [orderedProjects, selectedSubsoilId]);
 
     // Filtered subsoil users by status
     const filteredSubsoilUsers = React.useMemo(() => {
@@ -502,8 +576,34 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         if (activeTab === 'sez') return sezProjects;
         if (activeTab === 'iz') return izProjects;
         if (activeTab === 'subsoil') return subsoilProjects;
-        return projects;
-    }, [activeTab, projects, sezProjects, izProjects, subsoilProjects]);
+        return orderedProjects;
+    }, [activeTab, orderedProjects, sezProjects, izProjects, subsoilProjects]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
+    const saveProjectOrder = (newOrder: InvestmentProject[]) => {
+        const csrfToken =
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        fetch(`/regions/${region.id}/projects/reorder`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            body: JSON.stringify({ project_ids: newOrder.map((p) => p.id) }),
+        });
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        if (!isSuperAdmin) return;
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
+        const newIndex = orderedProjects.findIndex((p) => p.id === over.id);
+        const newOrder = arrayMove(orderedProjects, oldIndex, newIndex);
+        setOrderedProjects(newOrder);
+        saveProjectOrder(newOrder);
+    };
 
     const [downloadingPresentations, setDownloadingPresentations] = useState(false);
 
@@ -689,12 +789,12 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 disabled={downloadingPresentations}
                                                 onClick={() => {
                                                     const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
+                                                        ? orderedProjects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
                                                         : mapSelectedEntityType === 'iz' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
+                                                        ? orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
                                                         : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
-                                                        : projects;
+                                                        ? orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
+                                                        : orderedProjects;
                                                     handleBulkPresentationDownload(filteredProjects, allPage);
                                                 }}
                                             >
@@ -709,80 +809,80 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         </div>
                                     </div>
                                     <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
-                                        <Table>
-                                            <TableHeader className="bg-[#F0F4FA]">
-                                                <TableRow>
-                                                    <TableHead>Жоба</TableHead>
-                                                    <TableHead>Сала</TableHead>
-                                                    <TableHead>Күйі</TableHead>
-                                                    <TableHead>Көлемі</TableHead>
-                                                    <TableHead className="text-right">Инвестициялар</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {(() => {
-                                                    const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
-                                                        : mapSelectedEntityType === 'iz' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
-                                                        : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
-                                                        ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
-                                                        : projects;
-                                                    const paginatedAll = filteredProjects.slice((allPage - 1) * ITEMS_PER_PAGE, allPage * ITEMS_PER_PAGE);
-                                                    return paginatedAll.length > 0 ? paginatedAll.map((project) => (
-                                                        <TableRow
-                                                            key={project.id}
-                                                            className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
-                                                            onClick={() => handleProjectSelect(project.id)}
-                                                        >
-                                                            <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                                <Link
-                                                                    href={`/investment-projects/${project.id}`}
-                                                                    className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    {project.name}
-                                                                </Link>
-                                                            </TableCell>
-                                                            <TableCell className="text-gray-500 text-sm py-3">
-                                                                {getSectorDisplay(project)}
-                                                            </TableCell>
-                                                            <TableCell className="py-3">
-                                                                <Badge
-                                                                    variant="outline"
-                                                                    className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                                >
-                                                                    {getStatusLabel(project.status)}
-                                                                </Badge>
-                                                            </TableCell>
-                                                            <TableCell className="text-gray-700 font-medium text-sm py-3">
-                                                                —
-                                                            </TableCell>
-                                                            <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                                {project.total_investment
-                                                                    ? formatCurrency(Number(project.total_investment))
-                                                                    : '—'}
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    )) : (
-                                                        <TableRow>
-                                                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
-                                                                Жобалар туралы деректер жоқ
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    );
-                                                })()}
-                                            </TableBody>
-                                        </Table>
                                         {(() => {
                                             const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
-                                                ? projects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
+                                                ? orderedProjects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
                                                 : mapSelectedEntityType === 'iz' && mapSelectedEntityId
-                                                ? projects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
+                                                ? orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
                                                 : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
-                                                ? projects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
-                                                : projects;
-                                            return renderPagination(filteredProjects.length, allPage, setAllPage);
+                                                ? orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
+                                                : orderedProjects;
+                                            const paginatedAll = filteredProjects.slice((allPage - 1) * ITEMS_PER_PAGE, allPage * ITEMS_PER_PAGE);
+                                            return (
+                                                <>
+                                                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                                        <Table>
+                                                            <TableHeader className="bg-[#F0F4FA]">
+                                                                <TableRow>
+                                                                    <TableHead className="w-6" />
+                                                                    <TableHead>Жоба</TableHead>
+                                                                    <TableHead>Сала</TableHead>
+                                                                    <TableHead>Күйі</TableHead>
+                                                                    <TableHead>Көлемі</TableHead>
+                                                                    <TableHead className="text-right">Инвестициялар</TableHead>
+                                                                </TableRow>
+                                                            </TableHeader>
+                                                            <TableBody>
+                                                                {paginatedAll.length > 0 ? (
+                                                                    <SortableContext items={paginatedAll.map(p => p.id)} strategy={verticalListSortingStrategy}>
+                                                                        {paginatedAll.map((project) => (
+                                                                            <SortableProjectRow
+                                                                                key={project.id}
+                                                                                id={project.id}
+                                                                                isSelected={selectedProjectId === project.id}
+                                                                                canReorder={isSuperAdmin}
+                                                                                onClick={() => handleProjectSelect(project.id)}
+                                                                            >
+                                                                                <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
+                                                                                    <Link
+                                                                                        href={`/investment-projects/${project.id}`}
+                                                                                        className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                                        onClick={(e) => e.stopPropagation()}
+                                                                                    >
+                                                                                        {project.name}
+                                                                                    </Link>
+                                                                                </TableCell>
+                                                                                <TableCell className="text-gray-500 text-sm py-3">
+                                                                                    {getSectorDisplay(project)}
+                                                                                </TableCell>
+                                                                                <TableCell className="py-3">
+                                                                                    <Badge
+                                                                                        variant="outline"
+                                                                                        className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
+                                                                                    >
+                                                                                        {getStatusLabel(project.status)}
+                                                                                    </Badge>
+                                                                                </TableCell>
+                                                                                <TableCell className="text-gray-700 font-medium text-sm py-3">—</TableCell>
+                                                                                <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
+                                                                                    {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
+                                                                                </TableCell>
+                                                                            </SortableProjectRow>
+                                                                        ))}
+                                                                    </SortableContext>
+                                                                ) : (
+                                                                    <TableRow>
+                                                                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                                                                            Жобалар туралы деректер жоқ
+                                                                        </TableCell>
+                                                                    </TableRow>
+                                                                )}
+                                                            </TableBody>
+                                                        </Table>
+                                                    </DndContext>
+                                                    {renderPagination(filteredProjects.length, allPage, setAllPage)}
+                                                </>
+                                            );
                                         })()}
                                     </div>
                                 </TabsContent>
@@ -811,57 +911,64 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         </Button>
                                     </div>
                                     <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
-                                        <Table>
-                                            <TableHeader className="bg-[#F0F4FA]">
-                                                <TableRow>
-                                                    <TableHead>Жоба</TableHead>
-                                                    <TableHead>Сала</TableHead>
-                                                    <TableHead>Күйі</TableHead>
-                                                    <TableHead className="text-right">Инвестициялар</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {sezProjects.length > 0 ? sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map((project) => (
-                                                    <TableRow
-                                                        key={project.id}
-                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
-                                                        onClick={() => handleProjectSelect(project.id)}
-                                                    >
-                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                            <Link
-                                                                href={`/investment-projects/${project.id}`}
-                                                                className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                {project.name}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell className="text-gray-500 text-sm py-3">
-                                                            {getSectorDisplay(project)}
-                                                        </TableCell>
-                                                        <TableCell className="py-3">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                            >
-                                                                {getStatusLabel(project.status)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                            {project.total_investment
-                                                                ? formatCurrency(Number(project.total_investment))
-                                                                : '—'}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )) : (
+                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                            <Table>
+                                                <TableHeader className="bg-[#F0F4FA]">
                                                     <TableRow>
-                                                        <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Жобалар жоқ
-                                                        </TableCell>
+                                                        <TableHead className="w-6" />
+                                                        <TableHead>Жоба</TableHead>
+                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Күйі</TableHead>
+                                                        <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {sezProjects.length > 0 ? (
+                                                        <SortableContext items={sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map(p => p.id)} strategy={verticalListSortingStrategy}>
+                                                            {sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map((project) => (
+                                                                <SortableProjectRow
+                                                                    key={project.id}
+                                                                    id={project.id}
+                                                                    isSelected={selectedProjectId === project.id}
+                                                                    canReorder={isSuperAdmin}
+                                                                    onClick={() => handleProjectSelect(project.id)}
+                                                                >
+                                                                    <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
+                                                                        <Link
+                                                                            href={`/investment-projects/${project.id}`}
+                                                                            className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            {project.name}
+                                                                        </Link>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-gray-500 text-sm py-3">
+                                                                        {getSectorDisplay(project)}
+                                                                    </TableCell>
+                                                                    <TableCell className="py-3">
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
+                                                                        >
+                                                                            {getStatusLabel(project.status)}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
+                                                                        {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
+                                                                    </TableCell>
+                                                                </SortableProjectRow>
+                                                            ))}
+                                                        </SortableContext>
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                                                Жобалар жоқ
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </DndContext>
                                         {renderPagination(sezProjects.length, sezPage, setSezPage)}
                                     </div>
                                 </TabsContent>
@@ -890,57 +997,64 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         </Button>
                                     </div>
                                     <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
-                                        <Table>
-                                            <TableHeader className="bg-[#F0F4FA]">
-                                                <TableRow>
-                                                    <TableHead>Жоба</TableHead>
-                                                    <TableHead>Сала</TableHead>
-                                                    <TableHead>Күйі</TableHead>
-                                                    <TableHead className="text-right">Инвестициялар</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {izProjects.length > 0 ? izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map((project) => (
-                                                    <TableRow
-                                                        key={project.id}
-                                                        className={`cursor-pointer transition-colors ${selectedProjectId === project.id ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'}`}
-                                                        onClick={() => handleProjectSelect(project.id)}
-                                                    >
-                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                            <Link
-                                                                href={`/investment-projects/${project.id}`}
-                                                                className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                            >
-                                                                {project.name}
-                                                            </Link>
-                                                        </TableCell>
-                                                        <TableCell className="text-gray-500 text-sm py-3">
-                                                            {getSectorDisplay(project)}
-                                                        </TableCell>
-                                                        <TableCell className="py-3">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                            >
-                                                                {getStatusLabel(project.status)}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                            {project.total_investment
-                                                                ? formatCurrency(Number(project.total_investment))
-                                                                : '—'}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )) : (
+                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                            <Table>
+                                                <TableHeader className="bg-[#F0F4FA]">
                                                     <TableRow>
-                                                        <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Жобалар жоқ
-                                                        </TableCell>
+                                                        <TableHead className="w-6" />
+                                                        <TableHead>Жоба</TableHead>
+                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Күйі</TableHead>
+                                                        <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {izProjects.length > 0 ? (
+                                                        <SortableContext items={izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map(p => p.id)} strategy={verticalListSortingStrategy}>
+                                                            {izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map((project) => (
+                                                                <SortableProjectRow
+                                                                    key={project.id}
+                                                                    id={project.id}
+                                                                    isSelected={selectedProjectId === project.id}
+                                                                    canReorder={isSuperAdmin}
+                                                                    onClick={() => handleProjectSelect(project.id)}
+                                                                >
+                                                                    <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
+                                                                        <Link
+                                                                            href={`/investment-projects/${project.id}`}
+                                                                            className="hover:text-[#c8a44e] hover:underline transition-colors"
+                                                                            onClick={(e) => e.stopPropagation()}
+                                                                        >
+                                                                            {project.name}
+                                                                        </Link>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-gray-500 text-sm py-3">
+                                                                        {getSectorDisplay(project)}
+                                                                    </TableCell>
+                                                                    <TableCell className="py-3">
+                                                                        <Badge
+                                                                            variant="outline"
+                                                                            className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
+                                                                        >
+                                                                            {getStatusLabel(project.status)}
+                                                                        </Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
+                                                                        {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
+                                                                    </TableCell>
+                                                                </SortableProjectRow>
+                                                            ))}
+                                                        </SortableContext>
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                                                Жобалар жоқ
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </DndContext>
                                         {renderPagination(izProjects.length, izPage, setIzPage)}
                                     </div>
                                 </TabsContent>

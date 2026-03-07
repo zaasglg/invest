@@ -87,7 +87,7 @@ class RegionController extends Controller
         ]);
         $projects = InvestmentProject::with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
-            ->latest()
+            ->orderBy('sort_order')
             ->get();
 
         // Stats for "Все" tab
@@ -133,6 +133,27 @@ class RegionController extends Controller
                 'subsoilIssuesCount' => $subsoilIssuesCount,
             ],
         ]);
+    }
+
+    public function reorderProjects(Request $request, Region $region)
+    {
+        $user = $request->user();
+        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'project_ids' => 'required|array',
+            'project_ids.*' => 'integer|exists:investment_projects,id',
+        ]);
+
+        foreach ($validated['project_ids'] as $index => $projectId) {
+            InvestmentProject::where('id', $projectId)
+                ->where('region_id', $region->id)
+                ->update(['sort_order' => $index]);
+        }
+
+        return response()->noContent();
     }
 
     public function edit(Region $region)
