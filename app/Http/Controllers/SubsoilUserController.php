@@ -125,7 +125,7 @@ class SubsoilUserController extends Controller
 
         $assignableUsers = User::whereHas('roleModel', function ($q) {
             $q->whereIn('name', ['baskarma', 'ispolnitel', 'superadmin']);
-        })->select('id', 'name', 'full_name', 'position', 'baskarma_type')->get();
+        })->select('id', 'full_name', 'position', 'baskarma_type')->get();
 
         return Inertia::render('subsoil-users/show', [
             'subsoilUser' => $subsoilUser,

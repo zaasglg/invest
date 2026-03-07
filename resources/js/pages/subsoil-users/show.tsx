@@ -41,7 +41,6 @@ interface Issue {
 
 interface AssignableUser {
     id: number;
-    name: string;
     full_name?: string;
     position?: string;
     baskarma_type?: string;
@@ -488,7 +487,7 @@ export default function Show({
                                                     </p>
                                                     {task.assignee && (
                                                         <p className="mt-1 text-sm text-gray-500">
-                                                            {task.assignee.full_name ?? task.assignee.name}
+                                                            {task.assignee.full_name}
                                                             {task.assignee.position && ` — ${task.assignee.position}`}
                                                         </p>
                                                     )}
@@ -678,7 +677,7 @@ export default function Show({
                                     <option value="">— Таңдаңыз —</option>
                                     {assignableUsers.map((u) => (
                                         <option key={u.id} value={u.id}>
-                                            {u.full_name ?? u.name}
+                                            {u.full_name}
                                             {u.position ? ` — ${u.position}` : ''}
                                         </option>
                                     ))}
