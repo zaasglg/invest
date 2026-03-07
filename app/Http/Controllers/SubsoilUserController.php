@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Region;
 use App\Models\SubsoilUser;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -113,7 +114,7 @@ class SubsoilUserController extends Controller
 
     public function show(SubsoilUser $subsoilUser)
     {
-        $subsoilUser->load(['region', 'issues', 'documents'])
+        $subsoilUser->load(['region', 'issues', 'documents', 'tasks.assignee'])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $subsoilUser->photos()
@@ -122,10 +123,15 @@ class SubsoilUserController extends Controller
             ->get();
         $renderPhotos = $subsoilUser->photos()->renderPhotos()->latest()->get();
 
+        $assignableUsers = User::whereHas('roleModel', function ($q) {
+            $q->whereIn('name', ['baskarma', 'ispolnitel', 'superadmin']);
+        })->select('id', 'name', 'full_name', 'position', 'baskarma_type')->get();
+
         return Inertia::render('subsoil-users/show', [
             'subsoilUser' => $subsoilUser,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
+            'assignableUsers' => $assignableUsers,
         ]);
     }
 

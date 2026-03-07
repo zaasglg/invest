@@ -101,6 +101,10 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'r
     Route::post('gallery', [\App\Http\Controllers\SubsoilPhotoController::class, 'store'])->name('subsoil-users.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\SubsoilPhotoController::class, 'update'])->name('subsoil-users.gallery.update');
     Route::delete('gallery/{photo}', [\App\Http\Controllers\SubsoilPhotoController::class, 'destroy'])->name('subsoil-users.gallery.destroy');
+
+    Route::post('tasks', [\App\Http\Controllers\SubsoilTaskController::class, 'store'])->name('subsoil-users.tasks.store');
+    Route::put('tasks/{task}', [\App\Http\Controllers\SubsoilTaskController::class, 'update'])->name('subsoil-users.tasks.update');
+    Route::delete('tasks/{task}', [\App\Http\Controllers\SubsoilTaskController::class, 'destroy'])->name('subsoil-users.tasks.destroy');
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)

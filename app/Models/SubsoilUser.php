@@ -48,6 +48,11 @@ class SubsoilUser extends Model
         return $this->hasMany(SubsoilDocument::class);
     }
 
+    public function tasks()
+    {
+        return $this->hasMany(SubsoilTask::class);
+    }
+
     public function investmentProjects()
     {
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_subsoil_user');
