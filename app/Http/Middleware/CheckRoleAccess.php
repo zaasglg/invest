@@ -120,6 +120,9 @@ class CheckRoleAccess
             $this->enforceDistrictScope($request, $user);
         }
 
+        // Block non-superadmin from accessing archived investment projects
+        $this->blockArchivedProjectAccess($request, $user, $roleName);
+
         return $next($request);
     }
 
@@ -245,6 +248,32 @@ class CheckRoleAccess
             if ($region && is_object($region) && $region->id !== $user->region_id) {
                 abort(403, 'Сізге бұл ауданға кіруге рұқсат етілмеген.');
             }
+        }
+    }
+
+    /**
+     * Block non-superadmin users from accessing archived investment projects.
+     */
+    protected function blockArchivedProjectAccess(Request $request, $user, ?string $roleName): void
+    {
+        if ($roleName === 'superadmin') {
+            return;
+        }
+
+        $routeName = $request->route()?->getName();
+        if (! $routeName) {
+            return;
+        }
+
+        // Only check routes related to investment projects
+        if (! str_starts_with($routeName, 'investment-projects.')) {
+            return;
+        }
+
+        $project = $request->route('investmentProject') ?? $request->route('investment_project');
+
+        if ($project && is_object($project) && $project->is_archived) {
+            abort(403, 'Бұл жоба архивтелген. Қол жеткізу мүмкін емес.');
         }
     }
 }

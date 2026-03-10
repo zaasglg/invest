@@ -23,6 +23,7 @@ class InvestmentProject extends Model
         'geometry',
         'infrastructure',
         'sort_order',
+        'is_archived',
     ];
 
     protected function casts(): array
@@ -33,7 +34,18 @@ class InvestmentProject extends Model
             'end_date' => 'date',
             'geometry' => 'array',
             'infrastructure' => 'array',
+            'is_archived' => 'boolean',
         ];
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_archived', false);
+    }
+
+    public function scopeArchived($query)
+    {
+        return $query->where('is_archived', true);
     }
 
     public function region()

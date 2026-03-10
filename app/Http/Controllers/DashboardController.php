@@ -24,11 +24,11 @@ class DashboardController extends Controller
     {
         $stats = Cache::remember('dashboard.stats', 300, function () {
             return [
-                'total_investment' => InvestmentProject::sum('total_investment'),
-                'active_projects' => InvestmentProject::whereIn('status', ['implementation', 'launched'])->count(),
+                'total_investment' => InvestmentProject::active()->sum('total_investment'),
+                'active_projects' => InvestmentProject::active()->whereIn('status', ['implementation', 'launched'])->count(),
                 'sez_count' => Sez::count(),
                 'iz_count' => IndustrialZone::count(),
-                'project_count' => InvestmentProject::count(),
+                'project_count' => InvestmentProject::active()->count(),
             ];
         });
 
@@ -37,7 +37,7 @@ class DashboardController extends Controller
             $data = [];
 
             // Projects linked to SEZ
-            $sezProjectsInvestment = InvestmentProject::whereHas('sezs')
+            $sezProjectsInvestment = InvestmentProject::active()->whereHas('sezs')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($sezProjectsInvestment > 0) {
@@ -45,7 +45,7 @@ class DashboardController extends Controller
             }
 
             // Projects linked to Industrial Zones
-            $izProjectsInvestment = InvestmentProject::whereHas('industrialZones')
+            $izProjectsInvestment = InvestmentProject::active()->whereHas('industrialZones')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($izProjectsInvestment > 0) {
@@ -53,7 +53,7 @@ class DashboardController extends Controller
             }
 
             // Projects linked to Subsoil Users
-            $subsoilProjectsInvestment = InvestmentProject::whereHas('subsoilUsers')
+            $subsoilProjectsInvestment = InvestmentProject::active()->whereHas('subsoilUsers')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($subsoilProjectsInvestment > 0) {
@@ -61,7 +61,7 @@ class DashboardController extends Controller
             }
 
             // Other projects (not linked to any entity)
-            $otherProjectsInvestment = InvestmentProject::whereDoesntHave('sezs')
+            $otherProjectsInvestment = InvestmentProject::active()->whereDoesntHave('sezs')
                 ->whereDoesntHave('industrialZones')
                 ->whereDoesntHave('subsoilUsers')
                 ->where('total_investment', '>', 0)
@@ -79,10 +79,10 @@ class DashboardController extends Controller
         // Projects by status
         $projectsByStatus = Cache::remember('dashboard.projects_by_status', 300, function () {
             return [
-                ['name' => 'Жоспарлау', 'value' => InvestmentProject::where('status', 'plan')->count()],
-                ['name' => 'Іске асыру', 'value' => InvestmentProject::where('status', 'implementation')->count()],
-                ['name' => 'Іске қосылған', 'value' => InvestmentProject::where('status', 'launched')->count()],
-                ['name' => 'Тоқтатылған', 'value' => InvestmentProject::where('status', 'suspended')->count()],
+                ['name' => 'Жоспарлау', 'value' => InvestmentProject::active()->where('status', 'plan')->count()],
+                ['name' => 'Іске асыру', 'value' => InvestmentProject::active()->where('status', 'implementation')->count()],
+                ['name' => 'Іске қосылған', 'value' => InvestmentProject::active()->where('status', 'launched')->count()],
+                ['name' => 'Тоқтатылған', 'value' => InvestmentProject::active()->where('status', 'suspended')->count()],
             ];
         });
 
@@ -93,7 +93,7 @@ class DashboardController extends Controller
                 $date = now()->subMonths($i);
                 $months[] = [
                     'name' => $date->format('M.Y'),
-                    'value' => InvestmentProject::whereMonth('created_at', $date->month)
+                    'value' => InvestmentProject::active()->whereMonth('created_at', $date->month)
                         ->whereYear('created_at', $date->year)
                         ->sum('total_investment'),
                 ];
@@ -103,24 +103,24 @@ class DashboardController extends Controller
 
         $regions = Cache::remember('dashboard.regions.v2', 3600, function () {
             return Region::where('type', 'district')
-                ->select('id', 'name', 'color', 'icon', 'geometry')
+                ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
                 ->get();
         });
 
         $regionStats = Cache::remember('dashboard.region_stats', 300, function () {
-            $investments = InvestmentProject::selectRaw('region_id, COALESCE(SUM(total_investment), 0) as total')
+            $investments = InvestmentProject::active()->selectRaw('region_id, COALESCE(SUM(total_investment), 0) as total')
                 ->groupBy('region_id')
                 ->pluck('total', 'region_id')
                 ->toArray();
 
-            $izProjects = InvestmentProject::join('investment_project_industrial_zone as ipiz', 'investment_projects.id', '=', 'ipiz.investment_project_id')
+            $izProjects = InvestmentProject::active()->join('investment_project_industrial_zone as ipiz', 'investment_projects.id', '=', 'ipiz.investment_project_id')
                 ->join('industrial_zones as iz', 'ipiz.industrial_zone_id', '=', 'iz.id')
                 ->selectRaw('iz.region_id as region_id, COUNT(DISTINCT investment_projects.id) as cnt')
                 ->groupBy('iz.region_id')
                 ->pluck('cnt', 'region_id')
                 ->toArray();
 
-            $sezProjects = InvestmentProject::join('investment_project_sez as ips', 'investment_projects.id', '=', 'ips.investment_project_id')
+            $sezProjects = InvestmentProject::active()->join('investment_project_sez as ips', 'investment_projects.id', '=', 'ips.investment_project_id')
                 ->join('sezs as sez', 'ips.sez_id', '=', 'sez.id')
                 ->selectRaw('sez.region_id as region_id, COUNT(DISTINCT investment_projects.id) as cnt')
                 ->groupBy('sez.region_id')
@@ -161,16 +161,16 @@ class DashboardController extends Controller
             $subsoilOrgCount = SubsoilUser::count();
 
             // Project counts per sector (how many investment projects belong to each sector)
-            $sezProjectCount = InvestmentProject::whereHas('sezs')->count();
-            $izProjectCount = InvestmentProject::whereHas('industrialZones')->count();
-            $subsoilProjectCount = InvestmentProject::whereHas('subsoilUsers')->count();
-            $investProjectCount = InvestmentProject::count();
+            $sezProjectCount = InvestmentProject::active()->whereHas('sezs')->count();
+            $izProjectCount = InvestmentProject::active()->whereHas('industrialZones')->count();
+            $subsoilProjectCount = InvestmentProject::active()->whereHas('subsoilUsers')->count();
+            $investProjectCount = InvestmentProject::active()->count();
 
             // Investment from projects (not from SEZ/IZ entities)
-            $sezInvestment = (float) InvestmentProject::whereHas('sezs')->sum('total_investment');
-            $izInvestment = (float) InvestmentProject::whereHas('industrialZones')->sum('total_investment');
-            $nedroInvestment = (float) InvestmentProject::whereHas('subsoilUsers')->sum('total_investment');
-            $investInvestment = (float) InvestmentProject::sum('total_investment');
+            $sezInvestment = (float) InvestmentProject::active()->whereHas('sezs')->sum('total_investment');
+            $izInvestment = (float) InvestmentProject::active()->whereHas('industrialZones')->sum('total_investment');
+            $nedroInvestment = (float) InvestmentProject::active()->whereHas('subsoilUsers')->sum('total_investment');
+            $investInvestment = (float) InvestmentProject::active()->sum('total_investment');
 
             // Issue counts
             $sezIssues = SezIssue::count();
@@ -215,26 +215,26 @@ class DashboardController extends Controller
                 ->groupBy('region_id')->pluck('cnt', 'region_id')->toArray();
 
             // SEZ project count & investment by region (through pivot)
-            $sezProjectsByRegion = InvestmentProject::whereHas('sezs')
+            $sezProjectsByRegion = InvestmentProject::active()->whereHas('sezs')
                 ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment')
                 ->groupBy('region_id')->get()->keyBy('region_id');
 
             // IZ project count & investment by region (through pivot)
-            $izProjectsByRegion = InvestmentProject::whereHas('industrialZones')
+            $izProjectsByRegion = InvestmentProject::active()->whereHas('industrialZones')
                 ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment')
                 ->groupBy('region_id')->get()->keyBy('region_id');
 
             $subsoilByRegion = SubsoilUser::selectRaw('region_id, COUNT(*) as cnt')
                 ->groupBy('region_id')->pluck('cnt', 'region_id')->toArray();
 
-            $nedroByRegion = InvestmentProject::whereHas('subsoilUsers')
+            $nedroByRegion = InvestmentProject::active()->whereHas('subsoilUsers')
                 ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment')
                 ->groupBy('region_id')->get()->keyBy('region_id');
 
-            $investByRegion = InvestmentProject::selectRaw('region_id, COALESCE(SUM(total_investment), 0) as investment')
+            $investByRegion = InvestmentProject::active()->selectRaw('region_id, COALESCE(SUM(total_investment), 0) as investment')
                 ->groupBy('region_id')->pluck('investment', 'region_id')->toArray();
 
-            $investCountByRegion = InvestmentProject::selectRaw('region_id, COUNT(*) as cnt')
+            $investCountByRegion = InvestmentProject::active()->selectRaw('region_id, COUNT(*) as cnt')
                 ->groupBy('region_id')->pluck('cnt', 'region_id')->toArray();
 
             // Issues by region (via parent entity)

@@ -31,6 +31,7 @@ interface Region {
     name: string;
     color?: string | null;
     icon?: string | null;
+    subtype?: string | null;
     geometry: any;
 }
 
@@ -1441,7 +1442,7 @@ export default function Map({
                     {/* Header */}
                     <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
                         <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Аудан</p>
+                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">{activeRegion.subtype === 'city' ? 'Қала' : 'Аудан'}</p>
                             <h3 className="mt-0.5 text-lg font-bold leading-tight text-white break-words">
                                 {activeRegion.name}
                             </h3>
@@ -1504,7 +1505,7 @@ export default function Map({
                                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0f1b3d] text-sm font-semibold text-white shadow-none hover:bg-[#1a2d5a]"
                                 size="sm"
                             >
-                                Аудан туралы толығырақ
+                                {activeRegion.subtype === 'city' ? 'Қала' : 'Аудан'} туралы толығырақ
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </Link>

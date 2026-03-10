@@ -11,6 +11,7 @@ interface Region {
     name: string;
     color?: string | null;
     icon?: string | null;
+    subtype?: string | null;
     geometry: { lat: number; lng: number }[] | null;
 }
 
