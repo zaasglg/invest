@@ -12,7 +12,9 @@ class SezController extends Controller
     public function index(Request $request)
     {
         $query = Sez::with('region')
-            ->withSum('investmentProjects', 'total_investment');
+            ->withSum(['investmentProjects' => function ($q) {
+                $q->where('is_archived', false);
+            }], 'total_investment');
 
         $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
@@ -100,6 +102,7 @@ class SezController extends Controller
         $sez->load(['region', 'issues']);
 
         $investmentProjects = $sez->investmentProjects()
+            ->where('is_archived', false)
             ->with('region')
             ->latest()
             ->paginate(10)
