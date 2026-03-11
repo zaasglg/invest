@@ -1,6 +1,6 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { useMemo, useState, type FormEvent } from 'react';
-import { ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Archive, ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
 import AppLayout from '@/layouts/app-layout';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
@@ -25,7 +25,7 @@ import {
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import { useCanModify } from '@/hooks/use-can-modify';
 
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -122,6 +122,8 @@ interface Props {
 
 export default function Index({ projects, stats, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
+    const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const { data, setData, get, reset } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -268,14 +270,24 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Инвестициялық жобалар
                     </h1>
-                    {canModify && (
-                        <Link href={investmentProjectsRoutes.create.url()}>
-                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                                <Plus className="mr-2 h-4 w-4" />
-                                Жоба құру
-                            </Button>
-                        </Link>
-                    )}
+                    <div className="flex items-center gap-3">
+                        {isSuperAdmin && (
+                            <Link href="/investment-projects-archived">
+                                <Button variant="outline" className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]">
+                                    <Archive className="mr-2 h-4 w-4" />
+                                    Архив
+                                </Button>
+                            </Link>
+                        )}
+                        {canModify && (
+                            <Link href={investmentProjectsRoutes.create.url()}>
+                                <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Жоба құру
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
                 </div>
 
                 <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">

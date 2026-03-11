@@ -85,7 +85,7 @@ class RegionController extends Controller
             },
             'industrialZones.issues'
         ]);
-        $projects = InvestmentProject::with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
+        $projects = InvestmentProject::active()->with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
             ->orderBy('sort_order')
             ->get();

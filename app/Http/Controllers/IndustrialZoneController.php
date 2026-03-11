@@ -12,7 +12,9 @@ class IndustrialZoneController extends Controller
     public function index(Request $request)
     {
         $query = IndustrialZone::with('region')
-            ->withSum('investmentProjects', 'total_investment');
+            ->withSum(['investmentProjects' => function ($q) {
+                $q->where('is_archived', false);
+            }], 'total_investment');
 
         $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
@@ -97,7 +99,9 @@ class IndustrialZoneController extends Controller
 
     public function show(IndustrialZone $industrialZone)
     {
-        $industrialZone->load(['region', 'issues', 'investmentProjects.region']);
+        $industrialZone->load(['region', 'issues', 'investmentProjects' => function ($q) {
+            $q->where('is_archived', false)->with('region');
+        }]);
 
         return Inertia::render('industrial-zones/show', [
             'industrialZone' => $industrialZone,

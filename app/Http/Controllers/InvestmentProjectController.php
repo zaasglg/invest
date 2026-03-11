@@ -41,7 +41,7 @@ class InvestmentProjectController extends Controller
             'end_date_to',
         ]);
 
-        $projectsQuery = InvestmentProject::with([
+        $projectsQuery = InvestmentProject::active()->with([
             'region',
             'projectType',
             'creator',
@@ -324,6 +324,14 @@ class InvestmentProjectController extends Controller
         // Region-scope check: district-scoped users can only view their district's projects
         if ($project) {
             $this->authorizeDistrictAccess($project);
+
+            // Block non-superadmin from viewing archived projects
+            if ($project->is_archived) {
+                $user = request()->user();
+                if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+                    abort(403, 'Бұл жоба архивтелген. Қол жеткізу мүмкін емес.');
+                }
+            }
         }
 
         // Get gallery photos from the most recent date only
@@ -696,11 +704,18 @@ class InvestmentProjectController extends Controller
         ]);
 
         $projectIds = $validated['project_ids'];
-        $projects = InvestmentProject::with([
+        $query = InvestmentProject::with([
             'region', 'projectType', 'creator', 'executors',
             'documents', 'photos', 'issues',
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
-        ])->whereIn('id', $projectIds)->get();
+        ])->whereIn('id', $projectIds);
+
+        $user = $request->user();
+        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+            $query->active();
+        }
+
+        $projects = $query->get();
 
         if ($projects->isEmpty()) {
             abort(404, 'Жобалар табылмады.');
@@ -1058,5 +1073,63 @@ class InvestmentProjectController extends Controller
         if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
             abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
         }
+    }
+
+    public function archive(InvestmentProject $investmentProject)
+    {
+        $user = request()->user();
+        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+            abort(403);
+        }
+
+        $investmentProject->update(['is_archived' => true]);
+
+        return redirect()->back()->with('success', 'Жоба архивке жіберілді.');
+    }
+
+    public function unarchive(InvestmentProject $investmentProject)
+    {
+        $user = request()->user();
+        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+            abort(403);
+        }
+
+        $investmentProject->update(['is_archived' => false]);
+
+        return redirect()->back()->with('success', 'Жоба архивтен қайтарылды.');
+    }
+
+    public function archived(Request $request)
+    {
+        $user = $request->user();
+        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+            abort(403);
+        }
+
+        $search = $request->input('search');
+
+        $projectsQuery = InvestmentProject::archived()->with([
+            'region',
+            'projectType',
+            'creator',
+            'executors',
+            'sezs',
+            'industrialZones',
+            'subsoilUsers',
+        ]);
+
+        if ($search) {
+            $projectsQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('company_name', 'like', "%{$search}%");
+            });
+        }
+
+        $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
+
+        return Inertia::render('investment-projects/archived', [
+            'projects' => $projects,
+            'filters' => ['search' => $search ?? ''],
+        ]);
     }
 }

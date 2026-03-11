@@ -39,6 +39,18 @@ Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::cl
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::get('investment-projects-archived', [\App\Http\Controllers\InvestmentProjectController::class, 'archived'])
+    ->middleware(['auth', 'verified'])
+    ->name('investment-projects.archived');
+
+Route::post('investment-projects/{investmentProject}/archive', [\App\Http\Controllers\InvestmentProjectController::class, 'archive'])
+    ->middleware(['auth', 'verified'])
+    ->name('investment-projects.archive');
+
+Route::post('investment-projects/{investmentProject}/unarchive', [\App\Http\Controllers\InvestmentProjectController::class, 'unarchive'])
+    ->middleware(['auth', 'verified'])
+    ->name('investment-projects.unarchive');
+
 Route::post('investment-projects-bulk-presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'bulkPresentation'])
     ->middleware(['auth', 'verified', 'role.access'])
     ->name('investment-projects.bulk-presentation');

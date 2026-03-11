@@ -650,7 +650,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Dashboard', href: '/dashboard' },
+                { title: 'Басқару тақтасы', href: '/dashboard' },
                 { title: region.name, href: '' },
             ]}
         >

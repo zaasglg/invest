@@ -13,7 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
 import type { SharedData } from '@/types';
@@ -177,6 +177,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
     const isBaskarma = (auth.user?.role_model?.name || '').toLowerCase() === 'baskarma';
+    const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         : (project.photos_count as any)?.photos_count || 0;
@@ -1062,6 +1063,20 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         Презентацияны жүктеу
                                     </Button>
                                 </a>
+                                {isSuperAdmin && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
+                                        onClick={() => {
+                                            if (confirm('Бұл жобаны архивке жіберу керек пе?')) {
+                                                router.post(`/investment-projects/${project.id}/archive`);
+                                            }
+                                        }}
+                                    >
+                                        <Archive className="mr-2 h-4 w-4" />
+                                        Архивке жіберу
+                                    </Button>
+                                )}
                             </CardContent>
                         </Card>
                     </div>
