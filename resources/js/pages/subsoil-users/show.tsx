@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Card,
     CardContent,
@@ -9,6 +9,15 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     ArrowLeft,
     MapPin,
@@ -22,7 +31,9 @@ import {
     Download,
     Flag,
     Plus,
+    Search,
     Trash2,
+    X,
 } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
@@ -42,8 +53,10 @@ interface Issue {
 interface AssignableUser {
     id: number;
     full_name?: string;
+    name?: string;
     position?: string;
     baskarma_type?: string;
+    role_model?: { name: string; display_name?: string };
 }
 
 interface SubsoilTaskItem {
@@ -107,13 +120,29 @@ export default function Show({
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [taskFilter, setTaskFilter] = useState('all');
 
-    const taskForm = useForm({
-        title: '',
-        description: '',
-        assigned_to: '',
-        start_date: '',
-        due_date: '',
-    });
+    const [taskTitle, setTaskTitle] = useState('');
+    const [taskDescription, setTaskDescription] = useState('');
+    const [taskStartDate, setTaskStartDate] = useState('');
+    const [taskDueDate, setTaskDueDate] = useState('');
+    const [taskAssignedTo, setTaskAssignedTo] = useState<number | null>(null);
+    const [userSearch, setUserSearch] = useState('');
+    const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+
+    const filteredUsers = useMemo(() => {
+        const baskarmaUsers = assignableUsers.filter((u) => {
+            const roleName = (u.role_model?.name || '').toLowerCase();
+            return roleName === 'baskarma';
+        });
+        if (!userSearch.trim()) return baskarmaUsers;
+        const q = userSearch.toLowerCase();
+        return baskarmaUsers.filter((u) => {
+            const name = (u.full_name || '').toLowerCase();
+            const pos = (u.position || '').toLowerCase();
+            return name.includes(q) || pos.includes(q);
+        });
+    }, [assignableUsers, userSearch]);
+
+    const selectedUser = assignableUsers.find((u) => u.id === taskAssignedTo) || null;
 
     const tasks = subsoilUser.tasks ?? [];
 
@@ -138,13 +167,31 @@ export default function Show({
 
     const handleTaskSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        taskForm.post(`/subsoil-users/${subsoilUser.id}/tasks`, {
-            preserveScroll: true,
-            onSuccess: () => {
-                taskForm.reset();
-                setShowTaskModal(false);
+        if (!taskTitle || !taskAssignedTo) return;
+        setIsSubmittingTask(true);
+        router.post(
+            `/subsoil-users/${subsoilUser.id}/tasks`,
+            {
+                title: taskTitle,
+                description: taskDescription,
+                assigned_to: taskAssignedTo,
+                start_date: taskStartDate,
+                due_date: taskDueDate,
             },
-        });
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setTaskTitle('');
+                    setTaskDescription('');
+                    setTaskStartDate('');
+                    setTaskDueDate('');
+                    setTaskAssignedTo(null);
+                    setUserSearch('');
+                    setShowTaskModal(false);
+                },
+                onFinish: () => setIsSubmittingTask(false),
+            },
+        );
     };
 
     const getTaskDotColor = (task: SubsoilTaskItem): string => {
@@ -427,18 +474,22 @@ export default function Show({
                                         </h2>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <select
+                                        <Select
                                             value={taskFilter}
-                                            onChange={(e) => setTaskFilter(e.target.value)}
-                                            className="h-9 rounded-md border border-white/30 bg-white/20 px-3 text-sm text-white focus:outline-none"
+                                            onValueChange={setTaskFilter}
                                         >
-                                            <option value="all" className="text-gray-900">Барлық кезеңдер</option>
-                                            <option value="new" className="text-gray-900">Жаңа</option>
-                                            <option value="in_progress" className="text-gray-900">Орындалуда</option>
-                                            <option value="done" className="text-gray-900">Орындалды</option>
-                                            <option value="rejected" className="text-gray-900">Қабылданбады</option>
-                                            <option value="overdue" className="text-gray-900">Мерзімі өткен</option>
-                                        </select>
+                                            <SelectTrigger className="h-9 w-[160px] border-white/30 bg-white/20 text-sm text-white focus:ring-white/50 [&>svg]:text-white">
+                                                <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="all">Барлық кезеңдер</SelectItem>
+                                                <SelectItem value="new">Жаңа</SelectItem>
+                                                <SelectItem value="in_progress">Орындалуда</SelectItem>
+                                                <SelectItem value="done">Орындалды</SelectItem>
+                                                <SelectItem value="rejected">Қабылданбады</SelectItem>
+                                                <SelectItem value="overdue">Мерзімі өткен</SelectItem>
+                                            </SelectContent>
+                                        </Select>
                                         {canModify && isSuperAdmin && (
                                             <Button
                                                 size="icon"
@@ -637,90 +688,161 @@ export default function Show({
             {/* Add Task Modal */}
             {showTaskModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                    <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-                        <h3 className="mb-4 text-lg font-bold text-[#0f1b3d]">
-                            Жаңа кезең қосу
-                        </h3>
-                        <form onSubmit={handleTaskSubmit} className="space-y-4">
+                    <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
+                            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                <Flag className="h-5 w-5" />
+                                Жаңа кезең қосу
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => setShowTaskModal(false)}
+                                className="text-white/80 transition-colors hover:text-white"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <form
+                            onSubmit={handleTaskSubmit}
+                            className="space-y-5 p-6"
+                        >
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Тақырып *
-                                </label>
-                                <input
-                                    type="text"
-                                    value={taskForm.data.title}
-                                    onChange={(e) => taskForm.setData('title', e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0f1b3d] focus:outline-none"
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                    Тақырып
+                                </Label>
+                                <Input
+                                    value={taskTitle}
+                                    onChange={(e) => setTaskTitle(e.target.value)}
+                                    placeholder="Тақырып"
+                                    className="mt-1.5"
                                     required
                                 />
                             </div>
+
                             <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
                                     Сипаттама
-                                </label>
+                                </Label>
                                 <textarea
-                                    value={taskForm.data.description}
-                                    onChange={(e) => taskForm.setData('description', e.target.value)}
+                                    value={taskDescription}
+                                    onChange={(e) => setTaskDescription(e.target.value)}
+                                    placeholder="Сипаттама"
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
                                     rows={3}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0f1b3d] focus:outline-none"
                                 />
                             </div>
-                            <div>
-                                <label className="mb-1 block text-sm font-medium text-gray-700">
-                                    Жауапты
-                                </label>
-                                <select
-                                    value={taskForm.data.assigned_to}
-                                    onChange={(e) => taskForm.setData('assigned_to', e.target.value)}
-                                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0f1b3d] focus:outline-none"
-                                >
-                                    <option value="">— Таңдаңыз —</option>
-                                    {assignableUsers.map((u) => (
-                                        <option key={u.id} value={u.id}>
-                                            {u.full_name}
-                                            {u.position ? ` — ${u.position}` : ''}
-                                        </option>
-                                    ))}
-                                </select>
-                            </div>
-                            <div className="grid grid-cols-2 gap-3">
+
+                            <div className="grid grid-cols-2 gap-4">
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         Басталу күні
-                                    </label>
-                                    <input
+                                    </Label>
+                                    <Input
                                         type="date"
-                                        value={taskForm.data.start_date}
-                                        onChange={(e) => taskForm.setData('start_date', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0f1b3d] focus:outline-none"
+                                        value={taskStartDate}
+                                        onChange={(e) => setTaskStartDate(e.target.value)}
+                                        className="mt-1.5"
                                     />
                                 </div>
                                 <div>
-                                    <label className="mb-1 block text-sm font-medium text-gray-700">
-                                        Мерзімі
-                                    </label>
-                                    <input
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                        Аяқталу күні
+                                    </Label>
+                                    <Input
                                         type="date"
-                                        value={taskForm.data.due_date}
-                                        onChange={(e) => taskForm.setData('due_date', e.target.value)}
-                                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-[#0f1b3d] focus:outline-none"
+                                        value={taskDueDate}
+                                        onChange={(e) => setTaskDueDate(e.target.value)}
+                                        className="mt-1.5"
                                     />
                                 </div>
                             </div>
+
+                            <div>
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                    Жауаптыны тағайындау
+                                </Label>
+                                <div className="relative mt-1.5">
+                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <Input
+                                        value={userSearch}
+                                        onChange={(e) => setUserSearch(e.target.value)}
+                                        placeholder="Іздеу"
+                                        className="pl-9"
+                                    />
+                                </div>
+                                <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200">
+                                    {filteredUsers.length === 0 ? (
+                                        <p className="px-4 py-3 text-sm text-gray-400">
+                                            Пайдаланушылар табылмады
+                                        </p>
+                                    ) : (
+                                        filteredUsers.map((u, idx) => (
+                                            <div
+                                                key={u.id}
+                                                className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 ${
+                                                    taskAssignedTo === u.id
+                                                        ? 'bg-cyan-50'
+                                                        : ''
+                                                } ${
+                                                    idx > 0
+                                                        ? 'border-t border-gray-100'
+                                                        : ''
+                                                }`}
+                                                onClick={() => setTaskAssignedTo(u.id)}
+                                            >
+                                                <span className="text-gray-700">
+                                                    <span className="mr-2 text-gray-400">
+                                                        {idx + 1}
+                                                    </span>
+                                                    {u.baskarma_type === 'oblast'
+                                                        ? 'Облыстық'
+                                                        : u.baskarma_type === 'district'
+                                                            ? 'Аудандық'
+                                                            : ''}
+                                                    {u.baskarma_type ? ': ' : ''}
+                                                    {u.full_name || '—'}
+                                                    {u.position && ` — ${u.position}`}
+                                                </span>
+                                                {taskAssignedTo === u.id && (
+                                                    <span className="rounded-md bg-cyan-500 px-3 py-1 text-xs font-medium text-white">
+                                                        Таңдау
+                                                    </span>
+                                                )}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                                {selectedUser && (
+                                    <p className="mt-2 text-sm text-cyan-600">
+                                        Таңдалды:{' '}
+                                        <span className="font-medium">
+                                            {selectedUser.full_name}
+                                        </span>
+                                    </p>
+                                )}
+                            </div>
+
                             <div className="flex justify-end gap-3 pt-2">
+                                <Button
+                                    type="submit"
+                                    className="bg-emerald-500 hover:bg-emerald-600"
+                                    disabled={
+                                        !taskTitle ||
+                                        !taskAssignedTo ||
+                                        isSubmittingTask
+                                    }
+                                >
+                                    {isSubmittingTask
+                                        ? 'Сақталуда...'
+                                        : 'Сақтау'}
+                                </Button>
                                 <Button
                                     type="button"
                                     variant="outline"
-                                    onClick={() => { setShowTaskModal(false); taskForm.reset(); }}
+                                    className="border-gray-600 bg-gray-600 text-white hover:bg-gray-700 hover:text-white"
+                                    onClick={() => setShowTaskModal(false)}
                                 >
-                                    Бас тарту
-                                </Button>
-                                <Button
-                                    type="submit"
-                                    className="bg-[#0f1b3d] hover:bg-[#1a2d5a]"
-                                    disabled={taskForm.processing}
-                                >
-                                    Қосу
+                                    Болдырмау
                                 </Button>
                             </div>
                         </form>

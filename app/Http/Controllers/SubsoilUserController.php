@@ -123,15 +123,27 @@ class SubsoilUserController extends Controller
             ->get();
         $renderPhotos = $subsoilUser->photos()->renderPhotos()->latest()->get();
 
-        $assignableUsers = User::whereHas('roleModel', function ($q) {
-            $q->whereIn('name', ['baskarma', 'ispolnitel', 'superadmin']);
-        })->select('id', 'full_name', 'position', 'baskarma_type')->get();
+        $user = request()->user();
+
+        $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
+            ->with('roleModel:id,name,display_name')
+            ->whereHas('roleModel', function ($q) {
+                $q->where('name', 'baskarma');
+            })
+            ->orderBy('full_name');
+
+        if ($user && $user->isDistrictScoped()) {
+            $assignableUsersQuery->where(function ($query) use ($user) {
+                $query->where('region_id', $user->region_id)
+                    ->orWhere('baskarma_type', 'oblast');
+            });
+        }
 
         return Inertia::render('subsoil-users/show', [
             'subsoilUser' => $subsoilUser,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
-            'assignableUsers' => $assignableUsers,
+            'assignableUsers' => $assignableUsersQuery->get(),
         ]);
     }
 

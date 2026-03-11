@@ -58,16 +58,28 @@ interface Task {
     };
 }
 
+interface SubsoilTask {
+    id: number;
+    title: string;
+    subsoil_user_id: number;
+    subsoil_user?: {
+        id: number;
+        name: string;
+    };
+}
+
 interface NotificationItem {
     id: number;
     user_id: number;
     task_id: number;
+    subsoil_task_id?: number;
     completion_id?: number;
     type: string;
     message: string;
     is_read: boolean;
     created_at: string;
     task?: Task;
+    subsoil_task?: SubsoilTask;
     completion?: Completion;
 }
 
@@ -232,7 +244,11 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     notification.id,
                                                 );
                                             }
-                                            if (notification.task?.project) {
+                                            if (notification.subsoil_task?.subsoil_user) {
+                                                router.visit(
+                                                    `/subsoil-users/${notification.subsoil_task.subsoil_user.id}`,
+                                                );
+                                            } else if (notification.task?.project) {
                                                 router.visit(
                                                     `/investment-projects/${notification.task.project.id}`,
                                                 );
@@ -266,6 +282,15 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     {
                                                         notification.task
                                                             .project.name
+                                                    }
+                                                </p>
+                                            )}
+                                            {notification.subsoil_task?.subsoil_user && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Жер қойнауын пайдаланушы:{' '}
+                                                    {
+                                                        notification.subsoil_task
+                                                            .subsoil_user.name
                                                     }
                                                 </p>
                                             )}

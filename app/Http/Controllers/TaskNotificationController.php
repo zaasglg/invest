@@ -15,6 +15,7 @@ class TaskNotificationController extends Controller
             ->with([
                 'task.project',
                 'task.assignee',
+                'subsoilTask.subsoilUser',
                 'completion.submitter',
                 'completion.reviewer',
                 'completion.files',
