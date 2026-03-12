@@ -16,6 +16,7 @@ import {
     FileText,
     Trash2,
     Download,
+    CheckCircle2,
 } from 'lucide-react';
 import { useCanModify } from '@/hooks/use-can-modify';
 
@@ -40,14 +41,16 @@ interface SubsoilDocument {
 
 interface Props {
     subsoilUser: SubsoilUser;
+    completedDocuments: SubsoilDocument[];
     documents: SubsoilDocument[];
 }
 
-export default function Documents({ subsoilUser, documents }: Props) {
+export default function Documents({ subsoilUser, completedDocuments, documents }: Props) {
     const canModify = useCanModify();
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
     const [documentType, setDocumentType] = useState('');
+    const [isCompleted, setIsCompleted] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +75,9 @@ export default function Documents({ subsoilUser, documents }: Props) {
         if (documentType) {
             formData.append('type', documentType);
         }
+        if (isCompleted) {
+            formData.append('is_completed', '1');
+        }
 
         router.post(
             `/subsoil-users/${subsoilUser.id}/documents`,
@@ -81,6 +87,7 @@ export default function Documents({ subsoilUser, documents }: Props) {
                     setFile(null);
                     setDocumentName('');
                     setDocumentType('');
+                    setIsCompleted(false);
                     setIsUploading(false);
                 },
                 onError: () => {
@@ -255,6 +262,19 @@ export default function Documents({ subsoilUser, documents }: Props) {
                                             />
                                         </div>
 
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                id="is_completed"
+                                                type="checkbox"
+                                                checked={isCompleted}
+                                                onChange={(e) => setIsCompleted(e.target.checked)}
+                                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                            />
+                                            <Label htmlFor="is_completed" className="cursor-pointer text-sm font-medium text-gray-700">
+                                                Аяқталған құжат
+                                            </Label>
+                                        </div>
+
                                         <Button
                                             type="submit"
                                             className="w-full"
@@ -298,10 +318,82 @@ export default function Documents({ subsoilUser, documents }: Props) {
                     <div
                         className={
                             canModify
-                                ? 'lg:col-span-2'
-                                : 'lg:col-span-3'
+                                ? 'lg:col-span-2 space-y-6'
+                                : 'lg:col-span-3 space-y-6'
                         }
                     >
+                        {/* Completed Documents - shown first */}
+                        <Card className="border-green-200 shadow-none">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2 text-lg">
+                                    <CheckCircle2 className="h-5 w-5 text-green-600" />
+                                    <span className="text-green-800">Аяқталған құжаттар</span>
+                                    <span className="ml-2 text-sm font-normal text-gray-500">
+                                        ({completedDocuments.length})
+                                    </span>
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                {completedDocuments.length === 0 ? (
+                                    <div className="py-8 text-center">
+                                        <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+                                        <p className="text-sm text-gray-500">Аяқталған құжаттар жоқ</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 gap-3">
+                                        {completedDocuments.map((document) => (
+                                            <div
+                                                key={document.id}
+                                                className="flex items-center gap-4 rounded-lg border border-green-200 bg-green-50/50 p-4 transition-colors hover:bg-green-50"
+                                            >
+                                                {getFileIcon(document.type)}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate font-medium text-[#0f1b3d]">
+                                                        {document.name}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        {document.type.toUpperCase()}{' '}
+                                                        •{' '}
+                                                        {new Date(
+                                                            document.created_at,
+                                                        ).toLocaleDateString(
+                                                            'kk-KZ',
+                                                        )}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <a
+                                                        href={`/storage/${document.file_path}`}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        title="Жүктеу"
+                                                    >
+                                                        <Download className="h-4 w-4" />
+                                                    </a>
+                                                    {canModify && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    document.id,
+                                                                )
+                                                            }
+                                                            className="text-gray-500 hover:bg-red-50 hover:text-red-600"
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Regular Documents */}
                         <Card className="shadow-none">
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">

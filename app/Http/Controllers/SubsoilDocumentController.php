@@ -12,10 +12,15 @@ class SubsoilDocumentController extends Controller
 {
     public function index(SubsoilUser $subsoilUser)
     {
-        $documents = $subsoilUser->documents()->latest()->get();
+        $completedDocuments = $subsoilUser->documents()
+            ->where('is_completed', true)->latest()->get();
+
+        $documents = $subsoilUser->documents()
+            ->where('is_completed', false)->latest()->get();
 
         return Inertia::render('subsoil-users/documents', [
             'subsoilUser' => $subsoilUser->load('region'),
+            'completedDocuments' => $completedDocuments,
             'documents' => $documents,
         ]);
     }
@@ -26,6 +31,7 @@ class SubsoilDocumentController extends Controller
             'name' => 'required|string|max:255',
             'file' => 'required|file|max:10240',
             'type' => 'nullable|string|max:100',
+            'is_completed' => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('file')) {
@@ -37,6 +43,7 @@ class SubsoilDocumentController extends Controller
                 'name' => $validated['name'],
                 'file_path' => $path,
                 'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
+                'is_completed' => $request->boolean('is_completed'),
             ]);
         }
 

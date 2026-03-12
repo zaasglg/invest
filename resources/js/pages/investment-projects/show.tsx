@@ -805,6 +805,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     <p className="font-semibold text-[#0f1b3d]">
                                                         {task.title}:
                                                     </p>
+                                                    {/* {task.description && (
+                                                        <p className="mt-0.5 text-sm text-gray-600">
+                                                            {task.description}
+                                                        </p>
+                                                    )} */}
                                                     <p className="text-sm text-gray-500">
                                                         {task.start_date && (
                                                             <>
@@ -1281,6 +1286,17 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </button>
                             </div>
                             <form onSubmit={handleCompletionSubmit} className="p-6 space-y-5">
+                                {(() => {
+                                    const task = tasks.find((t) => t.id === completionTaskId);
+                                    return task ? (
+                                        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                            <h4 className="text-sm font-semibold text-[#0f1b3d]">{task.title}</h4>
+                                            {task.description && (
+                                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">{task.description}</p>
+                                            )}
+                                        </div>
+                                    ) : null;
+                                })()}
                                 {completionFileError && (
                                     <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                                         <AlertTriangle className="mr-1.5 inline h-4 w-4" />

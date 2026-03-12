@@ -19,6 +19,9 @@ class TaskNotificationController extends Controller
                 'completion.submitter',
                 'completion.reviewer',
                 'completion.files',
+                'subsoilCompletion.submitter',
+                'subsoilCompletion.reviewer',
+                'subsoilCompletion.files',
             ])
             ->orderByDesc('created_at')
             ->paginate(10);

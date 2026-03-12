@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
@@ -34,6 +34,9 @@ import {
     Search,
     Trash2,
     X,
+    Upload,
+    CheckCircle2,
+    XCircle,
 } from 'lucide-react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
@@ -59,14 +62,38 @@ interface AssignableUser {
     role_model?: { name: string; display_name?: string };
 }
 
+interface CompletionFile {
+    id: number;
+    file_path: string;
+    file_name: string;
+    type: 'document' | 'photo';
+}
+
+interface TaskCompletionItem {
+    id: number;
+    task_id: number;
+    submitted_by: number;
+    comment?: string;
+    status: 'pending' | 'approved' | 'rejected';
+    reviewer_comment?: string;
+    reviewed_by?: number;
+    reviewed_at?: string;
+    created_at: string;
+    submitter?: { id: number; full_name?: string };
+    files: CompletionFile[];
+}
+
 interface SubsoilTaskItem {
     id: number;
     title: string;
     description?: string;
+    assigned_to?: number;
     start_date?: string;
     due_date?: string;
     status: 'new' | 'in_progress' | 'done' | 'rejected';
     assignee?: AssignableUser;
+    completions?: TaskCompletionItem[];
+    created_at?: string;
 }
 
 interface Photo {
@@ -110,7 +137,12 @@ export default function Show({
     assignableUsers = [],
 }: Props) {
     const canModify = useCanModify();
-    const { auth } = usePage().props as unknown as { auth: { user: { role_model?: { name: string } } } };
+    const { auth } = usePage().props as unknown as {
+        auth: { user: { id: number; role_model?: { name: string } } };
+    };
+    const currentUserId = auth.user?.id;
+    const isBaskarma =
+        (auth.user.role_model?.name || '').toLowerCase() === 'baskarma';
     const isSuperAdmin = auth.user.role_model?.name === 'superadmin';
     const photosCount =
         typeof subsoilUser.photos_count === 'number'
@@ -127,6 +159,36 @@ export default function Show({
     const [taskAssignedTo, setTaskAssignedTo] = useState<number | null>(null);
     const [userSearch, setUserSearch] = useState('');
     const [isSubmittingTask, setIsSubmittingTask] = useState(false);
+
+    // Completion submission state (for baskarma)
+    const MAX_COMPLETION_FILE_SIZE = 20 * 1024 * 1024;
+    const MAX_COMPLETION_TOTAL_SIZE = 45 * 1024 * 1024;
+    const [showCompletionModal, setShowCompletionModal] = useState(false);
+    const [completionTaskId, setCompletionTaskId] = useState<number | null>(
+        null,
+    );
+    const [completionComment, setCompletionComment] = useState('');
+    const [completionDocuments, setCompletionDocuments] = useState<File[]>(
+        [],
+    );
+    const [completionPhotos, setCompletionPhotos] = useState<File[]>([]);
+    const [isSubmittingCompletion, setIsSubmittingCompletion] =
+        useState(false);
+    const [completionFileError, setCompletionFileError] = useState<
+        string | null
+    >(null);
+    const completionDocRef = useRef<HTMLInputElement>(null);
+    const completionPhotoRef = useRef<HTMLInputElement>(null);
+
+    // Review modal state (for curator/superadmin)
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [reviewCompletion, setReviewCompletion] =
+        useState<TaskCompletionItem | null>(null);
+    const [reviewTask, setReviewTask] = useState<SubsoilTaskItem | null>(
+        null,
+    );
+    const [reviewComment, setReviewComment] = useState('');
+    const [isReviewing, setIsReviewing] = useState(false);
 
     const filteredUsers = useMemo(() => {
         const baskarmaUsers = assignableUsers.filter((u) => {
@@ -146,23 +208,56 @@ export default function Show({
 
     const tasks = subsoilUser.tasks ?? [];
 
+    const getTaskDotColor = (task: SubsoilTaskItem): string => {
+        if (
+            task.due_date &&
+            new Date(task.due_date) < new Date() &&
+            task.status !== 'done'
+        ) {
+            return 'bg-red-500';
+        }
+        const colors: Record<string, string> = {
+            new: 'bg-blue-500',
+            in_progress: 'bg-amber-500',
+            done: 'bg-green-500',
+            rejected: 'bg-gray-400',
+        };
+        return colors[task.status] ?? 'bg-gray-400';
+    };
+
+    const isTaskOverdue = (task: SubsoilTaskItem): boolean => {
+        if (task.status === 'done') return false;
+        if (!task.due_date) return false;
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+        const due = new Date(task.due_date);
+        due.setHours(0, 0, 0, 0);
+        return due < now;
+    };
+
     const filteredTasks = tasks.filter((t) => {
         if (taskFilter === 'all') return true;
-        if (taskFilter === 'overdue') {
-            return (
-                t.due_date &&
-                new Date(t.due_date) < new Date() &&
-                t.status !== 'done'
-            );
+        if (taskFilter === 'overdue') return isTaskOverdue(t);
+        if (taskFilter === 'in_progress') {
+            return getTaskDotColor(t) === 'bg-amber-500';
         }
         return t.status === taskFilter;
     });
 
+    // Ensure tasks are displayed in creation order (oldest first).
+    const displayedTasks = filteredTasks.slice().sort((a, b) => {
+        const ta = new Date(a.created_at || '').getTime();
+        const tb = new Date(b.created_at || '').getTime();
+        return ta - tb;
+    });
+
     const handleTaskDelete = (taskId: number) => {
-        router.delete(
-            `/subsoil-users/${subsoilUser.id}/tasks/${taskId}`,
-            { preserveScroll: true },
-        );
+        if (confirm('Осы кезеңді жоюға сенімдісіз бе?')) {
+            router.delete(
+                `/subsoil-users/${subsoilUser.id}/tasks/${taskId}`,
+                { preserveScroll: true },
+            );
+        }
     };
 
     const handleTaskSubmit = (e: React.FormEvent) => {
@@ -194,21 +289,134 @@ export default function Show({
         );
     };
 
-    const getTaskDotColor = (task: SubsoilTaskItem): string => {
-        if (
-            task.due_date &&
-            new Date(task.due_date) < new Date() &&
-            task.status !== 'done'
-        ) {
-            return 'bg-red-500';
+    const handleOpenCompletionModal = (taskId: number) => {
+        setCompletionTaskId(taskId);
+        setCompletionComment('');
+        setCompletionDocuments([]);
+        setCompletionPhotos([]);
+        setCompletionFileError(null);
+        setShowCompletionModal(true);
+    };
+
+    const handleCompletionDocChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            const oversized = files.find(
+                (f) => f.size > MAX_COMPLETION_FILE_SIZE,
+            );
+            if (oversized) {
+                setCompletionFileError(
+                    `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                );
+                setCompletionDocuments([]);
+                if (completionDocRef.current)
+                    completionDocRef.current.value = '';
+                return;
+            }
+            setCompletionFileError(null);
+            setCompletionDocuments(files);
         }
-        const colors: Record<string, string> = {
-            new: 'bg-blue-500',
-            in_progress: 'bg-amber-500',
-            done: 'bg-green-500',
-            rejected: 'bg-gray-400',
-        };
-        return colors[task.status] ?? 'bg-gray-400';
+    };
+
+    const handleCompletionPhotoChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            const oversized = files.find(
+                (f) => f.size > MAX_COMPLETION_FILE_SIZE,
+            );
+            if (oversized) {
+                setCompletionFileError(
+                    `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
+                );
+                setCompletionPhotos([]);
+                if (completionPhotoRef.current)
+                    completionPhotoRef.current.value = '';
+                return;
+            }
+            setCompletionFileError(null);
+            setCompletionPhotos(files);
+        }
+    };
+
+    const handleCompletionSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!completionTaskId) return;
+
+        const allFiles = [...completionDocuments, ...completionPhotos];
+        const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
+        if (totalSize > MAX_COMPLETION_TOTAL_SIZE) {
+            setCompletionFileError(
+                `Файлдардың жалпы көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_COMPLETION_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдарды таңдаңыз.`,
+            );
+            return;
+        }
+
+        setIsSubmittingCompletion(true);
+
+        const formData = new FormData();
+        if (completionComment)
+            formData.append('comment', completionComment);
+        completionDocuments.forEach((file) =>
+            formData.append('documents[]', file),
+        );
+        completionPhotos.forEach((file) =>
+            formData.append('photos[]', file),
+        );
+
+        router.post(
+            `/subsoil-users/${subsoilUser.id}/tasks/${completionTaskId}/completions`,
+            formData,
+            {
+                forceFormData: true,
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowCompletionModal(false);
+                    setCompletionTaskId(null);
+                    setCompletionComment('');
+                    setCompletionDocuments([]);
+                    setCompletionPhotos([]);
+                    setIsSubmittingCompletion(false);
+                },
+                onError: () => setIsSubmittingCompletion(false),
+            },
+        );
+    };
+
+    const handleOpenReview = (
+        task: SubsoilTaskItem,
+        completion: TaskCompletionItem,
+    ) => {
+        setReviewTask(task);
+        setReviewCompletion(completion);
+        setReviewComment('');
+        setShowReviewModal(true);
+    };
+
+    const handleReview = (status: 'approved' | 'rejected') => {
+        if (!reviewCompletion || !reviewTask) return;
+        setIsReviewing(true);
+        router.put(
+            `/subsoil-users/${subsoilUser.id}/tasks/${reviewTask.id}/completions/${reviewCompletion.id}/review`,
+            {
+                status,
+                reviewer_comment: reviewComment || null,
+            },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setShowReviewModal(false);
+                    setReviewCompletion(null);
+                    setReviewTask(null);
+                    setReviewComment('');
+                    setIsReviewing(false);
+                },
+                onError: () => setIsReviewing(false),
+            },
+        );
     };
 
     const licenseStatusMap: Record<
@@ -389,69 +597,63 @@ export default function Show({
                                         'Сипаттама жоқ.'}
                                 </p>
                             </div>
-                        </Card>
 
-                        {/* Проблемалық мәселелер */}
-                        {issues.length > 0 && (
-                            <Card className="overflow-hidden py-0 shadow-none">
-                                <div className="bg-[#0f1b3d] px-6 py-4">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <AlertTriangle className="h-5 w-5" />
-                                        <h2 className="text-lg font-bold">
-                                            Проблемалық мәселелер
-                                        </h2>
-                                        <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-white/20 px-2 text-xs font-bold text-white">
+                            {/* Проблемалық мәселелер */}
+                            <div className="border-t border-gray-200 px-6 py-5">
+                                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                    <AlertTriangle className="h-5 w-5 text-gray-500" />
+                                    Проблемалық мәселелер
+                                    {issues.length > 0 && (
+                                        <Badge
+                                            variant="secondary"
+                                            className="ml-2"
+                                        >
                                             {issues.length}
-                                        </span>
-                                    </div>
-                                </div>
-                                <CardContent className="p-0">
-                                    <div className="divide-y divide-gray-100">
+                                        </Badge>
+                                    )}
+                                </h2>
+                                {issues.length > 0 ? (
+                                    <div className="space-y-3">
                                         {issues.map((issue) => {
-                                            const severityStyles: Record<string, string> = {
-                                                high: 'border-red-200 bg-red-50',
-                                                medium: 'border-amber-200 bg-amber-50',
+                                            const severityMap: Record<string, { label: string; color: string }> = {
+                                                low: { label: 'Төмен', color: 'bg-blue-100 text-blue-800' },
+                                                medium: { label: 'Орта', color: 'bg-amber-100 text-amber-800' },
+                                                high: { label: 'Жоғары', color: 'bg-red-100 text-red-800' },
                                             };
-                                            const severityLabels: Record<string, string> = {
-                                                high: 'Жоғары',
-                                                medium: 'Орта',
+                                            const issueStatusMap: Record<string, { label: string; color: string }> = {
+                                                open: { label: 'Ашық', color: 'bg-red-100 text-red-800' },
+                                                in_progress: { label: 'Жұмыста', color: 'bg-amber-100 text-amber-800' },
+                                                resolved: { label: 'Шешілді', color: 'bg-green-100 text-green-800' },
                                             };
-                                            const severityDot: Record<string, string> = {
-                                                high: 'bg-red-500',
-                                                medium: 'bg-amber-500',
-                                            };
-                                            const statusLabels: Record<string, string> = {
-                                                open: 'Ашық',
-                                                resolved: 'Шешілді',
-                                            };
-                                            const style = severityStyles[issue.severity ?? ''] ?? 'border-gray-200 bg-gray-50';
                                             return (
-                                                <div key={issue.id} className={`m-4 rounded-lg border p-4 ${style}`}>
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div className="flex min-w-0 items-start gap-3">
-                                                            <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity ?? ''] ?? 'bg-gray-400'}`} />
-                                                            <p className="min-w-0 text-sm text-gray-700">
-                                                                {issue.description}
-                                                            </p>
-                                                        </div>
-                                                        <div className="flex shrink-0 items-center gap-2">
+                                                <div
+                                                    key={issue.id}
+                                                    className="rounded-lg border p-3"
+                                                >
+                                                    <div className="mb-1 flex items-center justify-between">
+                                                        <p className="text-sm font-semibold text-[#0f1b3d]">
+                                                            {issue.description}
+                                                        </p>
+                                                        <div className="flex gap-1">
                                                             {issue.severity && (
-                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                    {severityLabels[issue.severity] ?? issue.severity}
-                                                                </span>
+                                                                <Badge
+                                                                    className={`${severityMap[issue.severity]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
+                                                                >
+                                                                    {severityMap[issue.severity]?.label || issue.severity}
+                                                                </Badge>
                                                             )}
                                                             {issue.status && (
-                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                    {statusLabels[issue.status] ?? issue.status}
-                                                                </span>
+                                                                <Badge
+                                                                    className={`${issueStatusMap[issue.status]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
+                                                                >
+                                                                    {issueStatusMap[issue.status]?.label || issue.status}
+                                                                </Badge>
                                                             )}
                                                         </div>
                                                     </div>
                                                 </div>
                                             );
                                         })}
-                                    </div>
-                                    <div className="px-6 pb-4">
                                         <Link
                                             href={`/subsoil-users/${subsoilUser.id}/issues`}
                                             className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] transition-colors hover:text-[#c8a44e]"
@@ -459,9 +661,13 @@ export default function Show({
                                             Барлық проблемалық мәселелер →
                                         </Link>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        )}
+                                ) : (
+                                    <p className="py-2 text-center text-sm text-gray-500">
+                                        Проблемалық мәселелер жоқ
+                                    </p>
+                                )}
+                            </div>
+                        </Card>
 
                         {/* Жол картасы / Roadmap */}
                         <Card className="overflow-hidden py-0 shadow-none">
@@ -490,7 +696,7 @@ export default function Show({
                                                 <SelectItem value="overdue">Мерзімі өткен</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {canModify && isSuperAdmin && (
+                                        {canModify && !isBaskarma && (
                                             <Button
                                                 size="icon"
                                                 className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
@@ -507,15 +713,31 @@ export default function Show({
                                     <div className="py-12 text-center">
                                         <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                         <p className="text-gray-500">Кезеңдер жоқ</p>
-                                        {canModify && isSuperAdmin && (
-                                            <p className="mt-1 text-sm text-gray-400">
-                                                Жаңа кезең қосу үшін + басыңыз
-                                            </p>
-                                        )}
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Жаңа кезең қосу үшін + басыңыз
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="divide-y divide-gray-100">
-                                        {filteredTasks.map((task) => (
+                                        {displayedTasks.map((task) => {
+                                            const isAssignedToMe =
+                                                task.assigned_to ===
+                                                currentUserId;
+                                            const pendingCompletion =
+                                                task.completions?.find(
+                                                    (c) =>
+                                                        c.status ===
+                                                        'pending',
+                                                );
+                                            const latestCompletion =
+                                                task.completions?.length
+                                                    ? task.completions[
+                                                          task.completions
+                                                              .length - 1
+                                                      ]
+                                                    : null;
+
+                                            return (
                                             <div
                                                 key={task.id}
                                                 className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
@@ -523,8 +745,13 @@ export default function Show({
                                                 <div className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`} />
                                                 <div className="min-w-0 flex-1">
                                                     <p className="font-semibold text-[#0f1b3d]">
-                                                        {task.title}
+                                                        {task.title}:
                                                     </p>
+                                                    {/* {task.description && (
+                                                        <p className="mt-0.5 text-sm text-gray-600">
+                                                            {task.description}
+                                                        </p>
+                                                    )} */}
                                                     <p className="text-sm text-gray-500">
                                                         {task.start_date && (
                                                             <>
@@ -538,28 +765,79 @@ export default function Show({
                                                     </p>
                                                     {task.assignee && (
                                                         <p className="mt-1 text-sm text-gray-500">
-                                                            {task.assignee.full_name}
+                                                            {task.assignee.baskarma_type === 'oblast'
+                                                                ? 'Облыстық:'
+                                                                : task.assignee.baskarma_type === 'district'
+                                                                    ? 'Аудандық:'
+                                                                    : ''}
+                                                            {' '}
+                                                            {task.assignee.full_name || task.assignee.name || '—'}
                                                             {task.assignee.position && ` — ${task.assignee.position}`}
                                                         </p>
                                                     )}
-                                                    {task.due_date && new Date(task.due_date) < new Date() && task.status !== 'done' && (
-                                                        <Badge className="mt-1 border-0 bg-red-100 text-xs text-red-700">
+                                                    {/* Overdue badge */}
+                                                    {isTaskOverdue(task) && (
+                                                        <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
                                                             Мерзімі өткен
                                                         </Badge>
                                                     )}
+                                                    {/* Status badge for completion */}
+                                                    {latestCompletion && (
+                                                        <div>
+                                                            <Badge className={`mt-1 text-xs border-0 ${
+                                                                latestCompletion.status === 'approved' ? 'bg-green-100 text-green-700' :
+                                                                latestCompletion.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                                                'bg-amber-100 text-amber-700'
+                                                            }`}>
+                                                                {latestCompletion.status === 'approved' ? 'Қабылданды' :
+                                                                 latestCompletion.status === 'rejected' ? 'Қабылданбады' :
+                                                                 'Тексеруде'}
+                                                            </Badge>
+                                                            {latestCompletion.status === 'rejected' && latestCompletion.reviewer_comment && (
+                                                                <p className="mt-1 text-xs text-red-600">
+                                                                    <span className="font-semibold">Себебі:</span> {latestCompletion.reviewer_comment}
+                                                                </p>
+                                                            )}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                                {canModify && isSuperAdmin && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                        onClick={() => handleTaskDelete(task.id)}
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
+                                                <div className="flex items-center gap-2">
+                                                    {isBaskarma && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
+                                                            onClick={() => handleOpenCompletionModal(task.id)}
+                                                        >
+                                                            <Upload className="mr-1 h-3.5 w-3.5" />
+                                                            Жіберу
+                                                        </Button>
+                                                    )}
+                                                    {canModify && !isBaskarma && pendingCompletion && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                                                            onClick={() => handleOpenReview(task, pendingCompletion)}
+                                                        >
+                                                            <Eye className="mr-1 h-3.5 w-3.5" />
+                                                            Тексеру
+                                                        </Button>
+                                                    )}
+                                                    {canModify && !isBaskarma && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                            onClick={() => handleTaskDelete(task.id)}
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                </div>
                                             </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </CardContent>
@@ -846,6 +1124,313 @@ export default function Show({
                                 </Button>
                             </div>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Completion Submission Modal (for baskarma) */}
+            {showCompletionModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
+                            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                <Upload className="h-5 w-5" />
+                                Тапсырманың орындалуын растаңыз!
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setShowCompletionModal(false)
+                                }
+                                className="text-white/80 transition-colors hover:text-white"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+                        <form
+                            onSubmit={handleCompletionSubmit}
+                            className="space-y-5 p-6"
+                        >
+                            {(() => {
+                                const task = tasks.find((t) => t.id === completionTaskId);
+                                return task ? (
+                                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                        <h4 className="text-sm font-semibold text-[#0f1b3d]">{task.title}</h4>
+                                        {task.description && (
+                                            <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">{task.description}</p>
+                                        )}
+                                    </div>
+                                ) : null;
+                            })()}
+                            {completionFileError && (
+                                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                                    <AlertTriangle className="mr-1.5 inline h-4 w-4" />
+                                    {completionFileError}
+                                </div>
+                            )}
+                            <div>
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                    <FileText className="mr-1 inline h-4 w-4" />
+                                    Құжаттар (файлдар)
+                                    <span className="ml-1 font-normal text-gray-400">
+                                        (макс.{' '}
+                                        {MAX_COMPLETION_FILE_SIZE /
+                                            1024 /
+                                            1024}
+                                        MB)
+                                    </span>
+                                </Label>
+                                <input
+                                    ref={completionDocRef}
+                                    type="file"
+                                    multiple
+                                    onChange={handleCompletionDocChange}
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-700 hover:file:bg-cyan-100"
+                                />
+                                {completionDocuments.length > 0 && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        {completionDocuments.length} құжат
+                                        таңдалды
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                    <ImageIcon className="mr-1 inline h-4 w-4" />
+                                    Суреттер
+                                    <span className="ml-1 font-normal text-gray-400">
+                                        (макс.{' '}
+                                        {MAX_COMPLETION_FILE_SIZE /
+                                            1024 /
+                                            1024}
+                                        MB)
+                                    </span>
+                                </Label>
+                                <input
+                                    ref={completionPhotoRef}
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleCompletionPhotoChange}
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-emerald-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-emerald-700 hover:file:bg-emerald-100"
+                                />
+                                {completionPhotos.length > 0 && (
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        {completionPhotos.length} сурет
+                                        таңдалды
+                                    </p>
+                                )}
+                            </div>
+
+                            <div>
+                                <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                    Пікір
+                                </Label>
+                                <textarea
+                                    value={completionComment}
+                                    onChange={(e) =>
+                                        setCompletionComment(
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder="Пікір енгізіңіз..."
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                    rows={4}
+                                />
+                            </div>
+
+                            <div className="flex justify-center gap-3 pt-2">
+                                <Button
+                                    type="submit"
+                                    className="bg-emerald-500 px-8 hover:bg-emerald-600"
+                                    disabled={
+                                        isSubmittingCompletion ||
+                                        !!completionFileError
+                                    }
+                                >
+                                    {isSubmittingCompletion
+                                        ? 'Жіберілуде...'
+                                        : 'Иә'}
+                                </Button>
+                                <Button
+                                    type="button"
+                                    className="bg-red-500 px-8 hover:bg-red-600"
+                                    onClick={() =>
+                                        setShowCompletionModal(false)
+                                    }
+                                >
+                                    Нет
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Review Completion Modal (for curator/superadmin) */}
+            {showReviewModal && reviewCompletion && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                    <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
+                            <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                <Eye className="h-5 w-5" />
+                                Тапсырманы тексеру
+                            </h3>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowReviewModal(false);
+                                    setReviewCompletion(null);
+                                    setReviewTask(null);
+                                }}
+                                className="text-white/80 transition-colors hover:text-white"
+                            >
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
+                            {reviewTask && (
+                                <div className="rounded-lg border border-gray-200 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        Тапсырма
+                                    </p>
+                                    <p className="mt-1 font-semibold text-[#0f1b3d]">
+                                        {reviewTask.title}
+                                    </p>
+                                    {reviewTask.description && (
+                                        <p className="mt-1 text-sm text-gray-600">
+                                            {reviewTask.description}
+                                        </p>
+                                    )}
+                                </div>
+                            )}
+
+                            <div className="rounded-lg border border-gray-200 p-4">
+                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    Жіберуші
+                                </p>
+                                <p className="mt-1 font-medium text-[#0f1b3d]">
+                                    {reviewCompletion.submitter
+                                        ?.full_name || '—'}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                    {new Date(
+                                        reviewCompletion.created_at,
+                                    ).toLocaleString('kk-KZ')}
+                                </p>
+                            </div>
+
+                            {reviewCompletion.comment && (
+                                <div className="rounded-lg border border-gray-200 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        Пікір
+                                    </p>
+                                    <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                                        {reviewCompletion.comment}
+                                    </p>
+                                </div>
+                            )}
+
+                            {reviewCompletion.files &&
+                                reviewCompletion.files.length > 0 && (
+                                    <div>
+                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                            Файлдар
+                                        </p>
+                                        <div className="space-y-2">
+                                            {reviewCompletion.files.map(
+                                                (file) => (
+                                                    <div
+                                                        key={file.id}
+                                                        className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
+                                                    >
+                                                        {file.type ===
+                                                        'photo' ? (
+                                                            <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                                                                <img
+                                                                    src={`/storage/${file.file_path}`}
+                                                                    alt={
+                                                                        file.file_name
+                                                                    }
+                                                                    className="h-full w-full object-cover"
+                                                                />
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                                                                <FileText className="h-5 w-5 text-gray-500" />
+                                                            </div>
+                                                        )}
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                                                {
+                                                                    file.file_name
+                                                                }
+                                                            </p>
+                                                            <p className="text-xs text-gray-400">
+                                                                {file.type ===
+                                                                'photo'
+                                                                    ? 'Сурет'
+                                                                    : 'Құжат'}
+                                                            </p>
+                                                        </div>
+                                                        <a
+                                                            href={`/storage/${file.file_path}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                            className="text-[#0f1b3d] hover:text-[#c8a44e]"
+                                                        >
+                                                            <Download className="h-4 w-4" />
+                                                        </a>
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                            <div className="space-y-4 border-t border-gray-200 pt-4">
+                                <div>
+                                    <label className="text-sm font-semibold text-[#0f1b3d]">
+                                        Пікір
+                                    </label>
+                                    <textarea
+                                        value={reviewComment}
+                                        onChange={(e) =>
+                                            setReviewComment(
+                                                e.target.value,
+                                            )
+                                        }
+                                        placeholder="Пікір жазыңыз..."
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        rows={3}
+                                    />
+                                </div>
+                                <div className="flex justify-center gap-3">
+                                    <Button
+                                        onClick={() =>
+                                            handleReview('approved')
+                                        }
+                                        className="bg-emerald-500 px-8 hover:bg-emerald-600"
+                                        disabled={isReviewing}
+                                    >
+                                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                                        Иә
+                                    </Button>
+                                    <Button
+                                        onClick={() =>
+                                            handleReview('rejected')
+                                        }
+                                        className="bg-red-500 px-8 hover:bg-red-600"
+                                        disabled={isReviewing}
+                                    >
+                                        <XCircle className="mr-2 h-4 w-4" />
+                                        Жоқ
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -11,6 +11,7 @@ class TaskNotification extends Model
         'task_id',
         'subsoil_task_id',
         'completion_id',
+        'subsoil_completion_id',
         'type',
         'message',
         'is_read',
@@ -41,5 +42,10 @@ class TaskNotification extends Model
     public function completion()
     {
         return $this->belongsTo(TaskCompletion::class, 'completion_id');
+    }
+
+    public function subsoilCompletion()
+    {
+        return $this->belongsTo(SubsoilTaskCompletion::class, 'subsoil_completion_id');
     }
 }

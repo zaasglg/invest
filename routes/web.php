@@ -117,6 +117,9 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'r
     Route::post('tasks', [\App\Http\Controllers\SubsoilTaskController::class, 'store'])->name('subsoil-users.tasks.store');
     Route::put('tasks/{task}', [\App\Http\Controllers\SubsoilTaskController::class, 'update'])->name('subsoil-users.tasks.update');
     Route::delete('tasks/{task}', [\App\Http\Controllers\SubsoilTaskController::class, 'destroy'])->name('subsoil-users.tasks.destroy');
+
+    Route::post('tasks/{task}/completions', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'store'])->name('subsoil-users.tasks.completions.store');
+    Route::put('tasks/{task}/completions/{completion}/review', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'review'])->name('subsoil-users.tasks.completions.review');
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)
