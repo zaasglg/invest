@@ -43,6 +43,7 @@ class CheckRoleAccess
     protected array $allowedForRestricted = [
         'regions.show',
         'investment-projects.tasks.completions.store',
+        'subsoil-users.tasks.completions.store',
     ];
 
     /**

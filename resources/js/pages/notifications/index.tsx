@@ -58,17 +58,31 @@ interface Task {
     };
 }
 
+interface SubsoilTask {
+    id: number;
+    title: string;
+    subsoil_user_id: number;
+    subsoil_user?: {
+        id: number;
+        name: string;
+    };
+}
+
 interface NotificationItem {
     id: number;
     user_id: number;
     task_id: number;
+    subsoil_task_id?: number;
     completion_id?: number;
+    subsoil_completion_id?: number;
     type: string;
     message: string;
     is_read: boolean;
     created_at: string;
     task?: Task;
+    subsoil_task?: SubsoilTask;
     completion?: Completion;
+    subsoil_completion?: Completion;
 }
 
 interface Props {
@@ -79,6 +93,12 @@ export default function NotificationsIndex({ notifications }: Props) {
     const [viewCompletion, setViewCompletion] =
         useState<Completion | null>(null);
     const [viewTask, setViewTask] = useState<Task | null>(null);
+    const [reviewSource, setReviewSource] = useState<{
+        type: 'investment' | 'subsoil';
+        subsoilUserId?: number;
+        subsoilTaskId?: number;
+        subsoilUserName?: string;
+    } | null>(null);
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
 
@@ -122,9 +142,26 @@ export default function NotificationsIndex({ notifications }: Props) {
         if (!notification.is_read) {
             handleMarkAsRead(notification.id);
         }
-        if (notification.completion) {
+        if (notification.subsoil_completion) {
+            setViewCompletion(notification.subsoil_completion);
+            setViewTask(notification.subsoil_task ? {
+                id: notification.subsoil_task.id,
+                title: notification.subsoil_task.title,
+                status: '',
+            } : null);
+            setReviewSource({
+                type: 'subsoil',
+                subsoilUserId: notification.subsoil_task?.subsoil_user_id,
+                subsoilTaskId: notification.subsoil_task?.id,
+                subsoilUserName: notification.subsoil_task?.subsoil_user?.name,
+            });
+            setReviewComment('');
+        } else if (notification.completion) {
             setViewCompletion(notification.completion);
             setViewTask(notification.task || null);
+            setReviewSource({
+                type: 'investment',
+            });
             setReviewComment('');
         }
     };
@@ -134,8 +171,13 @@ export default function NotificationsIndex({ notifications }: Props) {
     ) => {
         if (!viewCompletion || !viewTask) return;
         setIsReviewing(true);
+
+        const url = reviewSource?.type === 'subsoil'
+            ? `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/review`
+            : `/investment-projects/${viewTask.project?.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/review`;
+
         router.put(
-            `/investment-projects/${viewTask.project?.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/review`,
+            url,
             {
                 status,
                 reviewer_comment: reviewComment || null,
@@ -144,6 +186,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                 onSuccess: () => {
                     setViewCompletion(null);
                     setViewTask(null);
+                    setReviewSource(null);
                     setReviewComment('');
                     setIsReviewing(false);
                 },
@@ -232,7 +275,11 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     notification.id,
                                                 );
                                             }
-                                            if (notification.task?.project) {
+                                            if (notification.subsoil_task?.subsoil_user) {
+                                                router.visit(
+                                                    `/subsoil-users/${notification.subsoil_task.subsoil_user.id}`,
+                                                );
+                                            } else if (notification.task?.project) {
                                                 router.visit(
                                                     `/investment-projects/${notification.task.project.id}`,
                                                 );
@@ -269,13 +316,22 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     }
                                                 </p>
                                             )}
+                                            {notification.subsoil_task?.subsoil_user && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Жер қойнауын пайдаланушы:{' '}
+                                                    {
+                                                        notification.subsoil_task
+                                                            .subsoil_user.name
+                                                    }
+                                                </p>
+                                            )}
                                             <p className="mt-1 text-xs text-gray-400">
                                                 {new Date(
                                                     notification.created_at,
                                                 ).toLocaleString('kk-KZ')}
                                             </p>
                                         </div>
-                                        {notification.completion &&
+                                        {(notification.completion || notification.subsoil_completion) &&
                                             notification.type ===
                                                 'completion_submitted' && (
                                                 <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -310,6 +366,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                     onClick={() => {
                                         setViewCompletion(null);
                                         setViewTask(null);
+                                        setReviewSource(null);
                                     }}
                                     className="text-white/80 transition-colors hover:text-white"
                                 >
@@ -455,19 +512,27 @@ export default function NotificationsIndex({ notifications }: Props) {
                                     </div>
                                 )}
 
-                                {/* Navigate to project to resubmit (for baskarma seeing rejection) */}
-                                {viewCompletion.status !== 'pending' && viewTask?.project && (
+                                {/* Navigate to project/subsoil to resubmit (for baskarma seeing rejection) */}
+                                {viewCompletion.status !== 'pending' && (viewTask?.project || reviewSource?.type === 'subsoil') && (
                                     <div className="flex justify-center border-t border-gray-200 pt-4">
                                         <Button
                                             variant="outline"
                                             onClick={() => {
-                                                setViewCompletion(null);
-                                                setViewTask(null);
-                                                router.visit(`/investment-projects/${viewTask.project!.id}`);
+                                                if (reviewSource?.type === 'subsoil' && reviewSource.subsoilUserId) {
+                                                    setViewCompletion(null);
+                                                    setViewTask(null);
+                                                    setReviewSource(null);
+                                                    router.visit(`/subsoil-users/${reviewSource.subsoilUserId}`);
+                                                } else if (viewTask?.project) {
+                                                    setViewCompletion(null);
+                                                    setViewTask(null);
+                                                    setReviewSource(null);
+                                                    router.visit(`/investment-projects/${viewTask.project!.id}`);
+                                                }
                                             }}
                                         >
                                             <Flag className="mr-2 h-4 w-4" />
-                                            Жобаға өту
+                                            {reviewSource?.type === 'subsoil' ? 'Объектіге өту' : 'Жобаға өту'}
                                         </Button>
                                     </div>
                                 )}

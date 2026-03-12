@@ -9,7 +9,9 @@ class TaskNotification extends Model
     protected $fillable = [
         'user_id',
         'task_id',
+        'subsoil_task_id',
         'completion_id',
+        'subsoil_completion_id',
         'type',
         'message',
         'is_read',
@@ -32,8 +34,18 @@ class TaskNotification extends Model
         return $this->belongsTo(ProjectTask::class, 'task_id');
     }
 
+    public function subsoilTask()
+    {
+        return $this->belongsTo(SubsoilTask::class, 'subsoil_task_id');
+    }
+
     public function completion()
     {
         return $this->belongsTo(TaskCompletion::class, 'completion_id');
+    }
+
+    public function subsoilCompletion()
+    {
+        return $this->belongsTo(SubsoilTaskCompletion::class, 'subsoil_completion_id');
     }
 }

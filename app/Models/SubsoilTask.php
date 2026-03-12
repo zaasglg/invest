@@ -39,4 +39,14 @@ class SubsoilTask extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function completions()
+    {
+        return $this->hasMany(SubsoilTaskCompletion::class, 'task_id');
+    }
+
+    public function latestCompletion()
+    {
+        return $this->hasOne(SubsoilTaskCompletion::class, 'task_id')->latestOfMany();
+    }
 }

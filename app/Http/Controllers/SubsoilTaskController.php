@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\SubsoilTask;
 use App\Models\SubsoilUser;
+use App\Models\TaskNotification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,7 +24,17 @@ class SubsoilTaskController extends Controller
         $validated['status'] = 'new';
         $validated['created_by'] = Auth::id();
 
-        SubsoilTask::create($validated);
+        $task = SubsoilTask::create($validated);
+
+        // Send notification to assigned user
+        if (! empty($validated['assigned_to']) && $validated['assigned_to'] != Auth::id()) {
+            TaskNotification::create([
+                'user_id' => $validated['assigned_to'],
+                'subsoil_task_id' => $task->id,
+                'type' => 'task_assigned',
+                'message' => "Сізге жаңа тапсырма берілді: \"{$task->title}\" (Жер қойнауын пайдаланушы: {$subsoilUser->name})",
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Кезең қосылды.');
     }

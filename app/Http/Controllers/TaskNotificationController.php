@@ -15,9 +15,13 @@ class TaskNotificationController extends Controller
             ->with([
                 'task.project',
                 'task.assignee',
+                'subsoilTask.subsoilUser',
                 'completion.submitter',
                 'completion.reviewer',
                 'completion.files',
+                'subsoilCompletion.submitter',
+                'subsoilCompletion.reviewer',
+                'subsoilCompletion.files',
             ])
             ->orderByDesc('created_at')
             ->paginate(10);
