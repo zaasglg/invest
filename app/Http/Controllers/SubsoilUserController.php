@@ -88,7 +88,7 @@ class SubsoilUserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'bin' => 'required|string|max:20',
+            'bin' => 'nullable|string|max:20',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -106,6 +106,7 @@ class SubsoilUserController extends Controller
             'license_end' => 'nullable|date|after_or_equal:license_start',
             'location' => 'nullable|array',
         ]);
+        $validated['bin'] = $validated['bin'] ?? 'БСН жоқ';
 
         SubsoilUser::create($validated);
 
@@ -176,7 +177,7 @@ class SubsoilUserController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'bin' => 'required|string|max:20',
+            'bin' => 'nullable|string|max:20',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -194,6 +195,7 @@ class SubsoilUserController extends Controller
             'license_end' => 'nullable|date|after_or_equal:license_start',
             'location' => 'nullable|array',
         ]);
+        $validated['bin'] = $validated['bin'] ?? 'БСН жоқ';
 
         $subsoilUser->update($validated);
 

@@ -38,12 +38,15 @@ class UserController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->role_id === 'none') {
+            $request->merge(['role_id' => null]);
+        }
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
             'phone' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
-            'role_id' => 'nullable|exists:roles,id',
+            'role_id' => 'required|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
