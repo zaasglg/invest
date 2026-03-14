@@ -122,6 +122,11 @@ class User extends Authenticatable
      */
     public function isInvolvedInProject(InvestmentProject $project): bool
     {
+        // User is creator of the project
+        if ((int) $project->created_by === (int) $this->id) {
+            return true;
+        }
+
         // User is an executor of the project
         if ($project->executors()->where('users.id', $this->id)->exists()) {
             return true;

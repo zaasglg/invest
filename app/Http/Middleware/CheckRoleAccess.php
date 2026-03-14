@@ -58,6 +58,13 @@ class CheckRoleAccess
     ];
 
     /**
+     * Non-mutating routes that use non-safe HTTP methods (e.g. POST for downloads).
+     */
+    protected array $nonMutatingRoutes = [
+        'investment-projects.bulk-presentation',
+    ];
+
+    /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
@@ -100,8 +107,8 @@ class CheckRoleAccess
             // Baskarma: read-only on SEZ, IZ, Subsoil, Projects, Regions.
             // Can view/enter but cannot create, edit, or delete.
             if ($roleName === 'baskarma') {
-                // Block regions listing but allow show
-                if ($routeName === 'regions.index' || $routeName === 'regions.create'
+                // Block region management actions, allow listing/show
+                if ($routeName === 'regions.create'
                     || $routeName === 'regions.store' || $routeName === 'regions.edit'
                     || $routeName === 'regions.update' || $routeName === 'regions.destroy') {
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
@@ -189,6 +196,10 @@ class CheckRoleAccess
         $routeName = $request->route()?->getName();
 
         if (! $routeName) {
+            return false;
+        }
+
+        if (in_array($routeName, $this->nonMutatingRoutes, true)) {
             return false;
         }
 

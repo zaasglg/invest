@@ -11,9 +11,35 @@ use Inertia\Inertia;
 
 class RegionController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $regions = Region::latest()->paginate(15)->withQueryString();
+        $regionsQuery = Region::query()->latest();
+
+        $user = $request->user();
+        if ($this->isBaskarmaUser($user)) {
+            $regionsQuery->where('type', 'district');
+
+            if ($user->isDistrictScoped()) {
+                $regionsQuery->where('id', $user->region_id);
+
+                $regionsQuery->whereIn('id', function ($query) use ($user) {
+                    $query->select('region_id')
+                        ->from('investment_projects')
+                        ->where('is_archived', false)
+                        ->where(function ($projectQuery) use ($user) {
+                            $projectQuery->where('created_by', $user->id)
+                                ->orWhereExists(function ($executorQuery) use ($user) {
+                                    $executorQuery->selectRaw('1')
+                                        ->from('investment_project_user')
+                                        ->whereColumn('investment_project_user.investment_project_id', 'investment_projects.id')
+                                        ->where('investment_project_user.user_id', $user->id);
+                                });
+                        });
+                });
+            }
+        }
+
+        $regions = $regionsQuery->paginate(15)->withQueryString();
 
         return Inertia::render('regions/index', [
             'regions' => $regions,
@@ -66,6 +92,11 @@ class RegionController extends Controller
 
     public function show(Region $region)
     {
+        $user = request()->user();
+        if ($this->isBaskarmaUser($user) && $user->isDistrictScoped() && ! $this->hasProjectParticipationInRegion($region->id, $user->id)) {
+            abort(403, 'Сіз бұл ауданға қатысатын жобаңыз жоқ болғандықтан кіре алмайсыз.');
+        }
+
         $region->load([
             'subsoilUsers' => function ($query) {
                 $query->withCount('issues');
@@ -85,10 +116,20 @@ class RegionController extends Controller
             },
             'industrialZones.issues'
         ]);
-        $projects = InvestmentProject::active()->with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
+        $projectsQuery = InvestmentProject::active()->with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
-            ->orderBy('sort_order')
-            ->get();
+            ->orderBy('sort_order');
+
+        if ($this->isBaskarmaUser($user)) {
+            $projectsQuery->where(function ($query) use ($user) {
+                $query->where('created_by', $user->id)
+                    ->orWhereHas('executors', function ($executorQuery) use ($user) {
+                        $executorQuery->where('users.id', $user->id);
+                    });
+            });
+        }
+
+        $projects = $projectsQuery->get();
 
         // Stats for "Все" tab
         $totalArea = $region->area ?? 0;
@@ -221,5 +262,29 @@ class RegionController extends Controller
     {
         Cache::forget('dashboard.regions');
         Cache::forget('dashboard.regions.v2');
+    }
+
+    private function isBaskarmaUser($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('roleModel');
+
+        return $user->roleModel?->name === 'baskarma';
+    }
+
+    private function hasProjectParticipationInRegion(int $regionId, int $userId): bool
+    {
+        return InvestmentProject::active()
+            ->where('region_id', $regionId)
+            ->where(function ($query) use ($userId) {
+                $query->where('created_by', $userId)
+                    ->orWhereHas('executors', function ($executorQuery) use ($userId) {
+                        $executorQuery->where('users.id', $userId);
+                    });
+            })
+            ->exists();
     }
 }
