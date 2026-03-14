@@ -196,7 +196,7 @@ function SortableProjectRow({
 }
 
 export default function Show({ region, projects, sezs, industrialZones, subsoilUsers, stats }: Props) {
-    const { auth } = usePage().props;
+    const { auth, csrf_token } = usePage().props;
     const isSuperAdmin = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'superadmin';
 
     const [activeTab, setActiveTab] = useState('all');
@@ -585,8 +585,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     );
 
     const saveProjectOrder = (newOrder: InvestmentProject[]) => {
-        const csrfToken =
-            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
+        const csrfToken = (csrf_token as string) || 
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         fetch(`/regions/${region.id}/projects/reorder`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
@@ -623,12 +623,14 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         form.style.display = 'none';
 
         // CSRF token
-        const csrfMeta = document.querySelector('meta[name="csrf-token"]');
-        if (csrfMeta) {
+        const csrfTokenValue = (csrf_token as string) || 
+            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        
+        if (csrfTokenValue) {
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
             csrfInput.name = '_token';
-            csrfInput.value = csrfMeta.getAttribute('content') || '';
+            csrfInput.value = csrfTokenValue;
             form.appendChild(csrfInput);
         }
 

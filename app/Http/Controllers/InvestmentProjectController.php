@@ -57,6 +57,16 @@ class InvestmentProjectController extends Controller
             $projectsQuery->where('region_id', $user->region_id);
         }
 
+        // Baskarma can only see projects where they participate
+        if ($this->isBaskarmaUser($user)) {
+            $projectsQuery->where(function ($query) use ($user) {
+                $query->where('created_by', $user->id)
+                    ->orWhereHas('executors', function ($executorQuery) use ($user) {
+                        $executorQuery->where('users.id', $user->id);
+                    });
+            });
+        }
+
         if (!empty($filters['search'])) {
             $search = $filters['search'];
             $projectsQuery->where(function ($query) use ($search) {
@@ -325,6 +335,10 @@ class InvestmentProjectController extends Controller
         if ($project) {
             $this->authorizeDistrictAccess($project);
 
+            if ($this->isBaskarmaUser(request()->user()) && ! $this->isProjectParticipant($project, request()->user()?->id)) {
+                abort(403, 'Сіз бұл жобаға қатыспайсыз.');
+            }
+
             // Block non-superadmin from viewing archived projects
             if ($project->is_archived) {
                 $user = request()->user();
@@ -381,24 +395,25 @@ class InvestmentProjectController extends Controller
             ];
         }
 
-        // Logic for assignable users for tasks
-        // District scoped users can assign to:
-        // 1. Users in their own region
-        // 2. Regional management users
         $user = request()->user();
         $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
             ->with('roleModel:id,name,display_name')
             ->orderBy('full_name');
 
-        if ($user && $user->isDistrictScoped()) {
+        // Ispolnitel can assign tasks to all baskarma accounts.
+        if ($user?->roleModel?->name === 'ispolnitel') {
+            $assignableUsersQuery->whereHas('roleModel', function ($roleQuery) {
+                $roleQuery->where('name', 'baskarma');
+            });
+        } elseif ($user && $user->isDistrictScoped()) {
             $assignableUsersQuery->where(function ($query) use ($user) {
                 // Users in same region
                 $query->where('region_id', $user->region_id)
-                    // Or regional management
+                    // Or all baskarma users
                     ->orWhere(function ($q) {
-                         $q->whereHas('roleModel', function ($roleQuery) {
-                             $roleQuery->where('name', 'baskarma');
-                         })->where('baskarma_type', 'oblast');
+                        $q->whereHas('roleModel', function ($roleQuery) {
+                            $roleQuery->where('name', 'baskarma');
+                        });
                     });
             });
         }
@@ -713,6 +728,19 @@ class InvestmentProjectController extends Controller
         $user = $request->user();
         if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
             $query->active();
+        }
+
+        if ($user && $user->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        }
+
+        if ($this->isBaskarmaUser($user)) {
+            $query->where(function ($projectQuery) use ($user) {
+                $projectQuery->where('created_by', $user->id)
+                    ->orWhereHas('executors', function ($executorQuery) use ($user) {
+                        $executorQuery->where('users.id', $user->id);
+                    });
+            });
         }
 
         $projects = $query->get();
@@ -1073,6 +1101,34 @@ class InvestmentProjectController extends Controller
         if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
             abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
         }
+    }
+
+    protected function isBaskarmaUser($user): bool
+    {
+        if (! $user) {
+            return false;
+        }
+
+        $user->loadMissing('roleModel');
+
+        return $user->roleModel?->name === 'baskarma';
+    }
+
+    protected function isProjectParticipant(InvestmentProject $project, ?int $userId): bool
+    {
+        if (! $userId) {
+            return false;
+        }
+
+        if ((int) $project->created_by === $userId) {
+            return true;
+        }
+
+        if ($project->relationLoaded('executors')) {
+            return $project->executors->contains('id', $userId);
+        }
+
+        return $project->executors()->where('users.id', $userId)->exists();
     }
 
     public function archive(InvestmentProject $investmentProject)
