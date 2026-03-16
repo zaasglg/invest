@@ -1,8 +1,9 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler} from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -10,7 +11,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FormEventHandler, useState, useMemo } from 'react';
+import AppLayout from '@/layouts/app-layout';
 import * as users from '@/routes/users';
 
 interface Region {
@@ -59,9 +60,9 @@ export default function Create({ regions, roles }: Props) {
         return roles.find(r => r.id === rid);
     }, [data.role_id, roles]);
 
-    const isBaskarma = selectedRole?.name === 'baskarma';
     const isIspolnitel = selectedRole?.name === 'ispolnitel';
-    const showRegionSelects = isIspolnitel || (isBaskarma && data.baskarma_type === 'district');
+    const isInvest = selectedRole?.name === 'invest';
+    const showRegionSelects = isInvest || (isIspolnitel && data.baskarma_type === 'district');
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -176,7 +177,7 @@ export default function Create({ regions, roles }: Props) {
                     </div>
 
                     {/* Басқару түрін таңдау */}
-                    {isBaskarma && (
+                    {isIspolnitel && (
                         <div className="flex flex-col gap-2">
                             <Label className="text-gray-500 font-normal">Басқару түрі</Label>
                             <Select
@@ -195,16 +196,16 @@ export default function Create({ regions, roles }: Props) {
                                     <SelectValue placeholder="Басқару түрін таңдаңыз" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="oblast">Облыстық басқарма</SelectItem>
-                                    <SelectItem value="district">Аудандық басқарма</SelectItem>
+                                    <SelectItem value="oblast">Басқармалар</SelectItem>
+                                    <SelectItem value="district">Аудандық әкімдіктер</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.baskarma_type && <span className="text-sm text-red-500">{errors.baskarma_type}</span>}
                         </div>
                     )}
 
-                    {/* Position field for oblast baskarma only */}
-                    {isBaskarma && data.baskarma_type === 'oblast' && (
+                    {/* Position field for oblast ispolnitel only */}
+                    {isIspolnitel && data.baskarma_type === 'oblast' && (
                         <div className="flex flex-col gap-2">
                             <Label htmlFor="position" className="text-gray-500 font-normal">Лауазымы</Label>
                             <Input

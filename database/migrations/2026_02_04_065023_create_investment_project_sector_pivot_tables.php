@@ -17,7 +17,7 @@ return new class extends Migration
             $table->foreignId('investment_project_id')->constrained('investment_projects')->onDelete('cascade');
             $table->foreignId('sez_id')->constrained('sezs')->onDelete('cascade');
             $table->timestamps();
-            
+
             $table->unique(['investment_project_id', 'sez_id']);
         });
 
@@ -27,7 +27,7 @@ return new class extends Migration
             $table->foreignId('investment_project_id')->constrained('investment_projects')->onDelete('cascade');
             $table->foreignId('industrial_zone_id')->constrained('industrial_zones')->onDelete('cascade');
             $table->timestamps();
-            
+
             $table->unique(['investment_project_id', 'industrial_zone_id']);
         });
 
@@ -37,7 +37,7 @@ return new class extends Migration
             $table->foreignId('investment_project_id')->constrained('investment_projects')->onDelete('cascade');
             $table->foreignId('subsoil_user_id')->constrained('subsoil_users')->onDelete('cascade');
             $table->timestamps();
-            
+
             $table->unique(['investment_project_id', 'subsoil_user_id']);
         });
     }

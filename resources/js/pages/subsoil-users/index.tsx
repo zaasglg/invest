@@ -1,9 +1,10 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { ChevronDown, Edit, Eye, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,12 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ChevronDown, Edit, Eye, Plus, Trash2 } from 'lucide-react';
-import * as subsoilUsersRoutes from '@/routes/subsoil-users';
-import { useCanModify } from '@/hooks/use-can-modify';
-
-import type { PaginatedData } from '@/types';
-import type { FormEvent } from 'react';
 import {
     Table,
     TableBody,
@@ -27,6 +22,11 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
+import * as subsoilUsersRoutes from '@/routes/subsoil-users';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -90,7 +90,7 @@ export default function Index({
     filters,
 }: Props) {
     const canModify = useCanModify();
-    const { data, setData, get, reset } = useForm<Filters>({
+    const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         license_status: filters.license_status ?? '',

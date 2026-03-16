@@ -17,8 +17,9 @@ class InvestmentProjectSeeder extends Seeder
     {
         // Get first user for created_by
         $creator = User::first();
-        if (!$creator) {
+        if (! $creator) {
             $this->command->error('No users found. Please run user seeder first.');
+
             return;
         }
 
@@ -286,8 +287,9 @@ class InvestmentProjectSeeder extends Seeder
         foreach ($projects as $index => $data) {
             $region = Region::where('name', $data['region'])->first();
 
-            if (!$region) {
+            if (! $region) {
                 $this->command->warn("Region '{$data['region']}' not found. Skipping project '{$data['name']}'.");
+
                 continue;
             }
 
@@ -300,7 +302,6 @@ class InvestmentProjectSeeder extends Seeder
                     'company_name' => $data['company_name'],
                     'region_id' => $region->id,
                     'project_type_id' => $projectType ? $projectType->id : null,
-                    'sector' => $data['sector'],
                     'total_investment' => $data['total_investment'],
                     'status' => $data['status'],
                     'start_date' => $data['start_date'],

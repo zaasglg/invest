@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -10,7 +10,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import AppLayout from '@/layouts/app-layout';
 import * as rolesRoutes from '@/routes/roles';
 
 import type { PaginatedData } from '@/types';

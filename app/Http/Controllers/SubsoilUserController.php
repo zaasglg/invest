@@ -24,8 +24,8 @@ class SubsoilUserController extends Controller
         if ($request->filled('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                  ->orWhere('bin', 'like', '%' . $search . '%');
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('bin', 'like', '%'.$search.'%');
             });
         }
 
@@ -38,7 +38,7 @@ class SubsoilUserController extends Controller
         }
 
         if ($request->filled('mineral_type')) {
-            $query->where('mineral_type', 'like', '%' . $request->mineral_type . '%');
+            $query->where('mineral_type', 'like', '%'.$request->mineral_type.'%');
         }
 
         $subsoilUsers = $query->latest()->paginate(15)->withQueryString();
@@ -93,7 +93,7 @@ class SubsoilUserController extends Controller
                 'required',
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                    if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('Жер қойнауын пайдаланушыны тек өз ауданыңызға қосуға болады.');
                     }
                 },
@@ -129,7 +129,7 @@ class SubsoilUserController extends Controller
         $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
             ->with('roleModel:id,name,display_name')
             ->whereHas('roleModel', function ($q) {
-                $q->where('name', 'baskarma');
+                $q->where('name', 'ispolnitel');
             })
             ->orderBy('full_name');
 
@@ -182,7 +182,7 @@ class SubsoilUserController extends Controller
                 'required',
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                    if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('Жер қойнауын пайдаланушыны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },
@@ -206,9 +206,9 @@ class SubsoilUserController extends Controller
     {
         $subsoilUser->load(['region', 'documents', 'photos', 'issues']);
 
-        $zip = new ZipArchive();
-        $zipFileName = 'subsoil_passport_' . $subsoilUser->id . '_' . time() . '.zip';
-        $path = storage_path('app/private/' . $zipFileName);
+        $zip = new ZipArchive;
+        $zipFileName = 'subsoil_passport_'.$subsoilUser->id.'_'.time().'.zip';
+        $path = storage_path('app/private/'.$zipFileName);
 
         if ($zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             abort(500, 'Мұрағатты құру мүмкін болмады.');
@@ -220,10 +220,10 @@ class SubsoilUserController extends Controller
             if (file_exists($filePath)) {
                 $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
                 $docName = $document->name;
-                if ($extension && !str_ends_with(mb_strtolower($docName), '.' . mb_strtolower($extension))) {
-                    $docName .= '.' . $extension;
+                if ($extension && ! str_ends_with(mb_strtolower($docName), '.'.mb_strtolower($extension))) {
+                    $docName .= '.'.$extension;
                 }
-                $zip->addFile($filePath, 'Құжаттар/' . $docName);
+                $zip->addFile($filePath, 'Құжаттар/'.$docName);
             }
         }
 
@@ -232,11 +232,11 @@ class SubsoilUserController extends Controller
             $filePath = Storage::disk('public')->path($photo->file_path);
             if (file_exists($filePath)) {
                 $extension = pathinfo($photo->file_path, PATHINFO_EXTENSION) ?: 'jpg';
-                $photoName = ($index + 1) . '.' . $extension;
+                $photoName = ($index + 1).'.'.$extension;
                 if ($photo->description) {
-                   $photoName = ($index + 1) . '_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description) . '.' . $extension;
+                    $photoName = ($index + 1).'_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description).'.'.$extension;
                 }
-                $zip->addFile($filePath, 'Фото/' . $photoName);
+                $zip->addFile($filePath, 'Фото/'.$photoName);
             }
         }
 
@@ -248,7 +248,7 @@ class SubsoilUserController extends Controller
 
         $zip->close();
 
-        $downloadName = 'Төлқұжат_Жер_қойнауын_пайдаланушы_' . preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name) . '.zip';
+        $downloadName = 'Төлқұжат_Жер_қойнауын_пайдаланушы_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name).'.zip';
 
         return response()->download($path, $downloadName)->deleteFileAfterSend(true);
     }

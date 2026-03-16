@@ -1,8 +1,10 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler} from 'react';
+import { useMemo, useState } from 'react';
+import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -10,9 +12,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FormEventHandler, useMemo, useState } from 'react';
+import AppLayout from '@/layouts/app-layout';
 import * as subsoilUsersRoutes from '@/routes/subsoil-users';
-import LocationPicker from '@/components/location-picker';
 
 interface Region {
     id: number;
@@ -262,8 +263,6 @@ export default function Edit({ subsoilUser, regions, isDistrictScoped }: Props) 
                             regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
-                        {/* 
-                            // @ts-ignore */}
                         {errors.location && <span className="text-sm text-red-500">{errors.location}</span>}
                     </div>
 

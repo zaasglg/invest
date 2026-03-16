@@ -1,4 +1,13 @@
+import 'leaflet/dist/leaflet.css';
+import { Link } from '@inertiajs/react';
+import L from 'leaflet';
+
+
+import icon from 'leaflet/dist/images/marker-icon.png';
+import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { ChevronRight, ChevronDown, ChevronUp, X, Navigation } from 'lucide-react';
 import React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
     MapContainer,
     Marker,
@@ -7,18 +16,10 @@ import {
     Tooltip,
     useMap,
 } from 'react-leaflet';
-import { Link } from '@inertiajs/react';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { formatMoneyCompact } from '@/lib/utils';
 
-import { ChevronRight, ChevronDown, ChevronUp, X, CheckCircle2, Navigation } from 'lucide-react';
-
-import icon from 'leaflet/dist/images/marker-icon.png';
-import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
     iconAnchor: [12, 41],
@@ -32,6 +33,7 @@ interface Region {
     color?: string | null;
     icon?: string | null;
     subtype?: string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     geometry: any;
 }
 
@@ -207,7 +209,8 @@ interface Plot {
 
 // ... existing helpers ...
 
-function rotatePoints(
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function _rotatePoints(
     points: [number, number][],
     center: [number, number],
     angleDeg: number,
@@ -403,7 +406,7 @@ function MapController({
 
     useEffect(() => {
         let bounds: L.LatLngBounds | null = null;
-        let options: L.FitBoundsOptions = { padding: [50, 50], duration: 1 };
+        const options: L.FitBoundsOptions = { padding: [50, 50], duration: 1 };
 
         if (activeEntity && activeEntity.positions.length > 0) {
             // Priority 0: Active Entity (SEZ/IZ/Subsoil)
@@ -462,7 +465,7 @@ function MapController({
 
 // Helper to safely get lat/lng from various geometry formats
 // Helper to safely get lat/lng from various geometry formats
-function getLatLng(point: any): { lat: number; lng: number } | null {
+function getLatLng(point: Record<string, unknown> | unknown[] | null): { lat: number; lng: number } | null {
     if (!point) return null;
     let lat = NaN,
         lng = NaN;
@@ -489,25 +492,25 @@ function getLatLng(point: any): { lat: number; lng: number } | null {
 // Normalize region geometry to array of polygons (multi-polygon support)
 // Old format: [{lat,lng}, ...] -> [[{lat,lng}, ...]]
 // New format: [[{lat,lng}, ...], [{lat,lng}, ...]] -> as-is
-function getRegionPolygons(geometry: any): { lat: number; lng: number }[][] {
+function getRegionPolygons(geometry: unknown): { lat: number; lng: number }[][] {
     if (!geometry || !Array.isArray(geometry) || geometry.length === 0) return [];
     // Detect multi-polygon: first element is an array (not a point object)
     if (Array.isArray(geometry[0])) {
-        return geometry.map((polygon: any[]) =>
+        return geometry.map((polygon: unknown[]) =>
             polygon
-                .map((p) => getLatLng(p))
+                .map((p) => getLatLng(p as Record<string, unknown>))
                 .filter((p): p is { lat: number; lng: number } => p !== null),
-        ).filter((poly: any[]) => poly.length > 0);
+        ).filter((poly: { lat: number; lng: number }[]) => poly.length > 0);
     }
     // Single polygon: array of point objects
     const points = geometry
-        .map((p: any) => getLatLng(p))
-        .filter((p: any): p is { lat: number; lng: number } => p !== null);
+        .map((p: unknown) => getLatLng(p as Record<string, unknown>))
+        .filter((p): p is { lat: number; lng: number } => p !== null);
     return points.length > 0 ? [points] : [];
 }
 
 // Get all points from a region's geometry (flattened, for bounds calculation)
-function getRegionAllPoints(geometry: any): { lat: number; lng: number }[] {
+function getRegionAllPoints(geometry: unknown): { lat: number; lng: number }[] {
     return getRegionPolygons(geometry).flat();
 }
 
@@ -585,6 +588,7 @@ export default function Map({
     }, [selectedRegion]);
 
     const [isTableCollapsed, setIsTableCollapsed] = useState(false);
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const [popupPosition, setPopupPosition] = useState<[number, number] | null>(
         null,
     );
@@ -856,13 +860,7 @@ export default function Map({
 
     const formatInvestment = (value: number) => {
         if (!value) return '0';
-        if (value >= 1_000_000_000) {
-            return `${(value / 1_000_000_000).toFixed(1)} млрд ₸`;
-        }
-        if (value >= 1_000_000) {
-            return `${(value / 1_000_000).toFixed(1)} млн ₸`;
-        }
-        return `${value.toLocaleString('kk-KZ')} ₸`;
+        return formatMoneyCompact(value);
     };
 
     const formatCount = (value: number | null | undefined) => {

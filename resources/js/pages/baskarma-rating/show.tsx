@@ -9,7 +9,6 @@ import {
     Phone,
     User as UserIcon,
 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -20,6 +19,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
 
 interface TaskItem {
     id: number;
@@ -162,7 +162,7 @@ export default function BaskarmaRatingShow({
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Басқармалар рейтингі', href: '/baskarma-rating' },
+                { title: 'Исполнительдер рейтингі', href: '/baskarma-rating' },
                 { title: user.full_name, href: '' },
             ]}
         >
@@ -201,7 +201,7 @@ export default function BaskarmaRatingShow({
                                 )}
                                 <Badge className="border-0 bg-blue-100 text-blue-700">
                                     {user.baskarma_type === 'oblast'
-                                        ? 'Басқармалар'
+                                        ? 'Исполнительдер'
                                         : 'Аудандық әкімдіктер'}
                                 </Badge>
                                 {user.region && (

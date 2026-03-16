@@ -32,7 +32,7 @@ class ProfileController extends Controller
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
         $validated = $request->validated();
-        
+
         if (isset($validated['email'])) {
             $validated['email'] = \Illuminate\Support\Str::lower($validated['email']);
         }
@@ -64,7 +64,7 @@ class ProfileController extends Controller
             Storage::disk('public')->delete($user->avatar);
         }
 
-        $path = $request->file('avatar')->store('avatars/' . $user->id, 'public');
+        $path = $request->file('avatar')->store('avatars/'.$user->id, 'public');
         $user->update(['avatar' => $path]);
 
         return back()->with('status', 'avatar-updated');

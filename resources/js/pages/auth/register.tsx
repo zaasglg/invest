@@ -30,17 +30,17 @@ export default function Register() {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="name" className="text-white/80">
+                                <Label htmlFor="full_name" className="text-white/80">
                                     Аты-жөні
                                 </Label>
                                 <Input
-                                    id="name"
+                                    id="full_name"
                                     type="text"
                                     required
                                     autoFocus
                                     tabIndex={1}
                                     autoComplete="name"
-                                    name="name"
+                                    name="full_name"
                                     placeholder="Толық атыңыз"
                                     className={inputClass}
                                 />

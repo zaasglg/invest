@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 class TelegramService
 {
     protected string $botToken;
+
     protected string $apiUrl;
 
     public function __construct()
@@ -77,15 +78,15 @@ class TelegramService
         }
 
         // Ensure the URL has a scheme (Telegram needs absolute URLs in href).
-        if ($siteUrl !== '' && !preg_match('#^https?://#i', $siteUrl)) {
-            $siteUrl = 'https://' . ltrim($siteUrl, '/');
+        if ($siteUrl !== '' && ! preg_match('#^https?://#i', $siteUrl)) {
+            $siteUrl = 'https://'.ltrim($siteUrl, '/');
         }
 
         // Build link to the specific project if available, otherwise to notifications page.
         if ($siteUrl !== '' && $projectId) {
-            $targetUrl = $siteUrl . '/investment-projects/' . $projectId;
+            $targetUrl = $siteUrl.'/investment-projects/'.$projectId;
         } elseif ($siteUrl !== '') {
-            $targetUrl = $siteUrl . '/notifications';
+            $targetUrl = $siteUrl.'/notifications';
         } else {
             $targetUrl = '';
         }
@@ -95,8 +96,8 @@ class TelegramService
             : '🔗 Сайтқа өту';
 
         return "{$emoji} <b>Хабарлама</b>\n\n"
-            . $message . "\n\n"
-            . $linkPart;
+            .$message."\n\n"
+            .$linkPart;
     }
 
     /**

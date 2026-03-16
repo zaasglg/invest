@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectDocument;
 use App\Models\ProjectTask;
 use App\Models\TaskCompletion;
@@ -83,13 +84,17 @@ class TaskCompletionController extends Controller
         // Remove current user (submitter) and deduplicate
         $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
 
-        $submitterName = Auth::user()->full_name ?? 'Басқарма';
+        $submitterName = Auth::user()->full_name ?? 'Исполнитель';
         $docCount = count($request->file('documents', []));
         $photoCount = count($request->file('photos', []));
         $fileInfo = [];
-        if ($docCount > 0) $fileInfo[] = "{$docCount} құжат";
-        if ($photoCount > 0) $fileInfo[] = "{$photoCount} фото";
-        $fileStr = count($fileInfo) > 0 ? ' (' . implode(', ', $fileInfo) . ')' : '';
+        if ($docCount > 0) {
+            $fileInfo[] = "{$docCount} құжат";
+        }
+        if ($photoCount > 0) {
+            $fileInfo[] = "{$photoCount} фото";
+        }
+        $fileStr = count($fileInfo) > 0 ? ' ('.implode(', ', $fileInfo).')' : '';
 
         foreach ($notifyUserIds as $userId) {
             TaskNotification::create([
@@ -101,11 +106,13 @@ class TaskCompletionController extends Controller
             ]);
         }
 
+        KpiLog::log($investmentProject->id, 'Тапсырма орындалды: "' . $task->title . '"');
+
         return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
     }
 
     /**
-     * Исполнитель reviews a completion: approve or reject.
+     * Invest reviews a completion: approve or reject.
      */
     public function review(Request $request, InvestmentProject $investmentProject, ProjectTask $task, TaskCompletion $completion)
     {
@@ -146,7 +153,7 @@ class TaskCompletionController extends Controller
             $message = "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\". Қайта орындаңыз.{$commentStr}";
         }
 
-        // Notify the baskarma who submitted the completion
+        // Notify the ispolnitel who submitted the completion
         if ($completion->submitted_by !== Auth::id()) {
             TaskNotification::create([
                 'user_id' => $completion->submitted_by,
@@ -156,6 +163,9 @@ class TaskCompletionController extends Controller
                 'message' => $message,
             ]);
         }
+
+        $statusLabel = $request->input('status') === 'approved' ? 'қабылданды' : 'қабылданбады';
+        KpiLog::log($investmentProject->id, 'Тапсырма ' . $statusLabel . ': "' . $task->title . '"');
 
         return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
     }
@@ -176,14 +186,14 @@ class TaskCompletionController extends Controller
             // Copy the file to project-documents directory
             $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
             $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
-                . '_' . time() . '.' . $extension;
-            $newPath = 'project-documents/' . $project->id . '/' . $newFileName;
+                .'_'.time().'.'.$extension;
+            $newPath = 'project-documents/'.$project->id.'/'.$newFileName;
 
             Storage::disk('public')->copy($file->file_path, $newPath);
 
             ProjectDocument::create([
                 'project_id' => $project->id,
-                'name' => $file->file_name . ' (Тапсырма: ' . $task->title . ')',
+                'name' => $file->file_name.' (Тапсырма: '.$task->title.')',
                 'file_path' => $newPath,
                 'type' => $extension ?: 'document',
                 'is_completed' => true,

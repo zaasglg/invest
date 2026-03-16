@@ -267,8 +267,9 @@ class SezSeeder extends Seeder
         foreach ($sezs as $data) {
             $region = Region::where('name', $data['region'])->first();
 
-            if (!$region) {
+            if (! $region) {
                 $this->command->warn("Region '{$data['region']}' not found. Skipping SEZ '{$data['name']}'.");
+
                 continue;
             }
 
@@ -277,7 +278,6 @@ class SezSeeder extends Seeder
                 [
                     'region_id' => $region->id,
                     'total_area' => $data['total_area'],
-                    'investment_total' => $data['investment_total'],
                     'status' => $data['status'],
                     'description' => $data['description'],
                     'location' => $data['location'],

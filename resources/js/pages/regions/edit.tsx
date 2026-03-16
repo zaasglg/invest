@@ -1,8 +1,9 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler } from 'react';
+import LocationPicker, { normalizeToMultiPolygon } from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -10,9 +11,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FormEventHandler } from 'react';
+import AppLayout from '@/layouts/app-layout';
 import * as regions from '@/routes/regions';
-import LocationPicker, { normalizeToMultiPolygon } from '@/components/location-picker';
 
 interface Region {
     id: number;
@@ -53,7 +53,7 @@ function resolveRegionIconPath(icon: string | null | undefined): string | null {
 
 // Normalize corrupted geometry where lat/lng might be arrays instead of numbers
 function normalizeGeometry(
-    geometry?: { lat: any; lng: any }[],
+    geometry?: { lat: number | number[] | string; lng: number | number[] | string }[],
 ): { lat: number; lng: number }[] {
     if (!geometry || !Array.isArray(geometry)) return [];
     const result: { lat: number; lng: number }[] = [];
@@ -358,8 +358,6 @@ export default function Edit({ region, parents }: Props) {
                             onChange={(val) => setData('geometry', val)}
                             className="w-full"
                         />
-                        {/* 
-                            // @ts-ignore */}
                         {(errors.geometry ||
                             Object.keys(errors).some((k) =>
                                 k.startsWith('geometry'),

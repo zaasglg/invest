@@ -43,7 +43,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
     const getInitials = useInitials();
-    const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const { isCurrentUrl } = useCurrentUrl();
     const filteredHeaderNavItems = filterNavItemsByRole(
         headerNavItems,
         auth.user,
@@ -171,9 +171,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         className="relative flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                                     >
                                         <Bell className="h-4 w-4" />
+                                        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                         {(page.props as any)
                                             .unreadNotificationsCount > 0 && (
                                             <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                                                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                                 {
                                                     (page.props as any)
                                                         .unreadNotificationsCount

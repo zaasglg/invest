@@ -1,23 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     ArrowLeft,
     MapPin,
@@ -38,8 +19,27 @@ import {
     CheckCircle2,
     XCircle,
 } from 'lucide-react';
+import React, { useState, useMemo, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
 
 interface Region {
     id: number;
@@ -141,9 +141,8 @@ export default function Show({
         auth: { user: { id: number; role_model?: { name: string } } };
     };
     const currentUserId = auth.user?.id;
-    const isBaskarma =
-        (auth.user.role_model?.name || '').toLowerCase() === 'baskarma';
-    const isSuperAdmin = auth.user.role_model?.name === 'superadmin';
+    const isIspolnitel =
+        (auth.user.role_model?.name || '').toLowerCase() === 'ispolnitel';
     const photosCount =
         typeof subsoilUser.photos_count === 'number'
             ? subsoilUser.photos_count
@@ -160,7 +159,7 @@ export default function Show({
     const [userSearch, setUserSearch] = useState('');
     const [isSubmittingTask, setIsSubmittingTask] = useState(false);
 
-    // Completion submission state (for baskarma)
+    // Completion submission state (for ispolnitel)
     const MAX_COMPLETION_FILE_SIZE = 20 * 1024 * 1024;
     const MAX_COMPLETION_TOTAL_SIZE = 45 * 1024 * 1024;
     const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -191,13 +190,13 @@ export default function Show({
     const [isReviewing, setIsReviewing] = useState(false);
 
     const filteredUsers = useMemo(() => {
-        const baskarmaUsers = assignableUsers.filter((u) => {
+        const ispolnitelUsers = assignableUsers.filter((u) => {
             const roleName = (u.role_model?.name || '').toLowerCase();
-            return roleName === 'baskarma';
+            return roleName === 'ispolnitel';
         });
-        if (!userSearch.trim()) return baskarmaUsers;
+        if (!userSearch.trim()) return ispolnitelUsers;
         const q = userSearch.toLowerCase();
-        return baskarmaUsers.filter((u) => {
+        return ispolnitelUsers.filter((u) => {
             const name = (u.full_name || '').toLowerCase();
             const pos = (u.position || '').toLowerCase();
             return name.includes(q) || pos.includes(q);
@@ -696,7 +695,7 @@ export default function Show({
                                                 <SelectItem value="overdue">Мерзімі өткен</SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {canModify && !isBaskarma && (
+                                        {canModify && !isIspolnitel && (
                                             <Button
                                                 size="icon"
                                                 className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
@@ -802,7 +801,7 @@ export default function Show({
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    {isBaskarma && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
+                                                    {isIspolnitel && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -813,7 +812,7 @@ export default function Show({
                                                             Жіберу
                                                         </Button>
                                                     )}
-                                                    {canModify && !isBaskarma && pendingCompletion && (
+                                                    {canModify && !isIspolnitel && pendingCompletion && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -824,7 +823,7 @@ export default function Show({
                                                             Тексеру
                                                         </Button>
                                                     )}
-                                                    {canModify && !isBaskarma && (
+                                                    {canModify && !isIspolnitel && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -1128,7 +1127,7 @@ export default function Show({
                 </div>
             )}
 
-            {/* Completion Submission Modal (for baskarma) */}
+            {/* Completion Submission Modal (for ispolnitel) */}
             {showCompletionModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                     <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">

@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Upload, FileText, Trash2, Download, CheckCircle2 } from 'lucide-react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowLeft, Upload, FileText, Trash2, Download, CheckCircle2 } from 'lucide-react';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
 
 interface ProjectType {
     id: number;
@@ -38,10 +38,12 @@ interface Props {
     completedDocuments: ProjectDocument[];
     documents: ProjectDocument[];
     canDownload: boolean;
+    ispolnitelCanWrite?: boolean;
 }
 
-export default function Documents({ project, completedDocuments, documents, canDownload }: Props) {
+export default function Documents({ project, completedDocuments, documents, canDownload, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
+    const canEdit = canModify || ispolnitelCanWrite;
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
     const [documentType, setDocumentType] = useState('');
@@ -142,7 +144,7 @@ export default function Documents({ project, completedDocuments, documents, canD
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Upload Form */}
-                    {canModify && (
+                    {canEdit && (
                     <div className="lg:col-span-1">
                         <Card className="shadow-none">
                             <CardHeader>
@@ -238,7 +240,7 @@ export default function Documents({ project, completedDocuments, documents, canD
                     )}
 
                     {/* Documents List */}
-                    <div className={canModify ? 'lg:col-span-2 space-y-6' : 'lg:col-span-3 space-y-6'}>
+                    <div className={canEdit ? 'lg:col-span-2 space-y-6' : 'lg:col-span-3 space-y-6'}>
                         {/* Completed Documents - shown first */}
                         <Card className="shadow-none border-green-200">
                             <CardHeader>
@@ -282,7 +284,7 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                             <Download className="h-4 w-4" />
                                                         </a>
                                                     )}
-                                                    {canModify && (
+                                                    {canEdit && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -346,7 +348,7 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                             <Download className="h-4 w-4" />
                                                         </a>
                                                     )}
-                                                    {canModify && (
+                                                    {canEdit && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"

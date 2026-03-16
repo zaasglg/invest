@@ -12,7 +12,6 @@ import {
     SidebarMenuItem,
     SidebarSeparator,
 } from '@/components/ui/sidebar';
-import { dashboard } from '@/routes';
 import {
     adminNavItems,
     filterNavItemsByRole,
@@ -20,6 +19,7 @@ import {
     projectNavItems,
     zoneNavItems,
 } from '@/config/navigation';
+import { dashboard } from '@/routes';
 import type { NavItem, SharedData } from '@/types';
 import AppLogo from './app-logo';
 

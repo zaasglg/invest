@@ -1,11 +1,7 @@
 import { Head, Link, router } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import { Trash2, Edit } from 'lucide-react';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
-import { Trash2, Edit } from 'lucide-react';
-import * as regions from '@/routes/regions';
-
-import type { PaginatedData } from '@/types';
 import {
     Table,
     TableBody,
@@ -14,6 +10,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import * as regions from '@/routes/regions';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;

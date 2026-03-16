@@ -1,6 +1,3 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Car,
     Droplets,
@@ -9,8 +6,11 @@ import {
     Wifi,
     Zap,
 } from 'lucide-react';
-
 import type { LucideIcon } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+
 
 export interface InfrastructureDetails {
     available: boolean;

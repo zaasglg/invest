@@ -16,27 +16,8 @@ class RegionController extends Controller
         $regionsQuery = Region::query()->latest();
 
         $user = $request->user();
-        if ($this->isBaskarmaUser($user)) {
+        if ($this->isIspolnitelUser($user)) {
             $regionsQuery->where('type', 'district');
-
-            if ($user->isDistrictScoped()) {
-                $regionsQuery->where('id', $user->region_id);
-
-                $regionsQuery->whereIn('id', function ($query) use ($user) {
-                    $query->select('region_id')
-                        ->from('investment_projects')
-                        ->where('is_archived', false)
-                        ->where(function ($projectQuery) use ($user) {
-                            $projectQuery->where('created_by', $user->id)
-                                ->orWhereExists(function ($executorQuery) use ($user) {
-                                    $executorQuery->selectRaw('1')
-                                        ->from('investment_project_user')
-                                        ->whereColumn('investment_project_user.investment_project_id', 'investment_projects.id')
-                                        ->where('investment_project_user.user_id', $user->id);
-                                });
-                        });
-                });
-            }
         }
 
         $regions = $regionsQuery->paginate(15)->withQueryString();
@@ -93,41 +74,29 @@ class RegionController extends Controller
     public function show(Region $region)
     {
         $user = request()->user();
-        if ($this->isBaskarmaUser($user) && $user->isDistrictScoped() && ! $this->hasProjectParticipationInRegion($region->id, $user->id)) {
-            abort(403, 'Сіз бұл ауданға қатысатын жобаңыз жоқ болғандықтан кіре алмайсыз.');
-        }
 
         $region->load([
             'subsoilUsers' => function ($query) {
                 $query->withCount('issues');
             },
             'subsoilUsers.issues',
-            'parent'
+            'parent',
         ]);
         $region->load([
             'sezs' => function ($query) {
                 $query->withCount('issues');
             },
-            'sezs.issues'
+            'sezs.issues',
         ]);
         $region->load([
             'industrialZones' => function ($query) {
                 $query->withCount('issues');
             },
-            'industrialZones.issues'
+            'industrialZones.issues',
         ]);
         $projectsQuery = InvestmentProject::active()->with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
-
-        if ($this->isBaskarmaUser($user)) {
-            $projectsQuery->where(function ($query) use ($user) {
-                $query->where('created_by', $user->id)
-                    ->orWhereHas('executors', function ($executorQuery) use ($user) {
-                        $executorQuery->where('users.id', $user->id);
-                    });
-            });
-        }
 
         $projects = $projectsQuery->get();
 
@@ -212,7 +181,7 @@ class RegionController extends Controller
     public function update(Request $request, Region $region)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:regions,name,' . $region->id,
+            'name' => 'required|string|max:255|unique:regions,name,'.$region->id,
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
             'area' => 'nullable|numeric|min:0',
@@ -264,7 +233,7 @@ class RegionController extends Controller
         Cache::forget('dashboard.regions.v2');
     }
 
-    private function isBaskarmaUser($user): bool
+    private function isIspolnitelUser($user): bool
     {
         if (! $user) {
             return false;
@@ -272,7 +241,7 @@ class RegionController extends Controller
 
         $user->loadMissing('roleModel');
 
-        return $user->roleModel?->name === 'baskarma';
+        return $user->roleModel?->name === 'ispolnitel';
     }
 
     private function hasProjectParticipationInRegion(int $regionId, int $userId): bool

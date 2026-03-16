@@ -1,25 +1,23 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { Head, Link, router } from '@inertiajs/react';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Head, router } from '@inertiajs/react';
 import {
     Bell,
     CheckCircle2,
     XCircle,
     Clock,
     FileText,
-    ImageIcon,
-    ArrowLeft,
     Eye,
     Download,
     Flag,
     X,
 } from 'lucide-react';
+import React, { useState } from 'react';
+import Pagination from '@/components/pagination';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import AppLayout from '@/layouts/app-layout';
 
 import type { PaginatedData } from '@/types/pagination';
-import Pagination from '@/components/pagination';
 
 interface CompletionFile {
     id: number;
@@ -512,7 +510,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                     </div>
                                 )}
 
-                                {/* Navigate to project/subsoil to resubmit (for baskarma seeing rejection) */}
+                                {/* Navigate to project/subsoil to resubmit (for ispolnitel seeing rejection) */}
                                 {viewCompletion.status !== 'pending' && (viewTask?.project || reviewSource?.type === 'subsoil') && (
                                     <div className="flex justify-center border-t border-gray-200 pt-4">
                                         <Button

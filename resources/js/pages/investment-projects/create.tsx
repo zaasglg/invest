@@ -1,9 +1,12 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import { FileText, Info } from 'lucide-react';
+import type { FormEventHandler} from 'react';
+import { useState, useMemo } from 'react';
+import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -11,11 +14,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { FormEventHandler, useState, useMemo } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
 import * as investmentProjects from '@/routes/investment-projects';
-import LocationPicker from '@/components/location-picker';
-import { FileText, Info } from 'lucide-react';
 
 interface Region {
     id: number;
@@ -418,7 +419,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                 <>
                                     {districtUsers.length > 0 && (
                                         <div className="mb-3">
-                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан басқармасы</p>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан исполнителі</p>
                                             <div className="space-y-2">
                                                 {districtUsers.map((user) => (
                                                     <div key={user.id} className="flex items-center space-x-2">
@@ -441,7 +442,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     )}
                                     {oblastUsers.length > 0 && (
                                     <div className={districtUsers.length > 0 ? 'border-t border-gray-200 pt-3' : ''}>
-                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс басқармасы</p>
+                                        <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс исполнителі</p>
                                             <div className="space-y-2">
                                                 {oblastUsers.map((user) => (
                                                     <div key={user.id} className="flex items-center space-x-2">
@@ -464,8 +465,6 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     )}
                                 </>
                         </div>
-                        {/* 
-                            // @ts-ignore */}
                         {errors.executor_ids && <span className="text-sm text-red-500">{errors.executor_ids}</span>}
                     </div>
 
@@ -504,8 +503,6 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                             regionBoundary={regionBoundary}
                             overlayEntities={overlayEntities}
                         />
-                        {/*
-                            // @ts-ignore */}
                         {errors.geometry && <span className="text-sm text-red-500">{errors.geometry}</span>}
                     </div>
 

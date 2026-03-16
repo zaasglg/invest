@@ -71,7 +71,7 @@ class DashboardController extends Controller
             }
 
             // Sort by value
-            usort($data, fn($a, $b) => $b['value'] <=> $a['value']);
+            usort($data, fn ($a, $b) => $b['value'] <=> $a['value']);
 
             return array_slice($data, 0, 10);
         });
@@ -98,6 +98,7 @@ class DashboardController extends Controller
                         ->sum('total_investment'),
                 ];
             }
+
             return $months;
         });
 

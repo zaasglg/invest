@@ -391,8 +391,9 @@ class IndustrialZoneSeeder extends Seeder
         foreach ($industrialZones as $data) {
             $region = Region::where('name', $data['region'])->first();
 
-            if (!$region) {
+            if (! $region) {
                 $this->command->warn("Region '{$data['region']}' not found. Skipping IZ '{$data['name']}'.");
+
                 continue;
             }
 
@@ -402,7 +403,6 @@ class IndustrialZoneSeeder extends Seeder
                     'region_id' => $region->id,
                     'status' => $data['status'],
                     'total_area' => $data['total_area'],
-                    'investment_total' => $data['investment_total'],
                     'description' => $data['description'],
                     'location' => $data['location'],
                     'geometry' => $data['geometry'],

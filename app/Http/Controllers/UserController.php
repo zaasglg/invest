@@ -61,15 +61,15 @@ class UserController extends Controller
             $validated['region_id'] = null;
         }
 
-        // Clear baskarma fields if not baskarma role
+        // Clear ispolnitel fields if not ispolnitel role
         $role = $validated['role_id'] ? Role::find($validated['role_id']) : null;
-        if (!$role || $role->name !== 'baskarma') {
+        if (! $role || $role->name !== 'ispolnitel') {
             $validated['baskarma_type'] = null;
             $validated['position'] = null;
         }
 
-        // For district baskarma, set position to district (region) name
-        if ($role && $role->name === 'baskarma' && ($validated['baskarma_type'] ?? null) === 'district' && !empty($validated['region_id'])) {
+        // For district ispolnitel, set position to district (region) name
+        if ($role && $role->name === 'ispolnitel' && ($validated['baskarma_type'] ?? null) === 'district' && ! empty($validated['region_id'])) {
             $region = Region::find($validated['region_id']);
             if ($region) {
                 $validated['position'] = $region->name;
@@ -121,15 +121,15 @@ class UserController extends Controller
             $validated['region_id'] = null;
         }
 
-        // Clear baskarma fields if not baskarma role
+        // Clear ispolnitel fields if not ispolnitel role
         $role = $validated['role_id'] ? Role::find($validated['role_id']) : null;
-        if (!$role || $role->name !== 'baskarma') {
+        if (! $role || $role->name !== 'ispolnitel') {
             $validated['baskarma_type'] = null;
             $validated['position'] = null;
         }
 
-        // For district baskarma, set position to district (region) name
-        if ($role && $role->name === 'baskarma' && ($validated['baskarma_type'] ?? null) === 'district' && !empty($validated['region_id'])) {
+        // For district ispolnitel, set position to district (region) name
+        if ($role && $role->name === 'ispolnitel' && ($validated['baskarma_type'] ?? null) === 'district' && ! empty($validated['region_id'])) {
             $region = Region::find($validated['region_id']);
             if ($region) {
                 $validated['position'] = $region->name;

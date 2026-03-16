@@ -1,16 +1,4 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import {
     ArrowLeft,
     Upload,
@@ -20,8 +8,20 @@ import {
     AlertCircle,
     Eye,
 } from 'lucide-react';
+import React, { useState } from 'react';
 import PhotoLightbox from '@/components/photo-lightbox';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const MAX_TOTAL_SIZE = 45 * 1024 * 1024;

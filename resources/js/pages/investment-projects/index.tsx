@@ -1,7 +1,6 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { useMemo, useState, type FormEvent } from 'react';
 import { Archive, ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { useMemo, useState, type FormEvent } from 'react';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -22,8 +21,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
+import * as investmentProjectsRoutes from '@/routes/investment-projects';
 
 import type { PaginatedData, SharedData } from '@/types';
 
@@ -67,8 +68,8 @@ interface InvestmentProject {
     id: number;
     name: string;
     company_name: string | null;
-    region: Region;
-    project_type: ProjectType;
+    region: Region | null;
+    project_type: ProjectType | null;
     sector: string;
     total_investment: string | null;
     status: string;
@@ -124,7 +125,8 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
-    const { data, setData, get, reset } = useForm<Filters>({
+    const isInvest = auth.user?.role_model?.name === 'invest';
+    const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         project_type_id: filters.project_type_id ?? '',
@@ -230,25 +232,12 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         const num = Number(value);
         if (isNaN(num)) return String(value);
 
-        if (num >= 1_000_000_000) {
-            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 1 }).format(num / 1_000_000_000) + ' млрд ₸';
-        }
-        if (num >= 1_000_000) {
-            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 1 }).format(num / 1_000_000) + ' млн ₸';
-        }
-        return new Intl.NumberFormat('kk-KZ').format(num) + ' ₸';
+        return formatMoneyCompact(num);
     };
 
     const formatTotalInvestment = (value: number) => {
         if (!value) return '0 ₸';
-        if (value >= 1000000000000) {
-            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000000000) + ' трлн ₸';
-        } else if (value >= 1000000000) {
-            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000000) + ' млрд ₸';
-        } else if (value >= 1000000) {
-            return new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value / 1000000) + ' млн ₸';
-        }
-        return new Intl.NumberFormat('kk-KZ').format(value) + ' ₸';
+        return formatMoneyCompact(value, { compactFractionDigits: 2 });
     };
 
     const toNormalCase = (str: string) => {
@@ -271,7 +260,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         Инвестициялық жобалар
                     </h1>
                     <div className="flex items-center gap-3">
-                        {isSuperAdmin && (
+                        {(isSuperAdmin || isInvest) && (
                             <Link href="/investment-projects-archived">
                                 <Button variant="outline" className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]">
                                     <Archive className="mr-2 h-4 w-4" />
@@ -568,8 +557,8 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                 )}
                                             </div>
                                         </TableCell>
-                                        <TableCell>{project.region.name}</TableCell>
-                                        <TableCell>{project.project_type.name}</TableCell>
+                                        <TableCell>{project.region?.name ?? '—'}</TableCell>
+                                        <TableCell>{project.project_type?.name ?? '—'}</TableCell>
                                         <TableCell>{getSectorDisplay(project)}</TableCell>
                                         <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
                                         <TableCell>

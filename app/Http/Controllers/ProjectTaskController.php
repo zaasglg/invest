@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectTask;
 use App\Models\TaskNotification;
 use App\Models\User;
@@ -33,7 +34,7 @@ class ProjectTaskController extends Controller
         // Auto-attach the assigned user as a project executor
         $investmentProject->executors()->syncWithoutDetaching([$validated['assigned_to']]);
 
-        // Send notification to assigned user (baskarma)
+        // Send notification to assigned user (ispolnitel)
         if ($validated['assigned_to'] != Auth::id()) {
             TaskNotification::create([
                 'user_id' => $validated['assigned_to'],
@@ -42,6 +43,8 @@ class ProjectTaskController extends Controller
                 'message' => "Сізге жаңа тапсырма берілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
             ]);
         }
+
+        KpiLog::log($investmentProject->id, 'Кезең қосылды: "' . $task->title . '"');
 
         return redirect()->back()->with('success', 'Кезең қосылды.');
     }
@@ -63,6 +66,8 @@ class ProjectTaskController extends Controller
 
         $task->update($validated);
 
+        KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "' . $task->title . '"');
+
         return redirect()->back()->with('success', 'Кезең жаңартылды.');
     }
 
@@ -71,6 +76,8 @@ class ProjectTaskController extends Controller
         if ($task->project_id !== $investmentProject->id) {
             abort(404);
         }
+
+        KpiLog::log($investmentProject->id, 'Кезең жойылды: "' . $task->title . '"');
 
         $task->delete();
 

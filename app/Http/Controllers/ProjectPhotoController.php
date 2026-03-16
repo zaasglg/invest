@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectPhoto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class ProjectPhotoController extends Controller
 {
@@ -16,8 +17,8 @@ class ProjectPhotoController extends Controller
         $user = Auth::user();
         $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        // Baskarma who is not involved in the project cannot see photos
-        if ($user->roleModel?->name === 'baskarma' && ! $user->isInvolvedInProject($investmentProject)) {
+        // Ispolnitel who is not involved in the project cannot see photos
+        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
             $mainGalleryPhotos = collect();
             $datedGalleryPhotos = [];
             $renderPhotos = collect();
@@ -33,6 +34,7 @@ class ProjectPhotoController extends Controller
                     $photo->gallery_date = $photo->gallery_date
                         ? $photo->gallery_date->toDateString()
                         : $photo->created_at->toDateString();
+
                     return $photo;
                 });
 
@@ -59,6 +61,7 @@ class ProjectPhotoController extends Controller
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
             'canDownload' => $canDownload,
+            'ispolnitelCanWrite' => $this->ispolnitelCanWrite($user, $investmentProject),
         ]);
     }
 
@@ -96,7 +99,7 @@ class ProjectPhotoController extends Controller
         $galleryDate = $validated['gallery_date'] ?? ($photoType === 'gallery' ? now()->toDateString() : null);
 
         foreach ($validated['photos'] as $photo) {
-            $path = $photo->store('project-photos/' . $investmentProject->id, 'public');
+            $path = $photo->store('project-photos/'.$investmentProject->id, 'public');
 
             ProjectPhoto::create([
                 'project_id' => $investmentProject->id,
@@ -106,6 +109,8 @@ class ProjectPhotoController extends Controller
                 'description' => $validated['description'] ?? null,
             ]);
         }
+
+        KpiLog::log($investmentProject->id, 'Фотосуреттер жүктелді (' . count($validated['photos']) . ' фото)');
 
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
@@ -122,6 +127,8 @@ class ProjectPhotoController extends Controller
         ]);
 
         $photo->update($validated);
+
+        KpiLog::log($investmentProject->id, 'Фото мәліметтері жаңартылды');
 
         return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
@@ -140,6 +147,16 @@ class ProjectPhotoController extends Controller
         // Delete photo record
         $photoModel->delete();
 
+        KpiLog::log($investmentProject->id, 'Фото жойылды');
+
         return redirect()->back()->with('success', 'Фото жойылды.');
+    }
+
+    private function ispolnitelCanWrite($user, InvestmentProject $project): bool
+    {
+        return $user->roleModel?->name === 'ispolnitel'
+            && $user->isInvolvedInProject($project)
+            && $user->region_id
+            && (int) $project->region_id === (int) $user->region_id;
     }
 }

@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
 import { X, ChevronLeft, ChevronRight, ZoomIn, ZoomOut } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 
 interface Photo {
@@ -43,6 +43,21 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
         setCurrentIndex((prev) => (prev < photos.length - 1 ? prev + 1 : 0));
     }, [photos.length]);
 
+    const handleZoomIn = useCallback(() => {
+        if (zoom < 5) {
+            setZoom(prev => prev + 0.5);
+        }
+    }, [zoom]);
+
+    const handleZoomOut = useCallback(() => {
+        if (zoom > 1) {
+            setZoom(prev => prev - 0.5);
+            if (zoom - 0.5 === 1) {
+                setPosition({ x: 0, y: 0 });
+            }
+        }
+    }, [zoom]);
+
     // Keyboard navigation
     useEffect(() => {
         if (!isOpen) return;
@@ -57,22 +72,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [isOpen, goToPrevious, goToNext]);
-
-    const handleZoomIn = () => {
-        if (zoom < 5) {
-            setZoom(prev => prev + 0.5);
-        }
-    };
-
-    const handleZoomOut = () => {
-        if (zoom > 1) {
-            setZoom(prev => prev - 0.5);
-            if (zoom - 0.5 === 1) {
-                setPosition({ x: 0, y: 0 });
-            }
-        }
-    };
+    }, [isOpen, goToPrevious, goToNext, handleZoomIn, handleZoomOut, onClose]);
 
     const handleResetZoom = () => {
         setZoom(1);

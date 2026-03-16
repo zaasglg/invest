@@ -1,18 +1,4 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
 import {
     ArrowLeft,
     Plus,
@@ -22,7 +8,21 @@ import {
     X,
     Check,
 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
 
 interface ProjectType {
     id: number;
@@ -51,6 +51,7 @@ interface Issue {
 interface Props {
     project: InvestmentProject;
     issues: Issue[];
+    ispolnitelCanWrite?: boolean;
 }
 
 const severityMap: Record<string, { label: string; color: string }> = {
@@ -66,8 +67,9 @@ const statusMap: Record<string, { label: string; color: string }> = {
     resolved: { label: 'Шешілді', color: 'bg-green-100 text-green-800' },
 };
 
-export default function Issues({ project, issues }: Props) {
+export default function Issues({ project, issues, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
+    const canEdit = canModify || ispolnitelCanWrite;
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
@@ -166,7 +168,7 @@ export default function Issues({ project, issues }: Props) {
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Add form */}
-                    {canModify && (
+                    {canEdit && (
                         <div className="lg:col-span-1">
                             <Card className="shadow-none">
                                 <CardHeader>
@@ -296,7 +298,7 @@ export default function Issues({ project, issues }: Props) {
                     {/* Issues list */}
                     <div
                         className={
-                            canModify ? 'lg:col-span-2' : 'lg:col-span-3'
+                            canEdit ? 'lg:col-span-2' : 'lg:col-span-3'
                         }
                     >
                         <Card className="shadow-none">
@@ -499,7 +501,7 @@ export default function Issues({ project, issues }: Props) {
                                                                     'kk-KZ',
                                                                 )}
                                                             </span>
-                                                            {canModify && (
+                                                            {canEdit && (
                                                                 <div className="flex gap-1">
                                                                     <Button
                                                                         variant="ghost"

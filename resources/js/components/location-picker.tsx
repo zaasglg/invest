@@ -1,15 +1,15 @@
-import { MapContainer, TileLayer, Polygon, Marker, useMapEvents, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Undo2, X } from 'lucide-react';
 
 // Fix icons
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
+import { Plus, Trash2, Undo2, X } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { MapContainer, TileLayer, Polygon, Marker, useMapEvents, useMap } from 'react-leaflet';
+import { Button } from '@/components/ui/button';
 
-let DefaultIcon = L.icon({
+const DefaultIcon = L.icon({
     iconUrl: icon,
     shadowUrl: iconShadow,
     iconAnchor: [12, 41],
@@ -23,6 +23,7 @@ interface LatLng {
 }
 
 // Normalize a point that might have corrupted lat/lng (arrays instead of numbers)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizePoint(point: any): LatLng | null {
     if (!point) return null;
     let lat = point.lat;
@@ -50,11 +51,11 @@ interface OverlayEntity {
 
 // Normalize geometry to multi-polygon format (LatLng[][])
 // Handles both old format (LatLng[]) and new format (LatLng[][])
-export function normalizeToMultiPolygon(val: any): LatLng[][] {
+export function normalizeToMultiPolygon(val: unknown): LatLng[][] {
     if (!val || !Array.isArray(val) || val.length === 0) return [[]];
     // Check if it's already multi-polygon: first element is an array
     if (Array.isArray(val[0])) {
-        return (val as any[][]).map((polygon) =>
+        return (val as Record<string, unknown>[][]).map((polygon) =>
             polygon.map(normalizePoint).filter((p): p is LatLng => p !== null),
         );
     }
@@ -151,7 +152,9 @@ export default function LocationPicker(props: Props) {
     const [activeIndex, setActiveIndex] = useState(0);
     const isInternalChange = useRef(false);
     const onChangeRef = useRef(props.onChange);
-    onChangeRef.current = props.onChange;
+    useEffect(() => {
+        onChangeRef.current = props.onChange;
+    }, [props.onChange]);
 
     // Sync external value changes to internal state,
     // but skip when the change originated from within this component

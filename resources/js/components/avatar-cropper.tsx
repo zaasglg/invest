@@ -2,6 +2,7 @@ import { Check, Minus, Plus, RotateCcw } from 'lucide-react';
 import React, { useCallback, useState } from 'react';
 import Cropper from 'react-easy-crop';
 
+import type { Area } from 'react-easy-crop';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,7 +12,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-import type { Area } from 'react-easy-crop';
 
 interface AvatarCropperProps {
     open: boolean;

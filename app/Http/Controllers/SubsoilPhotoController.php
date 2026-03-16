@@ -18,6 +18,7 @@ class SubsoilPhotoController extends Controller
             ->get()
             ->map(function ($photo) {
                 $photo->gallery_date = null;
+
                 return $photo;
             });
 
@@ -29,6 +30,7 @@ class SubsoilPhotoController extends Controller
             ->get()
             ->map(function ($photo) {
                 $photo->gallery_date = $photo->gallery_date->toDateString();
+
                 return $photo;
             })
             ->groupBy('gallery_date')
@@ -64,7 +66,7 @@ class SubsoilPhotoController extends Controller
         $photoType = $validated['photo_type'] ?? 'gallery';
 
         foreach ($validated['photos'] as $photo) {
-            $path = $photo->store('subsoil-photos/' . $subsoilUser->id, 'public');
+            $path = $photo->store('subsoil-photos/'.$subsoilUser->id, 'public');
 
             SubsoilPhoto::create([
                 'subsoil_user_id' => $subsoilUser->id,

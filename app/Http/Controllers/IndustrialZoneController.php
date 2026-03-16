@@ -22,7 +22,7 @@ class IndustrialZoneController extends Controller
         }
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%' . $request->search . '%');
+            $query->where('name', 'like', '%'.$request->search.'%');
         }
 
         if ($request->filled('region_id')) {
@@ -80,7 +80,7 @@ class IndustrialZoneController extends Controller
                 'required',
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                    if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('ИА-ны тек өз ауданыңызға қосуға болады.');
                     }
                 },
@@ -141,7 +141,7 @@ class IndustrialZoneController extends Controller
                 'required',
                 'exists:regions,id',
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if ($isDistrictScoped && (int)$value !== (int)$user->region_id) {
+                    if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('ИА-ны тек өз ауданыңызда өзгертуге болады.');
                     }
                 },

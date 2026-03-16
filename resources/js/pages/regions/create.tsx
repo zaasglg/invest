@@ -1,8 +1,9 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler } from 'react';
+import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -10,9 +11,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FormEventHandler } from 'react';
+import AppLayout from '@/layouts/app-layout';
 import * as regions from '@/routes/regions';
-import LocationPicker from '@/components/location-picker';
 
 interface Region {
     id: number;
@@ -274,8 +274,6 @@ export default function Create({ parents }: Props) {
                             onChange={(val) => setData('geometry', val)}
                             className="w-full"
                         />
-                        {/* 
-                            // @ts-ignore */}
                         {errors.geometry && (
                             <span className="text-sm text-red-500">
                                 {errors.geometry}

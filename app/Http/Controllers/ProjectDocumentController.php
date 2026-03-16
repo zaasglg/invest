@@ -3,11 +3,12 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectDocument;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Inertia\Inertia;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Inertia;
 
 class ProjectDocumentController extends Controller
 {
@@ -16,8 +17,8 @@ class ProjectDocumentController extends Controller
         $user = Auth::user();
         $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        // Baskarma who is not involved in the project cannot see documents
-        if ($user->roleModel?->name === 'baskarma' && ! $user->isInvolvedInProject($investmentProject)) {
+        // Ispolnitel who is not involved in the project cannot see documents
+        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
             $completedDocuments = collect();
             $documents = collect();
         } else {
@@ -37,6 +38,7 @@ class ProjectDocumentController extends Controller
             'completedDocuments' => $completedDocuments,
             'documents' => $documents,
             'canDownload' => $canDownload,
+            'ispolnitelCanWrite' => $this->ispolnitelCanWrite($user, $investmentProject),
         ]);
     }
 
@@ -58,7 +60,7 @@ class ProjectDocumentController extends Controller
 
         return Storage::disk('public')->download(
             $document->file_path,
-            $document->name . '.' . $document->type
+            $document->name.'.'.$document->type
         );
     }
 
@@ -73,7 +75,7 @@ class ProjectDocumentController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store('project-documents/' . $investmentProject->id, 'public');
+            $path = $file->store('project-documents/'.$investmentProject->id, 'public');
 
             ProjectDocument::create([
                 'project_id' => $investmentProject->id,
@@ -83,6 +85,8 @@ class ProjectDocumentController extends Controller
                 'is_completed' => $request->boolean('is_completed', false),
             ]);
         }
+
+        KpiLog::log($investmentProject->id, 'Құжат жүктелді: "' . $validated['name'] . '"');
 
         return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
@@ -100,6 +104,16 @@ class ProjectDocumentController extends Controller
 
         $document->delete();
 
+        KpiLog::log($investmentProject->id, 'Құжат жойылды: "' . $document->name . '"');
+
         return redirect()->back()->with('success', 'Құжат жойылды.');
+    }
+
+    private function ispolnitelCanWrite($user, InvestmentProject $project): bool
+    {
+        return $user->roleModel?->name === 'ispolnitel'
+            && $user->isInvolvedInProject($project)
+            && $user->region_id
+            && (int) $project->region_id === (int) $user->region_id;
     }
 }

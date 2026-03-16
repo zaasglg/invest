@@ -33,8 +33,8 @@ class TaskNotificationObserver
                 $subsoilUserId = $subsoilTask?->subsoil_user_id;
                 $siteUrl = rtrim(config('app.url', ''), '/');
                 $targetUrl = $siteUrl && $subsoilUserId
-                    ? $siteUrl . '/subsoil-users/' . $subsoilUserId
-                    : ($siteUrl ? $siteUrl . '/notifications' : '');
+                    ? $siteUrl.'/subsoil-users/'.$subsoilUserId
+                    : ($siteUrl ? $siteUrl.'/notifications' : '');
                 $linkPart = $targetUrl
                     ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"
                     : '🔗 Сайтқа өту';
@@ -46,8 +46,8 @@ class TaskNotificationObserver
                 };
 
                 $formattedMessage = "{$emoji} <b>Хабарлама</b>\n\n"
-                    . $notification->message . "\n\n"
-                    . $linkPart;
+                    .$notification->message."\n\n"
+                    .$linkPart;
             } else {
                 $formattedMessage = $telegram->formatNotification(
                     $notification->type,

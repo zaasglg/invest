@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, AlertCircle, Eye, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import PhotoLightbox from '@/components/photo-lightbox';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, X, AlertCircle, Eye, Download } from 'lucide-react';
-import PhotoLightbox from '@/components/photo-lightbox';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per photo
 const MAX_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
@@ -48,10 +48,12 @@ interface Props {
     datedGallery: DatedGallery;
     renderPhotos?: ProjectPhoto[];
     canDownload: boolean;
+    ispolnitelCanWrite?: boolean;
 }
 
-export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [], canDownload }: Props) {
+export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [], canDownload, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
+    const canEdit = canModify || ispolnitelCanWrite;
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -188,7 +190,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
 
                 <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                     {/* Upload Form */}
-                    {canModify && (
+                    {canEdit && (
                     <div className="lg:col-span-1">
                         <Card className="shadow-none sticky top-4">
                             <CardHeader>
@@ -338,7 +340,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                     )}
 
                     {/* Gallery Display */}
-                    <div className={canModify ? 'lg:col-span-3 space-y-8' : 'lg:col-span-4 space-y-8'}>
+                    <div className={canEdit ? 'lg:col-span-3 space-y-8' : 'lg:col-span-4 space-y-8'}>
                         {/* Main Gallery (only for legacy photos without dates) */}
                         {mainGallery.length > 0 && (
                         <Card className="shadow-none">
@@ -370,7 +372,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 photos={mainGallery}
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
-                                                canModify={canModify}
+                                                canModify={canEdit}
                                                 canDownload={canDownload}
                                                 projectId={project.id}
                                             />
@@ -403,7 +405,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 photos={renderPhotos}
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
-                                                canModify={canModify}
+                                                canModify={canEdit}
                                                 canDownload={canDownload}
                                                 projectId={project.id}
                                             />
@@ -441,7 +443,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                         photos={photos}
                                                         onDelete={handleDelete}
                                                         onOpen={openLightbox}
-                                                        canModify={canModify}
+                                                        canModify={canEdit}
                                                         canDownload={canDownload}
                                                         projectId={project.id}
                                                     />
