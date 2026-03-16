@@ -1,9 +1,10 @@
-import React, { useState, useRef } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive, ScrollText } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,9 +14,9 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive } from 'lucide-react';
-import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
 interface ProjectType {
@@ -134,10 +135,24 @@ interface Props {
     renderPhotos?: Photo[];
     users?: UserOption[];
     canDownload: boolean;
+    isInvolved?: boolean;
+    isOwnDistrict?: boolean;
 }
 
-function DescriptionTabs({ description, currentStatus }: { description?: string; currentStatus?: string }) {
+function DescriptionTabs({ description, currentStatus, showCurrentStatus = true, canEditStatus = false, projectId }: { description?: string; currentStatus?: string; showCurrentStatus?: boolean; canEditStatus?: boolean; projectId?: number }) {
     const [activeTab, setActiveTab] = useState<'description' | 'current_status'>('description');
+    const [isEditing, setIsEditing] = useState(false);
+    const [editValue, setEditValue] = useState(currentStatus || '');
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSaveStatus = () => {
+        if (!projectId) return;
+        setIsSaving(true);
+        router.put(`/investment-projects/${projectId}/update-status`, { current_status: editValue }, {
+            onSuccess: () => { setIsEditing(false); setIsSaving(false); },
+            onError: () => { setIsSaving(false); },
+        });
+    };
 
     return (
         <div>
@@ -152,6 +167,7 @@ function DescriptionTabs({ description, currentStatus }: { description?: string;
                 >
                     Сипаттама
                 </button>
+                {showCurrentStatus && (
                 <button
                     onClick={() => setActiveTab('current_status')}
                     className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
@@ -162,24 +178,74 @@ function DescriptionTabs({ description, currentStatus }: { description?: string;
                 >
                     Ағымдағы жағдайы
                 </button>
+                )}
             </div>
-            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
-                {activeTab === 'description'
-                    ? (description || 'Сипаттама жоқ.')
-                    : (currentStatus || 'Ағымдағы жағдайы жоқ.')}
-            </div>
+            {activeTab === 'description' || !showCurrentStatus ? (
+                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                    {description || 'Сипаттама жоқ.'}
+                </div>
+            ) : (
+                <div>
+                    {isEditing ? (
+                        <div className="space-y-2">
+                            <textarea
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:outline-none focus:ring-1 focus:ring-[#c8a44e]"
+                                rows={4}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleSaveStatus}
+                                    disabled={isSaving}
+                                    className="rounded-md bg-[#c8a44e] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#b8943e] disabled:opacity-50"
+                                >
+                                    {isSaving ? 'Сақталуда...' : 'Сақтау'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsEditing(false); setEditValue(currentStatus || ''); }}
+                                    className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                                >
+                                    Болдырмау
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                                {currentStatus || 'Ағымдағы жағдайы жоқ.'}
+                            </div>
+                            {canEditStatus && (
+                                <button
+                                    type="button"
+                                    onClick={() => setIsEditing(true)}
+                                    className="mt-2 text-sm font-medium text-[#c8a44e] hover:text-[#b8943e]"
+                                >
+                                    Өзгерту
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 }
 
-export default function Show({ project, mainGallery = [], renderPhotos = [], users = [], canDownload }: Props) {
+export default function Show({ project, mainGallery = [], renderPhotos = [], users = [], canDownload, isInvolved = true, isOwnDistrict = false }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
-    const isBaskarma = (auth.user?.role_model?.name || '').toLowerCase() === 'baskarma';
+    const isIspolnitel = (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
+    const isInvest = auth.user?.role_model?.name === 'invest';
+    const isRestrictedView = isIspolnitel && !isInvolved;
+    const ispolnitelCanWrite = isIspolnitel && isInvolved && isOwnDistrict;
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         : (project.photos_count as any)?.photos_count || 0;
 
     const statusMap: Record<string, { label: string; color: string }> = {
@@ -222,16 +288,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         return details;
     };
 
-    const sectorDetails = getSectorDetails();
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _sectorDetails = getSectorDetails();
 
     const formatCurrency = (amount: number) => {
-        if (amount >= 1_000_000_000) {
-            return `${(amount / 1_000_000_000).toFixed(1)} млрд ₸`;
-        }
-        if (amount >= 1_000_000) {
-            return `${(amount / 1_000_000).toFixed(1)} млн ₸`;
-        }
-        return new Intl.NumberFormat('kk-KZ').format(amount) + ' ₸';
+        return formatMoneyCompact(amount);
     };
 
     // Roadmap state
@@ -282,6 +343,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         return ta - tb;
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const taskStatusMap: Record<string, { label: string; dotColor: string }> = {
         new: { label: 'Жаңа', dotColor: 'bg-amber-500' },
         in_progress: { label: 'Орындалуда', dotColor: 'bg-amber-500' },
@@ -289,13 +351,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         rejected: { label: 'Қабылданбады', dotColor: 'bg-red-500' },
     };
 
-    // Only show baskarma role users in task assignment
-    const baskarmaUsers = users.filter((u) => {
+    // Only show ispolnitel role users in task assignment
+    const ispolnitelUsers = users.filter((u) => {
         const roleName = (u.role_model?.name || '').toLowerCase();
-        return roleName === 'baskarma';
+        return roleName === 'ispolnitel';
     });
 
-    const filteredUsers = baskarmaUsers.filter((u) => {
+    const filteredUsers = ispolnitelUsers.filter((u) => {
         if (!userSearch.trim()) return true;
         const name = (u.full_name || '').toLowerCase();
         const role = (u.role_model?.display_name || '').toLowerCase();
@@ -333,6 +395,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         );
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const handleTaskStatusToggle = (task: ProjectTaskItem) => {
         const nextStatus = task.status === 'done' ? 'new' : 'done';
         router.put(`/investment-projects/${project.id}/tasks/${task.id}`, {
@@ -350,7 +413,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
     const selectedUser = users.find((u) => u.id === taskAssignedTo);
 
-    // Completion submission state (for baskarma)
+    // Completion submission state (for ispolnitel)
     const MAX_COMPLETION_FILE_SIZE = 20 * 1024 * 1024; // 20MB per file (matches backend)
     const MAX_COMPLETION_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
     const [showCompletionModal, setShowCompletionModal] = useState(false);
@@ -526,7 +589,6 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <CardContent className="p-6">
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                                     {/* Photo */}
-                                    {(!isBaskarma || canDownload) && (
                                     <div className="overflow-hidden rounded-lg md:col-span-2">
                                         {mainGallery.length > 0 && mainGallery[0]?.gallery_date && (
                                             <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
@@ -542,10 +604,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         )}
                                         <ProjectGallerySlider photos={mainGallery} />
                                     </div>
-                                    )}
 
                                     {/* Info Cards */}
-                                    <div className={`grid grid-cols-2 gap-3 ${(!isBaskarma || canDownload) ? 'md:col-span-3' : 'md:col-span-5'}`}>
+                                    <div className="grid grid-cols-2 gap-3 md:col-span-3">
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <MapPin className="h-3.5 w-3.5" /> Аудан
@@ -607,7 +668,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             </div>
 
                             {/* Инфрақұрылымға қажеттілік */}
-                            {project.infrastructure && Object.values(project.infrastructure).some((v: any) => v?.needed) && (
+                            {project.infrastructure && Object.values(project.infrastructure).some((v: Record<string, unknown>) => v?.needed) && (
                                 <div className="border-t border-gray-200 px-6 py-5">
                                     <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <Building2 className="h-5 w-5 text-gray-500" />
@@ -620,7 +681,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
                                             { key: 'land', label: 'Жер учаскесі', unit: 'га' },
                                         ].map((item) => {
-                                            const infra = (project.infrastructure as any)?.[item.key];
+                                            const infra = (project.infrastructure as Record<string, Record<string, unknown>>)?.[item.key];
                                             if (!infra?.needed) return null;
                                             return (
                                                 <div key={item.key} className="rounded-lg border border-gray-200 p-3">
@@ -640,11 +701,14 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <DescriptionTabs
                                     description={project.description}
                                     currentStatus={project.current_status}
+                                    showCurrentStatus={!isRestrictedView}
+                                    canEditStatus={ispolnitelCanWrite}
+                                    projectId={project.id}
                                 />
                             </div>
 
                             {/* Проблемалық мәселелер */}
-                            {project.issues && project.issues.length > 0 && (
+                            {!isRestrictedView && project.issues && project.issues.length > 0 && (
                                 <div className="border-t border-gray-200 px-6 py-5">
                                     <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                         <AlertTriangle className="h-5 w-5 text-red-500" />
@@ -721,6 +785,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                         </Card>
 
                         {/* Roadmap / Дорожная карта */}
+                        {!isRestrictedView && (
                         <Card className="shadow-none overflow-hidden py-0">
                             <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -759,7 +824,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 </SelectItem>
                                             </SelectContent>
                                         </Select>
-                                        {canModify && !isBaskarma && (
+                                        {canModify && !isIspolnitel && (
                                             <Button
                                                 size="icon"
                                                 className="h-9 w-9 bg-white/20 hover:bg-white/30 text-white border border-white/30"
@@ -873,9 +938,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    {/* Baskarma: submit completion (when task is new or rejected) */}
-                                                    {/* Baskarma: submit completion (when task is new or rejected) */}
-                                                    {isBaskarma && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
+                                                    {/* Ispolnitel: submit completion (when task is new or rejected) */}
+                                                    {/* Ispolnitel: submit completion (when task is new or rejected) */}
+                                                    {isIspolnitel && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -886,8 +951,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             Жіберу
                                                         </Button>
                                                     )}
-                                                    {/* Исполнитель: review pending completion */}
-                                                    {canModify && !isBaskarma && pendingCompletion && (
+                                                    {/* Invest: review pending completion */}
+                                                    {canModify && !isIspolnitel && pendingCompletion && (
                                                         <Button
                                                             variant="outline"
                                                             size="sm"
@@ -898,7 +963,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                             Тексеру
                                                         </Button>
                                                     )}
-                                                    {canModify && !isBaskarma && (
+                                                    {canModify && !isIspolnitel && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -920,6 +985,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 )}
                             </CardContent>
                         </Card>
+                        )}
                     </div>
 
                     {/* Sidebar Information */}
@@ -1013,20 +1079,20 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         </Button>
                                     </Link>
                                 )}
-                                {(!isBaskarma || canDownload) && (
-                                <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <FileText className="mr-2 h-4 w-4" />
-                                        Құжаттар
-                                        {project.documents && project.documents.length > 0 && (
-                                            <span className="ml-auto bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                                                {project.documents.length}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
+                                {(canModify || ispolnitelCanWrite) && (
+                                    <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
+                                        <Button variant="outline" className="w-full justify-start">
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            Құжаттар
+                                            {project.documents && project.documents.length > 0 && (
+                                                <span className="ml-auto bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
+                                                    {project.documents.length}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </Link>
                                 )}
-                                {(!isBaskarma || canDownload) && (
+                                {(canModify || ispolnitelCanWrite) && (
                                 <Link href={`/investment-projects/${project.id}/gallery`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <ImageIcon className="mr-2 h-4 w-4" />
@@ -1039,6 +1105,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </Button>
                                 </Link>
                                 )}
+                                {(!isRestrictedView || ispolnitelCanWrite) && (
                                 <Link href={`/investment-projects/${project.id}/issues`} className="w-full">
                                     <Button variant="outline" className="w-full justify-start">
                                         <AlertTriangle className="mr-2 h-4 w-4" />
@@ -1050,6 +1117,16 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         )}
                                     </Button>
                                 </Link>
+                                )}
+                                {isSuperAdmin && (
+                                <Link href={`/investment-projects/${project.id}/logs`} className="w-full">
+                                    <Button variant="outline" className="w-full justify-start">
+                                        <ScrollText className="mr-2 h-4 w-4" />
+                                        Логирование
+                                    </Button>
+                                </Link>
+                                )}
+                                {!isRestrictedView && !isIspolnitel && (
                                 <a
                                     href={`/investment-projects/${project.id}/passport`}
                                     className="w-full"
@@ -1059,6 +1136,23 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         Жоба паспортын жүктеу
                                     </Button>
                                 </a>
+                                )}
+                                {isIspolnitel && (() => {
+                                    const bType = auth.user?.baskarma_type;
+                                    const canSeePassport = bType === 'district' ? isOwnDistrict : bType === 'oblast' ? isInvolved : false;
+                                    return canSeePassport ? (
+                                        <a
+                                            href={`/investment-projects/${project.id}/passport`}
+                                            className="w-full"
+                                        >
+                                            <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
+                                                <Download className="mr-2 h-4 w-4" />
+                                                Жоба паспортын жүктеу
+                                            </Button>
+                                        </a>
+                                    ) : null;
+                                })()}
+                                {!isRestrictedView && (
                                 <a
                                     href={`/investment-projects/${project.id}/presentation`}
                                     className="w-full"
@@ -1068,7 +1162,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         Презентацияны жүктеу
                                     </Button>
                                 </a>
-                                {isSuperAdmin && (
+                                )}
+                                {(isSuperAdmin || isInvest) && (
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
@@ -1268,7 +1363,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                     </div>
                 )}
 
-                {/* Completion Submission Modal (for baskarma) */}
+                {/* Completion Submission Modal (for ispolnitel) */}
                 {showCompletionModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                         <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
@@ -1378,7 +1473,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                     </div>
                 )}
 
-                {/* Review Completion Modal (for исполнитель) */}
+                {/* Review Completion Modal (for invest) */}
                 {showReviewModal && reviewCompletion && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                         <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-xl bg-white shadow-2xl">

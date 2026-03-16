@@ -1,5 +1,5 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { MoreVertical, LogOut, Settings, User } from 'lucide-react';
+import { MoreVertical, LogOut, User } from 'lucide-react';
 import {
     DropdownMenu,
     DropdownMenuContent,

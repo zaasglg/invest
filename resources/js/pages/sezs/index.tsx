@@ -1,9 +1,10 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
+import { ChevronDown, Eye, Edit, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -13,12 +14,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { ChevronDown, Eye, Edit, Plus, Trash2 } from 'lucide-react';
-import * as sezs from '@/routes/sezs';
-import { useCanModify } from '@/hooks/use-can-modify';
-
-import type { PaginatedData } from '@/types';
-import type { FormEvent } from 'react';
 import {
     Table,
     TableBody,
@@ -27,6 +22,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
+import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
+import * as sezs from '@/routes/sezs';
+
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -62,7 +63,7 @@ export default function Index({
     filters,
 }: Props) {
     const canModify = useCanModify();
-    const { data, setData, get, reset } = useForm<Filters>({
+    const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         status: filters.status ?? '',
@@ -268,9 +269,7 @@ export default function Index({
                                             {sez.investment_projects_sum_total_investment
                                                 ? (() => {
                                                     const v = Number(sez.investment_projects_sum_total_investment);
-                                                    if (v >= 1_000_000_000) return (v / 1_000_000_000).toFixed(1) + ' млрд';
-                                                    if (v >= 1_000_000) return (v / 1_000_000).toFixed(1) + ' млн';
-                                                    return v.toLocaleString('kk-KZ');
+                                                    return formatMoneyCompact(v, { includeCurrency: false });
                                                 })()
                                                 : '—'}
                                         </TableCell>

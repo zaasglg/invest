@@ -109,7 +109,7 @@ class SubsoilUserSeeder extends Seeder
         foreach ($subsoilUsers as $data) {
             $region = Region::where('name', $data['region'])->first();
 
-            if (!$region) {
+            if (! $region) {
                 continue;
             }
 

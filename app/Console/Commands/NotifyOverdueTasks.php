@@ -49,10 +49,10 @@ class NotifyOverdueTasks extends Command
             $daysOverdue = (int) now()->startOfDay()->diffInDays($task->due_date);
 
             $message = "Тапсырманың орындалу мерзімі өтті!\n"
-                . "Жоба: {$projectName}\n"
-                . "Тапсырма: {$task->title}\n"
-                . "Мерзім: {$dueDate}\n"
-                . "Кешігу: {$daysOverdue} күн";
+                ."Жоба: {$projectName}\n"
+                ."Тапсырма: {$task->title}\n"
+                ."Мерзім: {$dueDate}\n"
+                ."Кешігу: {$daysOverdue} күн";
 
             // Creating the notification triggers the TaskNotificationObserver
             // which also sends a Telegram message automatically

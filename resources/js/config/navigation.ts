@@ -110,13 +110,12 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Рөлдер',
         'Пайдаланушылар',
     ]),
-    ispolnitel: new Set([
+    invest: new Set([
         'Аймақтар',
-        'Жоба түрлері',
         'Рөлдер',
         'Пайдаланушылар',
     ]),
-    baskarma: new Set([
+    ispolnitel: new Set([
         'Аймақтар',
         'Жоба түрлері',
         'Рөлдер',
@@ -142,12 +141,12 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
     );
 
     // Check exact role names first
-    if (normalizedCandidates.some((value) => value === 'ispolnitel')) {
-        return 'ispolnitel';
+    if (normalizedCandidates.some((value) => value === 'invest')) {
+        return 'invest';
     }
 
-    if (normalizedCandidates.some((value) => value === 'baskarma')) {
-        return 'baskarma';
+    if (normalizedCandidates.some((value) => value === 'ispolnitel')) {
+        return 'ispolnitel';
     }
 
     if (normalizedCandidates.some((value) => value.includes('zamakim'))) {

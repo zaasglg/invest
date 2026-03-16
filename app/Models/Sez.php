@@ -14,6 +14,7 @@ class Sez extends Model
         'infrastructure',
         'location',
         'description',
+        'geometry',
     ];
 
     protected function casts(): array

@@ -254,6 +254,7 @@ function SidebarTrigger({
   onClick,
   ...props
 }: React.ComponentProps<typeof Button>) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { toggleSidebar, isMobile, state } = useSidebar()
 
   return (

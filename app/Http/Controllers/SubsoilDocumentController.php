@@ -36,7 +36,7 @@ class SubsoilDocumentController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store('subsoil-documents/' . $subsoilUser->id, 'public');
+            $path = $file->store('subsoil-documents/'.$subsoilUser->id, 'public');
 
             SubsoilDocument::create([
                 'subsoil_user_id' => $subsoilUser->id,

@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\InvestmentProject;
 use App\Models\ProjectTask;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -16,18 +15,18 @@ class BaskarmaRatingController extends Controller
         $currentUser->load('roleModel');
         $roleName = $currentUser->roleModel?->name;
 
-        // Get all baskarma users with their region
-        $baskarmaUsers = User::where('role_id', 6)
+        // Get all ispolnitel users with their region
+        $ispolnitelUsers = User::whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
             ->with('region')
             ->get();
 
         $now = now()->startOfDay();
 
-        // Get task stats for each baskarma user
-        $ratings = $baskarmaUsers->map(function (User $user) use ($now) {
+        // Get task stats for each ispolnitel user
+        $ratings = $ispolnitelUsers->map(function (User $user) use ($now) {
             $tasks = ProjectTask::where('assigned_to', $user->id)->get();
 
-            // Count distinct projects this baskarma is assigned to
+            // Count distinct projects this ispolnitel is assigned to
             $projectCount = $tasks->pluck('project_id')->unique()->count();
 
             $completed = 0;
@@ -75,14 +74,14 @@ class BaskarmaRatingController extends Controller
             ->sortByDesc('kpd')
             ->values();
 
-        // For baskarma/ispolnitel: collect IDs they are allowed to view
+        // For ispolnitel/invest: collect IDs they are allowed to view
         $allowedIds = null;
-        if ($roleName === 'baskarma') {
-            // Baskarma can only view their own show page
+        if ($roleName === 'ispolnitel') {
+            // Ispolnitel can only view their own show page
             $allowedIds = [$currentUser->id];
-        } elseif ($roleName === 'ispolnitel') {
-            // Ispolnitel can view baskarma from their own region
-            $allowedIds = $baskarmaUsers
+        } elseif ($roleName === 'invest') {
+            // Invest can view ispolnitel from their own region
+            $allowedIds = $ispolnitelUsers
                 ->filter(fn (User $u) => $u->region_id === $currentUser->region_id)
                 ->pluck('id')
                 ->values()
@@ -102,13 +101,13 @@ class BaskarmaRatingController extends Controller
         $currentUser->load('roleModel');
         $roleName = $currentUser->roleModel?->name;
 
-        // Baskarma can only see their own page
-        if ($roleName === 'baskarma' && $currentUser->id !== $user->id) {
+        // Ispolnitel can only see their own page
+        if ($roleName === 'ispolnitel' && $currentUser->id !== $user->id) {
             abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
         }
 
-        // Ispolnitel can only view baskarma from their own region
-        if ($roleName === 'ispolnitel' && $user->region_id !== $currentUser->region_id) {
+        // Invest can only view ispolnitel from their own region
+        if ($roleName === 'invest' && $user->region_id !== $currentUser->region_id) {
             abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
         }
 

@@ -1,7 +1,6 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { type FormEvent } from 'react';
 import { Archive, Eye, RotateCcw, Search } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
+import { type FormEvent } from 'react';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +13,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
 
 import type { PaginatedData } from '@/types';
 
@@ -95,21 +96,7 @@ export default function Archived({ projects, filters }: Props) {
         const num = Number(value);
         if (isNaN(num)) return String(value);
 
-        if (num >= 1_000_000_000) {
-            return (
-                new Intl.NumberFormat('kk-KZ', {
-                    maximumFractionDigits: 1,
-                }).format(num / 1_000_000_000) + ' млрд ₸'
-            );
-        }
-        if (num >= 1_000_000) {
-            return (
-                new Intl.NumberFormat('kk-KZ', {
-                    maximumFractionDigits: 1,
-                }).format(num / 1_000_000) + ' млн ₸'
-            );
-        }
-        return new Intl.NumberFormat('kk-KZ').format(num) + ' ₸';
+        return formatMoneyCompact(num);
     };
 
     return (

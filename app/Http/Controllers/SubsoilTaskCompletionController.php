@@ -71,7 +71,7 @@ class SubsoilTaskCompletionController extends Controller
 
         $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
 
-        $submitterName = Auth::user()->full_name ?? 'Басқарма';
+        $submitterName = Auth::user()->full_name ?? 'Исполнитель';
         $docCount = count($request->file('documents', []));
         $photoCount = count($request->file('photos', []));
         $fileInfo = [];
@@ -81,7 +81,7 @@ class SubsoilTaskCompletionController extends Controller
         if ($photoCount > 0) {
             $fileInfo[] = "{$photoCount} фото";
         }
-        $fileStr = count($fileInfo) > 0 ? ' (' . implode(', ', $fileInfo) . ')' : '';
+        $fileStr = count($fileInfo) > 0 ? ' ('.implode(', ', $fileInfo).')' : '';
 
         foreach ($notifyUserIds as $userId) {
             TaskNotification::create([
@@ -153,14 +153,14 @@ class SubsoilTaskCompletionController extends Controller
 
             $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
             $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
-                . '_' . time() . '.' . $extension;
-            $newPath = 'subsoil-documents/' . $subsoilUser->id . '/' . $newFileName;
+                .'_'.time().'.'.$extension;
+            $newPath = 'subsoil-documents/'.$subsoilUser->id.'/'.$newFileName;
 
             Storage::disk('public')->copy($file->file_path, $newPath);
 
             SubsoilDocument::create([
                 'subsoil_user_id' => $subsoilUser->id,
-                'name' => $file->file_name . ' (Тапсырма: ' . $task->title . ')',
+                'name' => $file->file_name.' (Тапсырма: '.$task->title.')',
                 'file_path' => $newPath,
                 'type' => $extension ?: 'document',
                 'is_completed' => true,

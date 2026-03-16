@@ -1,7 +1,3 @@
-import Map from '@/components/map';
-import AppLayout from '@/layouts/app-layout';
-import React, { useState } from 'react';
-import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     DndContext,
     type DragEndEvent,
@@ -19,18 +15,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -40,7 +25,6 @@ import {
     Zap,
     Flame,
     Droplets,
-    Waves,
     Car,
     Wifi,
     CheckCircle2,
@@ -48,9 +32,24 @@ import {
     Building2,
     Pickaxe,
     TrainFront,
-    Maximize2,
     Presentation,
 } from 'lucide-react';
+import React, { useState } from 'react';
+import Map from '@/components/map';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -254,18 +253,6 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         }
     };
 
-    const handleResetMap = () => {
-        setSelectedEntityId(null);
-        setSelectedEntityType(null);
-        setMapSelectedEntityId(null);
-        setMapSelectedEntityType(null);
-        setSelectedSezId(null);
-        setSelectedIzId(null);
-        setSelectedSubsoilId(null);
-        setSelectedSubsoilStatus(null);
-        setSelectedProjectId(null);
-    };
-
     const handleProjectSelect = (projectId: number | null) => {
         if (selectedProjectId === projectId) {
             setSelectedProjectId(null);
@@ -335,23 +322,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     }, [subsoilUsers, selectedSubsoilStatus]);
 
     const formatCurrency = (amount: number) => {
-        if (Math.abs(amount) >= 1_000_000_000) {
-            const billions = amount / 1_000_000_000;
-            const formatted = new Intl.NumberFormat('kk-KZ', {
-                maximumFractionDigits: 1,
-            }).format(billions);
-            return `${formatted} млрд ₸`;
-        }
-        if (Math.abs(amount) >= 1_000_000) {
-            const millions = amount / 1_000_000;
-            const formatted = new Intl.NumberFormat('kk-KZ', {
-                maximumFractionDigits: 1,
-            }).format(millions);
-            return `${formatted} млн ₸`;
-        }
-        return new Intl.NumberFormat('kk-KZ', {
-            maximumFractionDigits: 0,
-        }).format(amount) + ' ₸';
+        return formatMoneyCompact(amount);
     };
 
     const formatArea = (area: number) => {
@@ -532,7 +503,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const totalIzArea = industrialZones.reduce((acc, curr) => acc + Number(curr.total_area), 0);
 
     // Helper to safely get lat/lng
-    function getLatLng(point: any): { lat: number, lng: number } | null {
+    function getLatLng(point: Record<string, unknown> | unknown[] | null): { lat: number, lng: number } | null {
         if (!point) return null;
         let lat = NaN, lng = NaN;
 
@@ -560,10 +531,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     if (region.geometry && Array.isArray(region.geometry) && region.geometry.length > 0) {
         // Flatten multi-polygon or single polygon to all points
         const allGeo = Array.isArray(region.geometry[0]) ? region.geometry : [region.geometry];
-        const points = (allGeo as any[][])
+        const points = (allGeo as unknown[][])
             .flat()
-            .map((p: any) => getLatLng(p))
-            .filter((p: any): p is { lat: number; lng: number } => p !== null);
+            .map((p) => getLatLng(p as Record<string, unknown>))
+            .filter((p): p is { lat: number; lng: number } => p !== null);
         if (points.length > 0) {
             mapCenter = [
                 points.reduce((sum: number, p: { lat: number }) => sum + p.lat, 0) / points.length,

@@ -1,9 +1,14 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler} from 'react';
+import { useState, useMemo } from 'react';
+import InfrastructureForm, {
+    getEmptyInfrastructure,
+} from '@/components/infrastructure-form';
+import type { InfrastructureData } from '@/components/infrastructure-form';
+import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -11,14 +16,10 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { FormEventHandler, useState, useMemo } from 'react';
+import { Textarea } from '@/components/ui/textarea';
+import AppLayout from '@/layouts/app-layout';
 import * as sezs from '@/routes/sezs';
-import LocationPicker from '@/components/location-picker';
-import InfrastructureForm, {
-    getEmptyInfrastructure,
-} from '@/components/infrastructure-form';
 
-import type { InfrastructureData } from '@/components/infrastructure-form';
 
 interface Region {
     id: number;
@@ -211,8 +212,6 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
                             regionBoundary={selectedDistrict?.geometry || undefined}
                             className="w-full"
                         />
-                        {/* 
-                            // @ts-ignore */}
                         {errors.location && <span className="text-sm text-red-500">{errors.location}</span>}
                     </div>
 

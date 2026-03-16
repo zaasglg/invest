@@ -10,7 +10,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement("ALTER TABLE subsoil_users DROP CONSTRAINT subsoil_users_license_status_check");
+        DB::statement('ALTER TABLE subsoil_users DROP CONSTRAINT subsoil_users_license_status_check');
         DB::statement("ALTER TABLE subsoil_users ADD CONSTRAINT subsoil_users_license_status_check CHECK (license_status::text = ANY (ARRAY['active', 'expired', 'suspended', 'illegal']))");
     }
 
@@ -19,7 +19,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        DB::statement("ALTER TABLE subsoil_users DROP CONSTRAINT subsoil_users_license_status_check");
+        DB::statement('ALTER TABLE subsoil_users DROP CONSTRAINT subsoil_users_license_status_check');
         DB::statement("ALTER TABLE subsoil_users ADD CONSTRAINT subsoil_users_license_status_check CHECK (license_status::text = ANY (ARRAY['active', 'expired', 'suspended']))");
     }
 };

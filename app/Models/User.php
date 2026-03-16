@@ -82,7 +82,7 @@ class User extends Authenticatable
 
     /**
      * Determine if the user is scoped to their district.
-     * This applies to 'ispolnitel' and 'district baskarma'.
+     * This applies to 'invest' and 'district ispolnitel'.
      */
     public function isDistrictScoped(): bool
     {
@@ -90,17 +90,15 @@ class User extends Authenticatable
             return false;
         }
 
-        // We need to load roleModel if not already loaded, or use specific check
-        // Assuming roleModel is the relation
         $roleName = $this->roleModel?->name;
 
-        // Executor is always district scoped if they have a region
-        if ($roleName === 'ispolnitel') {
+        // Invest is always district scoped if they have a region
+        if ($roleName === 'invest') {
             return true;
         }
 
-        // District Baskarma is district scoped
-        if ($roleName === 'baskarma' && $this->baskarma_type === 'district') {
+        // District Ispolnitel is district scoped
+        if ($roleName === 'ispolnitel' && $this->baskarma_type === 'district') {
             return true;
         }
 
@@ -113,12 +111,12 @@ class User extends Authenticatable
      */
     public function isRegionalManagement(): bool
     {
-        return $this->roleModel?->name === 'baskarma' && $this->baskarma_type === 'oblast';
+        return $this->roleModel?->name === 'ispolnitel' && $this->baskarma_type === 'oblast';
     }
 
     /**
      * Check if the user is involved in the given project.
-     * Baskarma is "involved" if they are an executor or have tasks assigned.
+     * Ispolnitel is "involved" if they are an executor or have tasks assigned.
      */
     public function isInvolvedInProject(InvestmentProject $project): bool
     {
@@ -142,14 +140,14 @@ class User extends Authenticatable
 
     /**
      * Determine if the user can download files from the given project.
-     * Baskarma can only download from projects they are involved in.
+     * Ispolnitel can only download from projects they are involved in.
      */
     public function canDownloadFromProject(InvestmentProject $project): bool
     {
         $roleName = $this->roleModel?->name;
 
-        // Baskarma can only download from involved projects
-        if ($roleName === 'baskarma') {
+        // Ispolnitel can only download from involved projects
+        if ($roleName === 'ispolnitel') {
             return $this->isInvolvedInProject($project);
         }
 
@@ -167,6 +165,6 @@ class User extends Authenticatable
      */
     public function getAvatarUrlAttribute(): ?string
     {
-        return $this->avatar ? '/storage/' . $this->avatar : null;
+        return $this->avatar ? '/storage/'.$this->avatar : null;
     }
 }

@@ -1,4 +1,5 @@
 import { CheckCircle2 } from 'lucide-react';
+import { formatMoneyCompact } from '@/lib/utils';
 
 interface SectorRow {
     investment: number;
@@ -26,13 +27,7 @@ interface Props {
 
 const formatInvestment = (value: number) => {
     if (!value) return '0';
-    if (value >= 1_000_000_000) {
-        return `${(value / 1_000_000_000).toFixed(1)} млрд ₸`;
-    }
-    if (value >= 1_000_000) {
-        return `${(value / 1_000_000).toFixed(1)} млн ₸`;
-    }
-    return `${value.toLocaleString('kk-KZ')} ₸`;
+    return formatMoneyCompact(value);
 };
 
 export default function SectorTable({

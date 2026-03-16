@@ -1,10 +1,10 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
+import type { FormEventHandler } from 'react';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { FormEventHandler } from 'react';
+import AppLayout from '@/layouts/app-layout';
 import * as roles from '@/routes/roles';
 
 interface Role {

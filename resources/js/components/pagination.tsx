@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button';
 import { router } from '@inertiajs/react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 import type { PaginatedData } from '@/types';
 

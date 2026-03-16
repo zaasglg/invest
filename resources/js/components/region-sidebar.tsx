@@ -1,4 +1,4 @@
-import { MapPin, Menu, X } from 'lucide-react';
+import { MapPin, Menu } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import {

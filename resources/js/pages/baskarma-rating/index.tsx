@@ -1,9 +1,8 @@
 import { Head, Link } from '@inertiajs/react';
-import { useState } from 'react';
 import { Award, BarChart3, Eye, Phone, User as UserIcon } from 'lucide-react';
-import AppLayout from '@/layouts/app-layout';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
     TableBody,
@@ -12,6 +11,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import AppLayout from '@/layouts/app-layout';
 
 interface RatingItem {
     id: number;
@@ -135,7 +135,7 @@ function RatingTable({
             <CardContent className="p-0">
                 {ratings.length === 0 ? (
                     <div className="px-6 pb-6 pt-2 text-center text-gray-400">
-                        Тіркелген басқармалар жоқ
+                        Тіркелген исполнительдер жоқ
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -148,7 +148,7 @@ function RatingTable({
                                 <TableHead className="w-[72px]" />
                                 <TableHead>АТА</TableHead>
                                 <TableHead>Телефон</TableHead>
-                                <TableHead>Басқарма</TableHead>
+                                <TableHead>Исполнитель</TableHead>
                                 <TableHead className="text-center">
                                     Жобалар
                                 </TableHead>

@@ -193,22 +193,21 @@ export default function Profile({
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
                                 <div className="grid gap-1.5">
-                                    <Label htmlFor="name">Аты</Label>
+                                    <Label htmlFor="full_name">Аты</Label>
                                     <Input
-                                        id="name"
+                                        id="full_name"
                                         className="block w-full"
                                         defaultValue={
-                                            auth.user.full_name ||
-                                            (auth.user.name as string)
+                                            auth.user.full_name
                                         }
-                                        name="name"
+                                        name="full_name"
                                         required
                                         autoComplete="name"
                                         placeholder="Толық атыңыз"
                                     />
                                     <InputError
                                         className="mt-1"
-                                        message={errors.name}
+                                        message={errors.full_name}
                                     />
                                 </div>
 

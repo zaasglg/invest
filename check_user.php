@@ -1,9 +1,10 @@
 <?php
+
 require 'vendor/autoload.php';
 $app = require 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
-$u = App\Models\User::whereHas('roleModel', fn($q) => $q->where('name', 'ispolnitel'))->first();
+$u = App\Models\User::whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))->first();
 $isDistrictScoped = $u && $u->isDistrictScoped();
 
 $regionsQuery = App\Models\Region::query();

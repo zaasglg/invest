@@ -20,16 +20,15 @@ class CheckRoleAccess
 
     /**
      * Routes that only superadmin can access.
-     * Ispolnitel and baskarma are blocked from these as well.
+     * Ispolnitel is blocked from these as well.
      */
     protected array $adminOnlyRoutes = [
-        'project-types',
         'roles',
         'users',
     ];
 
     /**
-     * Routes completely blocked for ispolnitel and baskarma.
+     * Routes completely blocked for invest and ispolnitel.
      * (regions.index — listing all regions)
      */
     protected array $limitedBlockedRoutes = [
@@ -44,6 +43,15 @@ class CheckRoleAccess
         'regions.show',
         'investment-projects.tasks.completions.store',
         'subsoil-users.tasks.completions.store',
+        'investment-projects.documents.store',
+        'investment-projects.documents.destroy',
+        'investment-projects.gallery.store',
+        'investment-projects.gallery.update',
+        'investment-projects.gallery.destroy',
+        'investment-projects.issues.store',
+        'investment-projects.issues.update',
+        'investment-projects.issues.destroy',
+        'investment-projects.update-status',
     ];
 
     /**
@@ -88,7 +96,7 @@ class CheckRoleAccess
             }
         }
 
-        // Limited roles (ispolnitel/baskarma): blocked from admin-only sections + regions
+        // Limited roles (invest/ispolnitel): blocked from admin-only sections + regions
         if ($this->isLimitedRole($roleName)) {
             if ($this->isMatchingRoute($request, $this->adminOnlyRoutes)) {
                 abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
@@ -96,17 +104,22 @@ class CheckRoleAccess
 
             $routeName = $request->route()?->getName();
 
-            // Ispolnitel: blocked from regions list & write routes,
+            // Invest: blocked from regions list & write routes,
             // but allowed to view their own district (regions.show)
-            if ($roleName === 'ispolnitel') {
+            if ($roleName === 'invest') {
                 if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
             }
 
-            // Baskarma: read-only on SEZ, IZ, Subsoil, Projects, Regions.
-            // Can view/enter but cannot create, edit, or delete.
-            if ($roleName === 'baskarma') {
+            // Ispolnitel: blocked from project-types and regions management.
+            // Can write to documents, gallery, issues, and current status on own-district projects.
+            if ($roleName === 'ispolnitel') {
+                // Block project-types for ispolnitel
+                if ($this->isMatchingRoute($request, ['project-types'])) {
+                    abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+                }
+
                 // Block region management actions, allow listing/show
                 if ($routeName === 'regions.create'
                     || $routeName === 'regions.store' || $routeName === 'regions.edit'
@@ -114,16 +127,29 @@ class CheckRoleAccess
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
 
-                // Block write actions on SEZ, IZ, Subsoil, Projects
+                // Block write actions on SEZ, IZ, Subsoil, and main project edit/create
                 if ($this->isWriteAction($request)) {
-                    $baskarmaReadOnly = ['sezs', 'industrial-zones', 'subsoil-users', 'investment-projects'];
-                    if ($this->isMatchingRoute($request, $baskarmaReadOnly)) {
+                    $ispolnitelReadOnly = ['sezs', 'industrial-zones', 'subsoil-users'];
+                    if ($this->isMatchingRoute($request, $ispolnitelReadOnly)) {
                         abort(403, 'Сізде деректерді өзгерту құқығы жоқ.');
                     }
+
+                    // Block main project create/edit/destroy (but allow sub-resource writes)
+                    if ($routeName === 'investment-projects.create'
+                        || $routeName === 'investment-projects.store'
+                        || $routeName === 'investment-projects.edit'
+                        || $routeName === 'investment-projects.update'
+                        || $routeName === 'investment-projects.destroy') {
+                        abort(403, 'Сізде жобаны өзгерту құқығы жоқ.');
+                    }
+
+                    // For allowed write routes (documents, gallery, issues, update-status),
+                    // enforce district-scope: ispolnitel can only write to own-district projects
+                    $this->enforceIspolnitelProjectWrite($request, $user);
                 }
             }
 
-            // District-scoping: ispolnitel and district baskarma can only access
+            // District-scoping: invest and district ispolnitel can only access
             // their own region's SEZ/IZ/Subsoil resources
             $this->enforceDistrictScope($request, $user);
         }
@@ -157,7 +183,7 @@ class CheckRoleAccess
     }
 
     /**
-     * Ispolnitel / baskarma — can write to projects but blocked from admin sections.
+     * Invest / ispolnitel — can write to projects but blocked from admin sections.
      */
     protected function isLimitedRole(?string $roleName): bool
     {
@@ -165,7 +191,7 @@ class CheckRoleAccess
             return false;
         }
 
-        return in_array($roleName, ['ispolnitel', 'baskarma'], true);
+        return in_array($roleName, ['invest', 'ispolnitel'], true);
     }
 
     protected function isMatchingRoute(Request $request, array $blockedList): bool
@@ -183,7 +209,7 @@ class CheckRoleAccess
         }
 
         foreach ($blockedList as $blocked) {
-            if ($routeName === $blocked || str_starts_with($routeName, $blocked . '.')) {
+            if ($routeName === $blocked || str_starts_with($routeName, $blocked.'.')) {
                 return true;
             }
         }
@@ -214,9 +240,9 @@ class CheckRoleAccess
     }
 
     /**
-     * Enforce district-scoping for ispolnitel and district baskarma.
+     * Enforce district-scoping for invest and district ispolnitel.
      * They can only access SEZ/IZ/Subsoil/Regions belonging to their region.
-     * Oblast baskarma can access all.
+     * Oblast ispolnitel can access all.
      */
     protected function enforceDistrictScope(Request $request, $user): void
     {
@@ -255,10 +281,33 @@ class CheckRoleAccess
         }
 
         // Check Region show — district-scoped users can only view their own region
-        if ($routeName === 'regions.show') {
+        // Ispolnitel can view any region
+        $roleName = $this->getRoleName($user);
+        if ($routeName === 'regions.show' && $roleName !== 'ispolnitel') {
             $region = $request->route('region');
             if ($region && is_object($region) && $region->id !== $user->region_id) {
                 abort(403, 'Сізге бұл ауданға кіруге рұқсат етілмеген.');
+            }
+        }
+    }
+
+    /**
+     * Enforce district-scoping for ispolnitel write actions on project sub-resources.
+     * Ispolnitel can only write to documents/gallery/issues of projects in their own district.
+     */
+    protected function enforceIspolnitelProjectWrite(Request $request, $user): void
+    {
+        $project = $request->route('investmentProject') ?? $request->route('investment_project');
+
+        if ($project && is_object($project)) {
+            // District ispolnitel can only write to own-district projects
+            if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
+                abort(403, 'Сіз тек өз ауданыңыздағы жобаларды өзгерте аласыз.');
+            }
+
+            // Must be involved in the project to write
+            if (! $user->isInvolvedInProject($project)) {
+                abort(403, 'Сіз бұл жобаға қатыспайсыз.');
             }
         }
     }
@@ -268,7 +317,7 @@ class CheckRoleAccess
      */
     protected function blockArchivedProjectAccess(Request $request, $user, ?string $roleName): void
     {
-        if ($roleName === 'superadmin') {
+        if (in_array($roleName, ['superadmin', 'invest'])) {
             return;
         }
 

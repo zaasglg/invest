@@ -1,22 +1,4 @@
-import React from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { Head, Link } from '@inertiajs/react';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
 import {
     ArrowLeft,
     Building2,
@@ -25,14 +7,32 @@ import {
     Flame,
     MapPin,
     Activity,
-    FileText,
     Layers,
     AlertTriangle,
     TrainFront,
     Wifi,
     Zap,
 } from 'lucide-react';
+import React from 'react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+    Card,
+    CardContent,
+    CardHeader,
+    CardTitle,
+} from '@/components/ui/card';
+import {
+    Table,
+    TableBody,
+    TableCell,
+    TableHead,
+    TableHeader,
+    TableRow,
+} from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
+import { formatMoneyCompact } from '@/lib/utils';
+import AppLayout from '@/layouts/app-layout';
 
 interface Region {
     id: number;
@@ -144,13 +144,7 @@ export default function Show({ industrialZone }: Props) {
         };
 
     const formatCurrency = (amount: number) => {
-        if (amount >= 1_000_000_000) {
-            return `${(amount / 1_000_000_000).toFixed(1)} млрд ₸`;
-        }
-        if (amount >= 1_000_000) {
-            return `${(amount / 1_000_000).toFixed(1)} млн ₸`;
-        }
-        return `${amount.toLocaleString('kk-KZ')} ₸`;
+        return formatMoneyCompact(amount);
     };
 
     const projects = industrialZone.investment_projects ?? [];

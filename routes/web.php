@@ -9,9 +9,9 @@ use Laravel\Fortify\Features;
 //         'canRegister' => Features::enabled(Features::registration()),
 //     ]);
 // })->name('home');
-route::get('/', function () {
+Route::get('/', function () {
     return redirect()->route('dashboard');
-});
+})->name('home');
 
 Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'verified'])
@@ -74,6 +74,10 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
     Route::post('issues', [\App\Http\Controllers\ProjectIssueController::class, 'store'])->name('investment-projects.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'update'])->name('investment-projects.issues.update');
     Route::delete('issues/{issue}', [\App\Http\Controllers\ProjectIssueController::class, 'destroy'])->name('investment-projects.issues.destroy');
+
+    Route::put('update-status', [\App\Http\Controllers\InvestmentProjectController::class, 'updateStatus'])->name('investment-projects.update-status');
+
+    Route::get('logs', [\App\Http\Controllers\InvestmentProjectController::class, 'logs'])->name('investment-projects.logs');
 
     Route::post('tasks', [\App\Http\Controllers\ProjectTaskController::class, 'store'])->name('investment-projects.tasks.store');
     Route::put('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'update'])->name('investment-projects.tasks.update');
@@ -143,4 +147,4 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 });
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';
