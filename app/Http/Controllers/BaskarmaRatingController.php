@@ -74,18 +74,11 @@ class BaskarmaRatingController extends Controller
             ->sortByDesc('kpd')
             ->values();
 
-        // For ispolnitel/invest: collect IDs they are allowed to view
+        // For ispolnitel: collect IDs they are allowed to view
         $allowedIds = null;
         if ($roleName === 'ispolnitel') {
             // Ispolnitel can only view their own show page
             $allowedIds = [$currentUser->id];
-        } elseif ($roleName === 'invest') {
-            // Invest can view ispolnitel from their own region
-            $allowedIds = $ispolnitelUsers
-                ->filter(fn (User $u) => $u->region_id === $currentUser->region_id)
-                ->pluck('id')
-                ->values()
-                ->toArray();
         }
 
         return Inertia::render('baskarma-rating/index', [
@@ -103,11 +96,6 @@ class BaskarmaRatingController extends Controller
 
         // Ispolnitel can only see their own page
         if ($roleName === 'ispolnitel' && $currentUser->id !== $user->id) {
-            abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
-        }
-
-        // Invest can only view ispolnitel from their own region
-        if ($roleName === 'invest' && $user->region_id !== $currentUser->region_id) {
             abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
         }
 

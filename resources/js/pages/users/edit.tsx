@@ -80,7 +80,7 @@ export default function Edit({ user, regions, roles }: Props) {
 
     const isIspolnitel = selectedRole?.name === 'ispolnitel';
     const isInvest = selectedRole?.name === 'invest';
-    const showRegionSelects = isInvest || (isIspolnitel && data.baskarma_type === 'district');
+    const showRegionSelects =(isIspolnitel && data.baskarma_type === 'district');
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();

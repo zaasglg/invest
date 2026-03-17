@@ -74,8 +74,19 @@ class ProjectIssueController extends Controller
 
     private function ispolnitelCanWrite($user, InvestmentProject $project): bool
     {
-        return $user->roleModel?->name === 'ispolnitel'
-            && $user->isInvolvedInProject($project)
+        if ($user->roleModel?->name !== 'ispolnitel') {
+            return false;
+        }
+
+        if (! $user->isInvolvedInProject($project)) {
+            return false;
+        }
+
+        if ($user->baskarma_type === 'oblast') {
+            return true;
+        }
+
+        return $user->baskarma_type === 'district'
             && $user->region_id
             && (int) $project->region_id === (int) $user->region_id;
     }

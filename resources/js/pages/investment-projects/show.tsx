@@ -239,10 +239,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
     const isIspolnitel = (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
+    const isOblastIspolnitel =
+        isIspolnitel && auth.user?.baskarma_type === 'oblast';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isRestrictedView = isIspolnitel && !isInvolved;
-    const ispolnitelCanWrite = isIspolnitel && isInvolved && isOwnDistrict;
+    const ispolnitelCanWrite =
+        isIspolnitel && isInvolved && (isOblastIspolnitel || isOwnDistrict);
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
