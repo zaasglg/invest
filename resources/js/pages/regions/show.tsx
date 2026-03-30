@@ -243,13 +243,28 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         setMapSelectedEntityId(id);
         setMapSelectedEntityType(type);
         setAllPage(1);
-        // Sync sidebar selection with map click
+        // Sync sidebar selection with map click and switch to appropriate tab
         if (id && type === 'sez') {
+            setActiveTab('sez');
             setSelectedSezId(id);
+            setSelectedIzId(null);
+            setSelectedSubsoilId(null);
+            setSelectedEntityId(id);
+            setSelectedEntityType('sez');
         } else if (id && type === 'iz') {
+            setActiveTab('iz');
             setSelectedIzId(id);
+            setSelectedSezId(null);
+            setSelectedSubsoilId(null);
+            setSelectedEntityId(id);
+            setSelectedEntityType('iz');
         } else if (id && type === 'subsoil') {
+            setActiveTab('subsoil');
             setSelectedSubsoilId(id);
+            setSelectedSezId(null);
+            setSelectedIzId(null);
+            setSelectedEntityId(id);
+            setSelectedEntityType('subsoil');
         }
     };
 
@@ -635,7 +650,27 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <Globe className="h-8 w-8 text-[#0f1b3d]" />
-                            <h1 className="text-3xl font-semibold tracking-tight text-[#0f1b3d]">{region.name}</h1>
+                            <h1 className="text-3xl font-semibold tracking-tight text-[#0f1b3d] flex items-center gap-2">
+                                {region.name}
+                                {selectedSezId && sezs.find(s => s.id === selectedSezId) && (
+                                    <>
+                                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                                        <span className="text-violet-600">{sezs.find(s => s.id === selectedSezId)?.name}</span>
+                                    </>
+                                )}
+                                {selectedIzId && industrialZones.find(z => z.id === selectedIzId) && (
+                                    <>
+                                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                                        <span className="text-amber-600">{industrialZones.find(z => z.id === selectedIzId)?.name}</span>
+                                    </>
+                                )}
+                                {selectedSubsoilId && subsoilUsers.find(s => s.id === selectedSubsoilId) && (
+                                    <>
+                                        <ChevronRight className="h-5 w-5 text-gray-400" />
+                                        <span className="text-gray-600">{subsoilUsers.find(s => s.id === selectedSubsoilId)?.name}</span>
+                                    </>
+                                )}
+                            </h1>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
                             <div className="flex items-center gap-2">
