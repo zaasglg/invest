@@ -132,6 +132,10 @@ Route::resource('roles', \App\Http\Controllers\RoleController::class)
 Route::resource('users', \App\Http\Controllers\UserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::get('issues', [\App\Http\Controllers\IssuesController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('issues.index');
+
 Route::get('baskarma-rating', [\App\Http\Controllers\BaskarmaRatingController::class, 'index'])
     ->middleware(['auth', 'verified'])
     ->name('baskarma-rating');

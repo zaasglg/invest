@@ -1809,8 +1809,15 @@ export default function Map({
                                                         )}
                                                     </td>
                                                     <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
-                                                        {formatCount(
-                                                            row.d.problemCount,
+                                                        {row.d.problemCount > 0 ? (
+                                                            <Link
+                                                                href={`/issues?sector=${row.key}${activeRegion?.id ? `&region_id=${activeRegion.id}` : ''}`}
+                                                                className="underline decoration-dotted hover:text-[#c8a44e] hover:decoration-solid transition-colors"
+                                                            >
+                                                                {formatCount(row.d.problemCount)}
+                                                            </Link>
+                                                        ) : (
+                                                            formatCount(row.d.problemCount)
                                                         )}
                                                     </td>
                                                     <td className="px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
