@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, Eye, Pencil, Plus, Trash2,Edit } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -316,7 +316,8 @@ export default function Index({
                                                                     zone.id,
                                                                 )}
                                                             >
-                                                                <Pencil className="h-4 w-4" />
+                                                                {/* <Pencil className="h-4 w-4" /> */}
+                                                                <Edit className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                         <Button
