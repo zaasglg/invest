@@ -403,10 +403,14 @@ function MapController({
     resetTrigger: number;
 }) {
     const map = useMap();
+    const prevResetTrigger = React.useRef(resetTrigger);
+    const hasInitialized = React.useRef(false);
 
     useEffect(() => {
         let bounds: L.LatLngBounds | null = null;
         const options: L.FitBoundsOptions = { padding: [50, 50], duration: 1 };
+        const resetTriggered = prevResetTrigger.current !== resetTrigger;
+        prevResetTrigger.current = resetTrigger;
 
         if (activeEntity && activeEntity.positions.length > 0) {
             // Priority 0: Active Entity (SEZ/IZ/Subsoil)
@@ -425,8 +429,9 @@ function MapController({
             if (points.length > 0) {
                 bounds = L.latLngBounds(points);
             }
-        } else if (fitBounds && regions.length > 0) {
-            // Priority 3: Fit All Regions
+        } else if ((fitBounds && regions.length > 0 && !hasInitialized.current) || resetTriggered) {
+            // Priority 3: Fit All Regions - only on initial load or explicit reset
+            hasInitialized.current = true;
             const allPoints: [number, number][] = [];
             regions.forEach((r) => {
                 getRegionAllPoints(r.geometry).forEach((pt) => {
@@ -441,8 +446,8 @@ function MapController({
 
         if (bounds) {
             map.fitBounds(bounds, options);
-        } else {
-            // Fallback
+        } else if (resetTriggered) {
+            // Fallback only on reset
             map.setView(defaultCenter, defaultZoom, {
                 animate: true,
                 duration: 1,
