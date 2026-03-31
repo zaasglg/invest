@@ -612,7 +612,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="grid grid-cols-2 gap-3 md:col-span-3">
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" /> Аудан
+                                                <MapPin className="h-3.5 w-3.5" /> Аймақ
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.region?.name || 'Көрсетілмеген'}
