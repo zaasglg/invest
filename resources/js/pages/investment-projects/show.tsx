@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive, ScrollText } from 'lucide-react';
+import { ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive, ScrollText, Edit } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -300,6 +300,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
     // Roadmap state
     const [showTaskModal, setShowTaskModal] = useState(false);
+    const [editingTaskId, setEditingTaskId] = useState<number | null>(null);
     const [taskTitle, setTaskTitle] = useState('');
     const [taskDescription, setTaskDescription] = useState('');
     const [taskStartDate, setTaskStartDate] = useState('');
@@ -373,29 +374,51 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         if (!taskTitle || !taskAssignedTo) return;
         setIsSubmittingTask(true);
 
-        router.post(
-            `/investment-projects/${project.id}/tasks`,
-            {
-                title: taskTitle,
-                description: taskDescription || null,
-                start_date: taskStartDate || null,
-                due_date: taskDueDate || null,
-                assigned_to: taskAssignedTo,
-            },
-            {
-                onSuccess: () => {
-                    setTaskTitle('');
-                    setTaskDescription('');
-                    setTaskStartDate('');
-                    setTaskDueDate('');
-                    setTaskAssignedTo(null);
-                    setUserSearch('');
-                    setIsSubmittingTask(false);
-                    setShowTaskModal(false);
-                },
-                onError: () => setIsSubmittingTask(false),
-            },
-        );
+        const payload = {
+            title: taskTitle,
+            description: taskDescription || null,
+            start_date: taskStartDate || null,
+            due_date: taskDueDate || null,
+            assigned_to: taskAssignedTo,
+        };
+
+        const onSuccess = () => {
+            setTaskTitle('');
+            setTaskDescription('');
+            setTaskStartDate('');
+            setTaskDueDate('');
+            setTaskAssignedTo(null);
+            setUserSearch('');
+            setIsSubmittingTask(false);
+            setEditingTaskId(null);
+            setShowTaskModal(false);
+        };
+
+        const onError = () => setIsSubmittingTask(false);
+
+        if (editingTaskId) {
+            router.put(
+                `/investment-projects/${project.id}/tasks/${editingTaskId}`,
+                payload,
+                { onSuccess, onError }
+            );
+        } else {
+            router.post(
+                `/investment-projects/${project.id}/tasks`,
+                payload,
+                { onSuccess, onError }
+            );
+        }
+    };
+
+    const handleEditTask = (task: ProjectTaskItem) => {
+        setEditingTaskId(task.id);
+        setTaskTitle(task.title || '');
+        setTaskDescription(task.description || '');
+        setTaskStartDate(task.start_date ? task.start_date.substring(0, 10) : '');
+        setTaskDueDate(task.due_date ? task.due_date.substring(0, 10) : '');
+        setTaskAssignedTo(task.assigned_to);
+        setShowTaskModal(true);
     };
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -831,9 +854,15 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             <Button
                                                 size="icon"
                                                 className="h-9 w-9 bg-white/20 hover:bg-white/30 text-white border border-white/30"
-                                                onClick={() =>
-                                                    setShowTaskModal(true)
-                                                }
+                                                onClick={() => {
+                                                    setEditingTaskId(null);
+                                                    setTaskTitle('');
+                                                    setTaskDescription('');
+                                                    setTaskStartDate('');
+                                                    setTaskDueDate('');
+                                                    setTaskAssignedTo(null);
+                                                    setShowTaskModal(true);
+                                                }}
                                             >
                                                 <Plus className="h-5 w-5" />
                                             </Button>
@@ -967,18 +996,28 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                         </Button>
                                                     )}
                                                     {canModify && !isIspolnitel && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                                            onClick={() =>
-                                                                handleTaskDelete(
-                                                                    task.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
+                                                        <>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
+                                                                onClick={() => handleEditTask(task)}
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Button>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                                                                onClick={() =>
+                                                                    handleTaskDelete(
+                                                                        task.id,
+                                                                    )
+                                                                }
+                                                            >
+                                                                <Trash2 className="h-4 w-4" />
+                                                            </Button>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
@@ -1192,7 +1231,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Flag className="h-5 w-5" />
-                                    Жобаға кезең қосу
+                                    {editingTaskId ? 'Кезеңді өңдеу' : 'Жобаға кезең қосу'}
                                 </h3>
                                 <button
                                     type="button"
