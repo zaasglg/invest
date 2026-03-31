@@ -64,7 +64,27 @@ class ProjectTaskController extends Controller
             'status' => 'sometimes|in:new,in_progress,done,rejected',
         ]);
 
+        $oldAssignedTo = $task->assigned_to;
+
         $task->update($validated);
+
+        $newAssignedTo = $task->assigned_to;
+
+        if ($oldAssignedTo !== $newAssignedTo) {
+            if ($oldAssignedTo) {
+                $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
+                    ->where('assigned_to', $oldAssignedTo)
+                    ->exists();
+
+                if (!$hasOtherTasks) {
+                    $investmentProject->executors()->detach($oldAssignedTo);
+                }
+            }
+
+            if ($newAssignedTo) {
+                $investmentProject->executors()->syncWithoutDetaching([$newAssignedTo]);
+            }
+        }
 
         KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "' . $task->title . '"');
 
@@ -79,7 +99,19 @@ class ProjectTaskController extends Controller
 
         KpiLog::log($investmentProject->id, 'Кезең жойылды: "' . $task->title . '"');
 
+        $assignedTo = $task->assigned_to;
+
         $task->delete();
+
+        if ($assignedTo) {
+            $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
+                ->where('assigned_to', $assignedTo)
+                ->exists();
+
+            if (!$hasOtherTasks) {
+                $investmentProject->executors()->detach($assignedTo);
+            }
+        }
 
         return redirect()->back()->with('success', 'Кезең жойылды.');
     }
