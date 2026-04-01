@@ -132,6 +132,8 @@ class InvestmentProject extends Model
             if ($project->is_expired) {
                 $project->updateQuietly(['status' => 'suspended']);
                 $project->setAttribute('status', 'suspended');
+                // Logging the automatic status change
+                KpiLog::log($project->id, 'Жоба мерзімі өтуіне байланысты автоматты түрде тоқтатылды (Expired)');
             }
         });
     }
