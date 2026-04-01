@@ -204,6 +204,17 @@ class InvestmentProjectController extends Controller
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
 
+        // Get invest-role users for curator selection (superadmin only)
+        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
+        $investUsers = [];
+        if ($isSuperAdmin) {
+            $investUsers = User::with('roleModel:id,name,display_name')
+                ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
+                ->select('id', 'full_name', 'region_id')
+                ->orderBy('full_name')
+                ->get();
+        }
+
         return Inertia::render('investment-projects/create', [
             'regions' => $regions,
             'isDistrictScoped' => $isDistrictScoped,
@@ -212,6 +223,8 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
+            'isSuperAdmin' => $isSuperAdmin,
+            'investUsers' => $investUsers,
         ]);
     }
 
@@ -270,9 +283,16 @@ class InvestmentProjectController extends Controller
             'infrastructure.water' => 'nullable|array',
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
+            'created_by' => 'nullable|exists:users,id',
         ]);
 
-        $validated['created_by'] = auth()->id();
+        // Superadmin can assign curator (created_by), otherwise use authenticated user
+        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
+        if ($isSuperAdmin && ! empty($validated['created_by'])) {
+            // Keep the selected curator
+        } else {
+            $validated['created_by'] = auth()->id();
+        }
 
         // Парсим массив sectors
         $sectors = $validated['sector'] ?? [];
@@ -487,6 +507,17 @@ class InvestmentProjectController extends Controller
 
         $projectData['sector'] = $sector;
 
+        // Get invest-role users for curator selection (superadmin only)
+        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
+        $investUsers = [];
+        if ($isSuperAdmin) {
+            $investUsers = User::with('roleModel:id,name,display_name')
+                ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
+                ->select('id', 'full_name', 'region_id')
+                ->orderBy('full_name')
+                ->get();
+        }
+
         return Inertia::render('investment-projects/edit', [
             'project' => $projectData,
             'regions' => $regions,
@@ -496,6 +527,8 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
+            'isSuperAdmin' => $isSuperAdmin,
+            'investUsers' => $investUsers,
         ]);
     }
 
@@ -588,7 +621,14 @@ class InvestmentProjectController extends Controller
             'infrastructure.water' => 'nullable|array',
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
+            'created_by' => 'nullable|exists:users,id',
         ]);
+
+        // Superadmin can change curator (created_by)
+        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
+        if (! $isSuperAdmin) {
+            unset($validated['created_by']);
+        }
 
         // Парсим массив sectors в формате ["sez-1", "industrial_zone-5"]
         $sectors = $validated['sector'] ?? [];

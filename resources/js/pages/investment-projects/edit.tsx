@@ -73,6 +73,13 @@ interface InvestmentProject {
     infrastructure?: Record<string, { needed: boolean; capacity: string }> | null;
     documents?: Array<{ id: number; name: string; file_path: string; type: string }>;
     photos_count?: number;
+    created_by?: number | null;
+}
+
+interface InvestUser {
+    id: number;
+    full_name: string;
+    region_id: number | null;
 }
 
 interface Props {
@@ -82,9 +89,11 @@ interface Props {
     users: User[];
     sezList: Sez[];
     industrialZones: IndustrialZone[];
+    isSuperAdmin?: boolean;
+    investUsers?: InvestUser[];
 }
 
-export default function Edit({ project, regions, projectTypes, users, sezList, industrialZones }: Props) {
+export default function Edit({ project, regions, projectTypes, users, sezList, industrialZones, isSuperAdmin, investUsers = [] }: Props) {
     const { data, setData, put, processing, errors } = useForm({
         name: project.name || '',
         company_name: project.company_name || '',
@@ -105,6 +114,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
             electricity: { needed: false, capacity: '' },
             land: { needed: false, capacity: '' },
         },
+        created_by: project.created_by?.toString() || '',
     });
 
     const initialRegion = regions.find(r => r.id === project.region_id);
@@ -223,6 +233,28 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         />
                         {errors.company_name && <span className="text-sm text-red-500">{errors.company_name}</span>}
                     </div>
+
+                    {isSuperAdmin && investUsers.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="created_by" className="text-gray-500 font-normal">Куратор</Label>
+                            <Select
+                                value={data.created_by}
+                                onValueChange={(value) => setData('created_by', value)}
+                            >
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
+                                    <SelectValue placeholder="Кураторды таңдаңыз" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {investUsers.map((user) => (
+                                        <SelectItem key={user.id} value={user.id.toString()}>
+                                            {user.full_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.created_by && <span className="text-sm text-red-500">{errors.created_by}</span>}
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">

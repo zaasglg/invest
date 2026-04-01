@@ -55,6 +55,12 @@ interface IndustrialZone {
     location?: { lat: number; lng: number }[] | null;
 }
 
+interface InvestUser {
+    id: number;
+    full_name: string;
+    region_id: number | null;
+}
+
 interface Props {
     regions: Region[];
     projectTypes: ProjectType[];
@@ -63,9 +69,11 @@ interface Props {
     industrialZones: IndustrialZone[];
     isDistrictScoped?: boolean;
     userRegionId?: number | null;
+    isSuperAdmin?: boolean;
+    investUsers?: InvestUser[];
 }
 
-export default function Create({ regions, projectTypes, users, sezList, industrialZones, isDistrictScoped, userRegionId }: Props) {
+export default function Create({ regions, projectTypes, users, sezList, industrialZones, isDistrictScoped, userRegionId, isSuperAdmin, investUsers = [] }: Props) {
     // Find user's district and its parent oblast for pre-selection
     const userDistrict = useMemo(() => {
         if (!userRegionId) return null;
@@ -98,6 +106,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
             electricity: { needed: false, capacity: '' },
             land: { needed: false, capacity: '' },
         } as Record<string, { needed: boolean; capacity: string }>,
+        created_by: '' as string,
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
@@ -211,6 +220,28 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                         />
                         {errors.company_name && <span className="text-sm text-red-500">{errors.company_name}</span>}
                     </div>
+
+                    {isSuperAdmin && investUsers.length > 0 && (
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="created_by" className="text-gray-500 font-normal">Куратор</Label>
+                            <Select
+                                value={data.created_by}
+                                onValueChange={(value) => setData('created_by', value)}
+                            >
+                                <SelectTrigger className="shadow-none border-gray-200 focus:ring-0 focus:border-[#0f1b3d] h-10 w-full">
+                                    <SelectValue placeholder="Кураторды таңдаңыз" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {investUsers.map((user) => (
+                                        <SelectItem key={user.id} value={user.id.toString()}>
+                                            {user.full_name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {errors.created_by && <span className="text-sm text-red-500">{errors.created_by}</span>}
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
