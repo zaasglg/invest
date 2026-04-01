@@ -675,7 +675,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         </div>
                                         <div className="col-span-2 rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Users className="h-3.5 w-3.5" /> Куратор
+                                                <Users className="h-3.5 w-3.5" /> Жауапты тұлға
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.creator?.full_name || project.creator?.name || 'Көрсетілмеген'}
