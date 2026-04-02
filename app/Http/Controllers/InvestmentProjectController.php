@@ -981,12 +981,32 @@ class InvestmentProjectController extends Controller
         $infoItems = [
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
-            ['Сала', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жоба қуаты', $project->description ? mb_substr($project->description, 0, 120).(mb_strlen($project->description) > 120 ? '...' : '') : '—'],
+            ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
+            ['Жоба қуаттылығы', '—'],
             ['Жұмыс орындары', '—'],
-            ['Орналасқан жері', $project->region?->name ?? 'Көрсетілмеген'],
-            ['Іске қосу мерзімі', ($project->start_date?->format('Y') ?? '—').'-'.($project->end_date?->format('Y') ?? '—')],
         ];
+
+        $locationParts = [];
+        if ($project->region?->name) {
+            $locationParts[] = $project->region->name;
+        }
+        $sectorNames = collect();
+        if ($project->sezs) {
+            $sectorNames = $sectorNames->merge($project->sezs->pluck('name'));
+        }
+        if ($project->industrialZones) {
+            $sectorNames = $sectorNames->merge($project->industrialZones->pluck('name'));
+        }
+        if ($project->subsoilUsers) {
+            $sectorNames = $sectorNames->merge($project->subsoilUsers->pluck('name'));
+        }
+        if ($sectorNames->isNotEmpty()) {
+            $locationParts[] = implode(', ', $sectorNames->toArray());
+        }
+        $locationStr = !empty($locationParts) ? implode(', ', $locationParts) : 'Көрсетілмеген';
+
+        $infoItems[] = ['Орналасуы', $locationStr];
+        $infoItems[] = ['Іске асыру мерзімі', ($project->start_date?->format('Y') ?? '—').'-'.($project->end_date?->format('Y') ?? '—').' жж.'];
 
         $charsPerLine = 55;
         $singleLineH = 18;
@@ -1012,11 +1032,11 @@ class InvestmentProjectController extends Controller
 
         $statusHeader = $slide->createRichTextShape();
         $statusHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
-        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙ', 12, $blue, true);
+        $addText($statusHeader, 'АҒЫМДАҒЫ ЖАҒДАЙЫ', 12, $blue, true);
         $yLeft += 26;
 
         if ($project->current_status) {
-            $maxStatusY = 710;
+            $maxStatusY = 560; // Leave space for infra below
             $availableH = max(40, $maxStatusY - $yLeft);
             $statusText = $project->current_status;
 
@@ -1027,14 +1047,71 @@ class InvestmentProjectController extends Controller
                 ->setVertical(Alignment::VERTICAL_TOP);
             $statusShape->setAutoFit(RichText::AUTOFIT_NORMAL);
             $addText($statusShape, $statusText, 10, $darkGray, false);
+            
+            // Approximate yLeft bump
+            $lines = max(1, (int) ceil(mb_strlen($statusText) / 80));
+            $yLeft += ($lines * 16) + 30; // Buffer
         } else {
             $noStatus = $slide->createRichTextShape();
             $noStatus->setHeight(16)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
             $addText($noStatus, 'Ағымдағы жағдай көрсетілмеген', 9, $midGray, false);
+            $yLeft += 30;
         }
 
+        // ── ПОТРЕБНОСТЬ В ИНФРАСТРУКТУРЕ (Moved to left side) ─────────────────────────────
+        $infrastructure = $project->infrastructure;
+        // Draw even if there is no infra (to match the image design, "Қажет етпейді")
+        $infraHeader = $slide->createRichTextShape();
+        $infraHeader->setHeight(24)->setWidth($leftW)->setOffsetX($leftX)->setOffsetY($yLeft);
+        $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМ ҚАЖЕТТІЛІГІ', 12, $blue, true);
+        $yLeft += 28;
+
+        $infraItems = [
+            ['key' => 'gas',         'label' => 'Газ'],
+            ['key' => 'water',       'label' => 'Су'],
+            ['key' => 'electricity', 'label' => 'Электр қуаты'],
+            ['key' => 'land',        'label' => 'Жер телімі'],
+        ];
+
+        $colCount = count($infraItems);
+        $colW = (int) (($leftW - ($colCount - 1) * 4) / $colCount);
+        $colX = $leftX;
+
+        foreach ($infraItems as $item) {
+            $val = $infrastructure[$item['key']] ?? null;
+            $isNeeded = is_array($val) && ($val['needed'] ?? false);
+
+            $headerCell = $slide->createRichTextShape();
+            $headerCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yLeft);
+            // $headerCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFE3F2FD'));
+            $headerCell->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+            $addText($headerCell, $item['label'], 10, $darkGray, false);
+
+            // Add top border manually by creating a thin shape or just no border to match picture
+            
+            $valueCell = $slide->createRichTextShape();
+            $valueCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yLeft + 24);
+            // $valueCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFAFAFA'));
+            $valueCell->getActiveParagraph()->getAlignment()
+                ->setHorizontal(Alignment::HORIZONTAL_LEFT)
+                ->setVertical(Alignment::VERTICAL_CENTER);
+
+            if ($isNeeded) {
+                // If capacity is empty, it means needed but capacity not stated properly, we fallback to image text
+                $addText($valueCell, ($val['capacity'] ?? '') ?: 'Қажет', 10, $darkGray, false);
+            } else {
+                $addText($valueCell, 'Қажет етпейді', 10, $darkGray, false);
+            }
+
+            $colX += $colW + 4;
+        }
+
+        $yLeft += 56;
+
         // ══════════════════════════════════════════════════════════
-        // RIGHT COLUMN — top: Photo, middle: Infrastructure, bottom: Issues
+        // RIGHT COLUMN — top: Photo, bottom: Issues
         // ══════════════════════════════════════════════════════════
         $yRight = 66;
 
@@ -1068,59 +1145,6 @@ class InvestmentProjectController extends Controller
 
         $yRight += max($actualImgH + 15, 180);
 
-        // ── ПОТРЕБНОСТЬ В ИНФРАСТРУКТУРЕ ─────────────────────────────
-        $infrastructure = $project->infrastructure;
-        $hasInfra = $infrastructure && is_array($infrastructure) &&
-            collect($infrastructure)->contains(fn ($v) => is_array($v) && ($v['needed'] ?? false));
-
-        if ($hasInfra) {
-            $infraHeader = $slide->createRichTextShape();
-            $infraHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
-            $addText($infraHeader, 'ИНФРАҚҰРЫЛЫМҒА ҚАЖЕТТІЛІК', 12, $blue, true);
-            $yRight += 28;
-
-            $infraItems = [
-                ['key' => 'gas',         'label' => 'Газ'],
-                ['key' => 'water',       'label' => 'Су'],
-                ['key' => 'electricity', 'label' => 'Электр қуаты'],
-                ['key' => 'land',        'label' => 'Жер учаскесі'],
-            ];
-
-            $colCount = count($infraItems);
-            $colW = (int) (($rightW - ($colCount - 1) * 4) / $colCount);
-            $colX = $rightX;
-
-            foreach ($infraItems as $item) {
-                $val = $infrastructure[$item['key']] ?? null;
-                $isNeeded = is_array($val) && ($val['needed'] ?? false);
-
-                $headerCell = $slide->createRichTextShape();
-                $headerCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yRight);
-                $headerCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFE3F2FD'));
-                $headerCell->getActiveParagraph()->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                    ->setVertical(Alignment::VERTICAL_CENTER);
-                $addText($headerCell, $item['label'], 10, $blue, true);
-
-                $valueCell = $slide->createRichTextShape();
-                $valueCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yRight + 24);
-                $valueCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFAFAFA'));
-                $valueCell->getActiveParagraph()->getAlignment()
-                    ->setHorizontal(Alignment::HORIZONTAL_CENTER)
-                    ->setVertical(Alignment::VERTICAL_CENTER);
-
-                if ($isNeeded) {
-                    $addText($valueCell, ($val['capacity'] ?? '') ?: 'Қажет', 10, $darkGray, false);
-                } else {
-                    $addText($valueCell, '—', 10, $midGray, false);
-                }
-
-                $colX += $colW + 4;
-            }
-
-            $yRight += 56;
-        }
-
         // ── ПРОБЛЕМНЫЕ ВОПРОСЫ ───────────────────────────────────
         $issues = $project->issues ?? collect();
         if ($issues instanceof \Illuminate\Database\Eloquent\Collection || is_array($issues)) {
@@ -1129,7 +1153,7 @@ class InvestmentProjectController extends Controller
 
         $issuesHeader = $slide->createRichTextShape();
         $issuesHeader->setHeight(24)->setWidth($rightW)->setOffsetX($rightX)->setOffsetY($yRight);
-        $addText($issuesHeader, 'ПРОБЛЕМАЛЫҚ МӘСЕЛЕЛЕР', 12, $red, true);
+        $addText($issuesHeader, 'ӨЗЕКТІ МӘСЕЛЕЛЕР', 12, $red, true);
         if ($issues->count() > 0) {
             $addText($issuesHeader, '  ('.$issues->count().')', 11, $red, true);
         }
