@@ -1626,13 +1626,13 @@ export default function Map({
                                             {activePlot.startDate
                                                 ? new Date(
                                                       activePlot.startDate,
-                                                  ).toLocaleDateString('kk-KZ')
+                                                  ).getFullYear()
                                                 : '—'}
                                             {' — '}
                                             {activePlot.endDate
                                                 ? new Date(
                                                       activePlot.endDate,
-                                                  ).toLocaleDateString('kk-KZ')
+                                                  ).getFullYear()
                                                 : '—'}
                                         </p>
                                     </div>
