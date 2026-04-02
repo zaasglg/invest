@@ -94,6 +94,8 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         region_id: userRegionId ? userRegionId.toString() : '',
         project_type_id: '',
         sector: [] as string[],
+        jobs_count: '',
+        capacity: '',
         total_investment: '',
         status: 'plan',
         start_date: '',
@@ -385,7 +387,36 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Жалпы инвестиция көлемі (млн)</Label>
+                            <Label htmlFor="jobs_count" className="text-gray-500 font-normal">Жұмыс орындары</Label>
+                            <Input
+                                id="jobs_count"
+                                type="number"
+                                min="0"
+                                value={data.jobs_count}
+                                onChange={(e) => setData('jobs_count', e.target.value)}
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                placeholder="0"
+                            />
+                            {errors.jobs_count && <span className="text-sm text-red-500">{errors.jobs_count}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="capacity" className="text-gray-500 font-normal">Жұмыс қуаттылығы</Label>
+                            <Input
+                                id="capacity"
+                                type="text"
+                                value={data.capacity}
+                                onChange={(e) => setData('capacity', e.target.value)}
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                placeholder="Қуаттылығы"
+                            />
+                            {errors.capacity && <span className="text-sm text-red-500">{errors.capacity}</span>}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Жалпы инвестиция көлемі</Label>
                             <Input
                                 id="total_investment"
                                 type="number"
@@ -420,24 +451,30 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу күні</Label>
+                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу жылы</Label>
                             <Input
                                 id="start_date"
-                                type="date"
-                                value={data.start_date}
-                                onChange={(e) => setData('start_date', e.target.value)}
+                                type="number"
+                                min="1990"
+                                max="2100"
+                                value={data.start_date ? data.start_date.split('-')[0] : ''}
+                                onChange={(e) => setData('start_date', e.target.value ? `${e.target.value}-01-01` : '')}
+                                placeholder="Мысалы: 2024"
                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.start_date && <span className="text-sm text-red-500">{errors.start_date}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу күні</Label>
+                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу жылы</Label>
                             <Input
                                 id="end_date"
-                                type="date"
-                                value={data.end_date}
-                                onChange={(e) => setData('end_date', e.target.value)}
+                                type="number"
+                                min="1990"
+                                max="2100"
+                                value={data.end_date ? data.end_date.split('-')[0] : ''}
+                                onChange={(e) => setData('end_date', e.target.value ? `${e.target.value}-12-31` : '')}
+                                placeholder="Мысалы: 2025"
                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.end_date && <span className="text-sm text-red-500">{errors.end_date}</span>}
@@ -541,10 +578,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                         <Label className="text-gray-500 font-normal">Инфрақұрылымға қажеттілік</Label>
                         <div className="border border-gray-200 rounded-md p-4 space-y-4">
                             {[
-                                { key: 'gas', label: 'Газ', unit: 'м³/сағ' },
-                                { key: 'water', label: 'Су (Сумен қамтамасыз ету)', unit: 'м³/тәу' },
-                                { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                { key: 'land', label: 'Жер учаскесі', unit: 'га' },
+                                { key: 'gas', label: 'Газ' },
+                                { key: 'water', label: 'Су (Сумен қамтамасыз ету)' },
+                                { key: 'electricity', label: 'Электр қуаты' },
+                                { key: 'land', label: 'Жер учаскесі' },
                             ].map((item) => (
                                 <div key={item.key} className="flex items-center gap-4">
                                     <div className="flex items-center space-x-2 w-48">
@@ -580,9 +617,8 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                     });
                                                 }}
                                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
-                                                placeholder={`Көлемі (${item.unit})`}
+                                                // placeholder={`Көлемі, мысалы: 35 кВт`}
                                             />
-                                            <span className="text-xs text-gray-400">{item.unit}</span>
                                         </div>
                                     )}
                                 </div>

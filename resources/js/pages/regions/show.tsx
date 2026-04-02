@@ -499,7 +499,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         </Badge>
                                         {detail && (
                                             <div className="text-[10px] text-gray-400 font-medium mt-0.5">
-                                                {detail} {item.unit}
+                                                {detail}
                                             </div>
                                         )}
                                     </div>
@@ -834,9 +834,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                 <TableRow>
                                                                     <TableHead className="w-6" />
                                                                     <TableHead>Жоба</TableHead>
-                                                                    <TableHead>Сала</TableHead>
+                                                                    <TableHead>Сектор</TableHead>
                                                                     <TableHead>Күйі</TableHead>
-                                                                    <TableHead>Көлемі</TableHead>
+                                                                    <TableHead>Сала</TableHead>
                                                                     <TableHead className="text-right">Инвестициялар</TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
@@ -871,7 +871,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                                         {getStatusLabel(project.status)}
                                                                                     </Badge>
                                                                                 </TableCell>
-                                                                                <TableCell className="text-gray-700 font-medium text-sm py-3">—</TableCell>
+                                                                                <TableCell className="text-gray-700 font-medium text-sm py-3">
+                                                                                    {project.project_type?.name ?? '—'}
+                                                                                </TableCell>
                                                                                 <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                                                     {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
                                                                                 </TableCell>
@@ -925,8 +927,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     <TableRow>
                                                         <TableHead className="w-6" />
                                                         <TableHead>Жоба</TableHead>
-                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Сектор</TableHead>
                                                         <TableHead>Күйі</TableHead>
+                                                        <TableHead>Сала</TableHead>
                                                         <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
@@ -961,6 +964,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                             {getStatusLabel(project.status)}
                                                                         </Badge>
                                                                     </TableCell>
+                                                                    <TableCell className="text-gray-700 font-medium text-sm py-3">
+                                                                                    {project.project_type?.name ?? '—'}
+                                                                                </TableCell>
                                                                     <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                                         {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
                                                                     </TableCell>
@@ -1011,8 +1017,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                     <TableRow>
                                                         <TableHead className="w-6" />
                                                         <TableHead>Жоба</TableHead>
-                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Сектор</TableHead>
                                                         <TableHead>Күйі</TableHead>
+                                                        <TableHead>Сала</TableHead>
                                                         <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
@@ -1047,6 +1054,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                             {getStatusLabel(project.status)}
                                                                         </Badge>
                                                                     </TableCell>
+                                                                    <TableCell className="text-gray-700 font-medium text-sm py-3">
+                                                                                    {project.project_type?.name ?? '—'}
+                                                                                </TableCell>
                                                                     <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
                                                                         {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
                                                                     </TableCell>

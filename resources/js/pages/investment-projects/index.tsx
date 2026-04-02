@@ -438,39 +438,51 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_from">Басталуы бастап</Label>
+                                    <Label htmlFor="start_date_from">Басталуы бастап (жыл)</Label>
                                     <Input
                                         id="start_date_from"
-                                        type="date"
-                                        value={data.start_date_from}
-                                        onChange={(event) => setData('start_date_from', event.target.value)}
+                                        type="number"
+                                        min="1990"
+                                        max="2100"
+                                        placeholder="Мысалы: 2023"
+                                        value={data.start_date_from ? data.start_date_from.split('-')[0] : ''}
+                                        onChange={(event) => setData('start_date_from', event.target.value ? `${event.target.value}-01-01` : '')}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_to">Басталуы дейін</Label>
+                                    <Label htmlFor="start_date_to">Басталуы дейін (жыл)</Label>
                                     <Input
                                         id="start_date_to"
-                                        type="date"
-                                        value={data.start_date_to}
-                                        onChange={(event) => setData('start_date_to', event.target.value)}
+                                        type="number"
+                                        min="1990"
+                                        max="2100"
+                                        placeholder="Мысалы: 2025"
+                                        value={data.start_date_to ? data.start_date_to.split('-')[0] : ''}
+                                        onChange={(event) => setData('start_date_to', event.target.value ? `${event.target.value}-12-31` : '')}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_from">Аяқталуы бастап</Label>
+                                    <Label htmlFor="end_date_from">Аяқталуы бастап (жыл)</Label>
                                     <Input
                                         id="end_date_from"
-                                        type="date"
-                                        value={data.end_date_from}
-                                        onChange={(event) => setData('end_date_from', event.target.value)}
+                                        type="number"
+                                        min="1990"
+                                        max="2100"
+                                        placeholder="Мысалы: 2024"
+                                        value={data.end_date_from ? data.end_date_from.split('-')[0] : ''}
+                                        onChange={(event) => setData('end_date_from', event.target.value ? `${event.target.value}-01-01` : '')}
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_to">Аяқталуы дейін</Label>
+                                    <Label htmlFor="end_date_to">Аяқталуы дейін (жыл)</Label>
                                     <Input
                                         id="end_date_to"
-                                        type="date"
-                                        value={data.end_date_to}
-                                        onChange={(event) => setData('end_date_to', event.target.value)}
+                                        type="number"
+                                        min="1990"
+                                        max="2100"
+                                        placeholder="Мысалы: 2026"
+                                        value={data.end_date_to ? data.end_date_to.split('-')[0] : ''}
+                                        onChange={(event) => setData('end_date_to', event.target.value ? `${event.target.value}-12-31` : '')}
                                     />
                                 </div>
                             </div>

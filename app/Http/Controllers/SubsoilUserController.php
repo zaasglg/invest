@@ -199,7 +199,7 @@ class SubsoilUserController extends Controller
 
         $subsoilUser->update($validated);
 
-        return redirect()->route('subsoil-users.index')->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
+        return redirect()->route('subsoil-users.show', $subsoilUser->id)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
     }
 
     public function passport(SubsoilUser $subsoilUser)
