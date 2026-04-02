@@ -665,11 +665,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.start_date
-                                                    ? new Date(project.start_date).toLocaleDateString()
+                                                    ? new Date(project.start_date).getFullYear()
                                                     : '...'}
                                                 {' — '}
                                                 {project.end_date
-                                                    ? new Date(project.end_date).toLocaleDateString()
+                                                    ? new Date(project.end_date).getFullYear()
                                                     : '...'}
                                             </p>
                                         </div>

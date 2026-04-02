@@ -420,24 +420,30 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу күні</Label>
+                            <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу жылы</Label>
                             <Input
                                 id="start_date"
-                                type="date"
-                                value={data.start_date}
-                                onChange={(e) => setData('start_date', e.target.value)}
+                                type="number"
+                                min="1990"
+                                max="2100"
+                                value={data.start_date ? data.start_date.split('-')[0] : ''}
+                                onChange={(e) => setData('start_date', e.target.value ? `${e.target.value}-01-01` : '')}
+                                placeholder="Мысалы: 2024"
                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.start_date && <span className="text-sm text-red-500">{errors.start_date}</span>}
                         </div>
 
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу күні</Label>
+                            <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу жылы</Label>
                             <Input
                                 id="end_date"
-                                type="date"
-                                value={data.end_date}
-                                onChange={(e) => setData('end_date', e.target.value)}
+                                type="number"
+                                min="1990"
+                                max="2100"
+                                value={data.end_date ? data.end_date.split('-')[0] : ''}
+                                onChange={(e) => setData('end_date', e.target.value ? `${e.target.value}-12-31` : '')}
+                                placeholder="Мысалы: 2025"
                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
                             />
                             {errors.end_date && <span className="text-sm text-red-500">{errors.end_date}</span>}
