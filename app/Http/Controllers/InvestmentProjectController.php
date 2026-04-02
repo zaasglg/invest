@@ -160,11 +160,11 @@ class InvestmentProjectController extends Controller
         ];
 
         $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
-
+        // dd(Region::where('type','district')->orderBy('name')->get());
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
             'stats' => $stats,
-            'regions' => Region::select('id', 'name')->orderBy('name')->get(),
+            'regions' => Region::where('type','district')->orderBy('name')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
