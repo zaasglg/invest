@@ -94,6 +94,8 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         region_id: userRegionId ? userRegionId.toString() : '',
         project_type_id: '',
         sector: [] as string[],
+        jobs_count: '',
+        capacity: '',
         total_investment: '',
         status: 'plan',
         start_date: '',
@@ -385,7 +387,36 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                     <div className="grid grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
-                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Жалпы инвестиция көлемі (млн)</Label>
+                            <Label htmlFor="jobs_count" className="text-gray-500 font-normal">Жұмыс орындары</Label>
+                            <Input
+                                id="jobs_count"
+                                type="number"
+                                min="0"
+                                value={data.jobs_count}
+                                onChange={(e) => setData('jobs_count', e.target.value)}
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                placeholder="0"
+                            />
+                            {errors.jobs_count && <span className="text-sm text-red-500">{errors.jobs_count}</span>}
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="capacity" className="text-gray-500 font-normal">Жұмыс қуаттылығы</Label>
+                            <Input
+                                id="capacity"
+                                type="text"
+                                value={data.capacity}
+                                onChange={(e) => setData('capacity', e.target.value)}
+                                className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                placeholder="Қуаттылығы"
+                            />
+                            {errors.capacity && <span className="text-sm text-red-500">{errors.capacity}</span>}
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="flex flex-col gap-2">
+                            <Label htmlFor="total_investment" className="text-gray-500 font-normal">Жалпы инвестиция көлемі</Label>
                             <Input
                                 id="total_investment"
                                 type="number"

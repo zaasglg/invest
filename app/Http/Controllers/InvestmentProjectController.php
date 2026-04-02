@@ -238,6 +238,8 @@ class InvestmentProjectController extends Controller
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
+            'jobs_count' => 'nullable|integer|min:0',
+            'capacity' => 'nullable|string|max:500',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -576,6 +578,8 @@ class InvestmentProjectController extends Controller
             'company_name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
+            'jobs_count' => 'nullable|integer|min:0',
+            'capacity' => 'nullable|string|max:500',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -982,8 +986,8 @@ class InvestmentProjectController extends Controller
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
             ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
-            ['Жоба қуаттылығы', '—'],
-            ['Жұмыс орындары', '—'],
+            ['Жоба қуаттылығы', $project->capacity ? $project->capacity : '—'],
+            ['Жұмыс орындары', $project->jobs_count ? $project->jobs_count . ' адам' : '—'],
         ];
 
         $locationParts = [];

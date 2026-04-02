@@ -16,6 +16,8 @@ class InvestmentProject extends Model
         'current_status',
         'region_id',
         'project_type_id',
+        'jobs_count',
+        'capacity',
         'total_investment',
         'status',
         'start_date',
