@@ -499,7 +499,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                         </Badge>
                                         {detail && (
                                             <div className="text-[10px] text-gray-400 font-medium mt-0.5">
-                                                {detail} {item.unit}
+                                                {detail}
                                             </div>
                                         )}
                                     </div>

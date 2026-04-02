@@ -236,12 +236,12 @@ export default function Show({ sez, investmentProjects }: Props) {
                                 {/* Infrastructure */}
                                 {sez.infrastructure && (() => {
                                     const infraItems = [
-                                        { key: 'electricity', name: 'Электрмен жабдықтау', icon: Zap, val: sez.infrastructure.electricity, unit: 'МВт' },
-                                        { key: 'gas', name: 'Газ', icon: Flame, val: sez.infrastructure.gas, unit: 'м³/сағ' },
-                                        { key: 'water', name: 'Сумен жабдықтау', icon: Droplets, val: sez.infrastructure.water, unit: 'м³/тәу' },
-                                        { key: 'roads', name: 'Жолдар', icon: Car, val: sez.infrastructure.roads, unit: 'км' },
-                                        { key: 'railway', name: 'Теміржол тұйығы', icon: TrainFront, val: sez.infrastructure.railway, unit: 'км' },
-                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: sez.infrastructure.internet, unit: '' },
+                                        { key: 'electricity', name: 'Электрмен жабдықтау', icon: Zap, val: sez.infrastructure.electricity },
+                                        { key: 'gas', name: 'Газ', icon: Flame, val: sez.infrastructure.gas },
+                                        { key: 'water', name: 'Сумен жабдықтау', icon: Droplets, val: sez.infrastructure.water },
+                                        { key: 'roads', name: 'Жолдар', icon: Car, val: sez.infrastructure.roads },
+                                        { key: 'railway', name: 'Теміржол тұйығы', icon: TrainFront, val: sez.infrastructure.railway },
+                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: sez.infrastructure.internet },
                                     ].filter(i => i.val && i.val.available !== undefined);
 
                                     if (infraItems.length === 0) return null;
@@ -272,7 +272,7 @@ export default function Show({ sez, investmentProjects }: Props) {
                                                                 </Badge>
                                                                 {detail && (
                                                                     <div className="mt-0.5 text-[10px] font-medium text-gray-400">
-                                                                        {detail} {item.unit}
+                                                                        {detail}
                                                                     </div>
                                                                 )}
                                                             </div>

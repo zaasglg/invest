@@ -702,10 +702,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </h2>
                                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                         {[
-                                            { key: 'gas', label: 'Газ', unit: 'м³/сағ' },
-                                            { key: 'water', label: 'Су', unit: 'м³/тәу' },
-                                            { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                            { key: 'land', label: 'Жер учаскесі', unit: 'га' },
+                                            { key: 'gas', label: 'Газ' },
+                                            { key: 'water', label: 'Су' },
+                                            { key: 'electricity', label: 'Электр қуаты' },
+                                            { key: 'land', label: 'Жер учаскесі' },
                                         ].map((item) => {
                                             const infra = (project.infrastructure as Record<string, Record<string, unknown>>)?.[item.key];
                                             if (!infra?.needed) return null;
@@ -713,7 +713,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                                 <div key={item.key} className="rounded-lg border border-gray-200 p-3">
                                                     <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
                                                     <p className="text-sm font-bold text-[#0f1b3d]">
-                                                        {infra.capacity ? `${infra.capacity} ${item.unit}` : 'Қажет'}
+                                                        {infra.capacity ? `${infra.capacity}` : 'Қажет'}
                                                     </p>
                                                 </div>
                                             );

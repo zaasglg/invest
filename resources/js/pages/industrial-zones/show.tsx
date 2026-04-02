@@ -269,7 +269,7 @@ export default function Show({ industrialZone }: Props) {
                                                                 </Badge>
                                                                 {detail && (
                                                                     <div className="mt-0.5 text-[10px] font-medium text-gray-400">
-                                                                        {detail} {item.unit}
+                                                                        {detail}
                                                                     </div>
                                                                 )}
                                                             </div>

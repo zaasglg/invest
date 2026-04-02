@@ -562,10 +562,10 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         <Label className="text-gray-500 font-normal">Инфрақұрылымға қажеттілік</Label>
                         <div className="border border-gray-200 rounded-md p-4 space-y-4">
                             {[
-                                { key: 'gas', label: 'Газ', unit: 'м³/сағ' },
-                                { key: 'water', label: 'Су (Сумен қамтамасыз ету)', unit: 'м³/тәу' },
-                                { key: 'electricity', label: 'Электр қуаты', unit: 'МВт' },
-                                { key: 'land', label: 'Жер учаскесі', unit: 'га' },
+                                { key: 'gas', label: 'Газ' },
+                                { key: 'water', label: 'Су (Сумен қамтамасыз ету)' },
+                                { key: 'electricity', label: 'Электр қуаты' },
+                                { key: 'land', label: 'Жер учаскесі' },
                             ].map((item) => (
                                 <div key={item.key} className="flex items-center gap-4">
                                     <div className="flex items-center space-x-2 w-48">
@@ -601,9 +601,8 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                     });
                                                 }}
                                                 className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-9 bg-transparent max-w-[200px]"
-                                                placeholder={`Көлемі (${item.unit})`}
+                                                // placeholder={`Көлемі, мысалы: 35 кВт`}
                                             />
-                                            <span className="text-xs text-gray-400">{item.unit}</span>
                                         </div>
                                     )}
                                 </div>
