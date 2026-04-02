@@ -658,7 +658,7 @@ class InvestmentProjectController extends Controller
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
 
-        return redirect()->route('investment-projects.index')->with('success', 'Жоба жаңартылды.');
+        return redirect()->route('investment-projects.show', $investmentProject->id)->with('success', 'Жоба жаңартылды.');
     }
 
     private function parseSector(string $sector): array
