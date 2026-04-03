@@ -122,7 +122,7 @@ export default function Issues({ subsoilUser, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Жер қойнауын пайдаланушылар', href: '/subsoil-users' },
+                { title: subsoilUser.region?.name || 'Аймақ', href: `/regions/${subsoilUser.region?.id}` },
                 {
                     title: subsoilUser.name,
                     href: `/subsoil-users/${subsoilUser.id}`,

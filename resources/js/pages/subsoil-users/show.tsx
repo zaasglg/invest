@@ -137,10 +137,12 @@ export default function Show({
     assignableUsers = [],
 }: Props) {
     const canModify = useCanModify();
-    const { auth } = usePage().props as unknown as {
+    const page = usePage<{
         auth: { user: { id: number; role_model?: { name: string } } };
-    };
+    }>();
+    const { auth } = page.props;
     const currentUserId = auth.user?.id;
+    const url = page.url;
     const isIspolnitel =
         (auth.user.role_model?.name || '').toLowerCase() === 'ispolnitel';
     const photosCount =
@@ -446,8 +448,8 @@ export default function Show({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Жер қойнауын пайдаланушылар',
-                    href: `/regions/${subsoilUser.region_id}`,
+                    title: subsoilUser.region?.name || 'Аймақ',
+                    href: `/regions/${subsoilUser.region?.id}`,
                 },
                 { title: subsoilUser.name, href: '' },
             ]}
@@ -457,7 +459,7 @@ export default function Show({
             <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
                 {/* Back link */}
                 <Link
-                    href={`/regions/${subsoilUser.region_id}`}
+                    href={`/subsoil-users`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге

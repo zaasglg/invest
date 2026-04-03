@@ -128,8 +128,8 @@ export default function Issues({ sez, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'АЭА', href: '/sezs' },
-                { title: sez.name, href: `/sezs/${sez.id}` },
+                { title: sez.region?.name || 'Аудан', href: `/regions/${sez.region?.id}` },
+                { title: sez.name, href: '' },
                 { title: 'Проблемалық мәселелер', href: '' },
             ]}
         >

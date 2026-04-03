@@ -154,7 +154,7 @@ export default function Show({ industrialZone }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Индустриялық аймақтар', href: `/regions/${industrialZone.region_id}` },
+                { title: industrialZone.region?.name || 'Аймақ', href: `/regions/${industrialZone.region?.id}` },
                 { title: industrialZone.name, href: '' },
             ]}
         >
@@ -163,7 +163,7 @@ export default function Show({ industrialZone }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
                 {/* Back link */}
                 <Link
-                    href={`/regions/${industrialZone.region_id}`}
+                    href={`/industrial-zones`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту

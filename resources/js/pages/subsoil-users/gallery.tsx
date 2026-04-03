@@ -190,8 +190,8 @@ export default function Gallery({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Жер қойнауын пайдаланушылар',
-                    href: '/subsoil-users',
+                    title: subsoilUser.region?.name || 'Аймақ',
+                    href: `/regions/${subsoilUser.region?.id}`,
                 },
                 {
                     title: subsoilUser.name,

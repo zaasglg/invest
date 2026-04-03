@@ -134,7 +134,7 @@ export default function Issues({ industrialZone, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Индустриялық аймақтар', href: '/industrial-zones' },
+                { title: industrialZone.region?.name || 'Аймақ', href: `/regions/${industrialZone.region?.id}` },
                 {
                     title: industrialZone.name,
                     href: `/industrial-zones/${industrialZone.id}`,
