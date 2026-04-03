@@ -29,6 +29,7 @@ export default function Create({ parents }: Props) {
         color: '#3B82F6',
         icon_file: null as File | null,
         area: '',
+        sort_order: '',
         type: 'district',
         subtype: 'district',
         parent_id: '',
@@ -259,6 +260,29 @@ export default function Create({ parents }: Props) {
                         {errors.area && (
                             <span className="text-sm text-red-500">
                                 {errors.area}
+                            </span>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col gap-2">
+                        <Label
+                            htmlFor="sort_order"
+                            className="font-normal text-gray-500"
+                        >
+                            Реттік нөмірі (Сұрыптау)
+                        </Label>
+                        <Input
+                            id="sort_order"
+                            type="number"
+                            step="1"
+                            value={data.sort_order}
+                            onChange={(e) => setData('sort_order', e.target.value)}
+                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                            placeholder="Мысалы: 1, 2, 3..."
+                        />
+                        {errors.sort_order && (
+                            <span className="text-sm text-red-500">
+                                {errors.sort_order}
                             </span>
                         )}
                     </div>

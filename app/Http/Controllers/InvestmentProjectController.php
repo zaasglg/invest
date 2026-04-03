@@ -164,7 +164,7 @@ class InvestmentProjectController extends Controller
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
             'stats' => $stats,
-            'regions' => Region::where('type','district')->orderBy('name')->get(),
+            'regions' => Region::where('type','district')->orderBy('sort_order')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),

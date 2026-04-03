@@ -24,6 +24,7 @@ class Region extends Model
         'type',
         'subtype',
         'geometry',
+        'sort_order',
     ];
 
     protected function casts(): array
@@ -34,6 +35,7 @@ class Region extends Model
             'icon' => 'string',
             'area' => 'decimal:2',
             'geometry' => 'array',
+            'sort_order' => 'integer',
         ];
     }
 
