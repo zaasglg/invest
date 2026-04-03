@@ -1,4 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Building2,
@@ -95,6 +95,7 @@ interface Props {
 }
 
 export default function Show({ sez, investmentProjects }: Props) {
+    const { url } = usePage();
     const canModify = useCanModify();
 
     const statusMap: Record<string, { label: string; color: string }> = {
@@ -390,7 +391,7 @@ export default function Show({ sez, investmentProjects }: Props) {
                             <CardContent className="flex flex-col gap-3 p-4">
                                 {canModify && (
                                     <Link
-                                        href={`/sezs/${sez.id}/edit`}
+                                        href={`/sezs/${sez.id}/edit?return_to=${encodeURIComponent(url)}`}
                                         className="w-full"
                                     >
                                         <Button

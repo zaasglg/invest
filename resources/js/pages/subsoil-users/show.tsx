@@ -867,7 +867,7 @@ export default function Show({
                             <CardContent className="flex flex-col gap-3 p-4">
                                 {canModify && (
                                     <Link
-                                        href={`/subsoil-users/${subsoilUser.id}/edit`}
+                                        href={`/subsoil-users/${subsoilUser.id}/edit?return_to=${encodeURIComponent(url)}`}
                                         className="w-full"
                                     >
                                         <Button

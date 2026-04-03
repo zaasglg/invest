@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
 import { ChevronDown, Eye, Pencil, Plus, Trash2,Edit } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
@@ -60,6 +60,7 @@ export default function Index({
     regions,
     filters,
 }: Props) {
+    const { url } = usePage();
     const canModify = useCanModify();
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
@@ -314,7 +315,7 @@ export default function Index({
                                                             <Link
                                                                 href={industrialZonesRoutes.edit.url(
                                                                     zone.id,
-                                                                )}
+                                                                ) + `?return_to=${encodeURIComponent(url)}`}
                                                             >
                                                                 {/* <Pencil className="h-4 w-4" /> */}
                                                                 <Edit className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
 import { ChevronDown, Edit, Eye, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
@@ -89,6 +89,7 @@ export default function Index({
     mineralTypes,
     filters,
 }: Props) {
+    const { url } = usePage();
     const canModify = useCanModify();
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
@@ -374,7 +375,7 @@ export default function Index({
                                                             <Link
                                                                 href={subsoilUsersRoutes.edit.url(
                                                                     user.id,
-                                                                )}
+                                                                ) + `?return_to=${encodeURIComponent(url)}`}
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Link>
