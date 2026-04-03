@@ -197,6 +197,7 @@ function SortableProjectRow({
 export default function Show({ region, projects, sezs, industrialZones, subsoilUsers, stats }: Props) {
     const { auth, csrf_token } = usePage().props;
     const isSuperAdmin = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'superadmin';
+    const isInvest = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'invest';
 
     const [activeTab, setActiveTab] = useState('all');
     const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
@@ -581,7 +582,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if (!isSuperAdmin) return;
+        if (!isSuperAdmin && !isInvest) return;
         const { active, over } = event;
         if (!over || active.id === over.id) return;
         const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
@@ -848,7 +849,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                                 key={project.id}
                                                                                 id={project.id}
                                                                                 isSelected={selectedProjectId === project.id}
-                                                                                canReorder={isSuperAdmin}
+                                                                                canReorder={isSuperAdmin || isInvest}
                                                                                 onClick={() => handleProjectSelect(project.id)}
                                                                             >
                                                                                 <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
@@ -941,7 +942,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                     key={project.id}
                                                                     id={project.id}
                                                                     isSelected={selectedProjectId === project.id}
-                                                                    canReorder={isSuperAdmin}
+                                                                    canReorder={isSuperAdmin || isInvest}
                                                                     onClick={() => handleProjectSelect(project.id)}
                                                                 >
                                                                     <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
@@ -1031,7 +1032,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                     key={project.id}
                                                                     id={project.id}
                                                                     isSelected={selectedProjectId === project.id}
-                                                                    canReorder={isSuperAdmin}
+                                                                    canReorder={isSuperAdmin || isInvest}
                                                                     onClick={() => handleProjectSelect(project.id)}
                                                                 >
                                                                     <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">

@@ -1,6 +1,23 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Archive, ChevronDown, Eye, Pencil, Plus, Trash2 } from 'lucide-react';
-import { useMemo, useState, type FormEvent } from 'react';
+import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useMemo, useState, useEffect, type FormEvent } from 'react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -121,6 +138,42 @@ interface Props {
     filters: Partial<Filters>;
 }
 
+function SortableProjectRow({
+    id,
+    children,
+    isEnabled,
+}: {
+    id: number;
+    children: React.ReactNode;
+    isEnabled: boolean;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    if (!isEnabled) {
+        return <TableRow>{children}</TableRow>;
+    }
+    
+    return (
+        <TableRow
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
+                opacity: isDragging ? 0.4 : 1,
+                position: isDragging ? 'relative' : undefined,
+                zIndex: isDragging ? 10 : undefined,
+            }}
+            className="hover:bg-gray-50 transition-colors"
+        >
+            <TableCell className="w-6 py-3 pl-3 pr-0">
+                <div {...attributes} {...listeners} className="cursor-grab hover:bg-gray-100 p-1 rounded">
+                    <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+            </TableCell>
+            {children}
+        </TableRow>
+    );
+}
+
 export default function Index({ projects, stats, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
@@ -144,6 +197,44 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     const [filtersOpen, setFiltersOpen] = useState(
         !!(filters.search || filters.region_id || filters.project_type_id || filters.status || filters.executor_id || filters.sector_type || filters.sector_id || filters.min_investment || filters.max_investment || filters.start_date_from || filters.start_date_to || filters.end_date_from || filters.end_date_to),
     );
+
+    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(projects.data);
+
+    useEffect(() => {
+        setOrderedProjects(projects.data);
+    }, [projects.data]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
+    const saveProjectOrder = (newOrder: InvestmentProject[]) => {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+        fetch('/investment-projects/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfTokenValue },
+            body: JSON.stringify({ 
+                project_ids: newOrder.map((p) => p.id),
+                page: projects.current_page || 1
+            }),
+        });
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        if (!isSuperAdmin && !isInvest) return;
+        
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        
+        const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
+        const newIndex = orderedProjects.findIndex((p) => p.id === over.id);
+        
+        const newOrder = arrayMove(orderedProjects, oldIndex, newIndex);
+        setOrderedProjects(newOrder);
+        saveProjectOrder(newOrder);
+    };
 
     const handleDelete = (id: number) => {
         if (confirm('Бұл жобаны жойғыңыз келетініне сенімдісіз бе?')) {
@@ -531,90 +622,102 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Атауы / Компания</TableHead>
-                                <TableHead>Аймақ</TableHead>
-                                <TableHead>Жоба түрі</TableHead>
-                                <TableHead>Сектор</TableHead>
-                                <TableHead>Инвестиция</TableHead>
-                                <TableHead>Орындаушылар</TableHead>
-                                <TableHead>Мәртебесі</TableHead>
-                                <TableHead className="text-right">Әрекеттер</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {projects.data.length === 0 ? (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <Table>
+                            <TableHeader>
                                 <TableRow>
-                                    <TableCell colSpan={8} className="py-12 text-center text-gray-400">
-                                        Деректер жоқ
-                                    </TableCell>
+                                    {(isSuperAdmin || isInvest) && <TableHead className="w-12"></TableHead>}
+                                    <TableHead>Атауы / Компания</TableHead>
+                                    <TableHead>Аймақ</TableHead>
+                                    <TableHead>Жоба түрі</TableHead>
+                                    <TableHead>Сектор</TableHead>
+                                    <TableHead>Инвестиция</TableHead>
+                                    <TableHead>Орындаушылар</TableHead>
+                                    <TableHead>Мәртебесі</TableHead>
+                                    <TableHead className="text-right">Әрекеттер</TableHead>
                                 </TableRow>
-                            ) : (
-                                projects.data.map((project) => (
-                                    <TableRow key={project.id}>
-                                        <TableCell>
-                                            <div className="flex flex-col">
-                                                <Link
-                                                    href={investmentProjectsRoutes.show.url(project.id)}
-                                                    className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
-                                                >
-                                                    {toNormalCase(project.name)}
-                                                </Link>
-                                                {project.company_name && (
-                                                    <span className="mt-0.5 text-xs text-gray-400">
-                                                        {toNormalCase(project.company_name)}
-                                                    </span>
-                                                )}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>{project.region?.name ?? '—'}</TableCell>
-                                        <TableCell>{project.project_type?.name ?? '—'}</TableCell>
-                                        <TableCell>{getSectorDisplay(project)}</TableCell>
-                                        <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
-                                        <TableCell>
-                                            {project.executors?.length > 0
-                                                ? project.executors.map(e => e.full_name).join(', ')
-                                                : '—'}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge className={`${getStatusColor(project.status)} px-3 py-1 text-sm font-medium border-0`}>
-                                                {getStatusLabel(project.status)}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Қарау">
-                                                    <Link href={investmentProjectsRoutes.show.url(project.id)}>
-                                                        <Eye className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                                {canModify && (
-                                                    <>
-                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Өңдеу">
-                                                            <Link href={investmentProjectsRoutes.edit.url(project.id)}>
-                                                                <Pencil className="h-4 w-4" />
-                                                            </Link>
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                            onClick={() => handleDelete(project.id)}
-                                                            title="Жою"
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    </>
-                                                )}
-                                            </div>
+                            </TableHeader>
+                            <TableBody>
+                                {orderedProjects.length === 0 ? (
+                                    <TableRow>
+                                        <TableCell colSpan={(isSuperAdmin || isInvest) ? 9 : 8} className="py-12 text-center text-gray-400">
+                                            Деректер жоқ
                                         </TableCell>
                                     </TableRow>
-                                ))
-                            )}
-                        </TableBody>
-                    </Table>
+                                ) : (
+                                    <SortableContext
+                                        items={orderedProjects.map((p) => p.id)}
+                                        strategy={verticalListSortingStrategy}
+                                    >
+                                        {orderedProjects.map((project) => (
+                                            <SortableProjectRow key={project.id} id={project.id} isEnabled={isSuperAdmin || isInvest}>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <Link
+                                                            href={investmentProjectsRoutes.show.url(project.id)}
+                                                            className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
+                                                        >
+                                                            {toNormalCase(project.name)}
+                                                        </Link>
+                                                        {project.company_name && (
+                                                            <span className="mt-0.5 text-xs text-gray-400">
+                                                                {toNormalCase(project.company_name)}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{project.region?.name ?? '—'}</TableCell>
+                                                <TableCell>{project.project_type?.name ?? '—'}</TableCell>
+                                                <TableCell>{getSectorDisplay(project)}</TableCell>
+                                                <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
+                                                <TableCell>
+                                                    {project.executors?.length > 0
+                                                        ? project.executors.map(e => e.full_name).join(', ')
+                                                        : '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <Badge className={`${getStatusColor(project.status)} px-3 py-1 text-sm font-medium border-0`}>
+                                                        {getStatusLabel(project.status)}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Қарау">
+                                                            <Link href={investmentProjectsRoutes.show.url(project.id)}>
+                                                                <Eye className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        {canModify && (
+                                                            <>
+                                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Өңдеу">
+                                                                    <Link href={investmentProjectsRoutes.edit.url(project.id)}>
+                                                                        <Pencil className="h-4 w-4" />
+                                                                    </Link>
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                                    onClick={() => handleDelete(project.id)}
+                                                                    title="Жою"
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                            </SortableProjectRow>
+                                        ))}
+                                    </SortableContext>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </DndContext>
                 </div>
 
                 <Pagination paginator={projects} />

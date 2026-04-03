@@ -159,7 +159,7 @@ class InvestmentProjectController extends Controller
             ],
         ];
 
-        $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
+        $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
         // dd(Region::where('type','district')->orderBy('name')->get());
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
@@ -172,6 +172,32 @@ class InvestmentProjectController extends Controller
             'subsoilUsers' => SubsoilUser::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'filters' => $filters,
         ]);
+    }
+
+    public function reorder(Request $request)
+    {
+        $user = $request->user();
+        $role = $user?->load('roleModel')->roleModel?->name;
+        
+        if (!in_array($role, ['superadmin', 'invest'])) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'project_ids' => 'required|array',
+            'project_ids.*' => 'integer|exists:investment_projects,id',
+        ]);
+
+        $projectIds = $validated['project_ids'];
+        $page = $request->input('page', 1);
+        $perPage = 15;
+        $offset = ($page - 1) * $perPage;
+
+        foreach ($projectIds as $index => $id) {
+            InvestmentProject::where('id', $id)->update(['sort_order' => $offset + $index]);
+        }
+
+        return response()->noContent();
     }
 
     public function create()

@@ -36,6 +36,10 @@ Route::resource('industrial-zones', \App\Http\Controllers\IndustrialZoneControll
 Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProjectController::class, 'reorder'])
+    ->middleware(['auth', 'verified'])
+    ->name('investment-projects.reorder');
+
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 

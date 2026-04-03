@@ -149,7 +149,9 @@ class RegionController extends Controller
     public function reorderProjects(Request $request, Region $region)
     {
         $user = $request->user();
-        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+        $role = $user?->load('roleModel')->roleModel?->name;
+        
+        if (!in_array($role, ['superadmin', 'invest'])) {
             abort(403);
         }
 
