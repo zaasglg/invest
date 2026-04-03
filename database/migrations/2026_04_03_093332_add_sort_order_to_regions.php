@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('regions', function (Blueprint $table) {
-                $table->integer('sort_order')->nullable();
+            $table->integer('sort_order')->nullable();
         });
     }
 
