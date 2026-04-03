@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import type { FormEventHandler} from 'react';
 import { useState, useMemo } from 'react';
 import InfrastructureForm, {
@@ -47,7 +47,11 @@ interface Props {
 }
 
 export default function Edit({ sez, regions, isDistrictScoped }: Props) {
+    const { url } = usePage();
+    const queryParams = new URLSearchParams(url.split('?')[1]);
+    const returnUrl = queryParams.get('return_to');
     const { data, setData, put, processing, errors } = useForm({
+        return_to: returnUrl || '',
         name: sez.name || '',
         region_id: sez.region_id?.toString() || '',
         total_area: sez.total_area || '',

@@ -159,12 +159,12 @@ class InvestmentProjectController extends Controller
             ],
         ];
 
-        $projects = $projectsQuery->latest()->paginate(15)->withQueryString();
+        $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
         // dd(Region::where('type','district')->orderBy('name')->get());
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
             'stats' => $stats,
-            'regions' => Region::where('type','district')->orderBy('name')->get(),
+            'regions' => Region::where('type','district')->orderBy('sort_order')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
@@ -172,6 +172,32 @@ class InvestmentProjectController extends Controller
             'subsoilUsers' => SubsoilUser::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'filters' => $filters,
         ]);
+    }
+
+    public function reorder(Request $request)
+    {
+        $user = $request->user();
+        $role = $user?->load('roleModel')->roleModel?->name;
+        
+        if (!in_array($role, ['superadmin', 'invest'])) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'project_ids' => 'required|array',
+            'project_ids.*' => 'integer|exists:investment_projects,id',
+        ]);
+
+        $projectIds = $validated['project_ids'];
+        $page = $request->input('page', 1);
+        $perPage = 15;
+        $offset = ($page - 1) * $perPage;
+
+        foreach ($projectIds as $index => $id) {
+            InvestmentProject::where('id', $id)->update(['sort_order' => $offset + $index]);
+        }
+
+        return response()->noContent();
     }
 
     public function create()
@@ -450,7 +476,6 @@ class InvestmentProjectController extends Controller
         if ($roleName === 'ispolnitel' && is_object($project) && $user->region_id) {
             $isOwnDistrict = (int) $project->region_id === (int) $user->region_id;
         }
-
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
@@ -626,6 +651,7 @@ class InvestmentProjectController extends Controller
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
             'created_by' => 'nullable|exists:users,id',
+            'return_to' => 'nullable|string',
         ]);
 
         // Superadmin can change curator (created_by)
@@ -633,6 +659,9 @@ class InvestmentProjectController extends Controller
         if (! $isSuperAdmin) {
             unset($validated['created_by']);
         }
+
+        $returnTo = $validated['return_to'] ?? '';
+        unset($validated['return_to']);
 
         // Парсим массив sectors в формате ["sez-1", "industrial_zone-5"]
         $sectors = $validated['sector'] ?? [];
@@ -661,6 +690,12 @@ class InvestmentProjectController extends Controller
         $investmentProject->industrialZones()->sync($izIds);
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
+
+        if (!empty($returnTo)) {
+            // Because returnTo might be an absolute URL or relative path with query strings,
+            // make sure it starts with a slash or matches the app URL.
+            return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
+        }
 
         return redirect()->route('investment-projects.show', $investmentProject->id)->with('success', 'Жоба жаңартылды.');
     }

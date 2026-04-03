@@ -194,10 +194,18 @@ class SubsoilUserController extends Controller
             'license_start' => 'nullable|date',
             'license_end' => 'nullable|date|after_or_equal:license_start',
             'location' => 'nullable|array',
+            'return_to' => 'nullable|string',
         ]);
         $validated['bin'] = $validated['bin'] ?? 'БСН жоқ';
 
+        $returnTo = $validated['return_to'] ?? '';
+        unset($validated['return_to']);
+
         $subsoilUser->update($validated);
+
+        if (!empty($returnTo)) {
+            return redirect($returnTo)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
+        }
 
         return redirect()->route('subsoil-users.show', $subsoilUser->id)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
     }

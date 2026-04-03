@@ -1,5 +1,23 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Trash2, Edit } from 'lucide-react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Trash2, Edit, GripVertical } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    DragEndEvent,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -13,7 +31,7 @@ import {
 import AppLayout from '@/layouts/app-layout';
 import * as regions from '@/routes/regions';
 
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -50,7 +68,84 @@ function resolveRegionIconPath(icon: string | null | undefined): string | null {
     return null;
 }
 
+function SortableRegionRow({
+    id,
+    children,
+    isEnabled,
+}: {
+    id: number;
+    children: React.ReactNode;
+    isEnabled: boolean;
+}) {
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    if (!isEnabled) {
+        return <TableRow>{children}</TableRow>;
+    }
+    
+    return (
+        <TableRow
+            ref={setNodeRef}
+            style={{
+                transform: CSS.Transform.toString(transform),
+                transition,
+                opacity: isDragging ? 0.4 : 1,
+                position: isDragging ? 'relative' : undefined,
+                zIndex: isDragging ? 10 : undefined,
+            }}
+            className="hover:bg-gray-50 transition-colors"
+        >
+            <TableCell className="w-6 py-3 pl-3 pr-0">
+                <div {...attributes} {...listeners} className="cursor-grab hover:bg-gray-100 p-1 rounded">
+                    <GripVertical className="h-4 w-4 text-gray-400" />
+                </div>
+            </TableCell>
+            {children}
+        </TableRow>
+    );
+}
+
 export default function Index({ regions: regionsData }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
+
+    const [orderedRegions, setOrderedRegions] = useState<Region[]>(regionsData.data);
+
+    useEffect(() => {
+        setOrderedRegions(regionsData.data);
+    }, [regionsData.data]);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    );
+
+    const saveOrder = (newOrder: Region[]) => {
+        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            
+        fetch('/regions/reorder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfTokenValue },
+            body: JSON.stringify({ 
+                region_ids: newOrder.map((r) => r.id),
+                page: regionsData.current_page || 1
+            }),
+        });
+    };
+
+    const handleDragEnd = (event: DragEndEvent) => {
+        if (!isSuperAdmin) return;
+        
+        const { active, over } = event;
+        if (!over || active.id === over.id) return;
+        
+        const oldIndex = orderedRegions.findIndex((r) => r.id === active.id);
+        const newIndex = orderedRegions.findIndex((r) => r.id === over.id);
+        
+        const newOrder = arrayMove(orderedRegions, oldIndex, newIndex);
+        setOrderedRegions(newOrder);
+        saveOrder(newOrder);
+    };
+
     const handleDelete = (id: number) => {
         if (confirm('Сенімдісіз бе?')) {
             router.delete(regions.destroy.url(id));
@@ -74,114 +169,126 @@ export default function Index({ regions: regionsData }: Props) {
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[80px]">ID</TableHead>
-                                <TableHead>Атауы</TableHead>
-                                <TableHead>Түрі</TableHead>
-                                <TableHead>Түсі</TableHead>
-                                <TableHead>Белгіше</TableHead>
-                                <TableHead className="text-right">
-                                    Әрекеттер
-                                </TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {regionsData.data.map((region) => (
-                                <TableRow key={region.id}>
-                                    <TableCell className="font-medium text-gray-400">
-                                        #{region.id}
-                                    </TableCell>
-                                    <TableCell className="font-semibold text-[#0f1b3d]">{region.name}</TableCell>
-                                    <TableCell>
-                                        <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
-                                            {region.type === 'oblast'
-                                                ? 'Облыс'
-                                                : region.subtype === 'city'
-                                                  ? 'Қала'
-                                                  : 'Аудан'}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <span
-                                                className="h-4 w-4 rounded border border-gray-200"
-                                                style={{
-                                                    backgroundColor:
-                                                        region.color ||
-                                                        '#3B82F6',
-                                                }}
-                                            />
-                                            <span className="font-mono text-xs text-gray-500 uppercase">
-                                                {region.color || '#3B82F6'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-gray-600">
-                                        {(() => {
-                                            const iconPath =
-                                                resolveRegionIconPath(
-                                                    region.icon,
-                                                );
-
-                                            return (
+                    <DndContext
+                        sensors={sensors}
+                        collisionDetection={closestCenter}
+                        onDragEnd={handleDragEnd}
+                    >
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    {isSuperAdmin && <TableHead className="w-12"></TableHead>}
+                                    <TableHead className="w-[80px]">ID</TableHead>
+                                    <TableHead>Атауы</TableHead>
+                                    <TableHead>Түрі</TableHead>
+                                    <TableHead>Түсі</TableHead>
+                                    <TableHead>Белгіше</TableHead>
+                                    <TableHead className="text-right">
+                                        Әрекеттер
+                                    </TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                <SortableContext
+                                    items={orderedRegions.map((r) => r.id)}
+                                    strategy={verticalListSortingStrategy}
+                                >
+                                    {orderedRegions.map((region) => (
+                                        <SortableRegionRow key={region.id} id={region.id} isEnabled={isSuperAdmin}>
+                                            <TableCell className="font-medium text-gray-400">
+                                                #{region.id}
+                                            </TableCell>
+                                            <TableCell className="font-semibold text-[#0f1b3d]">{region.name}</TableCell>
+                                            <TableCell>
+                                                <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
+                                                    {region.type === 'oblast'
+                                                        ? 'Облыс'
+                                                        : region.subtype === 'city'
+                                                          ? 'Қала'
+                                                          : 'Аудан'}
+                                                </span>
+                                            </TableCell>
+                                            <TableCell>
                                                 <div className="flex items-center gap-2">
-                                                    {iconPath && (
-                                                        <img
-                                                            src={iconPath}
-                                                            alt={`${region.name} белгішесі`}
-                                                            className="h-5 w-5 object-contain"
-                                                        />
-                                                    )}
-                                                    <span>
-                                                        {region.icon ||
-                                                            'factory'}
+                                                    <span
+                                                        className="h-4 w-4 rounded border border-gray-200"
+                                                        style={{
+                                                            backgroundColor:
+                                                                region.color ||
+                                                                '#3B82F6',
+                                                        }}
+                                                    />
+                                                    <span className="font-mono text-xs text-gray-500 uppercase">
+                                                        {region.color || '#3B82F6'}
                                                     </span>
                                                 </div>
-                                            );
-                                        })()}
-                                    </TableCell>
-                                    <TableCell className="space-x-2 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            asChild
-                                            className="h-8 w-8 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                            </TableCell>
+                                            <TableCell className="text-gray-600">
+                                                {(() => {
+                                                    const iconPath =
+                                                        resolveRegionIconPath(
+                                                            region.icon,
+                                                        );
+
+                                                    return (
+                                                        <div className="flex items-center gap-2">
+                                                            {iconPath && (
+                                                                <img
+                                                                    src={iconPath}
+                                                                    alt={`${region.name} белгішесі`}
+                                                                    className="h-5 w-5 object-contain"
+                                                                />
+                                                            )}
+                                                            <span>
+                                                                {region.icon ||
+                                                                    'factory'}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </TableCell>
+                                            <TableCell className="space-x-2 text-right">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    asChild
+                                                    className="h-8 w-8 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                >
+                                                    <Link
+                                                        href={regions.edit.url(
+                                                            region.id,
+                                                        )}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                                                    onClick={() =>
+                                                        handleDelete(region.id)
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </TableCell>
+                                        </SortableRegionRow>
+                                    ))}
+                                </SortableContext>
+                                {orderedRegions.length === 0 && (
+                                    <TableRow>
+                                        <TableCell
+                                            colSpan={isSuperAdmin ? 7 : 6}
+                                            className="py-12 text-center text-gray-400"
                                         >
-                                            <Link
-                                                href={regions.edit.url(
-                                                    region.id,
-                                                )}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
-                                            onClick={() =>
-                                                handleDelete(region.id)
-                                            }
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                            {regionsData.data.length === 0 && (
-                                <TableRow>
-                                    <TableCell
-                                        colSpan={6}
-                                        className="py-12 text-center text-gray-400"
-                                    >
-                                        Мәлімет жоқ. Бірінші аймақты құрыңыз.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                                            Мәлімет жоқ. Бірінші аймақты құрыңыз.
+                                        </TableCell>
+                                    </TableRow>
+                                )}
+                            </TableBody>
+                        </Table>
+                    </DndContext>
                 </div>
 
                 <Pagination paginator={regionsData} />

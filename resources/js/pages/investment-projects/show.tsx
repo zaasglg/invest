@@ -575,24 +575,24 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Жобалар', href: '/investment-projects' },
-                { title: project.name, href: '' },
+                { title: project.region?.name || 'Аудан', href: `/regions/${project.region_id}` },
+                { title: project.name || 'Жоба', href: '' },
             ]}
         >
             <Head title={project.name} />
 
             <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
                 {/* Back link */}
-                {/* <Link href="/investment-projects" className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors">
-                    <ArrowLeft className="h-4 w-4 mr-1" /> Назад к списку
-                </Link> */}
-                  <button
+                <Link href='/investment-projects' className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors">
+                    <ArrowLeft className="h-4 w-4 mr-1" /> Тізімге қайту
+                </Link>
+                {/* <button
                     type='button'
                     onClick={() => window.history.back()}
                     className='inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors'
                 >
                     <ArrowLeft className='h-4 w-4 mr-1' /> Тізімге қайту
-                </button>
+                </button> */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
@@ -1125,7 +1125,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                         <Card className='shadow-none'>
                             <CardContent className="p-4 flex flex-col gap-3">
                                 {canModify && (
-                                    <Link href={`/investment-projects/${project.id}/edit`} className="w-full">
+                                    <Link href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`} className="w-full">
                                         <Button variant="outline" className="w-full justify-start">
                                             <Activity className="mr-2 h-4 w-4" /> Жобаны өңдеу
                                         </Button>

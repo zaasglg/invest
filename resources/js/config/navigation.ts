@@ -161,11 +161,18 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
 };
 
 export const filterNavItemsByRole = (items: NavItem[], user: User | null | undefined) => {
+    // Only superadmin can see Аймақтар
+    let filteredItems = items;
+    const isSuperAdmin = user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
+    if (!isSuperAdmin) {
+        filteredItems = filteredItems.filter((item) => item.title !== 'Аймақтар');
+    }
+
     const roleKey = getRoleKey(user);
-    if (!roleKey) return items;
+    if (!roleKey) return filteredItems;
 
     const hidden = HIDDEN_NAV_TITLES_BY_ROLE[roleKey];
-    if (!hidden) return items;
+    if (!hidden) return filteredItems;
 
-    return items.filter((item) => !hidden.has(item.title));
+    return filteredItems.filter((item) => !hidden.has(item.title));
 };

@@ -85,6 +85,20 @@ class CheckRoleAccess
 
         $roleName = $this->getRoleName($user);
 
+        $routeName = $request->route()?->getName();
+
+        // Only superadmin can access regions routes, EXCEPT regions.show and regions.projects.reorder
+        if ($routeName && str_starts_with($routeName, 'regions.')) {
+            $allowedRegionsRoutes = ['regions.show', 'regions.projects.reorder'];
+            if (! in_array($routeName, $allowedRegionsRoutes, true) && $roleName !== 'superadmin') {
+                abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+            }
+        }
+
+        if ($routeName === 'regions' && $roleName !== 'superadmin') {
+            abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+        }
+
         // Read-only roles (akim/zamakim): blocked sections + no writes
         if ($this->isReadOnlyRole($roleName)) {
             if ($this->isMatchingRoute($request, $this->readOnlyBlockedRoutes)) {

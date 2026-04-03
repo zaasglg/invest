@@ -20,6 +20,7 @@ interface Region {
     color: string | null;
     icon: string | null;
     area: number | null;
+    sort_order: number | null;
     type: string;
     subtype: string | null;
     parent_id: number | null;

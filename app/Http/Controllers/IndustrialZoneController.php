@@ -151,9 +151,17 @@ class IndustrialZoneController extends Controller
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',
             'description' => 'nullable|string',
+            'return_to' => 'nullable|string',
         ]);
 
+        $returnTo = $validated['return_to'] ?? '';
+        unset($validated['return_to']);
+
         $industrialZone->update($validated);
+
+        if (!empty($returnTo)) {
+            return redirect($returnTo)->with('success', 'ИӘ жаңартылды.');
+        }
 
         return redirect()->route('industrial-zones.index')->with('success', 'ИА жаңартылды.');
     }

@@ -157,9 +157,17 @@ class SezController extends Controller
             'infrastructure' => 'nullable|array',
             'location' => 'nullable|array',
             'description' => 'nullable|string',
+            'return_to' => 'nullable|string',
         ]);
 
+        $returnTo = $validated['return_to'] ?? '';
+        unset($validated['return_to']);
+
         $sez->update($validated);
+
+        if (!empty($returnTo)) {
+            return redirect($returnTo)->with('success', 'АЭА жаңартылды.');
+        }
 
         return redirect()->route('sezs.index')->with('success', 'АЭА жаңартылды.');
     }
