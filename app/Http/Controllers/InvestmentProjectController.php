@@ -476,7 +476,6 @@ class InvestmentProjectController extends Controller
         if ($roleName === 'ispolnitel' && is_object($project) && $user->region_id) {
             $isOwnDistrict = (int) $project->region_id === (int) $user->region_id;
         }
-
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
@@ -652,6 +651,7 @@ class InvestmentProjectController extends Controller
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
             'created_by' => 'nullable|exists:users,id',
+            'return_to' => 'nullable|string',
         ]);
 
         // Superadmin can change curator (created_by)
@@ -659,6 +659,9 @@ class InvestmentProjectController extends Controller
         if (! $isSuperAdmin) {
             unset($validated['created_by']);
         }
+
+        $returnTo = $validated['return_to'] ?? '';
+        unset($validated['return_to']);
 
         // Парсим массив sectors в формате ["sez-1", "industrial_zone-5"]
         $sectors = $validated['sector'] ?? [];
@@ -687,6 +690,12 @@ class InvestmentProjectController extends Controller
         $investmentProject->industrialZones()->sync($izIds);
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
+
+        if (!empty($returnTo)) {
+            // Because returnTo might be an absolute URL or relative path with query strings,
+            // make sure it starts with a slash or matches the app URL.
+            return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
+        }
 
         return redirect()->route('investment-projects.show', $investmentProject->id)->with('success', 'Жоба жаңартылды.');
     }

@@ -123,8 +123,8 @@ export default function Documents({ project, completedDocuments, documents, canD
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Жобалар', href: '/investment-projects' },
-                { title: project.name, href: `/investment-projects/${project.id}` },
+                { title: project.region?.name || 'Аудан', href: project.region ? `/regions/${project.region.id}` : '' },
+                { title: project.name || 'Жоба', href: `/investment-projects/${project.id}` },
                 { title: 'Құжаттар', href: '' },
             ]}
         >

@@ -1,4 +1,4 @@
-import { Head, useForm, Link } from '@inertiajs/react';
+import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import { FileText, ExternalLink, ImageIcon } from 'lucide-react';
 import type { FormEventHandler} from 'react';
 import { useState, useMemo } from 'react';
@@ -96,6 +96,10 @@ interface Props {
 }
 
 export default function Edit({ project, regions, projectTypes, users, sezList, industrialZones, isSuperAdmin, investUsers = [] }: Props) {
+    const { url } = usePage();
+    const queryParams = new URLSearchParams(url.split('?')[1]);
+    const returnUrl = queryParams.get('return_to');
+    
     const { data, setData, put, processing, errors } = useForm({
         name: project.name || '',
         company_name: project.company_name || '',
@@ -119,6 +123,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
             land: { needed: false, capacity: '' },
         },
         created_by: project.created_by?.toString() || '',
+        return_to: returnUrl || '',
     });
 
     const initialRegion = regions.find(r => r.id === project.region_id);
@@ -200,6 +205,14 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
         put(investmentProjects.update.url(project.id));
+    };
+
+    const handleCancel = () => {
+        if (returnUrl) {
+            window.location.href = returnUrl;
+        } else {
+            window.location.href = investmentProjects.index.url();
+        }
     };
 
     return (
@@ -728,7 +741,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                         <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                             Сақтау
                         </Button>
-                        <Link href={investmentProjects.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
+                        <Link href={returnUrl || investmentProjects.index.url()} className="text-sm text-[#0f1b3d] hover:text-[#c8a44e]">
                             Болдырмау
                         </Link>
                     </div>

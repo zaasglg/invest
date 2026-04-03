@@ -20,6 +20,10 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, 'reorder'])
+    ->middleware(['auth', 'verified', 'role.access'])
+    ->name('regions.reorder');
+
 Route::resource('regions', \App\Http\Controllers\RegionController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 

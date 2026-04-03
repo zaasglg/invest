@@ -13,7 +13,7 @@ class RegionController extends Controller
 {
     public function index(Request $request)
     {
-        $regionsQuery = Region::query()->latest();
+        $regionsQuery = Region::query()->orderBy('sort_order', 'asc');
 
         $user = $request->user();
         if ($this->isIspolnitelUser($user)) {
@@ -144,6 +144,35 @@ class RegionController extends Controller
                 'subsoilIssuesCount' => $subsoilIssuesCount,
             ],
         ]);
+    }
+
+    public function reorder(Request $request)
+    {
+        $user = $request->user();
+        $roleName = $user?->load('roleModel')->roleModel?->name;
+        
+        if (!in_array($roleName, ['superadmin'])) {
+            abort(403);
+        }
+
+        $validated = $request->validate([
+            'region_ids' => 'required|array',
+            'region_ids.*' => 'integer|exists:regions,id',
+            'page' => 'integer',
+        ]);
+
+        // Using page to calculate relative sort_order offsets if necessary, 
+        // but simple array order starts from base index:
+        $page = $validated['page'] ?? 1;
+        $perPage = 15; // default pagination in index
+        $offset = ($page - 1) * $perPage;
+
+        foreach ($validated['region_ids'] as $index => $regionId) {
+            Region::where('id', $regionId)
+                ->update(['sort_order' => $offset + $index]);
+        }
+
+        return response()->json(['success' => true]);
     }
 
     public function reorderProjects(Request $request, Region $region)

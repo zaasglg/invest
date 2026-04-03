@@ -204,6 +204,8 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         setOrderedProjects(projects.data);
     }, [projects.data]);
 
+    const { url } = usePage();
+
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
         useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
@@ -694,7 +696,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                         {canModify && (
                                                             <>
                                                                 <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Өңдеу">
-                                                                    <Link href={investmentProjectsRoutes.edit.url(project.id)}>
+                                                                    <Link href={`${investmentProjectsRoutes.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}>
                                                                         <Pencil className="h-4 w-4" />
                                                                     </Link>
                                                                 </Button>

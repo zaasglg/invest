@@ -156,7 +156,7 @@ export default function Show({ sez, investmentProjects }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'АЭА', href: `/regions/${sez.region_id}` },
+                { title: sez.region?.name || 'Аудан', href: `/regions/${sez.region_id}` },
                 { title: sez.name, href: '' },
             ]}
         >
@@ -165,7 +165,7 @@ export default function Show({ sez, investmentProjects }: Props) {
             <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
                 {/* Back link */}
                 <Link
-                    href={`/regions/${sez.region_id}`}
+                    href={`/sezs`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
