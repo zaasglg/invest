@@ -20,7 +20,7 @@ class RegionController extends Controller
             $regionsQuery->where('type', 'district');
         }
 
-        $regions = $regionsQuery->paginate(15)->withQueryString();
+        $regions = $regionsQuery->paginate(20)->withQueryString();
 
         return Inertia::render('regions/index', [
             'regions' => $regions,
@@ -46,7 +46,7 @@ class RegionController extends Controller
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'required|exists:regions,id',
-            'sort_order' => 'required|integer',
+            'sort_order' => 'nullable|integer',
             'geometry' => 'nullable|array',
             'geometry.*' => 'array',
             'geometry.*.*.lat' => 'required|numeric',
@@ -56,6 +56,10 @@ class RegionController extends Controller
         // Clear subtype if type is oblast
         if ($validated['type'] === 'oblast') {
             $validated['subtype'] = null;
+        }
+
+        if (!isset($validated['sort_order'])) {
+            $validated['sort_order'] = \App\Models\Region::max('sort_order') + 1;
         }
 
         if ($request->hasFile('icon_file')) {
@@ -220,7 +224,7 @@ class RegionController extends Controller
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'required|exists:regions,id',
-            'sort_order' => 'required|integer',
+            'sort_order' => 'nullable|integer',
             'geometry' => 'nullable|array',
             'geometry.*' => 'array',
             'geometry.*.*.lat' => 'required|numeric',
@@ -230,6 +234,10 @@ class RegionController extends Controller
         // Clear subtype if type is oblast
         if ($validated['type'] === 'oblast') {
             $validated['subtype'] = null;
+        }
+
+        if (!isset($validated['sort_order'])) {
+            $validated['sort_order'] = $region->sort_order;
         }
 
         if ($request->hasFile('icon_file')) {
