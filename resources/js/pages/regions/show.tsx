@@ -837,7 +837,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                                     <TableHead>Жоба</TableHead>
                                                                     <TableHead>Сектор</TableHead>
                                                                     <TableHead>Күйі</TableHead>
-                                                                    <TableHead>Сала</TableHead>
+                                                                    <TableHead>Жоба түрі</TableHead>
                                                                     <TableHead className="text-right">Инвестициялар</TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
@@ -930,7 +930,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         <TableHead>Жоба</TableHead>
                                                         <TableHead>Сектор</TableHead>
                                                         <TableHead>Күйі</TableHead>
-                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Жоба түрі</TableHead>
                                                         <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
@@ -1020,7 +1020,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                         <TableHead>Жоба</TableHead>
                                                         <TableHead>Сектор</TableHead>
                                                         <TableHead>Күйі</TableHead>
-                                                        <TableHead>Сала</TableHead>
+                                                        <TableHead>Жоба түрі</TableHead>
                                                         <TableHead className="text-right">Инвестициялар</TableHead>
                                                     </TableRow>
                                                 </TableHeader>

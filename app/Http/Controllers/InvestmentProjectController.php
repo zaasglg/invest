@@ -261,7 +261,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'nullable|string|max:255',
+            'company_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
@@ -600,7 +600,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'nullable|string|max:255',
+            'company_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
