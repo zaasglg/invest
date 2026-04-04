@@ -617,7 +617,7 @@ export default function Edit({ project, regions, projectTypes, users, sezList, i
                                                 placeholder="0.00"
                                             />
                                             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
-                                                USD
+                                                KZT
                                             </span>
                                         </div>
                                         {(errors.total_investment || validationErrors.total_investment) && <span className="text-sm text-red-500">{errors.total_investment || validationErrors.total_investment}</span>}
