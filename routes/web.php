@@ -24,6 +24,10 @@ Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, '
     ->middleware(['auth', 'verified', 'role.access'])
     ->name('regions.reorder');
 
+Route::post('regions/{region}/move-to-page', [\App\Http\Controllers\RegionController::class, 'moveToPage'])
+    ->middleware(['auth', 'verified', 'role.access'])
+    ->name('regions.moveToPage');
+
 Route::resource('regions', \App\Http\Controllers\RegionController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
@@ -43,6 +47,10 @@ Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::cl
 Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProjectController::class, 'reorder'])
     ->middleware(['auth', 'verified'])
     ->name('investment-projects.reorder');
+
+Route::post('investment-projects/{investmentProject}/move-to-page', [\App\Http\Controllers\InvestmentProjectController::class, 'moveToPage'])
+    ->middleware(['auth', 'verified', 'role.access'])
+    ->name('investment-projects.moveToPage');
 
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
     ->middleware(['auth', 'verified', 'role.access']);

@@ -20,11 +20,33 @@ class RegionController extends Controller
             $regionsQuery->where('type', 'district');
         }
 
-        $regions = $regionsQuery->paginate(20)->withQueryString();
+        $regions = $regionsQuery->paginate(15)->withQueryString();
 
         return Inertia::render('regions/index', [
             'regions' => $regions,
         ]);
+    }
+
+    public function moveToPage(Request $request, Region $region)
+    {
+        $request->validate([
+            'target_page' => 'required|integer|min:1',
+        ]);
+
+        $targetPage = $request->target_page;
+        $perPage = 20;
+
+        $targetIndex = ($targetPage - 1) * $perPage;
+
+        $regions = Region::orderBy('sort_order', 'asc')->where('id', '!=', $region->id)->get();
+        $regions->splice($targetIndex, 0, [$region]);
+
+        $index = 1;
+        foreach ($regions as $r) {
+            $r->update(['sort_order' => $index++]);
+        }
+
+        return redirect()->back()->with('success', 'Аймақтың орны ауыстырылды.');
     }
 
     public function create()

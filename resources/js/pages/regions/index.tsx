@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Trash2, Edit, GripVertical } from 'lucide-react';
+import { Trash2, Edit, GripVertical, MoveRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import {
     DndContext,
@@ -18,6 +18,9 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -109,6 +112,25 @@ export default function Index({ regions: regionsData }: Props) {
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
 
     const [orderedRegions, setOrderedRegions] = useState<Region[]>(regionsData.data);
+    const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+    const [regionToMove, setRegionToMove] = useState<Region | null>(null);
+    const [targetPage, setTargetPage] = useState<number>(1);
+
+    const openMoveModal = (region: Region) => {
+        setRegionToMove(region);
+        setTargetPage(1);
+        setIsMoveModalOpen(true);
+    };
+
+    const handleMoveSubmit = () => {
+        if (!regionToMove) return;
+
+        router.post(`/regions/${regionToMove.id}/move-to-page`, {
+            target_page: targetPage
+        }, {
+            onSuccess: () => setIsMoveModalOpen(false)
+        });
+    };
 
     useEffect(() => {
         setOrderedRegions(regionsData.data);
@@ -247,7 +269,16 @@ export default function Index({ regions: regionsData }: Props) {
                                                     );
                                                 })()}
                                             </TableCell>
-                                            <TableCell className="space-x-2 text-right">
+                                            <TableCell className="space-x-2 text-right flex justify-end">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    title="Басқа бетке ауыстыру"
+                                                    className="h-8 w-8 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                                    onClick={() => openMoveModal(region)}
+                                                >
+                                                    <MoveRight className="h-4 w-4" />
+                                                </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
@@ -292,6 +323,33 @@ export default function Index({ regions: regionsData }: Props) {
                 </div>
 
                 <Pagination paginator={regionsData} />
+
+                <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Аймақтың орнын ауыстыру</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="targetPage">Қай бетке апарамыз?</Label>
+                            <Input
+                                id="targetPage"
+                                type="number"
+                                min={1}
+                                max={regionsData.last_page}
+                                value={targetPage}
+                                onChange={(e) => setTargetPage(parseInt(e.target.value) || 1)}
+                                className="mt-2"
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                                Жалпы беттер саны: {regionsData.last_page}
+                            </p>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)}>Болдырмау</Button>
+                            <Button onClick={handleMoveSubmit} className="bg-[#c8a44e] text-white hover:bg-[#b8943e]">Сақтау</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );
