@@ -102,11 +102,17 @@ class DashboardController extends Controller
             return $months;
         });
 
-        $regions = Cache::remember('dashboard.regions.v2', 3600, function () {
-            return Region::where('type', 'district')
-                ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
-                ->get();
-        });
+        // $regions = Cache::remember('dashboard.regions.v2', 3600, function () {
+        //     return Region::where('type', 'district')
+        //         ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
+        //         ->orderBy('sort_order','asc')
+        //         ->get();
+        // });
+        $regions = Region::where('type', 'district')
+            ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
+            ->orderBy('sort_order','asc')
+            ->get();
+        // dd($regions);
 
         $regionStats = Cache::remember('dashboard.region_stats', 300, function () {
             $investments = InvestmentProject::active()->selectRaw('region_id, COALESCE(SUM(total_investment), 0) as total')
