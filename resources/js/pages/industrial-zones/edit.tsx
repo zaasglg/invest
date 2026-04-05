@@ -205,7 +205,7 @@ export default function Edit({ industrialZone, regions, isDistrictScoped }: Prop
                                             }
                                         }}
                                         className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.name ? 'border-red-500' : ''}`}
-                                        placeholder="Мысалы: ИА Шымкент"
+                                        placeholder="Мысалы: ИА TURAN"
                                         autoFocus
                                     />
                                     {(errors.name || validationErrors.name) && <span className="text-sm text-red-500">{errors.name || validationErrors.name}</span>}
