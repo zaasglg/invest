@@ -70,6 +70,8 @@ const statusMap: Record<string, { label: string; color: string }> = {
 export default function Issues({ project, issues, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
+    // Ispolnitel can add but cannot delete
+    const canDelete = canModify;
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [category, setCategory] = useState('');
@@ -512,6 +514,7 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
                                                                     >
                                                                         <Pencil className="h-3.5 w-3.5" />
                                                                     </Button>
+                                                                    {canDelete && (
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
@@ -524,6 +527,7 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
                                                                     >
                                                                         <Trash2 className="h-3.5 w-3.5" />
                                                                     </Button>
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </div>

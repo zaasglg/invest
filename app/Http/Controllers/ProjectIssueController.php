@@ -15,12 +15,12 @@ class ProjectIssueController extends Controller
     {
         $user = Auth::user();
 
-        // Ispolnitel who is not involved cannot see issues
+        // Ispolnitel who is not involved cannot access issues page
         if ($user?->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
-            $issues = collect();
-        } else {
-            $issues = $investmentProject->issues()->latest()->get();
+            abort(403, 'Сіз бұл жобаға қатыспайсыз.');
         }
+
+        $issues = $investmentProject->issues()->latest()->get();
 
         return Inertia::render('investment-projects/issues', [
             'project' => $investmentProject->load(['region', 'projectType']),
@@ -65,6 +65,13 @@ class ProjectIssueController extends Controller
 
     public function destroy(InvestmentProject $investmentProject, ProjectIssue $issue)
     {
+        $user = Auth::user();
+
+        // Ispolnitel cannot delete issues
+        if ($user->roleModel?->name === 'ispolnitel') {
+            abort(403, 'Сізге проблемалық мәселені жоюға рұқсат жоқ.');
+        }
+
         KpiLog::log($investmentProject->id, 'Проблемалық мәселе жойылды: "' . $issue->title . '"');
 
         $issue->delete();
@@ -82,12 +89,7 @@ class ProjectIssueController extends Controller
             return false;
         }
 
-        if ($user->baskarma_type === 'oblast') {
-            return true;
-        }
-
-        return $user->baskarma_type === 'district'
-            && $user->region_id
-            && (int) $project->region_id === (int) $user->region_id;
+        // Both district and oblast ispolnitel have the same write permissions
+        return true;
     }
 }

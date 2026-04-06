@@ -15,23 +15,23 @@ class ProjectDocumentController extends Controller
     public function index(InvestmentProject $investmentProject)
     {
         $user = Auth::user();
+
+        // Ispolnitel who is not involved cannot access documents page
+        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
+            abort(403, 'Сіз бұл жобаға қатыспайсыз.');
+        }
+
         $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        // Ispolnitel who is not involved in the project cannot see documents
-        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
-            $completedDocuments = collect();
-            $documents = collect();
-        } else {
-            $completedDocuments = $investmentProject->documents()
-                ->where('is_completed', true)
-                ->latest()
-                ->get();
+        $completedDocuments = $investmentProject->documents()
+            ->where('is_completed', true)
+            ->latest()
+            ->get();
 
-            $documents = $investmentProject->documents()
-                ->where('is_completed', false)
-                ->latest()
-                ->get();
-        }
+        $documents = $investmentProject->documents()
+            ->where('is_completed', false)
+            ->latest()
+            ->get();
 
         return Inertia::render('investment-projects/documents', [
             'project' => $investmentProject->load(['region', 'projectType']),
@@ -93,6 +93,13 @@ class ProjectDocumentController extends Controller
 
     public function destroy(InvestmentProject $investmentProject, ProjectDocument $document)
     {
+        $user = Auth::user();
+
+        // Ispolnitel cannot delete documents
+        if ($user->roleModel?->name === 'ispolnitel') {
+            abort(403, 'Сізге құжатты жоюға рұқсат жоқ.');
+        }
+
         if ($document->project_id !== $investmentProject->id) {
             abort(404);
         }
@@ -119,12 +126,7 @@ class ProjectDocumentController extends Controller
             return false;
         }
 
-        if ($user->baskarma_type === 'oblast') {
-            return true;
-        }
-
-        return $user->baskarma_type === 'district'
-            && $user->region_id
-            && (int) $project->region_id === (int) $user->region_id;
+        // Both district and oblast ispolnitel have the same write permissions
+        return true;
     }
 }

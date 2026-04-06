@@ -54,6 +54,8 @@ interface Props {
 export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [], canDownload, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
+    // Ispolnitel can add but cannot delete
+    const canDelete = canModify;
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState(new Date().toISOString().split('T')[0]);
     const [description, setDescription] = useState('');
@@ -373,6 +375,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
                                                 canModify={canEdit}
+                                                canDelete={canDelete}
                                                 canDownload={canDownload}
                                                 projectId={project.id}
                                             />
@@ -406,6 +409,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
                                                 canModify={canEdit}
+                                                canDelete={canDelete}
                                                 canDownload={canDownload}
                                                 projectId={project.id}
                                             />
@@ -444,6 +448,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                                                         onDelete={handleDelete}
                                                         onOpen={openLightbox}
                                                         canModify={canEdit}
+                                                        canDelete={canDelete}
                                                         canDownload={canDownload}
                                                         projectId={project.id}
                                                     />
@@ -488,11 +493,12 @@ interface PhotoCardProps {
     onDelete: (id: number) => void;
     onOpen: (photos: ProjectPhoto[], index: number) => void;
     canModify: boolean;
+    canDelete: boolean;
     canDownload: boolean;
     projectId: number;
 }
 
-function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownload, projectId }: PhotoCardProps) {
+function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDelete, canDownload, projectId }: PhotoCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     const formatDateTime = (dateStr: string) => {
@@ -554,7 +560,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDownl
                             <Download className="h-4 w-4" />
                         </a>
                     )}
-                    {canModify && (
+                    {canDelete && (
                         <Button
                             variant="destructive"
                             size="icon"

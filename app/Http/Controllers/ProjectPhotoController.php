@@ -15,45 +15,44 @@ class ProjectPhotoController extends Controller
     public function index(InvestmentProject $investmentProject)
     {
         $user = Auth::user();
+
+        // Ispolnitel who is not involved cannot access gallery page
+        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
+            abort(403, 'Сіз бұл жобаға қатыспайсыз.');
+        }
+
         $canDownload = $user->canDownloadFromProject($investmentProject);
 
-        // Ispolnitel who is not involved in the project cannot see photos
-        if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($investmentProject)) {
-            $mainGalleryPhotos = collect();
-            $datedGalleryPhotos = [];
-            $renderPhotos = collect();
-        } else {
-            // Get ALL gallery photos grouped by date (newest date first)
-            $allGalleryPhotos = $investmentProject->photos()
-                ->where('photo_type', 'gallery')
-                ->latest('gallery_date')
-                ->latest()
-                ->get()
-                ->map(function ($photo) {
-                    // Normalize: photos without gallery_date use created_at date
-                    $photo->gallery_date = $photo->gallery_date
-                        ? $photo->gallery_date->toDateString()
-                        : $photo->created_at->toDateString();
+        // Get ALL gallery photos grouped by date (newest date first)
+        $allGalleryPhotos = $investmentProject->photos()
+            ->where('photo_type', 'gallery')
+            ->latest('gallery_date')
+            ->latest()
+            ->get()
+            ->map(function ($photo) {
+                // Normalize: photos without gallery_date use created_at date
+                $photo->gallery_date = $photo->gallery_date
+                    ? $photo->gallery_date->toDateString()
+                    : $photo->created_at->toDateString();
 
-                    return $photo;
-                });
+                return $photo;
+            });
 
-            $datedGalleryPhotos = $allGalleryPhotos
-                ->groupBy('gallery_date')
-                ->sortKeysDesc()
-                ->map(function ($photos) {
-                    return $photos->values();
-                })
-                ->toArray();
+        $datedGalleryPhotos = $allGalleryPhotos
+            ->groupBy('gallery_date')
+            ->sortKeysDesc()
+            ->map(function ($photos) {
+                return $photos->values();
+            })
+            ->toArray();
 
-            // mainGallery is empty now since all photos are date-grouped
-            $mainGalleryPhotos = collect();
+        // mainGallery is empty now since all photos are date-grouped
+        $mainGalleryPhotos = collect();
 
-            $renderPhotos = $investmentProject->photos()
-                ->renderPhotos()
-                ->latest()
-                ->get();
-        }
+        $renderPhotos = $investmentProject->photos()
+            ->renderPhotos()
+            ->latest()
+            ->get();
 
         return Inertia::render('investment-projects/gallery', [
             'project' => $investmentProject->load(['region', 'projectType']),
@@ -135,6 +134,13 @@ class ProjectPhotoController extends Controller
 
     public function destroy(Request $request, InvestmentProject $investmentProject, $photo)
     {
+        $user = Auth::user();
+
+        // Ispolnitel cannot delete photos
+        if ($user->roleModel?->name === 'ispolnitel') {
+            abort(403, 'Сізге фотоны жоюға рұқсат жоқ.');
+        }
+
         // Find the photo by ID
         $photoModel = ProjectPhoto::where('project_id', $investmentProject->id)
             ->findOrFail($photo);
@@ -162,12 +168,7 @@ class ProjectPhotoController extends Controller
             return false;
         }
 
-        if ($user->baskarma_type === 'oblast') {
-            return true;
-        }
-
-        return $user->baskarma_type === 'district'
-            && $user->region_id
-            && (int) $project->region_id === (int) $user->region_id;
+        // Both district and oblast ispolnitel have the same write permissions
+        return true;
     }
 }
