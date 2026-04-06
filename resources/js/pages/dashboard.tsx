@@ -19,7 +19,7 @@ interface SectorRow {
     investment: number;
     projectCount: number | null;
     problemCount: number;
-    orgCount: number | null;
+    jobCount: number | null;
 }
 
 interface SectorData {

@@ -5,7 +5,7 @@ interface SectorRow {
     investment: number;
     projectCount: number | null;
     problemCount: number;
-    orgCount: number | null;
+    jobCount: number | null;
 }
 
 interface SectorData {
@@ -67,7 +67,7 @@ export default function SectorTable({
                                 Проблемалық мәселелер
                             </th>
                             <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
-                                Ұйымдар
+                                Жұмыс орындары
                             </th>
                         </tr>
                     </thead>
@@ -117,7 +117,7 @@ export default function SectorTable({
                                     <td
                                         className={`px-4 py-3 text-center text-base font-bold ${isHighlighted ? 'text-white' : 'text-[#0056D2]'}`}
                                     >
-                                        {row.d.orgCount ?? '-'}
+                                        {row.d.jobCount ?? '-'}
                                     </td>
                                 </tr>
                             );
