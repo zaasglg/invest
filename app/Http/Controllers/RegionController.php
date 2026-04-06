@@ -27,6 +27,28 @@ class RegionController extends Controller
         ]);
     }
 
+    public function moveToPage(Request $request, Region $region)
+    {
+        $request->validate([
+            'target_page' => 'required|integer|min:1',
+        ]);
+
+        $targetPage = $request->target_page;
+        $perPage = 20;
+
+        $targetIndex = ($targetPage - 1) * $perPage;
+
+        $regions = Region::orderBy('sort_order', 'asc')->where('id', '!=', $region->id)->get();
+        $regions->splice($targetIndex, 0, [$region]);
+
+        $index = 1;
+        foreach ($regions as $r) {
+            $r->update(['sort_order' => $index++]);
+        }
+
+        return redirect()->back()->with('success', 'Аймақтың орны ауыстырылды.');
+    }
+
     public function create()
     {
         $parents = Region::where('type', 'oblast')->get();
@@ -46,7 +68,7 @@ class RegionController extends Controller
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'required|exists:regions,id',
-            'sort_order' => 'required|integer',
+            'sort_order' => 'nullable|integer',
             'geometry' => 'nullable|array',
             'geometry.*' => 'array',
             'geometry.*.*.lat' => 'required|numeric',
@@ -56,6 +78,10 @@ class RegionController extends Controller
         // Clear subtype if type is oblast
         if ($validated['type'] === 'oblast') {
             $validated['subtype'] = null;
+        }
+
+        if (!isset($validated['sort_order'])) {
+            $validated['sort_order'] = \App\Models\Region::max('sort_order') + 1;
         }
 
         if ($request->hasFile('icon_file')) {
@@ -220,7 +246,7 @@ class RegionController extends Controller
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
             'parent_id' => 'required|exists:regions,id',
-            'sort_order' => 'required|integer',
+            'sort_order' => 'nullable|integer',
             'geometry' => 'nullable|array',
             'geometry.*' => 'array',
             'geometry.*.*.lat' => 'required|numeric',
@@ -230,6 +256,10 @@ class RegionController extends Controller
         // Clear subtype if type is oblast
         if ($validated['type'] === 'oblast') {
             $validated['subtype'] = null;
+        }
+
+        if (!isset($validated['sort_order'])) {
+            $validated['sort_order'] = $region->sort_order;
         }
 
         if ($request->hasFile('icon_file')) {

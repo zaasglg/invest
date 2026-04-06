@@ -65,7 +65,7 @@ interface SectorRow {
     investment: number;
     projectCount: number | null;
     problemCount: number;
-    orgCount: number | null;
+    jobCount: number | null;
 }
 
 interface SectorData {
@@ -1790,7 +1790,7 @@ export default function Map({
                                                     Проблемалық мәселелер
                                                 </th>
                                                 <th className="px-5 py-2.5 text-center">
-                                                    Ұйымдар
+                                                    Жұмыс орындары
                                                 </th>
                                             </tr>
                                         </thead>
@@ -1827,7 +1827,7 @@ export default function Map({
                                                     </td>
                                                     <td className="px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
                                                         {formatCount(
-                                                            row.d.orgCount,
+                                                            row.d.jobCount,
                                                         )}
                                                     </td>
                                                 </tr>

@@ -220,6 +220,8 @@ return [
         'subtype' => 'Подтип',
         'geometry' => 'Геометрия',
         'sort_order' => 'Сорттау тәртібі',
+        'is_active' => 'Активті',
+        'company_name' => 'Компания атауы',
     ],
 
 ];

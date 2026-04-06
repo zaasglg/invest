@@ -63,7 +63,7 @@ export function RegionSidebar({
                     </div>
                 </SheetHeader>
                 <div className="flex flex-col gap-1 overflow-y-auto p-3">
-                    {[...regions].sort((a, b) => a.name.localeCompare(b.name, 'kk')).map((region) => (
+                    {regions.map((region) => (
                         <button
                             key={region.id}
                             onClick={() => {

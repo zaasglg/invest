@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2, MoveRight } from 'lucide-react';
 import { useMemo, useState, useEffect, type FormEvent } from 'react';
 import {
     DndContext,
@@ -23,6 +23,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -199,6 +200,26 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     );
 
     const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(projects.data);
+
+    const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+    const [projectToMove, setProjectToMove] = useState<InvestmentProject | null>(null);
+    const [targetPage, setTargetPage] = useState<number>(1);
+
+    const openMoveModal = (project: InvestmentProject) => {
+        setProjectToMove(project);
+        setTargetPage(1);
+        setIsMoveModalOpen(true);
+    };
+
+    const handleMoveSubmit = () => {
+        if (!projectToMove) return;
+
+        router.post(`/investment-projects/${projectToMove.id}/move-to-page`, {
+            target_page: targetPage
+        }, {
+            onSuccess: () => setIsMoveModalOpen(false)
+        });
+    };
 
     useEffect(() => {
         setOrderedProjects(projects.data);
@@ -688,6 +709,17 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
+                                                        {(isSuperAdmin || isInvest) && (
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                title="Басқа бетке ауыстыру"
+                                                                className="h-8 w-8 hover:bg-blue-50 hover:text-blue-700"
+                                                                onClick={() => openMoveModal(project)}
+                                                            >
+                                                                <MoveRight className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
                                                         <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Қарау">
                                                             <Link href={investmentProjectsRoutes.show.url(project.id)}>
                                                                 <Eye className="h-4 w-4" />
@@ -723,6 +755,33 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                 </div>
 
                 <Pagination paginator={projects} />
+
+                <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Жобаның орнын ауыстыру</DialogTitle>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="targetPage">Қай бетке апарамыз?</Label>
+                            <Input
+                                id="targetPage"
+                                type="number"
+                                min={1}
+                                max={projects.last_page}
+                                value={targetPage}
+                                onChange={(e) => setTargetPage(parseInt(e.target.value) || 1)}
+                                className="mt-2"
+                            />
+                            <p className="text-sm text-gray-500 mt-2">
+                                Жалпы беттер саны: {projects.last_page}
+                            </p>
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)}>Болдырмау</Button>
+                            <Button onClick={handleMoveSubmit} className="bg-[#c8a44e] text-white hover:bg-[#b8943e]">Сақтау</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
             </div>
         </AppLayout>
     );

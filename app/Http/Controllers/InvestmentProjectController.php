@@ -174,6 +174,28 @@ class InvestmentProjectController extends Controller
         ]);
     }
 
+    public function moveToPage(Request $request, InvestmentProject $investmentProject)
+    {
+        $request->validate([
+            'target_page' => 'required|integer|min:1',
+        ]);
+
+        $targetPage = $request->target_page;
+        $perPage = 15;
+
+        $targetIndex = ($targetPage - 1) * $perPage;
+
+        $projects = InvestmentProject::active()->orderBy('sort_order', 'asc')->orderBy('created_at', 'desc')->where('id', '!=', $investmentProject->id)->get();
+        $projects->splice($targetIndex, 0, [$investmentProject]);
+
+        $index = 1;
+        foreach ($projects as $p) {
+            $p->update(['sort_order' => $index++]);
+        }
+
+        return redirect()->back()->with('success', 'Жобаның орны ауыстырылды.');
+    }
+
     public function reorder(Request $request)
     {
         $user = $request->user();
@@ -261,7 +283,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'nullable|string|max:255',
+            'company_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
@@ -600,7 +622,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'nullable|string|max:255',
+            'company_name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
