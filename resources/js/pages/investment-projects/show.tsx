@@ -241,13 +241,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
     const isIspolnitel = (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
-    const isOblastIspolnitel =
-        isIspolnitel && auth.user?.baskarma_type === 'oblast';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isRestrictedView = isIspolnitel && !isInvolved;
-    const ispolnitelCanWrite =
-        isIspolnitel && isInvolved && (isOblastIspolnitel || isOwnDistrict);
+    // Both district and oblast ispolnitel have same write permissions if involved
+    const ispolnitelCanWrite = isIspolnitel && isInvolved;
     const photosCount = typeof project.photos_count === 'number'
         ? project.photos_count
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -1189,21 +1187,17 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </Button>
                                 </a>
                                 )}
-                                {isIspolnitel && (() => {
-                                    const bType = auth.user?.baskarma_type;
-                                    const canSeePassport = bType === 'district' ? isOwnDistrict : bType === 'oblast' ? isInvolved : false;
-                                    return canSeePassport ? (
-                                        <a
-                                            href={`/investment-projects/${project.id}/passport`}
-                                            className="w-full"
-                                        >
-                                            <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
-                                                <Download className="mr-2 h-4 w-4" />
-                                                Жоба паспортын жүктеу
-                                            </Button>
-                                        </a>
-                                    ) : null;
-                                })()}
+                                {isIspolnitel && isInvolved && (
+                                    <a
+                                        href={`/investment-projects/${project.id}/passport`}
+                                        className="w-full"
+                                    >
+                                        <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Жоба паспортын жүктеу
+                                        </Button>
+                                    </a>
+                                )}
                                 {!isRestrictedView && (
                                 <a
                                     href={`/investment-projects/${project.id}/presentation`}

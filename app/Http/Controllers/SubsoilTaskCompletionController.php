@@ -19,6 +19,11 @@ class SubsoilTaskCompletionController extends Controller
     {
         abort_if($task->subsoil_user_id !== $subsoilUser->id, 404);
 
+        // Verify that the user is the assigned executor of this task
+        if ($task->assigned_to !== Auth::id()) {
+            abort(403, 'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.');
+        }
+
         $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',

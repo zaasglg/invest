@@ -82,7 +82,8 @@ class User extends Authenticatable
 
     /**
      * Determine if the user is scoped to their district.
-     * This applies to 'invest' and 'district ispolnitel'.
+     * This applies to 'invest' role only.
+     * Ispolnitel (both district and oblast) can see everything.
      */
     public function isDistrictScoped(): bool
     {
@@ -97,21 +98,17 @@ class User extends Authenticatable
             return true;
         }
 
-        // District Ispolnitel is district scoped
-        if ($roleName === 'ispolnitel' && $this->baskarma_type === 'district') {
-            return true;
-        }
-
+        // Ispolnitel (both district and oblast) are NOT district scoped - they can see everything
         return false;
     }
 
     /**
-     * Determine if the user is Regional Management.
-     * Regional Management can see everything.
+     * Determine if the user is Regional Management (any ispolnitel).
+     * Both district and oblast ispolnitel can see everything.
      */
     public function isRegionalManagement(): bool
     {
-        return $this->roleModel?->name === 'ispolnitel' && $this->baskarma_type === 'oblast';
+        return $this->roleModel?->name === 'ispolnitel';
     }
 
     /**

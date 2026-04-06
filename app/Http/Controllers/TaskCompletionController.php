@@ -25,6 +25,11 @@ class TaskCompletionController extends Controller
             abort(404);
         }
 
+        // Verify that the user is the assigned executor of this task
+        if ($task->assigned_to !== Auth::id()) {
+            abort(403, 'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.');
+        }
+
         $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',

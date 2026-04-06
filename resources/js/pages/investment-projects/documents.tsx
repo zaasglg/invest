@@ -44,6 +44,8 @@ interface Props {
 export default function Documents({ project, completedDocuments, documents, canDownload, ispolnitelCanWrite = false }: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
+    // Ispolnitel can add but cannot delete
+    const canDelete = canModify;
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
     const [documentType, setDocumentType] = useState('');
@@ -284,7 +286,7 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                             <Download className="h-4 w-4" />
                                                         </a>
                                                     )}
-                                                    {canEdit && (
+                                                    {canDelete && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
@@ -348,7 +350,7 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                             <Download className="h-4 w-4" />
                                                         </a>
                                                     )}
-                                                    {canEdit && (
+                                                    {canDelete && (
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
