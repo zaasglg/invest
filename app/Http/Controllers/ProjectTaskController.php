@@ -72,8 +72,10 @@ class ProjectTaskController extends Controller
 
         if ($oldAssignedTo !== $newAssignedTo) {
             if ($oldAssignedTo) {
+                // Check for other tasks excluding the current one (since it's now reassigned)
                 $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
                     ->where('assigned_to', $oldAssignedTo)
+                    ->where('id', '!=', $task->id)
                     ->exists();
 
                 if (!$hasOtherTasks) {

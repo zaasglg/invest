@@ -713,9 +713,7 @@ class InvestmentProjectController extends Controller
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
 
-        if (!empty($returnTo)) {
-            // Because returnTo might be an absolute URL or relative path with query strings,
-            // make sure it starts with a slash or matches the app URL.
+        if (!empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
         }
 
@@ -1370,5 +1368,25 @@ class InvestmentProjectController extends Controller
             'projects' => $projects,
             'filters' => ['search' => $search ?? ''],
         ]);
+    }
+
+    /**
+     * Validate that the return URL is a safe local URL.
+     * Prevents open redirect vulnerabilities.
+     */
+    private function isValidReturnUrl(string $url): bool
+    {
+        // Only allow relative URLs starting with /
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+            return true;
+        }
+
+        // Allow URLs that match the app URL
+        $appUrl = config('app.url');
+        if ($appUrl && str_starts_with($url, $appUrl)) {
+            return true;
+        }
+
+        return false;
     }
 }

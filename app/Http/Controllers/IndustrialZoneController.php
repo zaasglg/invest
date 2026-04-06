@@ -159,7 +159,7 @@ class IndustrialZoneController extends Controller
 
         $industrialZone->update($validated);
 
-        if (!empty($returnTo)) {
+        if (!empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'ИӘ жаңартылды.');
         }
 
@@ -171,5 +171,22 @@ class IndustrialZoneController extends Controller
         $industrialZone->delete();
 
         return redirect()->back()->with('success', 'ИА жойылды.');
+    }
+
+    /**
+     * Validate that the return URL is a safe local URL.
+     */
+    private function isValidReturnUrl(string $url): bool
+    {
+        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+            return true;
+        }
+
+        $appUrl = config('app.url');
+        if ($appUrl && str_starts_with($url, $appUrl)) {
+            return true;
+        }
+
+        return false;
     }
 }
