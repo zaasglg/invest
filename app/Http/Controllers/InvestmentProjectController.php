@@ -148,6 +148,8 @@ class InvestmentProjectController extends Controller
             ->pluck('count', 'status')
             ->toArray();
 
+        $currentYear = now()->year;
+
         $stats = [
             'total_projects' => $totalProjects,
             'total_investment' => $totalInvestment,
@@ -157,6 +159,7 @@ class InvestmentProjectController extends Controller
                 'suspended' => $statusCounts['suspended'] ?? 0,
                 'plan' => $statusCounts['plan'] ?? 0,
             ],
+            'ending_this_year' => InvestmentProject::whereYear('end_date', $currentYear)->count(),
         ];
 
         $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
