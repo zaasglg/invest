@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2, MoveRight } from 'lucide-react';
+import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2, MoveRight, Calendar } from 'lucide-react';
 import { useMemo, useState, useEffect, type FormEvent } from 'react';
 import {
     DndContext,
@@ -125,6 +125,7 @@ interface Stats {
         suspended: number;
         plan: number;
     };
+    ending_this_year?: number;
 }
 
 interface Props {
@@ -351,7 +352,7 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     const formatTotalInvestment = (value: number) => {
         if (!value) return '0 ₸';
-        return formatMoneyCompact(value, { compactFractionDigits: 2 });
+        return formatMoneyCompact(value, { maxFractionDigits: 2 });
     };
 
     const toNormalCase = (str: string) => {
@@ -374,6 +375,27 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         Инвестициялық жобалар
                     </h1>
                     <div className="flex items-center gap-3">
+                        <Button 
+                            variant="outline" 
+                            className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]"
+                            onClick={() => {
+                                const currentYear = new Date().getFullYear();
+                                const newData = {
+                                    ...data,
+                                    end_date_from: `${currentYear}-01-01`,
+                                    end_date_to: `${currentYear}-12-31`
+                                };
+                                setData(newData);
+                                setFiltersOpen(true);
+                                router.get('/investment-projects', newData as any, {
+                                    preserveState: true,
+                                    preserveScroll: true,
+                                });
+                            }}
+                        >
+                            <Calendar className=" h-4 w-4" />
+                            {stats.ending_this_year !== undefined ? `${stats.ending_this_year} жоба` : 'Биыл аяқталатын'}
+                        </Button>
                         {(isSuperAdmin || isInvest) && (
                             <Link href="/investment-projects-archived">
                                 <Button variant="outline" className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]">
