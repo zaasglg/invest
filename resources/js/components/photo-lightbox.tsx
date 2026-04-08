@@ -15,7 +15,12 @@ interface PhotoLightboxProps {
     onClose: () => void;
 }
 
-export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClose }: PhotoLightboxProps) {
+export default function PhotoLightbox({
+    photos,
+    initialIndex = 0,
+    isOpen,
+    onClose,
+}: PhotoLightboxProps) {
     const [currentIndex, setCurrentIndex] = useState(initialIndex);
     const [zoom, setZoom] = useState(1);
     const [position, setPosition] = useState({ x: 0, y: 0 });
@@ -45,13 +50,13 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
 
     const handleZoomIn = useCallback(() => {
         if (zoom < 5) {
-            setZoom(prev => prev + 0.5);
+            setZoom((prev) => prev + 0.5);
         }
     }, [zoom]);
 
     const handleZoomOut = useCallback(() => {
         if (zoom > 1) {
-            setZoom(prev => prev - 0.5);
+            setZoom((prev) => prev - 0.5);
             if (zoom - 0.5 === 1) {
                 setPosition({ x: 0, y: 0 });
             }
@@ -82,7 +87,10 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
     const handleMouseDown = (e: React.MouseEvent) => {
         if (zoom > 1) {
             setIsDragging(true);
-            setDragStart({ x: e.clientX - position.x, y: e.clientY - position.y });
+            setDragStart({
+                x: e.clientX - position.x,
+                y: e.clientY - position.y,
+            });
         }
     };
 
@@ -104,11 +112,11 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
     if (!isOpen || !currentPhoto) return null;
 
     return (
-        <div className="fixed inset-0 z-50 bg-black/95 flex items-center justify-center">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95">
             {/* Close button */}
             <button
                 onClick={onClose}
-                className="absolute top-4 right-4 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                className="absolute top-4 right-4 z-50 rounded-full p-2 text-white transition-colors hover:bg-white/10"
                 aria-label="Жабу"
             >
                 <X className="h-6 w-6" />
@@ -119,14 +127,14 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
                 <>
                     <button
                         onClick={goToPrevious}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        className="absolute top-1/2 left-4 z-50 -translate-y-1/2 rounded-full p-2 text-white transition-colors hover:bg-white/10"
                         aria-label="Алдыңғы фото"
                     >
                         <ChevronLeft className="h-8 w-8" />
                     </button>
                     <button
                         onClick={goToNext}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-50 p-2 text-white hover:bg-white/10 rounded-full transition-colors"
+                        className="absolute top-1/2 right-4 z-50 -translate-y-1/2 rounded-full p-2 text-white transition-colors hover:bg-white/10"
                         aria-label="Келесі фото"
                     >
                         <ChevronRight className="h-8 w-8" />
@@ -135,17 +143,17 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
             )}
 
             {/* Zoom controls */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-black/50 px-4 py-2 rounded-full">
+            <div className="absolute bottom-4 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-black/50 px-4 py-2">
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={handleZoomOut}
                     disabled={zoom <= 1}
-                    className="text-white hover:bg-white/10 h-8 w-8"
+                    className="h-8 w-8 text-white hover:bg-white/10"
                 >
                     <ZoomOut className="h-4 w-4" />
                 </Button>
-                <span className="text-white text-sm min-w-[50px] text-center">
+                <span className="min-w-[50px] text-center text-sm text-white">
                     {Math.round(zoom * 100)}%
                 </span>
                 <Button
@@ -153,7 +161,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
                     size="icon"
                     onClick={handleZoomIn}
                     disabled={zoom >= 5}
-                    className="text-white hover:bg-white/10 h-8 w-8"
+                    className="h-8 w-8 text-white hover:bg-white/10"
                 >
                     <ZoomIn className="h-4 w-4" />
                 </Button>
@@ -162,7 +170,7 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
                         variant="ghost"
                         size="sm"
                         onClick={handleResetZoom}
-                        className="text-white hover:bg-white/10 text-xs"
+                        className="text-xs text-white hover:bg-white/10"
                     >
                         Қалпына келтіру
                     </Button>
@@ -171,38 +179,54 @@ export default function PhotoLightbox({ photos, initialIndex = 0, isOpen, onClos
 
             {/* Photo counter */}
             {photos.length > 1 && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 text-white text-sm bg-black/50 px-3 py-1 rounded-full">
+                <div className="absolute top-4 left-1/2 z-50 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 text-sm text-white">
                     {currentIndex + 1} / {photos.length}
                 </div>
             )}
 
             {/* Image container */}
             <div
-                className="relative w-full h-full flex items-center justify-center overflow-hidden cursor-grab active:cursor-grabbing"
-                onClick={zoom === 1 ? (e) => {
-                    if (e.target === e.currentTarget) goToNext();
-                } : undefined}
+                className="relative flex h-full w-full cursor-grab items-center justify-center overflow-hidden active:cursor-grabbing"
+                onClick={
+                    zoom === 1
+                        ? (e) => {
+                              if (e.target === e.currentTarget) goToNext();
+                          }
+                        : undefined
+                }
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
                 onMouseLeave={handleMouseUp}
-                style={{ cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer' }}
+                style={{
+                    cursor:
+                        zoom > 1
+                            ? isDragging
+                                ? 'grabbing'
+                                : 'grab'
+                            : 'pointer',
+                }}
             >
                 <img
                     src={`/storage/${currentPhoto.file_path}`}
                     alt={currentPhoto.description || 'Жоба фотосы'}
-                    className="max-w-full max-h-full object-contain transition-transform"
+                    className="max-h-full max-w-full object-contain transition-transform"
                     style={{
                         transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,
-                        cursor: zoom > 1 ? (isDragging ? 'grabbing' : 'grab') : 'pointer',
+                        cursor:
+                            zoom > 1
+                                ? isDragging
+                                    ? 'grabbing'
+                                    : 'grab'
+                                : 'pointer',
                     }}
                     draggable={false}
                 />
 
                 {/* Photo description */}
                 {currentPhoto.description && zoom === 1 && (
-                    <div className="absolute bottom-20 left-1/2 -translate-x-1/2 max-w-2xl px-4">
-                        <p className="text-white text-center text-sm bg-black/50 px-4 py-2 rounded-lg">
+                    <div className="absolute bottom-20 left-1/2 max-w-2xl -translate-x-1/2 px-4">
+                        <p className="rounded-lg bg-black/50 px-4 py-2 text-center text-sm text-white">
                             {currentPhoto.description}
                         </p>
                     </div>

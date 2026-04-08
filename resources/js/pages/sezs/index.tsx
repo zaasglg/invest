@@ -57,11 +57,7 @@ interface Props {
     filters: Partial<Filters>;
 }
 
-export default function Index({
-    sezs: sezsData,
-    regions,
-    filters,
-}: Props) {
+export default function Index({ sezs: sezsData, regions, filters }: Props) {
     const { url } = usePage();
     const canModify = useCanModify();
     const { data, setData, get } = useForm<Filters>({
@@ -103,9 +99,7 @@ export default function Index({
     };
 
     return (
-        <AppLayout
-            breadcrumbs={[{ title: 'АЭА', href: sezs.index.url() }]}
-        >
+        <AppLayout breadcrumbs={[{ title: 'АЭА', href: sezs.index.url() }]}>
             <Head title="АЭА" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
@@ -140,9 +134,7 @@ export default function Index({
                         <form onSubmit={submitFilters} className="mt-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="search">
-                                        Іздеу
-                                    </Label>
+                                    <Label htmlFor="search">Іздеу</Label>
                                     <Input
                                         id="search"
                                         value={data.search}
@@ -221,9 +213,7 @@ export default function Index({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80px]">
-                                    ID
-                                </TableHead>
+                                <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Атауы</TableHead>
                                 <TableHead>Аймақ</TableHead>
                                 <TableHead>Аумағы (га)</TableHead>
@@ -252,35 +242,36 @@ export default function Index({
                                         </TableCell>
                                         <TableCell className="font-semibold">
                                             <Link
-                                                href={sezs.show.url(
-                                                    sez.id,
-                                                )}
+                                                href={sezs.show.url(sez.id)}
                                                 className="text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
                                             >
                                                 {sez.name}
                                             </Link>
                                         </TableCell>
-                                        <TableCell>
-                                            {sez.region.name}
-                                        </TableCell>
+                                        <TableCell>{sez.region.name}</TableCell>
                                         <TableCell>
                                             {sez.total_area || '—'}
                                         </TableCell>
                                         <TableCell>
                                             {sez.investment_projects_sum_total_investment
                                                 ? (() => {
-                                                    const v = Number(sez.investment_projects_sum_total_investment);
-                                                    return formatMoneyCompact(v, { includeCurrency: false });
-                                                })()
+                                                      const v = Number(
+                                                          sez.investment_projects_sum_total_investment,
+                                                      );
+                                                      return formatMoneyCompact(
+                                                          v,
+                                                          {
+                                                              includeCurrency: false,
+                                                          },
+                                                      );
+                                                  })()
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>
                                             <Badge
                                                 className={`${getStatusColor(sez.status)} border-0 px-3 py-1 text-sm font-medium`}
                                             >
-                                                {getStatusLabel(
-                                                    sez.status,
-                                                )}
+                                                {getStatusLabel(sez.status)}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -310,9 +301,12 @@ export default function Index({
                                                             title="Өңдеу"
                                                         >
                                                             <Link
-                                                                href={sezs.edit.url(
-                                                                    sez.id,
-                                                                ) + `?return_to=${encodeURIComponent(url)}`}
+                                                                href={
+                                                                    sezs.edit.url(
+                                                                        sez.id,
+                                                                    ) +
+                                                                    `?return_to=${encodeURIComponent(url)}`
+                                                                }
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Link>

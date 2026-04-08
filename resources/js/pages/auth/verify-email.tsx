@@ -17,8 +17,8 @@ export default function VerifyEmail({ status }: { status?: string }) {
 
             {status === 'verification-link-sent' && (
                 <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    Растау сілтемесі тіркелу кезінде көрсетілген 
-                    электрондық пошта мекенжайына жіберілді.
+                    Растау сілтемесі тіркелу кезінде көрсетілген электрондық
+                    пошта мекенжайына жіберілді.
                 </div>
             )}
 

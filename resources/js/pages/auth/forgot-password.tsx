@@ -29,7 +29,9 @@ export default function ForgotPassword({ status }: { status?: string }) {
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
-                                <Label htmlFor="email">Электрондық пошта мекенжайы</Label>
+                                <Label htmlFor="email">
+                                    Электрондық пошта мекенжайы
+                                </Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -51,7 +53,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                     {processing && (
                                         <LoaderCircle className="h-4 w-4 animate-spin" />
                                     )}
-                                    Құпия сөзді қалпына келтіру сілтемесін жіберу
+                                    Құпия сөзді қалпына келтіру сілтемесін
+                                    жіберу
                                 </Button>
                             </div>
                         </>
@@ -60,7 +63,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
 
                 <div className="space-x-1 text-center text-sm text-muted-foreground">
                     <span>Немесе </span>
-                    <TextLink href={login()}>кіру бетіне</TextLink><span> оралу</span>
+                    <TextLink href={login()}>кіру бетіне</TextLink>
+                    <span> оралу</span>
                 </div>
             </div>
         </AuthLayout>

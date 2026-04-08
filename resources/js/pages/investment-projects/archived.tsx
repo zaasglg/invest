@@ -57,7 +57,9 @@ export default function Archived({ projects, filters }: Props) {
     });
 
     const handleUnarchive = (id: number) => {
-        if (confirm('Бұл жобаны архивтен қайтарғыңыз келетініне сенімдісіз бе?')) {
+        if (
+            confirm('Бұл жобаны архивтен қайтарғыңыз келетініне сенімдісіз бе?')
+        ) {
             router.post(`/investment-projects/${id}/unarchive`);
         }
     };
@@ -135,7 +137,7 @@ export default function Archived({ projects, filters }: Props) {
                     className="flex items-center gap-3"
                 >
                     <div className="relative max-w-sm flex-1">
-                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                         <Input
                             value={data.search}
                             onChange={(e) => setData('search', e.target.value)}
@@ -153,9 +155,7 @@ export default function Archived({ projects, filters }: Props) {
                     <Table>
                         <TableHeader>
                             <TableRow className="bg-gray-50">
-                                <TableHead className="w-[50px]">
-                                    №
-                                </TableHead>
+                                <TableHead className="w-[50px]">№</TableHead>
                                 <TableHead>Жоба атауы</TableHead>
                                 <TableHead>Аудан</TableHead>
                                 <TableHead>Түрі</TableHead>
@@ -192,8 +192,7 @@ export default function Archived({ projects, filters }: Props) {
                                             {project.region?.name || '—'}
                                         </TableCell>
                                         <TableCell className="text-sm text-gray-600">
-                                            {project.project_type?.name ||
-                                                '—'}
+                                            {project.project_type?.name || '—'}
                                         </TableCell>
                                         <TableCell className="text-sm font-medium">
                                             {formatInvestment(
@@ -204,9 +203,7 @@ export default function Archived({ projects, filters }: Props) {
                                             <Badge
                                                 className={`${getStatusColor(project.status)} border-0`}
                                             >
-                                                {getStatusLabel(
-                                                    project.status,
-                                                )}
+                                                {getStatusLabel(project.status)}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">

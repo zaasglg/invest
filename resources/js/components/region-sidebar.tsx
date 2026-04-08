@@ -40,7 +40,7 @@ export function RegionSidebar({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="fixed left-13 top-20 z-[1000] h-10 w-10 rounded-lg border border-white/20 bg-[#0f1b3d]/90 text-white shadow-lg backdrop-blur-sm hover:bg-[#0f1b3d] hover:text-[#c8a44e]"
+                        className="fixed top-20 left-13 z-[1000] h-10 w-10 rounded-lg border border-white/20 bg-[#0f1b3d]/90 text-white shadow-lg backdrop-blur-sm hover:bg-[#0f1b3d] hover:text-[#c8a44e]"
                         title="Аудандар мен қалалар"
                     >
                         <Menu className="h-5 w-5" />
@@ -79,8 +79,7 @@ export function RegionSidebar({
                             <span
                                 className="h-2.5 w-2.5 shrink-0 rounded-full"
                                 style={{
-                                    backgroundColor:
-                                        region.color || '#c8a44e',
+                                    backgroundColor: region.color || '#c8a44e',
                                 }}
                             />
                             <span>{region.name}</span>

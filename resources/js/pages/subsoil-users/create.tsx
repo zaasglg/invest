@@ -21,7 +21,7 @@ interface Region {
     name: string;
     type: string;
     parent_id: number | null;
-    geometry: { lat: number, lng: number }[] | null;
+    geometry: { lat: number; lng: number }[] | null;
 }
 
 interface Props {
@@ -30,7 +30,11 @@ interface Props {
     userRegionId?: number | null;
 }
 
-export default function Create({ regions, isDistrictScoped, userRegionId }: Props) {
+export default function Create({
+    regions,
+    isDistrictScoped,
+    userRegionId,
+}: Props) {
     const userDistrict = useMemo(() => {
         if (!userRegionId) return null;
         return regions.find((r) => r.id === userRegionId) || null;
@@ -51,23 +55,31 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
         license_status: 'active',
         license_start: '',
         license_end: '',
-        location: [] as { lat: number, lng: number }[],
+        location: [] as { lat: number; lng: number }[],
     });
 
-    const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
+    const [selectedOblastId, setSelectedOblastId] =
+        useState<string>(userOblastId);
     const [currentStep, setCurrentStep] = useState(1);
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [validationErrors, setValidationErrors] = useState<
+        Record<string, string>
+    >({});
 
-    const oblasts = useMemo(() => regions.filter(r => r.type === 'oblast'), [regions]);
+    const oblasts = useMemo(
+        () => regions.filter((r) => r.type === 'oblast'),
+        [regions],
+    );
 
     const districts = useMemo(() => {
         if (!selectedOblastId) return [];
-        return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
+        return regions.filter(
+            (r) => r.parent_id === parseInt(selectedOblastId),
+        );
     }, [regions, selectedOblastId]);
-    
+
     const selectedDistrict = useMemo(() => {
         if (!data.region_id) return null;
-        return regions.find(r => r.id.toString() === data.region_id);
+        return regions.find((r) => r.id.toString() === data.region_id);
     }, [regions, data.region_id]);
 
     const submit: FormEventHandler = (e) => {
@@ -114,37 +126,52 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
     const getLicenseStatusLabel = (status: string) => {
         switch (status) {
-            case 'active': return 'Белсенді';
-            case 'expired': return 'Мерзімі өткен';
-            case 'suspended': return 'Тоқтатылған';
-            case 'illegal': return 'Заңсыз';
-            default: return '—';
+            case 'active':
+                return 'Белсенді';
+            case 'expired':
+                return 'Мерзімі өткен';
+            case 'suspended':
+                return 'Тоқтатылған';
+            case 'illegal':
+                return 'Заңсыз';
+            default:
+                return '—';
         }
     };
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'Жер қойнауын пайдалану', href: subsoilUsersRoutes.index.url() },
-            { title: 'Құру', href: '#' }
-        ]}>
+        <AppLayout
+            breadcrumbs={[
+                {
+                    title: 'Жер қойнауын пайдалану',
+                    href: subsoilUsersRoutes.index.url(),
+                },
+                { title: 'Құру', href: '#' },
+            ]}
+        >
             <Head title="Жер қойнауын пайдаланушыны құру" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
-                <h1 className="text-2xl font-bold mb-2 text-[#0f1b3d]">Жаңа жер қойнауын пайдаланушы</h1>
+                <h1 className="mb-2 text-2xl font-bold text-[#0f1b3d]">
+                    Жаңа жер қойнауын пайдаланушы
+                </h1>
 
                 {/* Step Indicator */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between">
                         {steps.map((step, index) => (
-                            <div key={step.id} className="flex flex-1 items-center">
+                            <div
+                                key={step.id}
+                                className="flex flex-1 items-center"
+                            >
                                 <div className="flex items-center">
                                     <div
                                         className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
                                             currentStep > step.id
                                                 ? 'bg-[#0f1b3d] text-white'
                                                 : currentStep === step.id
-                                                    ? 'bg-[#0f1b3d] text-white'
-                                                    : 'bg-gray-200 text-gray-500'
+                                                  ? 'bg-[#0f1b3d] text-white'
+                                                  : 'bg-gray-200 text-gray-500'
                                         }`}
                                     >
                                         {currentStep > step.id ? (
@@ -186,15 +213,22 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                     Негізгі ақпарат
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    Жер қойнауын пайдаланушы туралы негізгі мәліметтерді толтырыңыз.
+                                    Жер қойнауын пайдаланушы туралы негізгі
+                                    мәліметтерді толтырыңыз.
                                 </p>
                             </div>
 
                             <div className="space-y-6">
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Атауы <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="name"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Атауы{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Input
                                             id="name"
@@ -202,34 +236,57 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                             onChange={(e) => {
                                                 setData('name', e.target.value);
                                                 if (validationErrors.name) {
-                                                    setValidationErrors(prev => ({ ...prev, name: '' }));
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            name: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
                                             className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.name ? 'border-red-500' : ''}`}
                                             placeholder="Компания / ұйым"
                                             autoFocus
                                         />
-                                        {(errors.name || validationErrors.name) && <span className="text-sm text-red-500">{errors.name || validationErrors.name}</span>}
+                                        {(errors.name ||
+                                            validationErrors.name) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.name ||
+                                                    validationErrors.name}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="bin" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="bin"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             БСН
                                         </Label>
                                         <Input
                                             id="bin"
                                             value={data.bin}
-                                            onChange={(e) => setData('bin', e.target.value)}
+                                            onChange={(e) =>
+                                                setData('bin', e.target.value)
+                                            }
                                             className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                             placeholder="Бірегей нөмір"
                                         />
-                                        {errors.bin && <span className="text-sm text-red-500">{errors.bin}</span>}
+                                        {errors.bin && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.bin}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="oblast" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="oblast"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Облыс
                                         </Label>
                                         <Select
@@ -245,7 +302,10 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {oblasts.map((oblast) => (
-                                                    <SelectItem key={oblast.id} value={oblast.id.toString()}>
+                                                    <SelectItem
+                                                        key={oblast.id}
+                                                        value={oblast.id.toString()}
+                                                    >
                                                         {oblast.name}
                                                     </SelectItem>
                                                 ))}
@@ -254,56 +314,108 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="region_id" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Аудан / Қала <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="region_id"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Аудан / Қала{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Select
                                             value={data.region_id}
                                             onValueChange={(value) => {
                                                 setData('region_id', value);
-                                                if (validationErrors.region_id) {
-                                                    setValidationErrors(prev => ({ ...prev, region_id: '' }));
+                                                if (
+                                                    validationErrors.region_id
+                                                ) {
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            region_id: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
-                                            disabled={!selectedOblastId || isDistrictScoped}
+                                            disabled={
+                                                !selectedOblastId ||
+                                                isDistrictScoped
+                                            }
                                         >
-                                            <SelectTrigger className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.region_id ? 'border-red-500' : ''}`}>
+                                            <SelectTrigger
+                                                className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.region_id ? 'border-red-500' : ''}`}
+                                            >
                                                 <SelectValue placeholder="Ауданды таңдаңыз" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {districts.map((district) => (
-                                                    <SelectItem key={district.id} value={district.id.toString()}>
+                                                    <SelectItem
+                                                        key={district.id}
+                                                        value={district.id.toString()}
+                                                    >
                                                         {district.name}
                                                     </SelectItem>
                                                 ))}
-                                                {selectedOblastId && districts.length === 0 && (
-                                                    <SelectItem value="none" disabled>
-                                                        Қолжетімді аудандар жоқ
-                                                    </SelectItem>
-                                                )}
+                                                {selectedOblastId &&
+                                                    districts.length === 0 && (
+                                                        <SelectItem
+                                                            value="none"
+                                                            disabled
+                                                        >
+                                                            Қолжетімді аудандар
+                                                            жоқ
+                                                        </SelectItem>
+                                                    )}
                                             </SelectContent>
                                         </Select>
-                                        {(errors.region_id || validationErrors.region_id) && <span className="text-sm text-red-500">{errors.region_id || validationErrors.region_id}</span>}
+                                        {(errors.region_id ||
+                                            validationErrors.region_id) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.region_id ||
+                                                    validationErrors.region_id}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="mineral_type" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Минерал түрі <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="mineral_type"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Минерал түрі{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Input
                                             id="mineral_type"
                                             value={data.mineral_type}
-                                            onChange={(e) => setData('mineral_type', e.target.value)}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'mineral_type',
+                                                    e.target.value,
+                                                )
+                                            }
                                             className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                             placeholder="Мысалы: мұнай"
                                         />
-                                        {(errors.mineral_type || validationErrors.mineral_type) && <span className="text-sm text-red-500">{errors.mineral_type || validationErrors.mineral_type}</span>}
+                                        {(errors.mineral_type ||
+                                            validationErrors.mineral_type) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.mineral_type ||
+                                                    validationErrors.mineral_type}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="total_area" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="total_area"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Аумағы (га)
                                         </Label>
                                         <Input
@@ -311,11 +423,20 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                                             type="number"
                                             step="0.01"
                                             value={data.total_area}
-                                            onChange={(e) => setData('total_area', e.target.value)}
+                                            onChange={(e) =>
+                                                setData(
+                                                    'total_area',
+                                                    e.target.value,
+                                                )
+                                            }
                                             className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                             placeholder="0.00"
                                         />
-                                        {errors.total_area && <span className="text-sm text-red-500">{errors.total_area}</span>}
+                                        {errors.total_area && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.total_area}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -328,73 +449,134 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
                             <div className="space-y-6">
                                 <div className="rounded-lg border border-gray-200 bg-white p-6">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-semibold text-[#0f1b3d]">Сипаттама</h3>
-                                        <p className="text-sm text-gray-500">Қосымша ақпаратты толтырыңыз.</p>
+                                        <h3 className="text-lg font-semibold text-[#0f1b3d]">
+                                            Сипаттама
+                                        </h3>
+                                        <p className="text-sm text-gray-500">
+                                            Қосымша ақпаратты толтырыңыз.
+                                        </p>
                                     </div>
                                     <textarea
                                         id="description"
                                         value={data.description}
-                                        onChange={(e) => setData('description', e.target.value)}
+                                        onChange={(e) =>
+                                            setData(
+                                                'description',
+                                                e.target.value,
+                                            )
+                                        }
                                         className="min-h-[100px] w-full resize-none rounded-md border border-gray-200 bg-transparent px-3 py-2 text-sm shadow-none focus:border-[#0f1b3d] focus:outline-none focus-visible:ring-0"
                                         placeholder="Жер қойнауын пайдаланушы қызметінің сипаттамасы"
                                     />
-                                    {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
+                                    {errors.description && (
+                                        <span className="text-sm text-red-500">
+                                            {errors.description}
+                                        </span>
+                                    )}
                                 </div>
 
                                 <div className="rounded-lg border border-gray-200 bg-white p-6">
                                     <div className="mb-4">
-                                        <h3 className="text-lg font-semibold text-[#0f1b3d]">Лицензия</h3>
-                                        <p className="text-sm text-gray-500">Лицензия ақпаратын толтырыңыз.</p>
+                                        <h3 className="text-lg font-semibold text-[#0f1b3d]">
+                                            Лицензия
+                                        </h3>
+                                        <p className="text-sm text-gray-500">
+                                            Лицензия ақпаратын толтырыңыз.
+                                        </p>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex flex-col gap-2">
-                                            <Label htmlFor="license_status" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            <Label
+                                                htmlFor="license_status"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
                                                 Лицензия күйі
                                             </Label>
                                             <Select
                                                 value={data.license_status}
-                                                onValueChange={(value) => setData('license_status', value)}
+                                                onValueChange={(value) =>
+                                                    setData(
+                                                        'license_status',
+                                                        value,
+                                                    )
+                                                }
                                             >
                                                 <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                                     <SelectValue placeholder="Күйді таңдаңыз" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="active">Белсенді</SelectItem>
-                                                    <SelectItem value="expired">Мерзімі өткен</SelectItem>
-                                                    <SelectItem value="suspended">Тоқтатылған</SelectItem>
-                                                    <SelectItem value="illegal">Заңсыз</SelectItem>
+                                                    <SelectItem value="active">
+                                                        Белсенді
+                                                    </SelectItem>
+                                                    <SelectItem value="expired">
+                                                        Мерзімі өткен
+                                                    </SelectItem>
+                                                    <SelectItem value="suspended">
+                                                        Тоқтатылған
+                                                    </SelectItem>
+                                                    <SelectItem value="illegal">
+                                                        Заңсыз
+                                                    </SelectItem>
                                                 </SelectContent>
                                             </Select>
-                                            {errors.license_status && <span className="text-sm text-red-500">{errors.license_status}</span>}
+                                            {errors.license_status && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.license_status}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="flex flex-col gap-2">
-                                                <Label htmlFor="license_start" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                <Label
+                                                    htmlFor="license_start"
+                                                    className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                                >
                                                     Басталу күні
                                                 </Label>
                                                 <Input
                                                     id="license_start"
                                                     type="date"
                                                     value={data.license_start}
-                                                    onChange={(e) => setData('license_start', e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'license_start',
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 />
-                                                {errors.license_start && <span className="text-sm text-red-500">{errors.license_start}</span>}
+                                                {errors.license_start && (
+                                                    <span className="text-sm text-red-500">
+                                                        {errors.license_start}
+                                                    </span>
+                                                )}
                                             </div>
 
                                             <div className="flex flex-col gap-2">
-                                                <Label htmlFor="license_end" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                                <Label
+                                                    htmlFor="license_end"
+                                                    className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                                >
                                                     Аяқталу күні
                                                 </Label>
                                                 <Input
                                                     id="license_end"
                                                     type="date"
                                                     value={data.license_end}
-                                                    onChange={(e) => setData('license_end', e.target.value)}
+                                                    onChange={(e) =>
+                                                        setData(
+                                                            'license_end',
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 />
-                                                {errors.license_end && <span className="text-sm text-red-500">{errors.license_end}</span>}
+                                                {errors.license_end && (
+                                                    <span className="text-sm text-red-500">
+                                                        {errors.license_end}
+                                                    </span>
+                                                )}
                                             </div>
                                         </div>
                                     </div>
@@ -403,16 +585,26 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                             <div className="rounded-lg border border-gray-200 bg-white p-6">
                                 <div className="mb-4">
-                                    <h3 className="text-lg font-semibold text-[#0f1b3d]">Орналасу (полигон)</h3>
-                                    <p className="text-sm text-gray-500">Картадан орналасуды белгілеңіз.</p>
+                                    <h3 className="text-lg font-semibold text-[#0f1b3d]">
+                                        Орналасу (полигон)
+                                    </h3>
+                                    <p className="text-sm text-gray-500">
+                                        Картадан орналасуды белгілеңіз.
+                                    </p>
                                 </div>
                                 <LocationPicker
                                     value={data.location}
                                     onChange={(val) => setData('location', val)}
-                                    regionBoundary={selectedDistrict?.geometry || undefined}
+                                    regionBoundary={
+                                        selectedDistrict?.geometry || undefined
+                                    }
                                     className="h-[400px] w-full"
                                 />
-                                {errors.location && <span className="text-sm text-red-500">{errors.location}</span>}
+                                {errors.location && (
+                                    <span className="text-sm text-red-500">
+                                        {errors.location}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}
@@ -431,51 +623,94 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                             <div className="space-y-6">
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">Негізгі ақпарат</h4>
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Негізгі ақпарат
+                                    </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="text-gray-500">Атауы:</span>
-                                            <p className="font-medium">{data.name || '—'}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">БСН:</span>
-                                            <p className="font-medium">{data.bin || '—'}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Облыс:</span>
+                                            <span className="text-gray-500">
+                                                Атауы:
+                                            </span>
                                             <p className="font-medium">
-                                                {oblasts.find(o => o.id.toString() === selectedOblastId)?.name || '—'}
+                                                {data.name || '—'}
                                             </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Аудан:</span>
+                                            <span className="text-gray-500">
+                                                БСН:
+                                            </span>
                                             <p className="font-medium">
-                                                {districts.find(d => d.id.toString() === data.region_id)?.name || '—'}
+                                                {data.bin || '—'}
                                             </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Минерал түрі:</span>
-                                            <p className="font-medium">{data.mineral_type || '—'}</p>
+                                            <span className="text-gray-500">
+                                                Облыс:
+                                            </span>
+                                            <p className="font-medium">
+                                                {oblasts.find(
+                                                    (o) =>
+                                                        o.id.toString() ===
+                                                        selectedOblastId,
+                                                )?.name || '—'}
+                                            </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Аумағы:</span>
-                                            <p className="font-medium">{data.total_area ? `${data.total_area} га` : '—'}</p>
+                                            <span className="text-gray-500">
+                                                Аудан:
+                                            </span>
+                                            <p className="font-medium">
+                                                {districts.find(
+                                                    (d) =>
+                                                        d.id.toString() ===
+                                                        data.region_id,
+                                                )?.name || '—'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">
+                                                Минерал түрі:
+                                            </span>
+                                            <p className="font-medium">
+                                                {data.mineral_type || '—'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">
+                                                Аумағы:
+                                            </span>
+                                            <p className="font-medium">
+                                                {data.total_area
+                                                    ? `${data.total_area} га`
+                                                    : '—'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">Лицензия</h4>
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Лицензия
+                                    </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="text-gray-500">Күйі:</span>
-                                            <p className="font-medium">{getLicenseStatusLabel(data.license_status)}</p>
+                                            <span className="text-gray-500">
+                                                Күйі:
+                                            </span>
+                                            <p className="font-medium">
+                                                {getLicenseStatusLabel(
+                                                    data.license_status,
+                                                )}
+                                            </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Мерзімі:</span>
+                                            <span className="text-gray-500">
+                                                Мерзімі:
+                                            </span>
                                             <p className="font-medium">
-                                                {data.license_start && data.license_end 
-                                                    ? `${data.license_start} — ${data.license_end}` 
+                                                {data.license_start &&
+                                                data.license_end
+                                                    ? `${data.license_start} — ${data.license_end}`
                                                     : '—'}
                                             </p>
                                         </div>
@@ -484,15 +719,22 @@ export default function Create({ regions, isDistrictScoped, userRegionId }: Prop
 
                                 {data.description && (
                                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">Сипаттама</h4>
-                                        <p className="text-sm text-gray-600">{data.description}</p>
+                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">
+                                            Сипаттама
+                                        </h4>
+                                        <p className="text-sm text-gray-600">
+                                            {data.description}
+                                        </p>
                                     </div>
                                 )}
 
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">Орналасу</h4>
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Орналасу
+                                    </h4>
                                     <p className="text-sm text-gray-600">
-                                        {data.location && data.location.length > 0
+                                        {data.location &&
+                                        data.location.length > 0
                                             ? `${data.location.length} нүкте белгіленді`
                                             : 'Орналасу белгіленбеді'}
                                     </p>

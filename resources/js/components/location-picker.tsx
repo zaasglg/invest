@@ -6,7 +6,14 @@ import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
 import { Plus, Trash2, Undo2, X } from 'lucide-react';
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { MapContainer, TileLayer, Polygon, Marker, useMapEvents, useMap } from 'react-leaflet';
+import {
+    MapContainer,
+    TileLayer,
+    Polygon,
+    Marker,
+    useMapEvents,
+    useMap,
+} from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 
 const DefaultIcon = L.icon({
@@ -60,7 +67,11 @@ export function normalizeToMultiPolygon(val: unknown): LatLng[][] {
         );
     }
     // Single polygon: array of {lat, lng} objects
-    if (val[0] && typeof val[0] === 'object' && ('lat' in val[0] || 'lng' in val[0])) {
+    if (
+        val[0] &&
+        typeof val[0] === 'object' &&
+        ('lat' in val[0] || 'lng' in val[0])
+    ) {
         return [val.map(normalizePoint).filter((p): p is LatLng => p !== null)];
     }
     return [[]];
@@ -93,7 +104,13 @@ function MapEvents({ onClick }: { onClick: (e: L.LeafletMouseEvent) => void }) {
     return null;
 }
 
-function FitBoundsController({ regionBoundary, overlayEntities }: { regionBoundary?: LatLng[][] | LatLng[]; overlayEntities?: OverlayEntity[] }) {
+function FitBoundsController({
+    regionBoundary,
+    overlayEntities,
+}: {
+    regionBoundary?: LatLng[][] | LatLng[];
+    overlayEntities?: OverlayEntity[];
+}) {
     const map = useMap();
     const prevBoundsKey = useRef('');
 
@@ -102,10 +119,14 @@ function FitBoundsController({ regionBoundary, overlayEntities }: { regionBounda
 
         // Collect selected entity points first (priority)
         if (overlayEntities && overlayEntities.length > 0) {
-            overlayEntities.forEach(e => {
+            overlayEntities.forEach((e) => {
                 if (e.location && Array.isArray(e.location)) {
-                    e.location.forEach(p => {
-                        if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+                    e.location.forEach((p) => {
+                        if (
+                            p &&
+                            typeof p.lat === 'number' &&
+                            typeof p.lng === 'number'
+                        ) {
                             allPoints.push([p.lat, p.lng]);
                         }
                     });
@@ -116,9 +137,13 @@ function FitBoundsController({ regionBoundary, overlayEntities }: { regionBounda
         // If no entity points, use region boundary (multi-polygon)
         if (allPoints.length === 0 && regionBoundary) {
             const normalized = normalizeToMultiPolygon(regionBoundary);
-            normalized.forEach(polygon => {
-                polygon.forEach(p => {
-                    if (p && typeof p.lat === 'number' && typeof p.lng === 'number') {
+            normalized.forEach((polygon) => {
+                polygon.forEach((p) => {
+                    if (
+                        p &&
+                        typeof p.lat === 'number' &&
+                        typeof p.lng === 'number'
+                    ) {
                         allPoints.push([p.lat, p.lng]);
                     }
                 });
@@ -132,7 +157,12 @@ function FitBoundsController({ regionBoundary, overlayEntities }: { regionBounda
 
         if (allPoints.length > 0) {
             const bounds = L.latLngBounds(allPoints);
-            map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15, animate: true, duration: 0.5 });
+            map.fitBounds(bounds, {
+                padding: [40, 40],
+                maxZoom: 15,
+                animate: true,
+                duration: 0.5,
+            });
         }
     }, [regionBoundary, overlayEntities, map]);
 
@@ -146,9 +176,17 @@ const entityColors: Record<string, { color: string; fill: string }> = {
 };
 
 export default function LocationPicker(props: Props) {
-    const { value = [[]], className, regionBoundary, overlayEntities, mapStyle = 'satellite' } = props;
+    const {
+        value = [[]],
+        className,
+        regionBoundary,
+        overlayEntities,
+        mapStyle = 'satellite',
+    } = props;
     const isMultiPolygon = props.multiPolygon === true;
-    const [polygons, setPolygons] = useState<LatLng[][]>(() => normalizeToMultiPolygon(value));
+    const [polygons, setPolygons] = useState<LatLng[][]>(() =>
+        normalizeToMultiPolygon(value),
+    );
     const [activeIndex, setActiveIndex] = useState(0);
     const isInternalChange = useRef(false);
     const onChangeRef = useRef(props.onChange);
@@ -170,28 +208,36 @@ export default function LocationPicker(props: Props) {
         }
     }, [value]);
 
-    const emitChange = useCallback((newPolygons: LatLng[][]) => {
-        isInternalChange.current = true;
-        if (isMultiPolygon) {
-            (onChangeRef.current as (v: LatLng[][]) => void)(newPolygons);
-        } else {
-            (onChangeRef.current as (v: LatLng[]) => void)(newPolygons[0] || []);
-        }
-    }, [isMultiPolygon]);
+    const emitChange = useCallback(
+        (newPolygons: LatLng[][]) => {
+            isInternalChange.current = true;
+            if (isMultiPolygon) {
+                (onChangeRef.current as (v: LatLng[][]) => void)(newPolygons);
+            } else {
+                (onChangeRef.current as (v: LatLng[]) => void)(
+                    newPolygons[0] || [],
+                );
+            }
+        },
+        [isMultiPolygon],
+    );
 
-    const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
-        const newPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
-        setPolygons(prev => {
-            const updated = prev.map((poly, i) =>
-                i === activeIndex ? [...poly, newPoint] : poly,
-            );
-            emitChange(updated);
-            return updated;
-        });
-    }, [activeIndex, emitChange]);
+    const handleMapClick = useCallback(
+        (e: L.LeafletMouseEvent) => {
+            const newPoint = { lat: e.latlng.lat, lng: e.latlng.lng };
+            setPolygons((prev) => {
+                const updated = prev.map((poly, i) =>
+                    i === activeIndex ? [...poly, newPoint] : poly,
+                );
+                emitChange(updated);
+                return updated;
+            });
+        },
+        [activeIndex, emitChange],
+    );
 
     const handleClear = useCallback(() => {
-        setPolygons(prev => {
+        setPolygons((prev) => {
             const updated = prev.map((poly, i) =>
                 i === activeIndex ? [] : poly,
             );
@@ -201,7 +247,7 @@ export default function LocationPicker(props: Props) {
     }, [activeIndex, emitChange]);
 
     const handleUndo = useCallback(() => {
-        setPolygons(prev => {
+        setPolygons((prev) => {
             const updated = prev.map((poly, i) =>
                 i === activeIndex ? poly.slice(0, -1) : poly,
             );
@@ -211,7 +257,7 @@ export default function LocationPicker(props: Props) {
     }, [activeIndex, emitChange]);
 
     const handleAddPolygon = useCallback(() => {
-        setPolygons(prev => {
+        setPolygons((prev) => {
             const updated = [...prev, []];
             setActiveIndex(updated.length - 1);
             emitChange(updated);
@@ -219,21 +265,25 @@ export default function LocationPicker(props: Props) {
         });
     }, [emitChange]);
 
-    const handleRemovePolygon = useCallback((index: number) => {
-        setPolygons(prev => {
-            if (prev.length <= 1) {
-                const updated = [[]];
-                setActiveIndex(0);
+    const handleRemovePolygon = useCallback(
+        (index: number) => {
+            setPolygons((prev) => {
+                if (prev.length <= 1) {
+                    const updated = [[]];
+                    setActiveIndex(0);
+                    emitChange(updated);
+                    return updated;
+                }
+                const updated = prev.filter((_, i) => i !== index);
+                const newActive =
+                    index >= updated.length ? updated.length - 1 : index;
+                setActiveIndex(newActive);
                 emitChange(updated);
                 return updated;
-            }
-            const updated = prev.filter((_, i) => i !== index);
-            const newActive = index >= updated.length ? updated.length - 1 : index;
-            setActiveIndex(newActive);
-            emitChange(updated);
-            return updated;
-        });
-    }, [emitChange]);
+            });
+        },
+        [emitChange],
+    );
 
     const activePoints = polygons[activeIndex] || [];
 
@@ -241,16 +291,20 @@ export default function LocationPicker(props: Props) {
     const center: [number, number] = [43.3, 68.25];
 
     // Normalize regionBoundary to multi-polygon
-    const normalizedBoundary = regionBoundary ? normalizeToMultiPolygon(regionBoundary) : [];
+    const normalizedBoundary = regionBoundary
+        ? normalizeToMultiPolygon(regionBoundary)
+        : [];
 
     return (
-        <div className={`relative w-full rounded-md border overflow-hidden ${className}`}>
+        <div
+            className={`relative w-full overflow-hidden rounded-md border ${className}`}
+        >
             <div className="h-[400px]">
                 <MapContainer
                     center={center}
                     zoom={9}
                     scrollWheelZoom={true}
-                    className="h-full w-full z-0"
+                    className="z-0 h-full w-full"
                 >
                     {mapStyle === 'standard' ? (
                         <TileLayer
@@ -265,7 +319,10 @@ export default function LocationPicker(props: Props) {
                     )}
 
                     <MapEvents onClick={handleMapClick} />
-                    <FitBoundsController regionBoundary={regionBoundary} overlayEntities={overlayEntities} />
+                    <FitBoundsController
+                        regionBoundary={regionBoundary}
+                        overlayEntities={overlayEntities}
+                    />
 
                     {normalizedBoundary.map((boundary, bIdx) => {
                         const safeBoundary = boundary
@@ -286,31 +343,44 @@ export default function LocationPicker(props: Props) {
                         ) : null;
                     })}
 
-                    {overlayEntities && overlayEntities.map((entity) => {
-                        if (!entity.location || !Array.isArray(entity.location) || entity.location.length === 0) return null;
-                        const positions = entity.location
-                            .filter(p => p && typeof p.lat === 'number' && typeof p.lng === 'number')
-                            .map(p => [p.lat, p.lng] as [number, number]);
-                        if (positions.length === 0) return null;
-                        const colors = entityColors[entity.type] || entityColors.sez;
-                        return (
-                            <Polygon
-                                key={`${entity.type}-${entity.id}`}
-                                positions={positions}
-                                pathOptions={{
-                                    color: colors.color,
-                                    fillColor: colors.fill,
-                                    fillOpacity: 0.15,
-                                    weight: 2,
-                                    dashArray: '5, 5',
-                                }}
-                            />
-                        );
-                    })}
+                    {overlayEntities &&
+                        overlayEntities.map((entity) => {
+                            if (
+                                !entity.location ||
+                                !Array.isArray(entity.location) ||
+                                entity.location.length === 0
+                            )
+                                return null;
+                            const positions = entity.location
+                                .filter(
+                                    (p) =>
+                                        p &&
+                                        typeof p.lat === 'number' &&
+                                        typeof p.lng === 'number',
+                                )
+                                .map((p) => [p.lat, p.lng] as [number, number]);
+                            if (positions.length === 0) return null;
+                            const colors =
+                                entityColors[entity.type] || entityColors.sez;
+                            return (
+                                <Polygon
+                                    key={`${entity.type}-${entity.id}`}
+                                    positions={positions}
+                                    pathOptions={{
+                                        color: colors.color,
+                                        fillColor: colors.fill,
+                                        fillOpacity: 0.15,
+                                        weight: 2,
+                                        dashArray: '5, 5',
+                                    }}
+                                />
+                            );
+                        })}
 
                     {/* Inactive polygons */}
                     {polygons.map((poly, idx) => {
-                        if (idx === activeIndex || poly.length === 0) return null;
+                        if (idx === activeIndex || poly.length === 0)
+                            return null;
                         return (
                             <Polygon
                                 key={`poly-${idx}`}
@@ -329,16 +399,22 @@ export default function LocationPicker(props: Props) {
                     {/* Active polygon */}
                     {activePoints.length > 0 && (
                         <>
-                            <Polygon positions={activePoints} pathOptions={{ color: 'blue' }} />
+                            <Polygon
+                                positions={activePoints}
+                                pathOptions={{ color: 'blue' }}
+                            />
                             {activePoints.map((point, idx) => (
-                                <Marker key={`marker-${activeIndex}-${idx}`} position={point} />
+                                <Marker
+                                    key={`marker-${activeIndex}-${idx}`}
+                                    position={point}
+                                />
                             ))}
                         </>
                     )}
                 </MapContainer>
             </div>
 
-            <div className="absolute top-2 right-2 flex flex-col gap-2 z-[400]">
+            <div className="absolute top-2 right-2 z-[400] flex flex-col gap-2">
                 <Button
                     type="button"
                     variant="secondary"
@@ -363,7 +439,7 @@ export default function LocationPicker(props: Props) {
 
             {/* Multi-polygon controls */}
             {isMultiPolygon ? (
-                <div className="flex items-center gap-1 border-t bg-white/95 px-2 py-1.5 z-[400]">
+                <div className="z-[400] flex items-center gap-1 border-t bg-white/95 px-2 py-1.5">
                     {polygons.map((poly, idx) => (
                         <div key={idx} className="flex items-center">
                             <button
@@ -377,7 +453,9 @@ export default function LocationPicker(props: Props) {
                             >
                                 Полигон {idx + 1}
                                 {poly.length > 0 && (
-                                    <span className="ml-1 opacity-70">({poly.length})</span>
+                                    <span className="ml-1 opacity-70">
+                                        ({poly.length})
+                                    </span>
                                 )}
                             </button>
                             {polygons.length > 1 && (
@@ -410,7 +488,7 @@ export default function LocationPicker(props: Props) {
                     </span>
                 </div>
             ) : (
-                <div className="absolute bottom-2 left-2 bg-white/90 p-2 rounded text-xs z-[400] pointer-events-none">
+                <div className="pointer-events-none absolute bottom-2 left-2 z-[400] rounded bg-white/90 p-2 text-xs">
                     {activePoints.length === 0
                         ? 'Полигон нүктелерін қосу үшін картаға басыңыз'
                         : `Нүктелер: ${activePoints.length}`}

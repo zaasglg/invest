@@ -35,14 +35,14 @@ export function NavUser() {
                     <DropdownMenuTrigger asChild>
                         <SidebarMenuButton
                             size="lg"
-                            className="group data-[state=open]:bg-sidebar-accent/80 p-2 pr-3"
+                            className="group p-2 pr-3 data-[state=open]:bg-sidebar-accent/80"
                             data-test="sidebar-menu-button"
                         >
-                            <div className="flex items-center gap-3 flex-1">
+                            <div className="flex flex-1 items-center gap-3">
                                 <UserInfo user={auth.user} />
                             </div>
-                            <div className="ml-auto flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <div className="h-7 w-7 rounded-lg hover:bg-sidebar-accent flex items-center justify-center">
+                            <div className="ml-auto flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                                <div className="flex h-7 w-7 items-center justify-center rounded-lg hover:bg-sidebar-accent">
                                     <MoreVertical className="size-4 text-muted-foreground" />
                                 </div>
                             </div>
@@ -59,17 +59,28 @@ export function NavUser() {
                                   : 'bottom'
                         }
                     >
-                        <div className="px-2 py-1.5 mb-1">
-                            <p className="text-xs font-medium text-muted-foreground">Мәзір</p>
+                        <div className="mb-1 px-2 py-1.5">
+                            <p className="text-xs font-medium text-muted-foreground">
+                                Мәзір
+                            </p>
                         </div>
-                        <DropdownMenuItem asChild className="rounded-lg gap-3 cursor-pointer">
-                            <Link className="flex items-center gap-3" href={editProfile()}>
+                        <DropdownMenuItem
+                            asChild
+                            className="cursor-pointer gap-3 rounded-lg"
+                        >
+                            <Link
+                                className="flex items-center gap-3"
+                                href={editProfile()}
+                            >
                                 <User className="size-4" />
                                 <span>Профиль</span>
                             </Link>
                         </DropdownMenuItem>
                         <DropdownMenuSeparator className="my-1" />
-                        <DropdownMenuItem asChild className="rounded-lg gap-3 cursor-pointer text-destructive focus:text-destructive">
+                        <DropdownMenuItem
+                            asChild
+                            className="cursor-pointer gap-3 rounded-lg text-destructive focus:text-destructive"
+                        >
                             <Link
                                 className="flex items-center gap-3 text-destructive"
                                 href={logout()}

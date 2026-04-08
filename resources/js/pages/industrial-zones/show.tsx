@@ -16,12 +16,7 @@ import {
 import React from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     Table,
     TableBody,
@@ -124,25 +119,24 @@ export default function Show({ industrialZone }: Props) {
         },
     };
 
-    const projectStatusMap: Record<string, { label: string; color: string }> =
-        {
-            plan: {
-                label: 'Жоспарлау',
-                color: 'bg-blue-100 text-blue-800',
-            },
-            implementation: {
-                label: 'Іске асыру',
-                color: 'bg-amber-100 text-amber-800',
-            },
-            launched: {
-                label: 'Іске қосылған',
-                color: 'bg-green-100 text-green-800',
-            },
-            suspended: {
-                label: 'Тоқтатылған',
-                color: 'bg-yellow-100 text-yellow-800',
-            },
-        };
+    const projectStatusMap: Record<string, { label: string; color: string }> = {
+        plan: {
+            label: 'Жоспарлау',
+            color: 'bg-blue-100 text-blue-800',
+        },
+        implementation: {
+            label: 'Іске асыру',
+            color: 'bg-amber-100 text-amber-800',
+        },
+        launched: {
+            label: 'Іске қосылған',
+            color: 'bg-green-100 text-green-800',
+        },
+        suspended: {
+            label: 'Тоқтатылған',
+            color: 'bg-yellow-100 text-yellow-800',
+        },
+    };
 
     const formatCurrency = (amount: number) => {
         return formatMoneyCompact(amount);
@@ -154,13 +148,16 @@ export default function Show({ industrialZone }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: industrialZone.region?.name || 'Аймақ', href: `/regions/${industrialZone.region?.id}` },
+                {
+                    title: industrialZone.region?.name || 'Аймақ',
+                    href: `/regions/${industrialZone.region?.id}`,
+                },
                 { title: industrialZone.name, href: '' },
             ]}
         >
             <Head title={industrialZone.name} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
+            <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
                 {/* Back link */}
                 <Link
                     href={`/industrial-zones`}
@@ -173,7 +170,7 @@ export default function Show({ industrialZone }: Props) {
                     {/* Main Content */}
                     <div className="space-y-6 lg:col-span-2">
                         {/* Banner + Info + Description */}
-                        <Card className="overflow-hidden shadow-none py-0">
+                        <Card className="overflow-hidden py-0 shadow-none">
                             {/* Banner Header */}
                             <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -186,7 +183,8 @@ export default function Show({ industrialZone }: Props) {
                                     <Badge
                                         className={`${statusMap[industrialZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
                                     >
-                                        {statusMap[industrialZone.status]?.label || industrialZone.status}
+                                        {statusMap[industrialZone.status]
+                                            ?.label || industrialZone.status}
                                     </Badge>
                                 </div>
                             </div>
@@ -196,91 +194,176 @@ export default function Show({ industrialZone }: Props) {
                                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" /> Аудан
+                                            <MapPin className="h-3.5 w-3.5" />{' '}
+                                            Аудан
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {industrialZone.region?.name || 'Көрсетілмеген'}
+                                            {industrialZone.region?.name ||
+                                                'Көрсетілмеген'}
                                         </p>
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Activity className="h-3.5 w-3.5" /> Күйі
+                                            <Activity className="h-3.5 w-3.5" />{' '}
+                                            Күйі
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {statusMap[industrialZone.status]?.label || industrialZone.status}
+                                            {statusMap[industrialZone.status]
+                                                ?.label ||
+                                                industrialZone.status}
                                         </p>
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" /> Аумағы
+                                            <MapPin className="h-3.5 w-3.5" />{' '}
+                                            Аумағы
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {industrialZone.total_area ? `${industrialZone.total_area} га` : 'Көрсетілмеген'}
+                                            {industrialZone.total_area
+                                                ? `${industrialZone.total_area} га`
+                                                : 'Көрсетілмеген'}
                                         </p>
                                     </div>
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Building2 className="h-3.5 w-3.5" /> Инвестиция көлемі
+                                            <Building2 className="h-3.5 w-3.5" />{' '}
+                                            Инвестиция көлемі
                                         </p>
                                         <p className="text-sm font-bold text-[#0f1b3d]">
                                             {(() => {
-                                                const sum = projects.reduce((acc, p) => acc + Number(p.total_investment || 0), 0);
-                                                return sum > 0 ? formatCurrency(sum) : 'Көрсетілмеген';
+                                                const sum = projects.reduce(
+                                                    (acc, p) =>
+                                                        acc +
+                                                        Number(
+                                                            p.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
+                                                return sum > 0
+                                                    ? formatCurrency(sum)
+                                                    : 'Көрсетілмеген';
                                             })()}
                                         </p>
                                     </div>
                                 </div>
 
                                 {/* Infrastructure */}
-                                {industrialZone.infrastructure && (() => {
-                                    const infraItems = [
-                                        { key: 'electricity', name: 'Электрмен жабдықтау', icon: Zap, val: industrialZone.infrastructure.electricity, unit: 'МВт' },
-                                        { key: 'gas', name: 'Газ', icon: Flame, val: industrialZone.infrastructure.gas, unit: 'м³/сағ' },
-                                        { key: 'water', name: 'Сумен жабдықтау', icon: Droplets, val: industrialZone.infrastructure.water, unit: 'м³/тәу' },
-                                        { key: 'roads', name: 'Жолдар', icon: Car, val: industrialZone.infrastructure.roads, unit: 'км' },
-                                        { key: 'railway', name: 'Теміржол тұйығы', icon: TrainFront, val: industrialZone.infrastructure.railway, unit: 'км' },
-                                        { key: 'internet', name: 'Интернет', icon: Wifi, val: industrialZone.infrastructure.internet, unit: '' },
-                                    ].filter(i => i.val && i.val.available !== undefined);
+                                {industrialZone.infrastructure &&
+                                    (() => {
+                                        const infraItems = [
+                                            {
+                                                key: 'electricity',
+                                                name: 'Электрмен жабдықтау',
+                                                icon: Zap,
+                                                val: industrialZone
+                                                    .infrastructure.electricity,
+                                                unit: 'МВт',
+                                            },
+                                            {
+                                                key: 'gas',
+                                                name: 'Газ',
+                                                icon: Flame,
+                                                val: industrialZone
+                                                    .infrastructure.gas,
+                                                unit: 'м³/сағ',
+                                            },
+                                            {
+                                                key: 'water',
+                                                name: 'Сумен жабдықтау',
+                                                icon: Droplets,
+                                                val: industrialZone
+                                                    .infrastructure.water,
+                                                unit: 'м³/тәу',
+                                            },
+                                            {
+                                                key: 'roads',
+                                                name: 'Жолдар',
+                                                icon: Car,
+                                                val: industrialZone
+                                                    .infrastructure.roads,
+                                                unit: 'км',
+                                            },
+                                            {
+                                                key: 'railway',
+                                                name: 'Теміржол тұйығы',
+                                                icon: TrainFront,
+                                                val: industrialZone
+                                                    .infrastructure.railway,
+                                                unit: 'км',
+                                            },
+                                            {
+                                                key: 'internet',
+                                                name: 'Интернет',
+                                                icon: Wifi,
+                                                val: industrialZone
+                                                    .infrastructure.internet,
+                                                unit: '',
+                                            },
+                                        ].filter(
+                                            (i) =>
+                                                i.val &&
+                                                i.val.available !== undefined,
+                                        );
 
-                                    if (infraItems.length === 0) return null;
+                                        if (infraItems.length === 0)
+                                            return null;
 
-                                    return (
-                                        <div className="mt-6">
-                                            <p className="mb-2 text-sm font-medium text-gray-500">
-                                                Инфрақұрылым
-                                            </p>
-                                            <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-                                                {infraItems.map((item) => {
-                                                    const active = item.val?.available;
-                                                    const detail = item.val?.capacity || item.val?.type || item.val?.distance || '';
-                                                    return (
-                                                        <div key={item.key} className="flex items-center justify-between p-3 transition-colors hover:bg-gray-50/50">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="rounded-md bg-gray-50 p-2 text-gray-500">
-                                                                    <item.icon className="h-4 w-4" />
-                                                                </div>
-                                                                <span className="text-sm font-medium text-gray-700">{item.name}</span>
-                                                            </div>
-                                                            <div className="flex flex-col items-end text-right">
-                                                                <Badge variant="outline" className={`
-                                                                    ${active ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'}
-                                                                    h-5 border px-1.5 py-0 text-[10px] font-medium
-                                                                `}>
-                                                                    {active ? 'Қолжетімді' : 'Жоқ'}
-                                                                </Badge>
-                                                                {detail && (
-                                                                    <div className="mt-0.5 text-[10px] font-medium text-gray-400">
-                                                                        {detail}
+                                        return (
+                                            <div className="mt-6">
+                                                <p className="mb-2 text-sm font-medium text-gray-500">
+                                                    Инфрақұрылым
+                                                </p>
+                                                <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
+                                                    {infraItems.map((item) => {
+                                                        const active =
+                                                            item.val?.available;
+                                                        const detail =
+                                                            item.val
+                                                                ?.capacity ||
+                                                            item.val?.type ||
+                                                            item.val
+                                                                ?.distance ||
+                                                            '';
+                                                        return (
+                                                            <div
+                                                                key={item.key}
+                                                                className="flex items-center justify-between p-3 transition-colors hover:bg-gray-50/50"
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="rounded-md bg-gray-50 p-2 text-gray-500">
+                                                                        <item.icon className="h-4 w-4" />
                                                                     </div>
-                                                                )}
+                                                                    <span className="text-sm font-medium text-gray-700">
+                                                                        {
+                                                                            item.name
+                                                                        }
+                                                                    </span>
+                                                                </div>
+                                                                <div className="flex flex-col items-end text-right">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={` ${active ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'} h-5 border px-1.5 py-0 text-[10px] font-medium`}
+                                                                    >
+                                                                        {active
+                                                                            ? 'Қолжетімді'
+                                                                            : 'Жоқ'}
+                                                                    </Badge>
+                                                                    {detail && (
+                                                                        <div className="mt-0.5 text-[10px] font-medium text-gray-400">
+                                                                            {
+                                                                                detail
+                                                                            }
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
-                                        </div>
-                                    );
-                                })()}
+                                        );
+                                    })()}
                             </CardContent>
 
                             {/* Description */}
@@ -289,8 +372,9 @@ export default function Show({ industrialZone }: Props) {
                                     <FileText className="h-5 w-5 text-gray-500" />
                                     {industrialZone.name}
                                 </h2> */}
-                                <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
-                                    {industrialZone.description || 'Сипаттама жоқ.'}
+                                <p className="leading-relaxed whitespace-pre-wrap text-gray-700">
+                                    {industrialZone.description ||
+                                        'Сипаттама жоқ.'}
                                 </p>
                             </div>
                         </Card>
@@ -316,12 +400,8 @@ export default function Show({ industrialZone }: Props) {
                                     <Table>
                                         <TableHeader>
                                             <TableRow>
-                                                <TableHead>
-                                                    Атауы
-                                                </TableHead>
-                                                <TableHead>
-                                                    Компания
-                                                </TableHead>
+                                                <TableHead>Атауы</TableHead>
+                                                <TableHead>Компания</TableHead>
                                                 <TableHead>
                                                     Инвестициялар
                                                 </TableHead>

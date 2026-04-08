@@ -1,5 +1,5 @@
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Eye, Pencil, Plus, Trash2,Edit } from 'lucide-react';
+import { ChevronDown, Eye, Pencil, Plus, Trash2, Edit } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -55,11 +55,7 @@ interface Props {
     filters: Partial<Filters>;
 }
 
-export default function Index({
-    industrialZones,
-    regions,
-    filters,
-}: Props) {
+export default function Index({ industrialZones, regions, filters }: Props) {
     const { url } = usePage();
     const canModify = useCanModify();
     const { data, setData, get } = useForm<Filters>({
@@ -143,9 +139,7 @@ export default function Index({
                         <form onSubmit={submitFilters} className="mt-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="search">
-                                        Іздеу
-                                    </Label>
+                                    <Label htmlFor="search">Іздеу</Label>
                                     <Input
                                         id="search"
                                         value={data.search}
@@ -224,9 +218,7 @@ export default function Index({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80px]">
-                                    ID
-                                </TableHead>
+                                <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Атауы</TableHead>
                                 <TableHead>Аймақ</TableHead>
                                 <TableHead>Аумағы (га)</TableHead>
@@ -272,18 +264,23 @@ export default function Index({
                                         <TableCell>
                                             {zone.investment_projects_sum_total_investment
                                                 ? (() => {
-                                                    const v = Number(zone.investment_projects_sum_total_investment);
-                                                    return formatMoneyCompact(v, { includeCurrency: false });
-                                                })()
+                                                      const v = Number(
+                                                          zone.investment_projects_sum_total_investment,
+                                                      );
+                                                      return formatMoneyCompact(
+                                                          v,
+                                                          {
+                                                              includeCurrency: false,
+                                                          },
+                                                      );
+                                                  })()
                                                 : '—'}
                                         </TableCell>
                                         <TableCell>
                                             <Badge
                                                 className={`${getStatusColor(zone.status)} border-0 px-3 py-1 text-sm font-medium`}
                                             >
-                                                {getStatusLabel(
-                                                    zone.status,
-                                                )}
+                                                {getStatusLabel(zone.status)}
                                             </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
@@ -313,9 +310,12 @@ export default function Index({
                                                             title="Өңдеу"
                                                         >
                                                             <Link
-                                                                href={industrialZonesRoutes.edit.url(
-                                                                    zone.id,
-                                                                ) + `?return_to=${encodeURIComponent(url)}`}
+                                                                href={
+                                                                    industrialZonesRoutes.edit.url(
+                                                                        zone.id,
+                                                                    ) +
+                                                                    `?return_to=${encodeURIComponent(url)}`
+                                                                }
                                                             >
                                                                 {/* <Pencil className="h-4 w-4" /> */}
                                                                 <Edit className="h-4 w-4" />
@@ -324,7 +324,7 @@ export default function Index({
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
                                                             onClick={() =>
                                                                 handleDelete(
                                                                     zone.id,

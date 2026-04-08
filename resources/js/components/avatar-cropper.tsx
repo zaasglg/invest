@@ -12,7 +12,6 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 
-
 interface AvatarCropperProps {
     open: boolean;
     imageSrc: string;

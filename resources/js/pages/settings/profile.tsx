@@ -123,8 +123,7 @@ export default function Profile({
                                 />
                                 <AvatarFallback className="rounded-full bg-[#0f1b3d]/10 text-lg font-semibold text-[#0f1b3d]">
                                     {getInitials(
-                                        auth.user.full_name ||
-                                            auth.user.email,
+                                        auth.user.full_name || auth.user.email,
                                     )}
                                 </AvatarFallback>
                             </Avatar>
@@ -197,9 +196,7 @@ export default function Profile({
                                     <Input
                                         id="full_name"
                                         className="block w-full"
-                                        defaultValue={
-                                            auth.user.full_name
-                                        }
+                                        defaultValue={auth.user.full_name}
                                         name="full_name"
                                         required
                                         autoComplete="name"
@@ -235,23 +232,23 @@ export default function Profile({
                                     auth.user.email_verified_at === null && (
                                         <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
                                             <p className="text-sm text-amber-700">
-                                                Электрондық пошта
-                                                мекенжайыңыз расталмаған.{' '}
+                                                Электрондық пошта мекенжайыңыз
+                                                расталмаған.{' '}
                                                 <Link
                                                     href={send()}
                                                     as="button"
                                                     className="font-medium text-amber-800 underline underline-offset-4 transition-colors hover:text-amber-900"
                                                 >
-                                                    Растау хатын
-                                                    жіберу үшін басыңыз.
+                                                    Растау хатын жіберу үшін
+                                                    басыңыз.
                                                 </Link>
                                             </p>
 
                                             {status ===
                                                 'verification-link-sent' && (
                                                 <div className="mt-2 text-sm font-medium text-green-600">
-                                                    Растау сілтемесі
-                                                    поштаңызға жіберілді.
+                                                    Растау сілтемесі поштаңызға
+                                                    жіберілді.
                                                 </div>
                                             )}
                                         </div>

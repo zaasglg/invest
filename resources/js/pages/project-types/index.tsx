@@ -34,13 +34,23 @@ export default function Index({ types }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={[{ title: 'Жоба түрлері', href: projectTypes.index.url() }]}>
+        <AppLayout
+            breadcrumbs={[
+                { title: 'Жоба түрлері', href: projectTypes.index.url() },
+            ]}
+        >
             <Head title="Жоба түрлері" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
                 <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">Жоба түрлері</h1>
-                    <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
+                        Жоба түрлері
+                    </h1>
+                    <Button
+                        asChild
+                        size="sm"
+                        className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                    >
                         <Link href={projectTypes.create.url()}>Жаңа қосу</Link>
                     </Button>
                 </div>
@@ -51,21 +61,41 @@ export default function Index({ types }: Props) {
                             <TableRow>
                                 <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Атауы</TableHead>
-                                <TableHead className="text-right">Әрекеттер</TableHead>
+                                <TableHead className="text-right">
+                                    Әрекеттер
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {types.data.map((type) => (
                                 <TableRow key={type.id}>
-                                    <TableCell className="font-medium text-gray-400">#{type.id}</TableCell>
+                                    <TableCell className="font-medium text-gray-400">
+                                        #{type.id}
+                                    </TableCell>
                                     <TableCell>{type.name}</TableCell>
-                                    <TableCell className="text-right space-x-2">
-                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]">
-                                            <Link href={projectTypes.edit.url(type.id)}>
+                                    <TableCell className="space-x-2 text-right">
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            asChild
+                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                        >
+                                            <Link
+                                                href={projectTypes.edit.url(
+                                                    type.id,
+                                                )}
+                                            >
                                                 <Edit className="h-4 w-4" />
                                             </Link>
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700" onClick={() => handleDelete(type.id)}>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                            onClick={() =>
+                                                handleDelete(type.id)
+                                            }
+                                        >
                                             <Trash2 className="h-4 w-4" />
                                         </Button>
                                     </TableCell>
@@ -73,7 +103,10 @@ export default function Index({ types }: Props) {
                             ))}
                             {types.data.length === 0 && (
                                 <TableRow>
-                                    <TableCell colSpan={3} className="py-12 text-center text-gray-400">
+                                    <TableCell
+                                        colSpan={3}
+                                        className="py-12 text-center text-gray-400"
+                                    >
                                         Мәлімет жоқ. Бірінші жоба түрін құрыңыз.
                                     </TableCell>
                                 </TableRow>

@@ -1,16 +1,8 @@
-import {
-    Car,
-    Droplets,
-    Flame,
-    TrainFront,
-    Wifi,
-    Zap,
-} from 'lucide-react';
+import { Car, Droplets, Flame, TrainFront, Wifi, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-
 
 export interface InfrastructureDetails {
     available: boolean;
@@ -136,9 +128,7 @@ export default function InfrastructureForm({
 
     return (
         <div className="flex flex-col gap-2">
-            <Label className="text-neutral-500 font-normal">
-                Инфрақұрылым
-            </Label>
+            <Label className="font-normal text-neutral-500">Инфрақұрылым</Label>
             <div className="rounded-md border border-neutral-200">
                 {INFRA_FIELDS.map((field, idx) => {
                     const item = value[field.key];
@@ -155,7 +145,7 @@ export default function InfrastructureForm({
                                     : ''
                             }`}
                         >
-                            <div className="flex items-center gap-3 min-w-[180px]">
+                            <div className="flex min-w-[180px] items-center gap-3">
                                 <div className="rounded-md bg-neutral-50 p-1.5 text-neutral-500">
                                     <field.icon className="h-4 w-4" />
                                 </div>
@@ -181,7 +171,7 @@ export default function InfrastructureForm({
                             </div>
 
                             <div className="flex flex-1 items-center gap-2">
-                                <span className="text-xs text-neutral-400 whitespace-nowrap">
+                                <span className="text-xs whitespace-nowrap text-neutral-400">
                                     {field.detailLabel}:
                                 </span>
                                 <Input
@@ -193,7 +183,7 @@ export default function InfrastructureForm({
                                             e.target.value,
                                         )
                                     }
-                                    className="h-8 shadow-none border-neutral-200 focus-visible:ring-0 focus:border-neutral-900 bg-transparent text-sm"
+                                    className="h-8 border-neutral-200 bg-transparent text-sm shadow-none focus:border-neutral-900 focus-visible:ring-0"
                                     placeholder={field.detailPlaceholder}
                                 />
                             </div>

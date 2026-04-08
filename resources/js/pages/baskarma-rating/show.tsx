@@ -88,7 +88,7 @@ function TaskTable({
             </CardHeader>
             <CardContent className="p-0">
                 {tasks.length === 0 ? (
-                    <div className="px-6 pb-6 pt-2 text-center text-sm text-gray-400">
+                    <div className="px-6 pt-2 pb-6 text-center text-sm text-gray-400">
                         {emptyText}
                     </div>
                 ) : (
@@ -196,9 +196,7 @@ export default function BaskarmaRatingShow({
                                 {user.full_name}
                             </h1>
                             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
-                                {user.position && (
-                                    <span>{user.position}</span>
-                                )}
+                                {user.position && <span>{user.position}</span>}
                                 <Badge className="border-0 bg-blue-100 text-blue-700">
                                     {user.baskarma_type === 'oblast'
                                         ? 'Исполнительдер'
@@ -225,9 +223,7 @@ export default function BaskarmaRatingShow({
                                 <p className="text-2xl font-bold text-[#0f1b3d]">
                                     {projectCount}
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                    Жобалар
-                                </p>
+                                <p className="text-xs text-gray-500">Жобалар</p>
                             </div>
                             <div className="rounded-lg border border-gray-200 px-4 py-2 text-center">
                                 <p className="text-2xl font-bold text-[#0f1b3d]">

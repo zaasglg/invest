@@ -138,9 +138,7 @@ export default function Create({ parents }: Props) {
                                     <SelectItem value="district">
                                         Аудан
                                     </SelectItem>
-                                    <SelectItem value="city">
-                                        Қала
-                                    </SelectItem>
+                                    <SelectItem value="city">Қала</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.subtype && (
@@ -229,8 +227,7 @@ export default function Create({ parents }: Props) {
                             className="h-10 border-gray-200 bg-transparent shadow-none file:mr-3 file:rounded-md file:border-0 file:bg-gray-100 file:px-3 file:py-1.5 file:text-xs file:font-medium hover:file:bg-gray-200 focus:border-[#0f1b3d] focus-visible:ring-0"
                         />
                         <p className="text-xs text-gray-500">
-                            Файл жүктелмесе, стандартты белгіше
-                            қолданылады.
+                            Файл жүктелмесе, стандартты белгіше қолданылады.
                         </p>
                         {errors.icon_file && (
                             <span className="text-sm text-red-500">
@@ -282,7 +279,10 @@ export default function Create({ parents }: Props) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                        <Button
+                            disabled={processing}
+                            className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                        >
                             Сақтау
                         </Button>
                         <Link

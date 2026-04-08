@@ -91,30 +91,14 @@ export const headerNavItems: NavItem[] = [
         icon: Briefcase,
     },
     ...zoneNavItems,
-    ...projectNavItems.filter(
-        (item) => item.title !== 'Инвест. жобалар',
-    ),
+    ...projectNavItems.filter((item) => item.title !== 'Инвест. жобалар'),
     ...adminNavItems,
 ];
 
 const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
-    akim: new Set([
-        'Аймақтар',
-        'Жоба түрлері',
-        'Рөлдер',
-        'Пайдаланушылар',
-    ]),
-    zamakim: new Set([
-        'Аймақтар',
-        'Жоба түрлері',
-        'Рөлдер',
-        'Пайдаланушылар',
-    ]),
-    invest: new Set([
-        'Аймақтар',
-        'Рөлдер',
-        'Пайдаланушылар',
-    ]),
+    akim: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
+    zamakim: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
+    invest: new Set(['Аймақтар', 'Рөлдер', 'Пайдаланушылар']),
     ispolnitel: new Set([
         'Аймақтар',
         'Жоба түрлері',
@@ -123,7 +107,8 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     ]),
 };
 
-const normalizeRoleKey = (value: string) => value.toLowerCase().replace(/\s+/g, '');
+const normalizeRoleKey = (value: string) =>
+    value.toLowerCase().replace(/\s+/g, '');
 
 export const getRoleKey = (user: User | null | undefined): string | null => {
     if (!user) return null;
@@ -160,12 +145,18 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
     return null;
 };
 
-export const filterNavItemsByRole = (items: NavItem[], user: User | null | undefined) => {
+export const filterNavItemsByRole = (
+    items: NavItem[],
+    user: User | null | undefined,
+) => {
     // Only superadmin can see Аймақтар
     let filteredItems = items;
-    const isSuperAdmin = user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
+    const isSuperAdmin =
+        user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
     if (!isSuperAdmin) {
-        filteredItems = filteredItems.filter((item) => item.title !== 'Аймақтар');
+        filteredItems = filteredItems.filter(
+            (item) => item.title !== 'Аймақтар',
+        );
     }
 
     const roleKey = getRoleKey(user);

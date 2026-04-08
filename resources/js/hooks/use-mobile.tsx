@@ -10,11 +10,11 @@ const mql =
 export function useIsMobile(): boolean {
     return useSyncExternalStore(
         (callback) => {
-            if (!mql) return () => { };
+            if (!mql) return () => {};
             mql.addEventListener('change', callback);
             return () => mql.removeEventListener('change', callback);
         },
         () => mql?.matches ?? false,
-        () => false
+        () => false,
     );
 }

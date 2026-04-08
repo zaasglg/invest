@@ -1,5 +1,14 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Upload, Image as ImageIcon, Trash2, Calendar, AlertCircle, Eye, Download } from 'lucide-react';
+import {
+    ArrowLeft,
+    Upload,
+    Image as ImageIcon,
+    Trash2,
+    Calendar,
+    AlertCircle,
+    Eye,
+    Download,
+} from 'lucide-react';
 import React, { useState } from 'react';
 import PhotoLightbox from '@/components/photo-lightbox';
 import { Button } from '@/components/ui/button';
@@ -51,13 +60,22 @@ interface Props {
     ispolnitelCanWrite?: boolean;
 }
 
-export default function Gallery({ project, mainGallery, datedGallery, renderPhotos = [], canDownload, ispolnitelCanWrite = false }: Props) {
+export default function Gallery({
+    project,
+    mainGallery,
+    datedGallery,
+    renderPhotos = [],
+    canDownload,
+    ispolnitelCanWrite = false,
+}: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
     // Ispolnitel can add but cannot delete
     const canDelete = canModify;
     const [photos, setPhotos] = useState<FileList | null>(null);
-    const [galleryDate, setGalleryDate] = useState(new Date().toISOString().split('T')[0]);
+    const [galleryDate, setGalleryDate] = useState(
+        new Date().toISOString().split('T')[0],
+    );
     const [description, setDescription] = useState('');
     const [photoType, setPhotoType] = useState<'gallery' | 'render'>('gallery');
     const [isUploading, setIsUploading] = useState(false);
@@ -85,23 +103,27 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
             const files = Array.from(e.target.files);
 
             // Check individual file size
-            const oversizedFile = files.find(f => f.size > MAX_FILE_SIZE);
+            const oversizedFile = files.find((f) => f.size > MAX_FILE_SIZE);
             if (oversizedFile) {
-                setUploadError(`"${oversizedFile.name}" файлы өте үлкен. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB әр фотоға.`);
+                setUploadError(
+                    `"${oversizedFile.name}" файлы өте үлкен. Максимум ${MAX_FILE_SIZE / 1024 / 1024}MB әр фотоға.`,
+                );
                 return;
             }
 
             // Check total size
             const totalSize = files.reduce((sum, f) => sum + f.size, 0);
             if (totalSize > MAX_TOTAL_SIZE) {
-                setUploadError(`Файлдардың жалпы көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдарды таңдаңыз.`);
+                setUploadError(
+                    `Файлдардың жалпы көлемі (${(totalSize / 1024 / 1024).toFixed(1)}MB) шектен асып кетті (${MAX_TOTAL_SIZE / 1024 / 1024}MB). Кішірек файлдарды таңдаңыз.`,
+                );
                 return;
             }
 
             setPhotos(e.target.files);
 
             // Create preview URLs
-            const urls = files.map(file => URL.createObjectURL(file));
+            const urls = files.map((file) => URL.createObjectURL(file));
             setPreviewUrls(urls);
         }
     };
@@ -123,7 +145,7 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
         setIsUploading(true);
 
         const formData = new FormData();
-        Array.from(photos).forEach(photo => {
+        Array.from(photos).forEach((photo) => {
             formData.append('photos[]', photo);
         });
         if (galleryDate) {
@@ -148,7 +170,9 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
 
     const handleDelete = (photoId: number) => {
         if (confirm('Осы фотоны жоюға сенімдісіз бе?')) {
-            router.delete(`/investment-projects/${project.id}/gallery/${photoId}`);
+            router.delete(
+                `/investment-projects/${project.id}/gallery/${photoId}`,
+            );
         }
     };
 
@@ -171,235 +195,319 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
     return (
         <AppLayout
             breadcrumbs={[
-                { title: project.region?.name || 'Аудан', href: project.region ? `/regions/${project.region.id}` : '' },
-                { title: project.name || 'Жоба', href: `/investment-projects/${project.id}` },
+                {
+                    title: project.region?.name || 'Аудан',
+                    href: project.region ? `/regions/${project.region.id}` : '',
+                },
+                {
+                    title: project.name || 'Жоба',
+                    href: `/investment-projects/${project.id}`,
+                },
                 { title: 'Галерея', href: '' },
             ]}
         >
             <Head title={`Галерея - ${project.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full max-w-7xl mx-auto">
+            <div className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] mb-2 transition-colors">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Жобаға қайту
+                        <Link
+                            href={`/investment-projects/${project.id}`}
+                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
+                        >
+                            <ArrowLeft className="mr-1 h-4 w-4" /> Жобаға қайту
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Жоба галереясы</h1>
-                        <p className="text-sm text-gray-500 mt-1">{project.name}</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
+                            Жоба галереясы
+                        </h1>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {project.name}
+                        </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
                     {/* Upload Form */}
                     {canEdit && (
-                    <div className="lg:col-span-1">
-                        <Card className="shadow-none sticky top-4">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Upload className="h-5 w-5 text-gray-500" />
-                                    Фото жүктеу
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleUpload} className="space-y-4">
-                                    <div>
-                                        <Label className="block mb-2">Фото түрі</Label>
-                                        <div className="flex gap-2">
-                                            <button
-                                                type="button"
-                                                onClick={() => setPhotoType('gallery')}
-                                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
-                                                    photoType === 'gallery'
-                                                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                Галерея
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={() => setPhotoType('render')}
-                                                className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium border transition-colors ${
-                                                    photoType === 'render'
-                                                        ? 'bg-purple-50 border-purple-200 text-purple-700'
-                                                        : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                                                }`}
-                                            >
-                                                Болашақ
-                                            </button>
-                                        </div>
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {photoType === 'render'
-                                                ? 'Жобаның болашақ көрінісі'
-                                                : 'Ағымдағы жағдай фотолары'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="photos" className="block mb-2">Фотосуреттер</Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="photos"
-                                                type="file"
-                                                multiple
-                                                accept="image/*"
-                                                onChange={handlePhotoChange}
-                                                className="hidden"
-                                            />
-                                            <label
-                                                htmlFor="photos"
-                                                className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
-                                            >
-                                                <ImageIcon className="h-8 w-8 text-gray-400 mb-2" />
-                                                <span className="text-sm text-gray-600">Таңдау үшін басыңыз</span>
-                                                <span className="text-xs text-gray-400 mt-1">Әр фотоға 5MB дейін, барлығы 45MB</span>
-                                            </label>
-                                        </div>
-
-                                        {/* Upload Error */}
-                                        {uploadError && (
-                                            <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
-                                                <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                                                <p className="text-sm text-red-700">{uploadError}</p>
-                                            </div>
-                                        )}
-
-                                        {/* Preview */}
-                                        {previewUrls.length > 0 && (
-                                            <div className="mt-3 space-y-2">
-                                                <div className="flex items-center justify-between text-sm">
-                                                    <span className="text-gray-600">Таңдалды: {previewUrls.length}</span>
-                                                    <button
-                                                        type="button"
-                                                        onClick={clearPhotos}
-                                                        className="text-red-600 hover:text-red-700 text-xs"
-                                                    >
-                                                        Тазалау
-                                                    </button>
-                                                </div>
-                                                <div className="grid grid-cols-3 gap-2">
-                                                    {previewUrls.slice(0, 6).map((url, idx) => (
-                                                        <div key={idx} className="relative aspect-square">
-                                                            <img
-                                                                src={url}
-                                                                alt={`Preview ${idx + 1}`}
-                                                                className="w-full h-full object-cover rounded border"
-                                                            />
-                                                        </div>
-                                                    ))}
-                                                    {previewUrls.length > 6 && (
-                                                        <div className="relative aspect-square bg-gray-100 rounded border flex items-center justify-center">
-                                                            <span className="text-sm text-gray-600">
-                                                                +{previewUrls.length - 6}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="gallery_date" className="block mb-2">Галерея күні (қосымша)</Label>
-                                        <Input
-                                            id="gallery_date"
-                                            type="date"
-                                            value={galleryDate}
-                                            onChange={(e) => setGalleryDate(e.target.value)}
-                                            className="w-full"
-                                            disabled={photoType === 'render'}
-                                        />
-                                        <p className="text-xs text-gray-500 mt-1">
-                                            {galleryDate
-                                                ? 'Фотолар осы күнге қосылады'
-                                                : 'Бүгінгі күн автоматты түрде орнатылады'}
-                                        </p>
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="description" className="block mb-2">Сипаттама (қосымша)</Label>
-                                        <Textarea
-                                            id="description"
-                                            value={description}
-                                            onChange={(e) => setDescription(e.target.value)}
-                                            placeholder="Жүктелетін фотолар үшін қысқаша сипаттама"
-                                            className="min-h-[80px] resize-none"
-                                        />
-                                    </div>
-
-                                    <Button
-                                        type="submit"
-                                        className="w-full"
-                                        disabled={!photos || photos.length === 0 || isUploading}
+                        <div className="lg:col-span-1">
+                            <Card className="sticky top-4 shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Upload className="h-5 w-5 text-gray-500" />
+                                        Фото жүктеу
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <form
+                                        onSubmit={handleUpload}
+                                        className="space-y-4"
                                     >
-                                        {isUploading ? 'Жүктелуде...' : `${photos?.length || 0} фото жүктеу`}
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                        <div>
+                                            <Label className="mb-2 block">
+                                                Фото түрі
+                                            </Label>
+                                            <div className="flex gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setPhotoType('gallery')
+                                                    }
+                                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                                                        photoType === 'gallery'
+                                                            ? 'border-blue-200 bg-blue-50 text-blue-700'
+                                                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    Галерея
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        setPhotoType('render')
+                                                    }
+                                                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                                                        photoType === 'render'
+                                                            ? 'border-purple-200 bg-purple-50 text-purple-700'
+                                                            : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                                                    }`}
+                                                >
+                                                    Болашақ
+                                                </button>
+                                            </div>
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                {photoType === 'render'
+                                                    ? 'Жобаның болашақ көрінісі'
+                                                    : 'Ағымдағы жағдай фотолары'}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <Label
+                                                htmlFor="photos"
+                                                className="mb-2 block"
+                                            >
+                                                Фотосуреттер
+                                            </Label>
+                                            <div className="relative">
+                                                <Input
+                                                    id="photos"
+                                                    type="file"
+                                                    multiple
+                                                    accept="image/*"
+                                                    onChange={handlePhotoChange}
+                                                    className="hidden"
+                                                />
+                                                <label
+                                                    htmlFor="photos"
+                                                    className="flex h-32 w-full cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-300 transition-colors hover:bg-gray-50"
+                                                >
+                                                    <ImageIcon className="mb-2 h-8 w-8 text-gray-400" />
+                                                    <span className="text-sm text-gray-600">
+                                                        Таңдау үшін басыңыз
+                                                    </span>
+                                                    <span className="mt-1 text-xs text-gray-400">
+                                                        Әр фотоға 5MB дейін,
+                                                        барлығы 45MB
+                                                    </span>
+                                                </label>
+                                            </div>
+
+                                            {/* Upload Error */}
+                                            {uploadError && (
+                                                <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3">
+                                                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-red-500" />
+                                                    <p className="text-sm text-red-700">
+                                                        {uploadError}
+                                                    </p>
+                                                </div>
+                                            )}
+
+                                            {/* Preview */}
+                                            {previewUrls.length > 0 && (
+                                                <div className="mt-3 space-y-2">
+                                                    <div className="flex items-center justify-between text-sm">
+                                                        <span className="text-gray-600">
+                                                            Таңдалды:{' '}
+                                                            {previewUrls.length}
+                                                        </span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={
+                                                                clearPhotos
+                                                            }
+                                                            className="text-xs text-red-600 hover:text-red-700"
+                                                        >
+                                                            Тазалау
+                                                        </button>
+                                                    </div>
+                                                    <div className="grid grid-cols-3 gap-2">
+                                                        {previewUrls
+                                                            .slice(0, 6)
+                                                            .map((url, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    className="relative aspect-square"
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            url
+                                                                        }
+                                                                        alt={`Preview ${idx + 1}`}
+                                                                        className="h-full w-full rounded border object-cover"
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        {previewUrls.length >
+                                                            6 && (
+                                                            <div className="relative flex aspect-square items-center justify-center rounded border bg-gray-100">
+                                                                <span className="text-sm text-gray-600">
+                                                                    +
+                                                                    {previewUrls.length -
+                                                                        6}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        <div>
+                                            <Label
+                                                htmlFor="gallery_date"
+                                                className="mb-2 block"
+                                            >
+                                                Галерея күні (қосымша)
+                                            </Label>
+                                            <Input
+                                                id="gallery_date"
+                                                type="date"
+                                                value={galleryDate}
+                                                onChange={(e) =>
+                                                    setGalleryDate(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="w-full"
+                                                disabled={
+                                                    photoType === 'render'
+                                                }
+                                            />
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                {galleryDate
+                                                    ? 'Фотолар осы күнге қосылады'
+                                                    : 'Бүгінгі күн автоматты түрде орнатылады'}
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <Label
+                                                htmlFor="description"
+                                                className="mb-2 block"
+                                            >
+                                                Сипаттама (қосымша)
+                                            </Label>
+                                            <Textarea
+                                                id="description"
+                                                value={description}
+                                                onChange={(e) =>
+                                                    setDescription(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Жүктелетін фотолар үшін қысқаша сипаттама"
+                                                className="min-h-[80px] resize-none"
+                                            />
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            className="w-full"
+                                            disabled={
+                                                !photos ||
+                                                photos.length === 0 ||
+                                                isUploading
+                                            }
+                                        >
+                                            {isUploading
+                                                ? 'Жүктелуде...'
+                                                : `${photos?.length || 0} фото жүктеу`}
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+                        </div>
                     )}
 
                     {/* Gallery Display */}
-                    <div className={canEdit ? 'lg:col-span-3 space-y-8' : 'lg:col-span-4 space-y-8'}>
+                    <div
+                        className={
+                            canEdit
+                                ? 'space-y-8 lg:col-span-3'
+                                : 'space-y-8 lg:col-span-4'
+                        }
+                    >
                         {/* Main Gallery (only for legacy photos without dates) */}
                         {mainGallery.length > 0 && (
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <ImageIcon className="h-5 w-5 text-gray-500" />
-                                    Негізгі галерея
-                                    <span className="text-sm font-normal text-gray-500 ml-2">
-                                        ({mainGallery.length})
-                                    </span>
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {mainGallery.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">Фотосуреттер жоқ</p>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            Күн өрісін бос қалдырып фотосуреттерді жүктеңіз
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                        {mainGallery.map((photo, index) => (
-                                            <PhotoCard
-                                                key={photo.id}
-                                                photo={photo}
-                                                index={index}
-                                                photos={mainGallery}
-                                                onDelete={handleDelete}
-                                                onOpen={openLightbox}
-                                                canModify={canEdit}
-                                                canDelete={canDelete}
-                                                canDownload={canDownload}
-                                                projectId={project.id}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                            <Card className="shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <ImageIcon className="h-5 w-5 text-gray-500" />
+                                        Негізгі галерея
+                                        <span className="ml-2 text-sm font-normal text-gray-500">
+                                            ({mainGallery.length})
+                                        </span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {mainGallery.length === 0 ? (
+                                        <div className="py-12 text-center">
+                                            <ImageIcon className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                                            <p className="text-gray-500">
+                                                Фотосуреттер жоқ
+                                            </p>
+                                            <p className="mt-1 text-sm text-gray-400">
+                                                Күн өрісін бос қалдырып
+                                                фотосуреттерді жүктеңіз
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                            {mainGallery.map((photo, index) => (
+                                                <PhotoCard
+                                                    key={photo.id}
+                                                    photo={photo}
+                                                    index={index}
+                                                    photos={mainGallery}
+                                                    onDelete={handleDelete}
+                                                    onOpen={openLightbox}
+                                                    canModify={canEdit}
+                                                    canDelete={canDelete}
+                                                    canDownload={canDownload}
+                                                    projectId={project.id}
+                                                />
+                                            ))}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         )}
 
                         {/* Render Photos */}
                         {renderPhotos.length > 0 && (
                             <Card className="shadow-none">
                                 <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
+                                    <CardTitle className="flex items-center gap-2 text-lg">
                                         <Eye className="h-5 w-5 text-purple-500" />
                                         Болашақ көрінісі
-                                        <span className="text-sm font-normal text-gray-500 ml-2">
+                                        <span className="ml-2 text-sm font-normal text-gray-500">
                                             ({renderPhotos.length})
                                         </span>
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                                         {renderPhotos.map((photo, index) => (
                                             <PhotoCard
                                                 key={photo.id}
@@ -422,50 +530,73 @@ export default function Gallery({ project, mainGallery, datedGallery, renderPhot
                         {/* Dated Galleries */}
                         {Object.keys(sortedDatedGallery).length > 0 ? (
                             <div className="space-y-8">
-                                <h2 className="text-xl font-bold text-[#0f1b3d] flex items-center gap-2">
+                                <h2 className="flex items-center gap-2 text-xl font-bold text-[#0f1b3d]">
                                     <Calendar className="h-5 w-5" />
                                     Күндер бойынша іске асыру барысы
                                 </h2>
-                                {Object.entries(sortedDatedGallery).map(([date, photos]) => (
-                                    <Card key={date} className="shadow-none">
-                                        <CardHeader>
-                                            <CardTitle className="text-lg flex items-center gap-2">
-                                                <Calendar className="h-5 w-5 text-blue-500" />
-                                                {formatDate(date)}
-                                                <span className="text-sm font-normal text-gray-500 ml-2">
-                                                    ({photos.length} фото)
-                                                </span>
-                                            </CardTitle>
-                                        </CardHeader>
-                                        <CardContent>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                                                {photos.map((photo, index) => (
-                                                    <PhotoCard
-                                                        key={photo.id}
-                                                        photo={photo}
-                                                        index={index}
-                                                        photos={photos}
-                                                        onDelete={handleDelete}
-                                                        onOpen={openLightbox}
-                                                        canModify={canEdit}
-                                                        canDelete={canDelete}
-                                                        canDownload={canDownload}
-                                                        projectId={project.id}
-                                                    />
-                                                ))}
-                                            </div>
-                                        </CardContent>
-                                    </Card>
-                                ))}
+                                {Object.entries(sortedDatedGallery).map(
+                                    ([date, photos]) => (
+                                        <Card
+                                            key={date}
+                                            className="shadow-none"
+                                        >
+                                            <CardHeader>
+                                                <CardTitle className="flex items-center gap-2 text-lg">
+                                                    <Calendar className="h-5 w-5 text-blue-500" />
+                                                    {formatDate(date)}
+                                                    <span className="ml-2 text-sm font-normal text-gray-500">
+                                                        ({photos.length} фото)
+                                                    </span>
+                                                </CardTitle>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
+                                                    {photos.map(
+                                                        (photo, index) => (
+                                                            <PhotoCard
+                                                                key={photo.id}
+                                                                photo={photo}
+                                                                index={index}
+                                                                photos={photos}
+                                                                onDelete={
+                                                                    handleDelete
+                                                                }
+                                                                onOpen={
+                                                                    openLightbox
+                                                                }
+                                                                canModify={
+                                                                    canEdit
+                                                                }
+                                                                canDelete={
+                                                                    canDelete
+                                                                }
+                                                                canDownload={
+                                                                    canDownload
+                                                                }
+                                                                projectId={
+                                                                    project.id
+                                                                }
+                                                            />
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    ),
+                                )}
                             </div>
-                        ) : mainGallery.length === 0 && renderPhotos.length === 0 ? (
+                        ) : mainGallery.length === 0 &&
+                          renderPhotos.length === 0 ? (
                             <Card className="shadow-none">
                                 <CardContent className="py-12">
                                     <div className="text-center">
-                                        <ImageIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">Фотосуреттер жоқ</p>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            Сол жақтағы пішін арқылы фотосуреттерді жүктеңіз
+                                        <ImageIcon className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                                        <p className="text-gray-500">
+                                            Фотосуреттер жоқ
+                                        </p>
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Сол жақтағы пішін арқылы
+                                            фотосуреттерді жүктеңіз
                                         </p>
                                     </div>
                                 </CardContent>
@@ -498,7 +629,17 @@ interface PhotoCardProps {
     projectId: number;
 }
 
-function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDelete, canDownload, projectId }: PhotoCardProps) {
+function PhotoCard({
+    photo,
+    index,
+    photos,
+    onDelete,
+    onOpen,
+    canModify,
+    canDelete,
+    canDownload,
+    projectId,
+}: PhotoCardProps) {
     const [isHovered, setIsHovered] = useState(false);
 
     const formatDateTime = (dateStr: string) => {
@@ -512,7 +653,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDelet
 
     return (
         <div
-            className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100 cursor-pointer"
+            className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-gray-100"
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             onClick={() => onOpen(photos, index)}
@@ -520,25 +661,29 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDelet
             <img
                 src={`/storage/${photo.file_path}`}
                 alt={photo.description || 'Жоба фотосы'}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover"
             />
             {/* Date badge */}
             {(photo.gallery_date || photo.created_at) && (
                 <div className="absolute top-2 left-2 z-10">
                     <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                         <Calendar className="h-2.5 w-2.5" />
-                        {formatDateTime(photo.gallery_date || photo.created_at!)}
+                        {formatDateTime(
+                            photo.gallery_date || photo.created_at!,
+                        )}
                     </span>
                 </div>
             )}
             {/* Description overlay */}
             {photo.description && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
-                    <p className="text-white text-xs truncate">{photo.description}</p>
+                <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                    <p className="truncate text-xs text-white">
+                        {photo.description}
+                    </p>
                 </div>
             )}
             {isHovered && (
-                <div className="absolute inset-0 bg-black/40 flex items-center justify-center gap-2">
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40">
                     <Button
                         variant="secondary"
                         size="icon"
@@ -554,7 +699,7 @@ function PhotoCard({ photo, index, photos, onDelete, onOpen, canModify, canDelet
                         <a
                             href={`/investment-projects/${projectId}/gallery/${photo.id}/download`}
                             onClick={(e) => e.stopPropagation()}
-                            className="inline-flex items-center justify-center h-10 w-10 bg-white/90 hover:bg-white rounded-md transition-colors"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-md bg-white/90 transition-colors hover:bg-white"
                             title="Жүктеу"
                         >
                             <Download className="h-4 w-4" />

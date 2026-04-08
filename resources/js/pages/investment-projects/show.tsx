@@ -1,5 +1,30 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Factory, ArrowLeft, Calendar, Building2, MapPin, Users, Activity, FileText, ImageIcon, Download, AlertTriangle, Eye, Plus, X, Flag, CheckCircle2, Trash2, Search, Upload, XCircle, Presentation, Archive, ScrollText, Edit } from 'lucide-react';
+import {
+    Factory,
+    ArrowLeft,
+    Calendar,
+    Building2,
+    MapPin,
+    Users,
+    Activity,
+    FileText,
+    ImageIcon,
+    Download,
+    AlertTriangle,
+    Eye,
+    Plus,
+    X,
+    Flag,
+    CheckCircle2,
+    Trash2,
+    Search,
+    Upload,
+    XCircle,
+    Presentation,
+    Archive,
+    ScrollText,
+    Edit,
+} from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -72,11 +97,20 @@ interface InvestmentProject {
     creator?: User;
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
-    issues?: Array<{ id: number; title: string; description?: string; status?: string; severity?: string }>;
+    issues?: Array<{
+        id: number;
+        title: string;
+        description?: string;
+        status?: string;
+        severity?: string;
+    }>;
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
-    infrastructure?: Record<string, { needed: boolean; capacity: string }> | null;
+    infrastructure?: Record<
+        string,
+        { needed: boolean; capacity: string }
+    > | null;
     created_at: string;
 }
 
@@ -141,8 +175,22 @@ interface Props {
     isOwnDistrict?: boolean;
 }
 
-function DescriptionTabs({ description, currentStatus, showCurrentStatus = true, canEditStatus = false, projectId }: { description?: string; currentStatus?: string; showCurrentStatus?: boolean; canEditStatus?: boolean; projectId?: number }) {
-    const [activeTab, setActiveTab] = useState<'description' | 'current_status'>('description');
+function DescriptionTabs({
+    description,
+    currentStatus,
+    showCurrentStatus = true,
+    canEditStatus = false,
+    projectId,
+}: {
+    description?: string;
+    currentStatus?: string;
+    showCurrentStatus?: boolean;
+    canEditStatus?: boolean;
+    projectId?: number;
+}) {
+    const [activeTab, setActiveTab] = useState<
+        'description' | 'current_status'
+    >('description');
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(currentStatus || '');
     const [isSaving, setIsSaving] = useState(false);
@@ -150,10 +198,19 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
     const handleSaveStatus = () => {
         if (!projectId) return;
         setIsSaving(true);
-        router.put(`/investment-projects/${projectId}/update-status`, { current_status: editValue }, {
-            onSuccess: () => { setIsEditing(false); setIsSaving(false); },
-            onError: () => { setIsSaving(false); },
-        });
+        router.put(
+            `/investment-projects/${projectId}/update-status`,
+            { current_status: editValue },
+            {
+                onSuccess: () => {
+                    setIsEditing(false);
+                    setIsSaving(false);
+                },
+                onError: () => {
+                    setIsSaving(false);
+                },
+            },
+        );
     };
 
     return (
@@ -170,20 +227,20 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
                     Сипаттама
                 </button>
                 {showCurrentStatus && (
-                <button
-                    onClick={() => setActiveTab('current_status')}
-                    className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === 'current_status'
-                            ? 'bg-[#c8a44e] text-white shadow-sm'
-                            : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                >
-                    Ағымдағы жағдайы
-                </button>
+                    <button
+                        onClick={() => setActiveTab('current_status')}
+                        className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
+                            activeTab === 'current_status'
+                                ? 'bg-[#c8a44e] text-white shadow-sm'
+                                : 'text-gray-600 hover:text-gray-800'
+                        }`}
+                    >
+                        Ағымдағы жағдайы
+                    </button>
                 )}
             </div>
             {activeTab === 'description' || !showCurrentStatus ? (
-                <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                <div className="leading-relaxed whitespace-pre-wrap text-gray-700">
                     {description || 'Сипаттама жоқ.'}
                 </div>
             ) : (
@@ -193,7 +250,7 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
                             <textarea
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:outline-none focus:ring-1 focus:ring-[#c8a44e]"
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
                                 rows={4}
                             />
                             <div className="flex gap-2">
@@ -207,7 +264,10 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
                                 </button>
                                 <button
                                     type="button"
-                                    onClick={() => { setIsEditing(false); setEditValue(currentStatus || ''); }}
+                                    onClick={() => {
+                                        setIsEditing(false);
+                                        setEditValue(currentStatus || '');
+                                    }}
                                     className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                                 >
                                     Болдырмау
@@ -216,7 +276,7 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
                         </div>
                     ) : (
                         <div>
-                            <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                            <div className="leading-relaxed whitespace-pre-wrap text-gray-700">
                                 {currentStatus || 'Ағымдағы жағдайы жоқ.'}
                             </div>
                             {canEditStatus && (
@@ -236,25 +296,41 @@ function DescriptionTabs({ description, currentStatus, showCurrentStatus = true,
     );
 }
 
-export default function Show({ project, mainGallery = [], renderPhotos = [], users = [], canDownload, isInvolved = true, isOwnDistrict = false }: Props) {
+export default function Show({
+    project,
+    mainGallery = [],
+    renderPhotos = [],
+    users = [],
+    canDownload,
+    isInvolved = true,
+    isOwnDistrict = false,
+}: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
-    const isIspolnitel = (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
+    const isIspolnitel =
+        (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isRestrictedView = isIspolnitel && !isInvolved;
     // Both district and oblast ispolnitel have same write permissions if involved
     const ispolnitelCanWrite = isIspolnitel && isInvolved;
-    const photosCount = typeof project.photos_count === 'number'
-        ? project.photos_count
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        : (project.photos_count as any)?.photos_count || 0;
+    const photosCount =
+        typeof project.photos_count === 'number'
+            ? project.photos_count
+            : // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              (project.photos_count as any)?.photos_count || 0;
 
     const statusMap: Record<string, { label: string; color: string }> = {
         plan: { label: 'Жоспарлау', color: 'bg-blue-100 text-blue-800' },
-        implementation: { label: 'Іске асыру', color: 'bg-amber-100 text-amber-800' },
-        launched: { label: 'Іске қосылған', color: 'bg-green-100 text-green-800' },
+        implementation: {
+            label: 'Іске асыру',
+            color: 'bg-amber-100 text-amber-800',
+        },
+        launched: {
+            label: 'Іске қосылған',
+            color: 'bg-green-100 text-green-800',
+        },
         suspended: { label: 'Тоқтатылған', color: 'bg-red-100 text-red-800' },
     };
 
@@ -273,7 +349,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             details.push(
                 `Индустриялық аймақтар: ${industrialZonesList
                     .map((item) => item.name)
-                    .join(', ')}`
+                    .join(', ')}`,
             );
         }
 
@@ -284,7 +360,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             details.push(
                 `Жер қойнауын пайдалану: ${subsoilUsersList
                     .map((item) => item.name)
-                    .join(', ')}`
+                    .join(', ')}`,
             );
         }
 
@@ -400,14 +476,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
             router.put(
                 `/investment-projects/${project.id}/tasks/${editingTaskId}`,
                 payload,
-                { onSuccess, onError }
+                { onSuccess, onError },
             );
         } else {
-            router.post(
-                `/investment-projects/${project.id}/tasks`,
-                payload,
-                { onSuccess, onError }
-            );
+            router.post(`/investment-projects/${project.id}/tasks`, payload, {
+                onSuccess,
+                onError,
+            });
         }
     };
 
@@ -415,7 +490,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         setEditingTaskId(task.id);
         setTaskTitle(task.title || '');
         setTaskDescription(task.description || '');
-        setTaskStartDate(task.start_date ? task.start_date.substring(0, 10) : '');
+        setTaskStartDate(
+            task.start_date ? task.start_date.substring(0, 10) : '',
+        );
         setTaskDueDate(task.due_date ? task.due_date.substring(0, 10) : '');
         setTaskAssignedTo(task.assigned_to);
         setShowTaskModal(true);
@@ -431,9 +508,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
     const handleTaskDelete = (taskId: number) => {
         if (confirm('Осы кезеңді жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/investment-projects/${project.id}/tasks/${taskId}`,
-            );
+            router.delete(`/investment-projects/${project.id}/tasks/${taskId}`);
         }
     };
 
@@ -443,18 +518,23 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     const MAX_COMPLETION_FILE_SIZE = 20 * 1024 * 1024; // 20MB per file (matches backend)
     const MAX_COMPLETION_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
     const [showCompletionModal, setShowCompletionModal] = useState(false);
-    const [completionTaskId, setCompletionTaskId] = useState<number | null>(null);
+    const [completionTaskId, setCompletionTaskId] = useState<number | null>(
+        null,
+    );
     const [completionComment, setCompletionComment] = useState('');
     const [completionDocuments, setCompletionDocuments] = useState<File[]>([]);
     const [completionPhotos, setCompletionPhotos] = useState<File[]>([]);
     const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
-    const [completionFileError, setCompletionFileError] = useState<string | null>(null);
+    const [completionFileError, setCompletionFileError] = useState<
+        string | null
+    >(null);
     const completionDocRef = useRef<HTMLInputElement>(null);
     const completionPhotoRef = useRef<HTMLInputElement>(null);
 
     // Review modal state (for исполнитель)
     const [showReviewModal, setShowReviewModal] = useState(false);
-    const [reviewCompletion, setReviewCompletion] = useState<TaskCompletionItem | null>(null);
+    const [reviewCompletion, setReviewCompletion] =
+        useState<TaskCompletionItem | null>(null);
     const [reviewTask, setReviewTask] = useState<ProjectTaskItem | null>(null);
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
@@ -468,16 +548,21 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         setShowCompletionModal(true);
     };
 
-    const handleCompletionDocChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCompletionDocChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
+            const oversized = files.find(
+                (f) => f.size > MAX_COMPLETION_FILE_SIZE,
+            );
             if (oversized) {
                 setCompletionFileError(
                     `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionDocuments([]);
-                if (completionDocRef.current) completionDocRef.current.value = '';
+                if (completionDocRef.current)
+                    completionDocRef.current.value = '';
                 return;
             }
             setCompletionFileError(null);
@@ -485,16 +570,21 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         }
     };
 
-    const handleCompletionPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCompletionPhotoChange = (
+        e: React.ChangeEvent<HTMLInputElement>,
+    ) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            const oversized = files.find((f) => f.size > MAX_COMPLETION_FILE_SIZE);
+            const oversized = files.find(
+                (f) => f.size > MAX_COMPLETION_FILE_SIZE,
+            );
             if (oversized) {
                 setCompletionFileError(
                     `"${oversized.name}" файлы өте үлкен (${(oversized.size / 1024 / 1024).toFixed(1)}MB). Максимум ${MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB.`,
                 );
                 setCompletionPhotos([]);
-                if (completionPhotoRef.current) completionPhotoRef.current.value = '';
+                if (completionPhotoRef.current)
+                    completionPhotoRef.current.value = '';
                 return;
             }
             setCompletionFileError(null);
@@ -520,7 +610,9 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
         const formData = new FormData();
         if (completionComment) formData.append('comment', completionComment);
-        completionDocuments.forEach((file) => formData.append('documents[]', file));
+        completionDocuments.forEach((file) =>
+            formData.append('documents[]', file),
+        );
         completionPhotos.forEach((file) => formData.append('photos[]', file));
 
         router.post(
@@ -541,7 +633,10 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
         );
     };
 
-    const handleOpenReview = (task: ProjectTaskItem, completion: TaskCompletionItem) => {
+    const handleOpenReview = (
+        task: ProjectTaskItem,
+        completion: TaskCompletionItem,
+    ) => {
         setReviewTask(task);
         setReviewCompletion(completion);
         setReviewComment('');
@@ -573,16 +668,22 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
     return (
         <AppLayout
             breadcrumbs={[
-                { title: project.region?.name || 'Аудан', href: `/regions/${project.region_id}` },
+                {
+                    title: project.region?.name || 'Аудан',
+                    href: `/regions/${project.region_id}`,
+                },
                 { title: project.name || 'Жоба', href: '' },
             ]}
         >
             <Head title={project.name} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full">
+            <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
                 {/* Back link */}
-                <Link href='/investment-projects' className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors">
-                    <ArrowLeft className="h-4 w-4 mr-1" /> Тізімге қайту
+                <Link
+                    href="/investment-projects"
+                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
+                >
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
                 </Link>
                 {/* <button
                     type='button'
@@ -591,11 +692,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                 >
                     <ArrowLeft className='h-4 w-4 mr-1' /> Тізімге қайту
                 </button> */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="space-y-6 lg:col-span-2">
                         {/* Project Banner + Info */}
-                        <Card className="overflow-hidden shadow-none py-0">
+                        <Card className="overflow-hidden py-0 shadow-none">
                             {/* Banner Header */}
                             <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -605,8 +706,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             Жоба № {project.id} - {project.name}
                                         </h1>
                                     </div>
-                                    <Badge className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} px-3 py-1 text-sm font-medium border-0`}>
-                                        {statusMap[project.status]?.label || project.status}
+                                    <Badge
+                                        className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
+                                    >
+                                        {statusMap[project.status]?.label ||
+                                            project.status}
                                     </Badge>
                                 </div>
                             </div>
@@ -616,77 +720,103 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                                     {/* Photo */}
                                     <div className="overflow-hidden rounded-lg md:col-span-2">
-                                        {mainGallery.length > 0 && mainGallery[0]?.gallery_date && (
-                                            <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Calendar className="h-3.5 w-3.5" />
-                                                <span>
-                                                    {new Date(mainGallery[0].gallery_date).toLocaleDateString('kk-KZ', {
-                                                        day: 'numeric',
-                                                        month: 'long',
-                                                        year: 'numeric',
-                                                    })}
-                                                </span>
-                                            </div>
-                                        )}
-                                        <ProjectGallerySlider photos={mainGallery} />
+                                        {mainGallery.length > 0 &&
+                                            mainGallery[0]?.gallery_date && (
+                                                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <Calendar className="h-3.5 w-3.5" />
+                                                    <span>
+                                                        {new Date(
+                                                            mainGallery[0]
+                                                                .gallery_date,
+                                                        ).toLocaleDateString(
+                                                            'kk-KZ',
+                                                            {
+                                                                day: 'numeric',
+                                                                month: 'long',
+                                                                year: 'numeric',
+                                                            },
+                                                        )}
+                                                    </span>
+                                                </div>
+                                            )}
+                                        <ProjectGallerySlider
+                                            photos={mainGallery}
+                                        />
                                     </div>
 
                                     {/* Info Cards */}
                                     <div className="grid grid-cols-2 gap-3 md:col-span-3">
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" /> Аймақ
+                                                <MapPin className="h-3.5 w-3.5" />{' '}
+                                                Аймақ
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.region?.name || 'Көрсетілмеген'}
+                                                {project.region?.name ||
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <FileText className="h-3.5 w-3.5" /> Жоба түрі
+                                                <FileText className="h-3.5 w-3.5" />{' '}
+                                                Жоба түрі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.project_type?.name || 'Көрсетілмеген'}
+                                                {project.project_type?.name ||
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Building2 className="h-3.5 w-3.5" /> Инвестиция сомасы
+                                                <Building2 className="h-3.5 w-3.5" />{' '}
+                                                Инвестиция сомасы
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.total_investment
-                                                    ? formatCurrency(project.total_investment)
+                                                    ? formatCurrency(
+                                                          project.total_investment,
+                                                      )
                                                     : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Calendar className="h-3.5 w-3.5" /> Іске асыру мерзімдері
+                                                <Calendar className="h-3.5 w-3.5" />{' '}
+                                                Іске асыру мерзімдері
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {project.start_date
-                                                    ? new Date(project.start_date).getFullYear()
+                                                    ? new Date(
+                                                          project.start_date,
+                                                      ).getFullYear()
                                                     : '...'}
                                                 {' — '}
                                                 {project.end_date
-                                                    ? new Date(project.end_date).getFullYear()
+                                                    ? new Date(
+                                                          project.end_date,
+                                                      ).getFullYear()
                                                     : '...'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Users className="h-3.5 w-3.5" /> Жұмыс орындары
+                                                <Users className="h-3.5 w-3.5" />{' '}
+                                                Жұмыс орындары
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.jobs_count ? `${project.jobs_count} адам` : 'Көрсетілмеген'}
+                                                {project.jobs_count
+                                                    ? `${project.jobs_count} адам`
+                                                    : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Factory className="h-3.5 w-3.5" /> Жұмыс қуаттылығы
+                                                <Factory className="h-3.5 w-3.5" />{' '}
+                                                Жұмыс қуаттылығы
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.capacity || 'Көрсетілмеген'}
+                                                {project.capacity ||
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                     </div>
@@ -697,38 +827,60 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="border-t border-gray-200 px-6 py-5">
                                 <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <Building2 className="h-5 w-5 text-gray-500" />
-                                    {project.company_name || 'Компания көрсетілмеген'}
+                                    {project.company_name ||
+                                        'Компания көрсетілмеген'}
                                 </h2>
                             </div>
 
                             {/* Инфрақұрылымға қажеттілік */}
-                            {project.infrastructure && Object.values(project.infrastructure).some((v: Record<string, unknown>) => v?.needed) && (
-                                <div className="border-t border-gray-200 px-6 py-5">
-                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                        <Building2 className="h-5 w-5 text-gray-500" />
-                                        Инфрақұрылымға қажеттілік
-                                    </h2>
-                                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                        {[
-                                            { key: 'gas', label: 'Газ' },
-                                            { key: 'water', label: 'Су' },
-                                            { key: 'electricity', label: 'Электр қуаты' },
-                                            { key: 'land', label: 'Жер учаскесі' },
-                                        ].map((item) => {
-                                            const infra = (project.infrastructure as Record<string, Record<string, unknown>>)?.[item.key];
-                                            if (!infra?.needed) return null;
-                                            return (
-                                                <div key={item.key} className="rounded-lg border border-gray-200 p-3">
-                                                    <p className="text-xs font-medium text-gray-500 mb-1">{item.label}</p>
-                                                    <p className="text-sm font-bold text-[#0f1b3d]">
-                                                        {infra.capacity ? `${infra.capacity}` : 'Қажет'}
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
+                            {project.infrastructure &&
+                                Object.values(project.infrastructure).some(
+                                    (v: Record<string, unknown>) => v?.needed,
+                                ) && (
+                                    <div className="border-t border-gray-200 px-6 py-5">
+                                        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                            <Building2 className="h-5 w-5 text-gray-500" />
+                                            Инфрақұрылымға қажеттілік
+                                        </h2>
+                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                            {[
+                                                { key: 'gas', label: 'Газ' },
+                                                { key: 'water', label: 'Су' },
+                                                {
+                                                    key: 'electricity',
+                                                    label: 'Электр қуаты',
+                                                },
+                                                {
+                                                    key: 'land',
+                                                    label: 'Жер учаскесі',
+                                                },
+                                            ].map((item) => {
+                                                const infra = (
+                                                    project.infrastructure as Record<
+                                                        string,
+                                                        Record<string, unknown>
+                                                    >
+                                                )?.[item.key];
+                                                if (!infra?.needed) return null;
+                                                return (
+                                                    <div
+                                                        key={item.key}
+                                                        className="rounded-lg border border-gray-200 p-3"
+                                                    >
+                                                        <p className="mb-1 text-xs font-medium text-gray-500">
+                                                            {item.label}
+                                                        </p>
+                                                        <p className="text-sm font-bold text-[#0f1b3d]">
+                                                            {infra.capacity
+                                                                ? `${infra.capacity}`
+                                                                : 'Қажет'}
+                                                        </p>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
+                                )}
 
                             {/* Description & Current Status Tabs */}
                             <div className="border-t border-gray-200 px-6 py-5">
@@ -742,299 +894,410 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             </div>
 
                             {/* Проблемалық мәселелер */}
-                            {!isRestrictedView && project.issues && project.issues.length > 0 && (
-                                <div className="border-t border-gray-200 px-6 py-5">
-                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                        <AlertTriangle className="h-5 w-5 text-red-500" />
-                                        Проблемалық мәселелер
-                                        <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
-                                            {project.issues.length}
-                                        </span>
-                                    </h2>
-                                    <div className="space-y-3">
-                                        {project.issues.map((issue) => {
-                                            const severityStyles: Record<string, string> = {
-                                                high: 'border-red-200 bg-red-50',
-                                                medium: 'border-amber-200 bg-amber-50',
-                                                low: 'border-blue-200 bg-blue-50',
-                                                critical: 'border-red-300 bg-red-100',
-                                            };
-                                            const severityLabels: Record<string, string> = {
-                                                high: 'Жоғары',
-                                                medium: 'Орта',
-                                                low: 'Төмен',
-                                                critical: 'Сыни жағдай',
-                                            };
-                                            const severityDot: Record<string, string> = {
-                                                high: 'bg-red-500',
-                                                medium: 'bg-amber-500',
-                                                low: 'bg-blue-500',
-                                                critical: 'bg-red-600',
-                                            };
-                                            const statusLabels: Record<string, string> = {
-                                                open: 'Ашық',
-                                                in_progress: 'Орындалуда',
-                                                resolved: 'Шешілді',
-                                            };
-                                            const style = severityStyles[issue.severity || ''] || 'border-gray-200 bg-gray-50';
-                                            return (
-                                                <div key={issue.id} className={`rounded-lg border p-4 ${style}`}>
-                                                    <div className="flex items-start justify-between gap-3">
-                                                        <div className="flex items-start gap-3 min-w-0">
-                                                            <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`} />
-                                                            <div className="min-w-0">
-                                                                <p className="font-semibold text-[#0f1b3d]">{issue.title}</p>
-                                                                {issue.description && (
-                                                                    <p className="mt-1 text-sm text-gray-600 line-clamp-2">{issue.description}</p>
+                            {!isRestrictedView &&
+                                project.issues &&
+                                project.issues.length > 0 && (
+                                    <div className="border-t border-gray-200 px-6 py-5">
+                                        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                            <AlertTriangle className="h-5 w-5 text-red-500" />
+                                            Проблемалық мәселелер
+                                            <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
+                                                {project.issues.length}
+                                            </span>
+                                        </h2>
+                                        <div className="space-y-3">
+                                            {project.issues.map((issue) => {
+                                                const severityStyles: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    high: 'border-red-200 bg-red-50',
+                                                    medium: 'border-amber-200 bg-amber-50',
+                                                    low: 'border-blue-200 bg-blue-50',
+                                                    critical:
+                                                        'border-red-300 bg-red-100',
+                                                };
+                                                const severityLabels: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    high: 'Жоғары',
+                                                    medium: 'Орта',
+                                                    low: 'Төмен',
+                                                    critical: 'Сыни жағдай',
+                                                };
+                                                const severityDot: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    high: 'bg-red-500',
+                                                    medium: 'bg-amber-500',
+                                                    low: 'bg-blue-500',
+                                                    critical: 'bg-red-600',
+                                                };
+                                                const statusLabels: Record<
+                                                    string,
+                                                    string
+                                                > = {
+                                                    open: 'Ашық',
+                                                    in_progress: 'Орындалуда',
+                                                    resolved: 'Шешілді',
+                                                };
+                                                const style =
+                                                    severityStyles[
+                                                        issue.severity || ''
+                                                    ] ||
+                                                    'border-gray-200 bg-gray-50';
+                                                return (
+                                                    <div
+                                                        key={issue.id}
+                                                        className={`rounded-lg border p-4 ${style}`}
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div className="flex min-w-0 items-start gap-3">
+                                                                <div
+                                                                    className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
+                                                                />
+                                                                <div className="min-w-0">
+                                                                    <p className="font-semibold text-[#0f1b3d]">
+                                                                        {
+                                                                            issue.title
+                                                                        }
+                                                                    </p>
+                                                                    {issue.description && (
+                                                                        <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+                                                                            {
+                                                                                issue.description
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex shrink-0 items-center gap-2">
+                                                                {issue.severity && (
+                                                                    <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                        {severityLabels[
+                                                                            issue
+                                                                                .severity
+                                                                        ] ||
+                                                                            issue.severity}
+                                                                    </span>
+                                                                )}
+                                                                {issue.status && (
+                                                                    <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                        {statusLabels[
+                                                                            issue
+                                                                                .status
+                                                                        ] ||
+                                                                            issue.status}
+                                                                    </span>
                                                                 )}
                                                             </div>
                                                         </div>
-                                                        <div className="flex shrink-0 items-center gap-2">
-                                                            {issue.severity && (
-                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                    {severityLabels[issue.severity] || issue.severity}
-                                                                </span>
-                                                            )}
-                                                            {issue.status && (
-                                                                <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                    {statusLabels[issue.status] || issue.status}
-                                                                </span>
-                                                            )}
-                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
+                                        </div>
+                                        <div className="mt-4">
+                                            <Link
+                                                href={`/investment-projects/${project.id}/issues`}
+                                                className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] transition-colors hover:text-[#c8a44e]"
+                                            >
+                                                Барлық проблемалық мәселелер →
+                                            </Link>
+                                        </div>
                                     </div>
-                                    <div className="mt-4">
-                                        <Link
-                                            href={`/investment-projects/${project.id}/issues`}
-                                            className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] hover:text-[#c8a44e] transition-colors"
-                                        >
-                                            Барлық проблемалық мәселелер →
-                                        </Link>
-                                    </div>
-                                </div>
-                            )}
+                                )}
                         </Card>
 
                         {/* Roadmap / Дорожная карта */}
                         {!isRestrictedView && (
-                        <Card className="shadow-none overflow-hidden py-0">
-                            <div className="bg-[#0f1b3d] px-6 py-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Flag className="h-5 w-5" />
-                                        <h2 className="text-lg font-bold">
-                                            Жол картасы
-                                        </h2>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Select
-                                            value={taskFilter}
-                                            onValueChange={setTaskFilter}
-                                        >
-                                            <SelectTrigger className="h-9 w-[160px] border-white/30 bg-white/20 text-white text-sm focus:ring-white/50 [&>svg]:text-white">
-                                                <SelectValue />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">
-                                                    Барлық кезеңдер
-                                                </SelectItem>
-                                                <SelectItem value="new">
-                                                    Жаңа
-                                                </SelectItem>
-                                                <SelectItem value="in_progress">
-                                                    Орындалуда
-                                                </SelectItem>
-                                                <SelectItem value="done">
-                                                    Орындалды
-                                                </SelectItem>
-                                                <SelectItem value="rejected">
-                                                    Қабылданбады
-                                                </SelectItem>
-                                                <SelectItem value="overdue">
-                                                    Мерзімі өткен
-                                                </SelectItem>
-                                            </SelectContent>
-                                        </Select>
-                                        {canModify && !isIspolnitel && (
-                                            <Button
-                                                size="icon"
-                                                className="h-9 w-9 bg-white/20 hover:bg-white/30 text-white border border-white/30"
-                                                onClick={() => {
-                                                    setEditingTaskId(null);
-                                                    setTaskTitle('');
-                                                    setTaskDescription('');
-                                                    setTaskStartDate('');
-                                                    setTaskDueDate('');
-                                                    setTaskAssignedTo(null);
-                                                    setShowTaskModal(true);
-                                                }}
+                            <Card className="overflow-hidden py-0 shadow-none">
+                                <div className="bg-[#0f1b3d] px-6 py-4">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-white">
+                                            <Flag className="h-5 w-5" />
+                                            <h2 className="text-lg font-bold">
+                                                Жол картасы
+                                            </h2>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                            <Select
+                                                value={taskFilter}
+                                                onValueChange={setTaskFilter}
                                             >
-                                                <Plus className="h-5 w-5" />
-                                            </Button>
-                                        )}
+                                                <SelectTrigger className="h-9 w-[160px] border-white/30 bg-white/20 text-sm text-white focus:ring-white/50 [&>svg]:text-white">
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">
+                                                        Барлық кезеңдер
+                                                    </SelectItem>
+                                                    <SelectItem value="new">
+                                                        Жаңа
+                                                    </SelectItem>
+                                                    <SelectItem value="in_progress">
+                                                        Орындалуда
+                                                    </SelectItem>
+                                                    <SelectItem value="done">
+                                                        Орындалды
+                                                    </SelectItem>
+                                                    <SelectItem value="rejected">
+                                                        Қабылданбады
+                                                    </SelectItem>
+                                                    <SelectItem value="overdue">
+                                                        Мерзімі өткен
+                                                    </SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            {canModify && !isIspolnitel && (
+                                                <Button
+                                                    size="icon"
+                                                    className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
+                                                    onClick={() => {
+                                                        setEditingTaskId(null);
+                                                        setTaskTitle('');
+                                                        setTaskDescription('');
+                                                        setTaskStartDate('');
+                                                        setTaskDueDate('');
+                                                        setTaskAssignedTo(null);
+                                                        setShowTaskModal(true);
+                                                    }}
+                                                >
+                                                    <Plus className="h-5 w-5" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                            <CardContent className="p-0">
-                                {filteredTasks.length === 0 ? (
-                                    <div className="py-12 text-center">
-                                        <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                                        <p className="text-gray-500">
-                                            Кезеңдер жоқ
-                                        </p>
-                                        <p className="mt-1 text-sm text-gray-400">
-                                            Жаңа кезең қосу үшін + басыңыз
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="divide-y divide-gray-100">
-                                        {displayedTasks.map((task) => {
-                                            const isAssignedToMe = task.assigned_to === currentUserId;
-                                            const pendingCompletion = task.completions?.find(c => c.status === 'pending');
-                                            const latestCompletion = task.completions?.length
-                                                ? task.completions[task.completions.length - 1]
-                                                : null;
+                                <CardContent className="p-0">
+                                    {filteredTasks.length === 0 ? (
+                                        <div className="py-12 text-center">
+                                            <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                                            <p className="text-gray-500">
+                                                Кезеңдер жоқ
+                                            </p>
+                                            <p className="mt-1 text-sm text-gray-400">
+                                                Жаңа кезең қосу үшін + басыңыз
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="divide-y divide-gray-100">
+                                            {displayedTasks.map((task) => {
+                                                const isAssignedToMe =
+                                                    task.assigned_to ===
+                                                    currentUserId;
+                                                const pendingCompletion =
+                                                    task.completions?.find(
+                                                        (c) =>
+                                                            c.status ===
+                                                            'pending',
+                                                    );
+                                                const latestCompletion = task
+                                                    .completions?.length
+                                                    ? task.completions[
+                                                          task.completions
+                                                              .length - 1
+                                                      ]
+                                                    : null;
 
-                                            return (
-                                            <div
-                                                key={task.id}
-                                                className="flex items-center gap-4 px-6 py-4 hover:bg-gray-50 transition-colors"
-                                            >
-                                                <div
-                                                    className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
-                                                />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-semibold text-[#0f1b3d]">
-                                                        {task.title}:
-                                                    </p>
-                                                    {/* {task.description && (
+                                                return (
+                                                    <div
+                                                        key={task.id}
+                                                        className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
+                                                    >
+                                                        <div
+                                                            className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
+                                                        />
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="font-semibold text-[#0f1b3d]">
+                                                                {task.title}:
+                                                            </p>
+                                                            {/* {task.description && (
                                                         <p className="mt-0.5 text-sm text-gray-600">
                                                             {task.description}
                                                         </p>
                                                     )} */}
-                                                    <p className="text-sm text-gray-500">
-                                                        {task.start_date && (
-                                                            <>
-                                                                {new Date(task.start_date).toLocaleDateString('kk-KZ', {
-                                                                    day: 'numeric',
-                                                                    month: 'long',
-                                                                    year: 'numeric',
-                                                                })}
-                                                                {' — '}
-                                                            </>
-                                                        )}
-                                                        {task.due_date
-                                                            ? new Date(
-                                                                  task.due_date,
-                                                              ).toLocaleDateString(
-                                                                  'kk-KZ',
-                                                                  {
-                                                                      day: 'numeric',
-                                                                      month: 'long',
-                                                                      year: 'numeric',
-                                                                  },
-                                                              )
-                                                            : 'Мерзімі көрсетілмеген'}
-                                                    </p>
-                                                    {task.assignee && (
-                                                        <p className="text-sm text-gray-500 mt-1">
-                                                            {task.assignee.baskarma_type === 'oblast'
-                                                                ? 'Облыстық:'
-                                                                : task.assignee.baskarma_type === 'district'
-                                                                    ? 'Аудандық:'
-                                                                    : ''}
-                                                            {' '}
-                                                            {task.assignee.full_name || task.assignee.name || '—'}
-                                                            {task.assignee.position && ` — ${task.assignee.position}`}
-                                                        </p>
-                                                    )}
-                                                    {/* Overdue badge */}
-                                                    {isTaskOverdue(task) && (
-                                                        <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
-                                                            Мерзімі өткен
-                                                        </Badge>
-                                                    )}
-                                                    {/* Status badge for completion */}
-                                                    {latestCompletion && (
-                                                        <div>
-                                                            <Badge className={`mt-1 text-xs border-0 ${
-                                                                latestCompletion.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                                latestCompletion.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                                'bg-amber-100 text-amber-700'
-                                                            }`}>
-                                                                {latestCompletion.status === 'approved' ? 'Қабылданды' :
-                                                                 latestCompletion.status === 'rejected' ? 'Қабылданбады' :
-                                                                 'Тексеруде'}
-                                                            </Badge>
-                                                            {latestCompletion.status === 'rejected' && latestCompletion.reviewer_comment && (
-                                                                <p className="mt-1 text-xs text-red-600">
-                                                                    <span className="font-semibold">Себебі:</span> {latestCompletion.reviewer_comment}
+                                                            <p className="text-sm text-gray-500">
+                                                                {task.start_date && (
+                                                                    <>
+                                                                        {new Date(
+                                                                            task.start_date,
+                                                                        ).toLocaleDateString(
+                                                                            'kk-KZ',
+                                                                            {
+                                                                                day: 'numeric',
+                                                                                month: 'long',
+                                                                                year: 'numeric',
+                                                                            },
+                                                                        )}
+                                                                        {' — '}
+                                                                    </>
+                                                                )}
+                                                                {task.due_date
+                                                                    ? new Date(
+                                                                          task.due_date,
+                                                                      ).toLocaleDateString(
+                                                                          'kk-KZ',
+                                                                          {
+                                                                              day: 'numeric',
+                                                                              month: 'long',
+                                                                              year: 'numeric',
+                                                                          },
+                                                                      )
+                                                                    : 'Мерзімі көрсетілмеген'}
+                                                            </p>
+                                                            {task.assignee && (
+                                                                <p className="mt-1 text-sm text-gray-500">
+                                                                    {task
+                                                                        .assignee
+                                                                        .baskarma_type ===
+                                                                    'oblast'
+                                                                        ? 'Облыстық:'
+                                                                        : task
+                                                                                .assignee
+                                                                                .baskarma_type ===
+                                                                            'district'
+                                                                          ? 'Аудандық:'
+                                                                          : ''}{' '}
+                                                                    {task
+                                                                        .assignee
+                                                                        .full_name ||
+                                                                        task
+                                                                            .assignee
+                                                                            .name ||
+                                                                        '—'}
+                                                                    {task
+                                                                        .assignee
+                                                                        .position &&
+                                                                        ` — ${task.assignee.position}`}
                                                                 </p>
                                                             )}
+                                                            {/* Overdue badge */}
+                                                            {isTaskOverdue(
+                                                                task,
+                                                            ) && (
+                                                                <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
+                                                                    Мерзімі
+                                                                    өткен
+                                                                </Badge>
+                                                            )}
+                                                            {/* Status badge for completion */}
+                                                            {latestCompletion && (
+                                                                <div>
+                                                                    <Badge
+                                                                        className={`mt-1 border-0 text-xs ${
+                                                                            latestCompletion.status ===
+                                                                            'approved'
+                                                                                ? 'bg-green-100 text-green-700'
+                                                                                : latestCompletion.status ===
+                                                                                    'rejected'
+                                                                                  ? 'bg-red-100 text-red-700'
+                                                                                  : 'bg-amber-100 text-amber-700'
+                                                                        }`}
+                                                                    >
+                                                                        {latestCompletion.status ===
+                                                                        'approved'
+                                                                            ? 'Қабылданды'
+                                                                            : latestCompletion.status ===
+                                                                                'rejected'
+                                                                              ? 'Қабылданбады'
+                                                                              : 'Тексеруде'}
+                                                                    </Badge>
+                                                                    {latestCompletion.status ===
+                                                                        'rejected' &&
+                                                                        latestCompletion.reviewer_comment && (
+                                                                            <p className="mt-1 text-xs text-red-600">
+                                                                                <span className="font-semibold">
+                                                                                    Себебі:
+                                                                                </span>{' '}
+                                                                                {
+                                                                                    latestCompletion.reviewer_comment
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                </div>
+                                                            )}
                                                         </div>
-                                                    )}
-                                                </div>
-                                                <div className="flex items-center gap-2">
-                                                    {/* Ispolnitel: submit completion (when task is new or rejected) */}
-                                                    {/* Ispolnitel: submit completion (when task is new or rejected) */}
-                                                    {isIspolnitel && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-                                                            onClick={() => handleOpenCompletionModal(task.id)}
-                                                        >
-                                                            <Upload className="mr-1 h-3.5 w-3.5" />
-                                                            Жіберу
-                                                        </Button>
-                                                    )}
-                                                    {/* Invest: review pending completion */}
-                                                    {canModify && !isIspolnitel && pendingCompletion && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-                                                            onClick={() => handleOpenReview(task, pendingCompletion)}
-                                                        >
-                                                            <Eye className="mr-1 h-3.5 w-3.5" />
-                                                            Тексеру
-                                                        </Button>
-                                                    )}
-                                                    {canModify && !isIspolnitel && (
-                                                        <>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50"
-                                                                onClick={() => handleEditTask(task)}
-                                                            >
-                                                                <Edit className="h-4 w-4" />
-                                                            </Button>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
-                                                                onClick={() =>
-                                                                    handleTaskDelete(
-                                                                        task.id,
-                                                                    )
-                                                                }
-                                                            >
-                                                                <Trash2 className="h-4 w-4" />
-                                                            </Button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* Ispolnitel: submit completion (when task is new or rejected) */}
+                                                            {/* Ispolnitel: submit completion (when task is new or rejected) */}
+                                                            {isIspolnitel &&
+                                                                isAssignedToMe &&
+                                                                (task.status ===
+                                                                    'new' ||
+                                                                    task.status ===
+                                                                        'rejected') && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-8 border-cyan-300 text-xs text-cyan-700 hover:bg-cyan-50"
+                                                                        onClick={() =>
+                                                                            handleOpenCompletionModal(
+                                                                                task.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Upload className="mr-1 h-3.5 w-3.5" />
+                                                                        Жіберу
+                                                                    </Button>
+                                                                )}
+                                                            {/* Invest: review pending completion */}
+                                                            {canModify &&
+                                                                !isIspolnitel &&
+                                                                pendingCompletion && (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="h-8 border-amber-300 text-xs text-amber-700 hover:bg-amber-50"
+                                                                        onClick={() =>
+                                                                            handleOpenReview(
+                                                                                task,
+                                                                                pendingCompletion,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Eye className="mr-1 h-3.5 w-3.5" />
+                                                                        Тексеру
+                                                                    </Button>
+                                                                )}
+                                                            {canModify &&
+                                                                !isIspolnitel && (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                                                                            onClick={() =>
+                                                                                handleEditTask(
+                                                                                    task,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Edit className="h-4 w-4" />
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                                            onClick={() =>
+                                                                                handleTaskDelete(
+                                                                                    task.id,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    </>
+                                                                )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
                         )}
                     </div>
 
@@ -1042,180 +1305,281 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                     <div className="space-y-6">
                         {/* Render Photos Card */}
                         {renderPhotos.length > 0 && (
-                            <Card className="shadow-none overflow-hidden">
+                            <Card className="overflow-hidden shadow-none">
                                 <CardHeader>
-                                    <CardTitle className="text-lg flex items-center gap-2">
+                                    <CardTitle className="flex items-center gap-2 text-lg">
                                         <Eye className="h-5 w-5 text-gray-500" />
                                         Болашақ көрінісі
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                    <ProjectGallerySlider photos={renderPhotos} />
+                                    <ProjectGallerySlider
+                                        photos={renderPhotos}
+                                    />
                                 </CardContent>
                             </Card>
                         )}
 
                         {/* Executors Card */}
-                        <Card className='shadow-none'>
+                        <Card className="shadow-none">
                             <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-lg">
                                     <Users className="h-5 w-5 text-gray-500" />
                                     Қатысушылар
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 <div>
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Жауапты</p>
+                                    <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                        Жауапты
+                                    </p>
                                     <div className="flex items-center gap-3">
                                         {project.creator?.avatar_url ? (
                                             <img
                                                 src={project.creator.avatar_url}
-                                                alt={project.creator?.full_name || project.creator?.name || ''}
+                                                alt={
+                                                    project.creator
+                                                        ?.full_name ||
+                                                    project.creator?.name ||
+                                                    ''
+                                                }
                                                 className="h-8 w-8 rounded-full object-cover"
                                             />
                                         ) : (
-                                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-[#0f1b3d] font-bold text-xs">
-                                                {(project.creator?.full_name || project.creator?.name)?.slice(0, 2).toUpperCase() || 'NA'}
+                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-[#0f1b3d]">
+                                                {(
+                                                    project.creator
+                                                        ?.full_name ||
+                                                    project.creator?.name
+                                                )
+                                                    ?.slice(0, 2)
+                                                    .toUpperCase() || 'NA'}
                                             </div>
                                         )}
                                         <div>
-                                            <p className="text-sm font-medium text-[#0f1b3d]">{project.creator?.full_name || project.creator?.name || 'Көрсетілмеген'}</p>
-                                            <p className="text-xs text-gray-500">Жоба кураторы</p>
+                                            <p className="text-sm font-medium text-[#0f1b3d]">
+                                                {project.creator?.full_name ||
+                                                    project.creator?.name ||
+                                                    'Көрсетілмеген'}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Жоба кураторы
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
 
-                                {project.executors && project.executors.length > 0 && (
-                                    <div>
-                                        <div className="h-px bg-gray-100 my-4"></div>
-                                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Орындаушылар</p>
-                                        <div className="flex flex-col gap-3">
-                                            {project.executors.map(executor => (
-                                                <div key={executor.id} className="flex items-center gap-3">
-                                                    {executor.avatar_url ? (
-                                                        <img
-                                                            src={executor.avatar_url}
-                                                            alt={executor.full_name || executor.name || ''}
-                                                            className="h-7 w-7 rounded-full object-cover"
-                                                        />
-                                                    ) : (
-                                                        <div className="h-7 w-7 rounded-full bg-gray-100 flex items-center justify-center text-gray-600 font-bold text-[10px]">
-                                                            {(executor.full_name || executor.name)?.slice(0, 2).toUpperCase() || 'NA'}
+                                {project.executors &&
+                                    project.executors.length > 0 && (
+                                        <div>
+                                            <div className="my-4 h-px bg-gray-100"></div>
+                                            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Орындаушылар
+                                            </p>
+                                            <div className="flex flex-col gap-3">
+                                                {project.executors.map(
+                                                    (executor) => (
+                                                        <div
+                                                            key={executor.id}
+                                                            className="flex items-center gap-3"
+                                                        >
+                                                            {executor.avatar_url ? (
+                                                                <img
+                                                                    src={
+                                                                        executor.avatar_url
+                                                                    }
+                                                                    alt={
+                                                                        executor.full_name ||
+                                                                        executor.name ||
+                                                                        ''
+                                                                    }
+                                                                    className="h-7 w-7 rounded-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gray-100 text-[10px] font-bold text-gray-600">
+                                                                    {(
+                                                                        executor.full_name ||
+                                                                        executor.name
+                                                                    )
+                                                                        ?.slice(
+                                                                            0,
+                                                                            2,
+                                                                        )
+                                                                        .toUpperCase() ||
+                                                                        'NA'}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="text-sm text-gray-700">
+                                                                    {executor.position ||
+                                                                        'Орындаушы'}
+                                                                </p>
+                                                                <p className="text-xs text-gray-400">
+                                                                    (
+                                                                    {executor.full_name ||
+                                                                        executor.name ||
+                                                                        '—'}
+                                                                    )
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    )}
-                                                    <div>
-                                                        <p className="text-sm text-gray-700">
-                                                            {executor.position || 'Орындаушы'}
-                                                        </p>
-                                                        <p className="text-xs text-gray-400">
-                                                            ({executor.full_name || executor.name || '—'})
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                            ))}
+                                                    ),
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
                             </CardContent>
                         </Card>
 
                         {/* Actions */}
-                        <Card className='shadow-none'>
-                            <CardContent className="p-4 flex flex-col gap-3">
+                        <Card className="shadow-none">
+                            <CardContent className="flex flex-col gap-3 p-4">
                                 {canModify && (
-                                    <Link href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`} className="w-full">
-                                        <Button variant="outline" className="w-full justify-start">
-                                            <Activity className="mr-2 h-4 w-4" /> Жобаны өңдеу
+                                    <Link
+                                        href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <Activity className="mr-2 h-4 w-4" />{' '}
+                                            Жобаны өңдеу
                                         </Button>
                                     </Link>
                                 )}
                                 {(canModify || ispolnitelCanWrite) && (
-                                    <Link href={`/investment-projects/${project.id}/documents`} className="w-full">
-                                        <Button variant="outline" className="w-full justify-start">
+                                    <Link
+                                        href={`/investment-projects/${project.id}/documents`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
                                             <FileText className="mr-2 h-4 w-4" />
                                             Құжаттар
-                                            {project.documents && project.documents.length > 0 && (
-                                                <span className="ml-auto bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                                                    {project.documents.length}
+                                            {project.documents &&
+                                                project.documents.length >
+                                                    0 && (
+                                                    <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                        {
+                                                            project.documents
+                                                                .length
+                                                        }
+                                                    </span>
+                                                )}
+                                        </Button>
+                                    </Link>
+                                )}
+                                {(canModify || ispolnitelCanWrite) && (
+                                    <Link
+                                        href={`/investment-projects/${project.id}/gallery`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ImageIcon className="mr-2 h-4 w-4" />
+                                            Галерея
+                                            {photosCount > 0 && (
+                                                <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                    {photosCount}
                                                 </span>
                                             )}
                                         </Button>
                                     </Link>
                                 )}
-                                {(canModify || ispolnitelCanWrite) && (
-                                <Link href={`/investment-projects/${project.id}/gallery`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <ImageIcon className="mr-2 h-4 w-4" />
-                                        Галерея
-                                        {photosCount > 0 && (
-                                            <span className="ml-auto bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-xs">
-                                                {photosCount}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
-                                )}
                                 {(!isRestrictedView || ispolnitelCanWrite) && (
-                                <Link href={`/investment-projects/${project.id}/issues`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <AlertTriangle className="mr-2 h-4 w-4" />
-                                        Проблемалық мәселелер
-                                        {project.issues && project.issues.length > 0 && (
-                                            <span className="ml-auto bg-red-100 text-red-600 px-2 py-0.5 rounded text-xs">
-                                                {project.issues.length}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
+                                    <Link
+                                        href={`/investment-projects/${project.id}/issues`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <AlertTriangle className="mr-2 h-4 w-4" />
+                                            Проблемалық мәселелер
+                                            {project.issues &&
+                                                project.issues.length > 0 && (
+                                                    <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
+                                                        {project.issues.length}
+                                                    </span>
+                                                )}
+                                        </Button>
+                                    </Link>
                                 )}
                                 {isSuperAdmin && (
-                                <Link href={`/investment-projects/${project.id}/logs`} className="w-full">
-                                    <Button variant="outline" className="w-full justify-start">
-                                        <ScrollText className="mr-2 h-4 w-4" />
-                                        Логирование
-                                    </Button>
-                                </Link>
+                                    <Link
+                                        href={`/investment-projects/${project.id}/logs`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ScrollText className="mr-2 h-4 w-4" />
+                                            Логирование
+                                        </Button>
+                                    </Link>
                                 )}
                                 {!isRestrictedView && !isIspolnitel && (
-                                <a
-                                    href={`/investment-projects/${project.id}/passport`}
-                                    className="w-full"
-                                >
-                                    <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
-                                        <Download className="mr-2 h-4 w-4" />
-                                        Жоба паспортын жүктеу
-                                    </Button>
-                                </a>
+                                    <a
+                                        href={`/investment-projects/${project.id}/passport`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]"
+                                            disabled={!canDownload}
+                                        >
+                                            <Download className="mr-2 h-4 w-4" />
+                                            Жоба паспортын жүктеу
+                                        </Button>
+                                    </a>
                                 )}
                                 {isIspolnitel && isInvolved && (
                                     <a
                                         href={`/investment-projects/${project.id}/passport`}
                                         className="w-full"
                                     >
-                                        <Button className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]" disabled={!canDownload}>
+                                        <Button
+                                            className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]"
+                                            disabled={!canDownload}
+                                        >
                                             <Download className="mr-2 h-4 w-4" />
                                             Жоба паспортын жүктеу
                                         </Button>
                                     </a>
                                 )}
                                 {!isRestrictedView && (
-                                <a
-                                    href={`/investment-projects/${project.id}/presentation`}
-                                    className="w-full"
-                                >
-                                    <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5a] text-white" disabled={!canDownload}>
-                                        <Presentation className="mr-2 h-4 w-4" />
-                                        Презентацияны жүктеу
-                                    </Button>
-                                </a>
+                                    <a
+                                        href={`/investment-projects/${project.id}/presentation`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            className="w-full bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
+                                            disabled={!canDownload}
+                                        >
+                                            <Presentation className="mr-2 h-4 w-4" />
+                                            Презентацияны жүктеу
+                                        </Button>
+                                    </a>
                                 )}
                                 {(isSuperAdmin || isInvest) && (
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
                                         onClick={() => {
-                                            if (confirm('Бұл жобаны архивке жіберу керек пе?')) {
-                                                router.post(`/investment-projects/${project.id}/archive`);
+                                            if (
+                                                confirm(
+                                                    'Бұл жобаны архивке жіберу керек пе?',
+                                                )
+                                            ) {
+                                                router.post(
+                                                    `/investment-projects/${project.id}/archive`,
+                                                );
                                             }
                                         }}
                                     >
@@ -1235,23 +1599,25 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Flag className="h-5 w-5" />
-                                    {editingTaskId ? 'Кезеңді өңдеу' : 'Жобаға кезең қосу'}
+                                    {editingTaskId
+                                        ? 'Кезеңді өңдеу'
+                                        : 'Жобаға кезең қосу'}
                                 </h3>
                                 <button
                                     type="button"
                                     onClick={() => setShowTaskModal(false)}
-                                    className="text-white/80 hover:text-white transition-colors"
+                                    className="text-white/80 transition-colors hover:text-white"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
                             <form
                                 onSubmit={handleTaskSubmit}
-                                className="p-6 space-y-5"
+                                className="space-y-5 p-6"
                             >
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                    Тақырыптың (модульдің) атауы
+                                        Тақырыптың (модульдің) атауы
                                     </Label>
                                     <Input
                                         value={taskTitle}
@@ -1274,7 +1640,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             setTaskDescription(e.target.value)
                                         }
                                         placeholder="Сипаттама"
-                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                         rows={3}
                                     />
                                 </div>
@@ -1288,9 +1654,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                             type="date"
                                             value={taskStartDate}
                                             onChange={(e) =>
-                                                setTaskStartDate(
-                                                    e.target.value,
-                                                )
+                                                setTaskStartDate(e.target.value)
                                             }
                                             className="mt-1.5"
                                         />
@@ -1315,7 +1679,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         Жауаптыны тағайындау
                                     </Label>
                                     <div className="relative mt-1.5">
-                                        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                         <Input
                                             value={userSearch}
                                             onChange={(e) =>
@@ -1328,13 +1692,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <div className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200">
                                         {filteredUsers.length === 0 ? (
                                             <p className="px-4 py-3 text-sm text-gray-400">
-                                               Пайдаланушылар табылмады
+                                                Пайдаланушылар табылмады
                                             </p>
                                         ) : (
                                             filteredUsers.map((u, idx) => (
                                                 <div
                                                     key={u.id}
-                                                    className={`flex items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 cursor-pointer ${
+                                                    className={`flex cursor-pointer items-center justify-between px-4 py-2.5 text-sm hover:bg-gray-50 ${
                                                         taskAssignedTo === u.id
                                                             ? 'bg-cyan-50'
                                                             : ''
@@ -1397,9 +1761,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         type="button"
                                         variant="outline"
                                         className="border-gray-600 bg-gray-600 text-white hover:bg-gray-700 hover:text-white"
-                                        onClick={() =>
-                                            setShowTaskModal(false)
-                                        }
+                                        onClick={() => setShowTaskModal(false)}
                                     >
                                         Болдырмау
                                     </Button>
@@ -1420,20 +1782,31 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 </h3>
                                 <button
                                     type="button"
-                                    onClick={() => setShowCompletionModal(false)}
-                                    className="text-white/80 hover:text-white transition-colors"
+                                    onClick={() =>
+                                        setShowCompletionModal(false)
+                                    }
+                                    className="text-white/80 transition-colors hover:text-white"
                                 >
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
-                            <form onSubmit={handleCompletionSubmit} className="p-6 space-y-5">
+                            <form
+                                onSubmit={handleCompletionSubmit}
+                                className="space-y-5 p-6"
+                            >
                                 {(() => {
-                                    const task = tasks.find((t) => t.id === completionTaskId);
+                                    const task = tasks.find(
+                                        (t) => t.id === completionTaskId,
+                                    );
                                     return task ? (
                                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                            <h4 className="text-sm font-semibold text-[#0f1b3d]">{task.title}</h4>
+                                            <h4 className="text-sm font-semibold text-[#0f1b3d]">
+                                                {task.title}
+                                            </h4>
                                             {task.description && (
-                                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">{task.description}</p>
+                                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">
+                                                    {task.description}
+                                                </p>
                                             )}
                                         </div>
                                     ) : null;
@@ -1448,7 +1821,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
                                         Құжаттар (файлдар)
-                                        <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
+                                        <span className="ml-1 font-normal text-gray-400">
+                                            (макс.{' '}
+                                            {MAX_COMPLETION_FILE_SIZE /
+                                                1024 /
+                                                1024}
+                                            MB)
+                                        </span>
                                     </Label>
                                     <input
                                         ref={completionDocRef}
@@ -1459,7 +1838,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     />
                                     {completionDocuments.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
-                                            {completionDocuments.length} құжат таңдалды
+                                            {completionDocuments.length} құжат
+                                            таңдалды
                                         </p>
                                     )}
                                 </div>
@@ -1468,7 +1848,13 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
                                         Суреттер
-                                        <span className="ml-1 font-normal text-gray-400">(макс. {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}MB)</span>
+                                        <span className="ml-1 font-normal text-gray-400">
+                                            (макс.{' '}
+                                            {MAX_COMPLETION_FILE_SIZE /
+                                                1024 /
+                                                1024}
+                                            MB)
+                                        </span>
                                     </Label>
                                     <input
                                         ref={completionPhotoRef}
@@ -1480,7 +1866,8 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     />
                                     {completionPhotos.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
-                                            {completionPhotos.length} сурет таңдалды
+                                            {completionPhotos.length} сурет
+                                            таңдалды
                                         </p>
                                     )}
                                 </div>
@@ -1491,9 +1878,11 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                     </Label>
                                     <textarea
                                         value={completionComment}
-                                        onChange={(e) => setCompletionComment(e.target.value)}
+                                        onChange={(e) =>
+                                            setCompletionComment(e.target.value)
+                                        }
                                         placeholder="Пікір енгізіңіз..."
-                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                         rows={4}
                                     />
                                 </div>
@@ -1501,15 +1890,22 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 <div className="flex justify-center gap-3 pt-2">
                                     <Button
                                         type="submit"
-                                        className="bg-emerald-500 hover:bg-emerald-600 px-8"
-                                        disabled={isSubmittingCompletion || !!completionFileError}
+                                        className="bg-emerald-500 px-8 hover:bg-emerald-600"
+                                        disabled={
+                                            isSubmittingCompletion ||
+                                            !!completionFileError
+                                        }
                                     >
-                                        {isSubmittingCompletion ? 'Жіберілуде...' : 'Иә'}
+                                        {isSubmittingCompletion
+                                            ? 'Жіберілуде...'
+                                            : 'Иә'}
                                     </Button>
                                     <Button
                                         type="button"
-                                        className="bg-red-500 hover:bg-red-600 px-8"
-                                        onClick={() => setShowCompletionModal(false)}
+                                        className="bg-red-500 px-8 hover:bg-red-600"
+                                        onClick={() =>
+                                            setShowCompletionModal(false)
+                                        }
                                     >
                                         Нет
                                     </Button>
@@ -1545,7 +1941,7 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                 {/* Task info */}
                                 {reviewTask && (
                                     <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Тапсырма
                                         </p>
                                         <p className="mt-1 font-semibold text-[#0f1b3d]">
@@ -1561,76 +1957,97 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
 
                                 {/* Who submitted */}
                                 <div className="rounded-lg border border-gray-200 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                         Отправил
                                     </p>
                                     <p className="mt-1 font-medium text-[#0f1b3d]">
-                                        {reviewCompletion.submitter?.full_name || '—'}
+                                        {reviewCompletion.submitter
+                                            ?.full_name || '—'}
                                     </p>
                                     <p className="text-xs text-gray-500">
-                                        {new Date(reviewCompletion.created_at).toLocaleString('kk-KZ')}
+                                        {new Date(
+                                            reviewCompletion.created_at,
+                                        ).toLocaleString('kk-KZ')}
                                     </p>
                                 </div>
 
                                 {/* Comment */}
                                 {reviewCompletion.comment && (
                                     <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Пікір
                                         </p>
-                                        <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                                        <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
                                             {reviewCompletion.comment}
                                         </p>
                                     </div>
                                 )}
 
                                 {/* Files */}
-                                {reviewCompletion.files && reviewCompletion.files.length > 0 && (
-                                    <div>
-                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                            Файлдар
-                                        </p>
-                                        <div className="space-y-2">
-                                            {reviewCompletion.files.map((file) => (
-                                                <div
-                                                    key={file.id}
-                                                    className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
-                                                >
-                                                    {file.type === 'photo' ? (
-                                                        <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-                                                            <img
-                                                                src={`/storage/${file.file_path}`}
-                                                                alt={file.file_name}
-                                                                className="h-full w-full object-cover"
-                                                            />
+                                {reviewCompletion.files &&
+                                    reviewCompletion.files.length > 0 && (
+                                        <div>
+                                            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Файлдар
+                                            </p>
+                                            <div className="space-y-2">
+                                                {reviewCompletion.files.map(
+                                                    (file) => (
+                                                        <div
+                                                            key={file.id}
+                                                            className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
+                                                        >
+                                                            {file.type ===
+                                                            'photo' ? (
+                                                                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
+                                                                    <img
+                                                                        src={`/storage/${file.file_path}`}
+                                                                        alt={
+                                                                            file.file_name
+                                                                        }
+                                                                        className="h-full w-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            ) : (
+                                                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                                                                    <FileText className="h-5 w-5 text-gray-500" />
+                                                                </div>
+                                                            )}
+                                                            <div className="min-w-0 flex-1">
+                                                                <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                                                    {
+                                                                        file.file_name
+                                                                    }
+                                                                </p>
+                                                                <p className="text-xs text-gray-400">
+                                                                    {file.type ===
+                                                                    'photo'
+                                                                        ? 'Сурет'
+                                                                        : 'Құжат'}
+                                                                </p>
+                                                            </div>
+                                                            <a
+                                                                href={`/storage/${file.file_path}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                                className={`text-[#0f1b3d] hover:text-[#c8a44e] ${!canDownload ? 'pointer-events-none opacity-40' : ''}`}
+                                                                onClick={(
+                                                                    e,
+                                                                ) => {
+                                                                    if (
+                                                                        !canDownload
+                                                                    )
+                                                                        e.preventDefault();
+                                                                }}
+                                                            >
+                                                                <Download className="h-4 w-4" />
+                                                            </a>
                                                         </div>
-                                                    ) : (
-                                                        <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                                                            <FileText className="h-5 w-5 text-gray-500" />
-                                                        </div>
-                                                    )}
-                                                    <div className="min-w-0 flex-1">
-                                                        <p className="truncate text-sm font-medium text-[#0f1b3d]">
-                                                            {file.file_name}
-                                                        </p>
-                                                        <p className="text-xs text-gray-400">
-                                                            {file.type === 'photo' ? 'Сурет' : 'Құжат'}
-                                                        </p>
-                                                    </div>
-                                                    <a
-                                                        href={`/storage/${file.file_path}`}
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className={`text-[#0f1b3d] hover:text-[#c8a44e] ${!canDownload ? 'pointer-events-none opacity-40' : ''}`}
-                                                        onClick={(e) => { if (!canDownload) e.preventDefault(); }}
-                                                    >
-                                                        <Download className="h-4 w-4" />
-                                                    </a>
-                                                </div>
-                                            ))}
+                                                    ),
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
-                                )}
+                                    )}
 
                                 {/* Review form */}
                                 <div className="space-y-4 border-t border-gray-200 pt-4">
@@ -1640,24 +2057,30 @@ export default function Show({ project, mainGallery = [], renderPhotos = [], use
                                         </label>
                                         <textarea
                                             value={reviewComment}
-                                            onChange={(e) => setReviewComment(e.target.value)}
+                                            onChange={(e) =>
+                                                setReviewComment(e.target.value)
+                                            }
                                             placeholder="Пікір жазыңыз..."
-                                            className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                            className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                             rows={3}
                                         />
                                     </div>
                                     <div className="flex justify-center gap-3">
                                         <Button
-                                            onClick={() => handleReview('approved')}
-                                            className="bg-emerald-500 hover:bg-emerald-600 px-8"
+                                            onClick={() =>
+                                                handleReview('approved')
+                                            }
+                                            className="bg-emerald-500 px-8 hover:bg-emerald-600"
                                             disabled={isReviewing}
                                         >
                                             <CheckCircle2 className="mr-2 h-4 w-4" />
                                             Иә
                                         </Button>
                                         <Button
-                                            onClick={() => handleReview('rejected')}
-                                            className="bg-red-500 hover:bg-red-600 px-8"
+                                            onClick={() =>
+                                                handleReview('rejected')
+                                            }
+                                            className="bg-red-500 px-8 hover:bg-red-600"
                                             disabled={isReviewing}
                                         >
                                             <XCircle className="mr-2 h-4 w-4" />

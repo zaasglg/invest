@@ -45,7 +45,10 @@ export default function Index({ users }: Props) {
         const parts = fullName.trim().split(/\s+/);
         if (parts.length <= 1) return fullName;
         const first = parts[0];
-        const initials = parts.slice(1).map(p => p.charAt(0).toUpperCase()).join('');
+        const initials = parts
+            .slice(1)
+            .map((p) => p.charAt(0).toUpperCase())
+            .join('');
         return `${first} ${initials}`;
     };
 
@@ -56,9 +59,7 @@ export default function Index({ users }: Props) {
     };
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'Пайдаланушылар', href: '#' }
-        ]}>
+        <AppLayout breadcrumbs={[{ title: 'Пайдаланушылар', href: '#' }]}>
             <Head title="Пайдаланушылар" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
@@ -84,13 +85,18 @@ export default function Index({ users }: Props) {
                                 <TableHead>Нөмір</TableHead>
                                 <TableHead>Email</TableHead>
                                 <TableHead>Аймақ</TableHead>
-                                <TableHead className="text-right">Әрекеттер</TableHead>
+                                <TableHead className="text-right">
+                                    Әрекеттер
+                                </TableHead>
                             </TableRow>
                         </TableHeader>
                         <TableBody>
                             {users.data.length === 0 ? (
                                 <TableRow>
-                                    <TableCell colSpan={6} className="py-12 text-center text-gray-400">
+                                    <TableCell
+                                        colSpan={6}
+                                        className="py-12 text-center text-gray-400"
+                                    >
                                         Мәлімет жоқ
                                     </TableCell>
                                 </TableRow>
@@ -113,14 +119,30 @@ export default function Index({ users }: Props) {
                                                 </div>
                                             )}
                                         </TableCell>
-                                        <TableCell className="font-semibold text-[#0f1b3d]">{formatShortName(user.full_name)}</TableCell>
-                                        <TableCell className="text-gray-500">{user.phone || '—'}</TableCell>
-                                        <TableCell className="text-gray-500">{user.email}</TableCell>
-                                        <TableCell>{user.region?.name || '—'}</TableCell>
+                                        <TableCell className="font-semibold text-[#0f1b3d]">
+                                            {formatShortName(user.full_name)}
+                                        </TableCell>
+                                        <TableCell className="text-gray-500">
+                                            {user.phone || '—'}
+                                        </TableCell>
+                                        <TableCell className="text-gray-500">
+                                            {user.email}
+                                        </TableCell>
+                                        <TableCell>
+                                            {user.region?.name || '—'}
+                                        </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
-                                                <Link href={usersRoutes.edit.url(user.id)}>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]">
+                                                <Link
+                                                    href={usersRoutes.edit.url(
+                                                        user.id,
+                                                    )}
+                                                >
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                    >
                                                         <Pencil className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
@@ -128,7 +150,9 @@ export default function Index({ users }: Props) {
                                                     variant="ghost"
                                                     size="icon"
                                                     className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                    onClick={() => handleDelete(user.id)}
+                                                    onClick={() =>
+                                                        handleDelete(user.id)
+                                                    }
                                                 >
                                                     <Trash2 className="h-4 w-4" />
                                                 </Button>

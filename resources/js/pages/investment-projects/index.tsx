@@ -1,5 +1,15 @@
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
-import { Archive, ChevronDown, Eye, GripVertical, Pencil, Plus, Trash2, MoveRight, Calendar } from 'lucide-react';
+import {
+    Archive,
+    ChevronDown,
+    Eye,
+    GripVertical,
+    Pencil,
+    Plus,
+    Trash2,
+    MoveRight,
+    Calendar,
+} from 'lucide-react';
 import { useMemo, useState, useEffect, type FormEvent } from 'react';
 import {
     DndContext,
@@ -23,7 +33,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
 import {
     Select,
     SelectContent,
@@ -149,11 +165,18 @@ function SortableProjectRow({
     children: React.ReactNode;
     isEnabled: boolean;
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
     if (!isEnabled) {
         return <TableRow>{children}</TableRow>;
     }
-    
+
     return (
         <TableRow
             ref={setNodeRef}
@@ -164,10 +187,14 @@ function SortableProjectRow({
                 position: isDragging ? 'relative' : undefined,
                 zIndex: isDragging ? 10 : undefined,
             }}
-            className="hover:bg-gray-50 transition-colors"
+            className="transition-colors hover:bg-gray-50"
         >
-            <TableCell className="w-6 py-3 pl-3 pr-0">
-                <div {...attributes} {...listeners} className="cursor-grab hover:bg-gray-100 p-1 rounded">
+            <TableCell className="w-6 py-3 pr-0 pl-3">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab rounded p-1 hover:bg-gray-100"
+                >
                     <GripVertical className="h-4 w-4 text-gray-400" />
                 </div>
             </TableCell>
@@ -176,7 +203,17 @@ function SortableProjectRow({
     );
 }
 
-export default function Index({ projects, stats, regions, projectTypes, users, sezs, industrialZones, subsoilUsers, filters }: Props) {
+export default function Index({
+    projects,
+    stats,
+    regions,
+    projectTypes,
+    users,
+    sezs,
+    industrialZones,
+    subsoilUsers,
+    filters,
+}: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
@@ -197,13 +234,30 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
         end_date_to: filters.end_date_to ?? '',
     });
     const [filtersOpen, setFiltersOpen] = useState(
-        !!(filters.search || filters.region_id || filters.project_type_id || filters.status || filters.executor_id || filters.sector_type || filters.sector_id || filters.min_investment || filters.max_investment || filters.start_date_from || filters.start_date_to || filters.end_date_from || filters.end_date_to),
+        !!(
+            filters.search ||
+            filters.region_id ||
+            filters.project_type_id ||
+            filters.status ||
+            filters.executor_id ||
+            filters.sector_type ||
+            filters.sector_id ||
+            filters.min_investment ||
+            filters.max_investment ||
+            filters.start_date_from ||
+            filters.start_date_to ||
+            filters.end_date_from ||
+            filters.end_date_to
+        ),
     );
 
-    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(projects.data);
+    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(
+        projects.data,
+    );
 
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
-    const [projectToMove, setProjectToMove] = useState<InvestmentProject | null>(null);
+    const [projectToMove, setProjectToMove] =
+        useState<InvestmentProject | null>(null);
     const [targetPage, setTargetPage] = useState<number>(1);
 
     const openMoveModal = (project: InvestmentProject) => {
@@ -215,11 +269,15 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     const handleMoveSubmit = () => {
         if (!projectToMove) return;
 
-        router.post(`/investment-projects/${projectToMove.id}/move-to-page`, {
-            target_page: targetPage
-        }, {
-            onSuccess: () => setIsMoveModalOpen(false)
-        });
+        router.post(
+            `/investment-projects/${projectToMove.id}/move-to-page`,
+            {
+                target_page: targetPage,
+            },
+            {
+                onSuccess: () => setIsMoveModalOpen(false),
+            },
+        );
     };
 
     useEffect(() => {
@@ -230,31 +288,39 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
     );
 
     const saveProjectOrder = (newOrder: InvestmentProject[]) => {
-        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            
+        const csrfTokenValue =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') || '';
+
         fetch('/investment-projects/reorder', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfTokenValue },
-            body: JSON.stringify({ 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfTokenValue,
+            },
+            body: JSON.stringify({
                 project_ids: newOrder.map((p) => p.id),
-                page: projects.current_page || 1
+                page: projects.current_page || 1,
             }),
         });
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
         if (!isSuperAdmin && !isInvest) return;
-        
+
         const { active, over } = event;
         if (!over || active.id === over.id) return;
-        
+
         const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
         const newIndex = orderedProjects.findIndex((p) => p.id === over.id);
-        
+
         const newOrder = arrayMove(orderedProjects, oldIndex, newIndex);
         setOrderedProjects(newOrder);
         saveProjectOrder(newOrder);
@@ -269,16 +335,31 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     const sectorOptions = useMemo(() => {
         const regionId = data.region_id ? Number(data.region_id) : null;
         if (data.sector_type === 'sez') {
-            const filtered = regionId ? sezs.filter(s => s.region_id === regionId) : sezs;
-            return filtered.map(sez => ({ value: String(sez.id), label: sez.name }));
+            const filtered = regionId
+                ? sezs.filter((s) => s.region_id === regionId)
+                : sezs;
+            return filtered.map((sez) => ({
+                value: String(sez.id),
+                label: sez.name,
+            }));
         }
         if (data.sector_type === 'industrial_zone') {
-            const filtered = regionId ? industrialZones.filter(iz => iz.region_id === regionId) : industrialZones;
-            return filtered.map(iz => ({ value: String(iz.id), label: iz.name }));
+            const filtered = regionId
+                ? industrialZones.filter((iz) => iz.region_id === regionId)
+                : industrialZones;
+            return filtered.map((iz) => ({
+                value: String(iz.id),
+                label: iz.name,
+            }));
         }
         if (data.sector_type === 'subsoil') {
-            const filtered = regionId ? subsoilUsers.filter(su => su.region_id === regionId) : subsoilUsers;
-            return filtered.map(su => ({ value: String(su.id), label: su.name }));
+            const filtered = regionId
+                ? subsoilUsers.filter((su) => su.region_id === regionId)
+                : subsoilUsers;
+            return filtered.map((su) => ({
+                value: String(su.id),
+                label: su.name,
+            }));
         }
         return [];
     }, [data.sector_type, data.region_id, sezs, industrialZones, subsoilUsers]);
@@ -286,9 +367,13 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     // Егер аймақ не сектор түрі өзгерсе, сектор мәнін тазалау
     const filteredUsers = useMemo(() => {
         if (!data.region_id) {
-            return users.filter(user => user.baskarma_type === 'oblast');
+            return users.filter((user) => user.baskarma_type === 'oblast');
         }
-        return users.filter(user => user.baskarma_type === 'oblast' || String(user.region_id) === data.region_id);
+        return users.filter(
+            (user) =>
+                user.baskarma_type === 'oblast' ||
+                String(user.region_id) === data.region_id,
+        );
     }, [users, data.region_id]);
 
     const submitFilters = (event: FormEvent) => {
@@ -306,19 +391,25 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
     const getSectorDisplay = (project: InvestmentProject) => {
         const sectors = [];
-        
+
         if (project.sezs && project.sezs.length > 0) {
-            sectors.push(...project.sezs.map(s => `АЭА: ${s.name}`));
+            sectors.push(...project.sezs.map((s) => `АЭА: ${s.name}`));
         }
-        
+
         if (project.industrial_zones && project.industrial_zones.length > 0) {
-            sectors.push(...project.industrial_zones.map(iz => `ИА: ${iz.name}`));
+            sectors.push(
+                ...project.industrial_zones.map((iz) => `ИА: ${iz.name}`),
+            );
         }
-        
+
         if (project.subsoil_users && project.subsoil_users.length > 0) {
-            sectors.push(...project.subsoil_users.map(su => `Жер қойнауын пайдалану: ${su.name}`));
+            sectors.push(
+                ...project.subsoil_users.map(
+                    (su) => `Жер қойнауын пайдалану: ${su.name}`,
+                ),
+            );
         }
-        
+
         return sectors.length > 0 ? sectors.join(', ') : '—';
     };
 
@@ -364,9 +455,14 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
     };
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'Инвестициялық жобалар', href: investmentProjectsRoutes.index.url() }
-        ]}>
+        <AppLayout
+            breadcrumbs={[
+                {
+                    title: 'Инвестициялық жобалар',
+                    href: investmentProjectsRoutes.index.url(),
+                },
+            ]}
+        >
             <Head title="Инвестициялық жобалар" />
 
             <div className="flex h-full flex-col space-y-5 p-6">
@@ -375,30 +471,39 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         Инвестициялық жобалар
                     </h1>
                     <div className="flex items-center gap-3">
-                        <Button 
-                            variant="outline" 
+                        <Button
+                            variant="outline"
                             className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]"
                             onClick={() => {
                                 const currentYear = new Date().getFullYear();
                                 const newData = {
                                     ...data,
                                     end_date_from: `${currentYear}-01-01`,
-                                    end_date_to: `${currentYear}-12-31`
+                                    end_date_to: `${currentYear}-12-31`,
                                 };
                                 setData(newData);
                                 setFiltersOpen(true);
-                                router.get('/investment-projects', newData as any, {
-                                    preserveState: true,
-                                    preserveScroll: true,
-                                });
+                                router.get(
+                                    '/investment-projects',
+                                    newData as any,
+                                    {
+                                        preserveState: true,
+                                        preserveScroll: true,
+                                    },
+                                );
                             }}
                         >
-                            <Calendar className=" h-4 w-4" />
-                            {stats.ending_this_year !== undefined ? `${stats.ending_this_year} жоба` : 'Биыл аяқталатын'}
+                            <Calendar className="h-4 w-4" />
+                            {stats.ending_this_year !== undefined
+                                ? `${stats.ending_this_year} жоба`
+                                : 'Биыл аяқталатын'}
                         </Button>
                         {(isSuperAdmin || isInvest) && (
                             <Link href="/investment-projects-archived">
-                                <Button variant="outline" className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]">
+                                <Button
+                                    variant="outline"
+                                    className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]"
+                                >
                                     <Archive className="mr-2 h-4 w-4" />
                                     Архив
                                 </Button>
@@ -436,7 +541,12 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <Input
                                         id="search"
                                         value={data.search}
-                                        onChange={(event) => setData('search', event.target.value)}
+                                        onChange={(event) =>
+                                            setData(
+                                                'search',
+                                                event.target.value,
+                                            )
+                                        }
                                         placeholder="Атауы немесе компания"
                                     />
                                 </div>
@@ -454,7 +564,10 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         </SelectTrigger>
                                         <SelectContent>
                                             {regions.map((region) => (
-                                                <SelectItem key={region.id} value={String(region.id)}>
+                                                <SelectItem
+                                                    key={region.id}
+                                                    value={String(region.id)}
+                                                >
                                                     {region.name}
                                                 </SelectItem>
                                             ))}
@@ -465,14 +578,19 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <Label>Жоба түрі</Label>
                                     <Select
                                         value={data.project_type_id}
-                                        onValueChange={(value) => setData('project_type_id', value)}
+                                        onValueChange={(value) =>
+                                            setData('project_type_id', value)
+                                        }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Барлық түрлер" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {projectTypes.map((type) => (
-                                                <SelectItem key={type.id} value={String(type.id)}>
+                                                <SelectItem
+                                                    key={type.id}
+                                                    value={String(type.id)}
+                                                >
                                                     {type.name}
                                                 </SelectItem>
                                             ))}
@@ -483,16 +601,26 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <Label>Мәртебесі</Label>
                                     <Select
                                         value={data.status}
-                                        onValueChange={(value) => setData('status', value)}
+                                        onValueChange={(value) =>
+                                            setData('status', value)
+                                        }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Барлық мәртебелер" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="plan">Жоспарлау</SelectItem>
-                                            <SelectItem value="implementation">Іске асыру</SelectItem>
-                                            <SelectItem value="launched">Іске қосылған</SelectItem>
-                                            <SelectItem value="suspended">Тоқтатылған</SelectItem>
+                                            <SelectItem value="plan">
+                                                Жоспарлау
+                                            </SelectItem>
+                                            <SelectItem value="implementation">
+                                                Іске асыру
+                                            </SelectItem>
+                                            <SelectItem value="launched">
+                                                Іске қосылған
+                                            </SelectItem>
+                                            <SelectItem value="suspended">
+                                                Тоқтатылған
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -500,15 +628,23 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <Label>Орындаушы</Label>
                                     <Select
                                         value={data.executor_id}
-                                        onValueChange={(value) => setData('executor_id', value)}
+                                        onValueChange={(value) =>
+                                            setData('executor_id', value)
+                                        }
                                     >
                                         <SelectTrigger>
                                             <SelectValue placeholder="Барлық орындаушылар" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {filteredUsers.map((user) => (
-                                                <SelectItem key={user.id} value={String(user.id)}>
-                                                    {user.full_name} {user.position ? `- ${user.position}` : ''}
+                                                <SelectItem
+                                                    key={user.id}
+                                                    value={String(user.id)}
+                                                >
+                                                    {user.full_name}{' '}
+                                                    {user.position
+                                                        ? `- ${user.position}`
+                                                        : ''}
                                                 </SelectItem>
                                             ))}
                                         </SelectContent>
@@ -527,8 +663,12 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                             <SelectValue placeholder="Кез келген" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="sez">АЭА</SelectItem>
-                                            <SelectItem value="industrial_zone">ИА</SelectItem>
+                                            <SelectItem value="sez">
+                                                АЭА
+                                            </SelectItem>
+                                            <SelectItem value="industrial_zone">
+                                                ИА
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
                                 </div>
@@ -536,15 +676,26 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <Label>Сектор</Label>
                                     <Select
                                         value={data.sector_id}
-                                        onValueChange={(value) => setData('sector_id', value)}
+                                        onValueChange={(value) =>
+                                            setData('sector_id', value)
+                                        }
                                         disabled={!data.sector_type}
                                     >
                                         <SelectTrigger>
-                                            <SelectValue placeholder={data.sector_type ? 'Барлығы' : 'Түрін таңдаңыз'} />
+                                            <SelectValue
+                                                placeholder={
+                                                    data.sector_type
+                                                        ? 'Барлығы'
+                                                        : 'Түрін таңдаңыз'
+                                                }
+                                            />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {sectorOptions.map((option) => (
-                                                <SelectItem key={option.value} value={option.value}>
+                                                <SelectItem
+                                                    key={option.value}
+                                                    value={option.value}
+                                                >
                                                     {option.label}
                                                 </SelectItem>
                                             ))}
@@ -552,115 +703,206 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     </Select>
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="min_investment">Инвестиция бастап</Label>
+                                    <Label htmlFor="min_investment">
+                                        Инвестиция бастап
+                                    </Label>
                                     <Input
                                         id="min_investment"
                                         type="number"
                                         value={data.min_investment}
-                                        onChange={(event) => setData('min_investment', event.target.value)}
+                                        onChange={(event) =>
+                                            setData(
+                                                'min_investment',
+                                                event.target.value,
+                                            )
+                                        }
                                         placeholder="0"
                                         min="0"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="max_investment">Инвестиция дейін</Label>
+                                    <Label htmlFor="max_investment">
+                                        Инвестиция дейін
+                                    </Label>
                                     <Input
                                         id="max_investment"
                                         type="number"
                                         value={data.max_investment}
-                                        onChange={(event) => setData('max_investment', event.target.value)}
+                                        onChange={(event) =>
+                                            setData(
+                                                'max_investment',
+                                                event.target.value,
+                                            )
+                                        }
                                         placeholder="∞"
                                         min="0"
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_from">Басталуы бастап (жыл)</Label>
+                                    <Label htmlFor="start_date_from">
+                                        Басталуы бастап (жыл)
+                                    </Label>
                                     <Input
                                         id="start_date_from"
                                         type="number"
                                         min="1990"
                                         max="2100"
                                         placeholder="Мысалы: 2023"
-                                        value={data.start_date_from ? data.start_date_from.split('-')[0] : ''}
-                                        onChange={(event) => setData('start_date_from', event.target.value ? `${event.target.value}-01-01` : '')}
+                                        value={
+                                            data.start_date_from
+                                                ? data.start_date_from.split(
+                                                      '-',
+                                                  )[0]
+                                                : ''
+                                        }
+                                        onChange={(event) =>
+                                            setData(
+                                                'start_date_from',
+                                                event.target.value
+                                                    ? `${event.target.value}-01-01`
+                                                    : '',
+                                            )
+                                        }
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_to">Басталуы дейін (жыл)</Label>
+                                    <Label htmlFor="start_date_to">
+                                        Басталуы дейін (жыл)
+                                    </Label>
                                     <Input
                                         id="start_date_to"
                                         type="number"
                                         min="1990"
                                         max="2100"
                                         placeholder="Мысалы: 2025"
-                                        value={data.start_date_to ? data.start_date_to.split('-')[0] : ''}
-                                        onChange={(event) => setData('start_date_to', event.target.value ? `${event.target.value}-12-31` : '')}
+                                        value={
+                                            data.start_date_to
+                                                ? data.start_date_to.split(
+                                                      '-',
+                                                  )[0]
+                                                : ''
+                                        }
+                                        onChange={(event) =>
+                                            setData(
+                                                'start_date_to',
+                                                event.target.value
+                                                    ? `${event.target.value}-12-31`
+                                                    : '',
+                                            )
+                                        }
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_from">Аяқталуы бастап (жыл)</Label>
+                                    <Label htmlFor="end_date_from">
+                                        Аяқталуы бастап (жыл)
+                                    </Label>
                                     <Input
                                         id="end_date_from"
                                         type="number"
                                         min="1990"
                                         max="2100"
                                         placeholder="Мысалы: 2024"
-                                        value={data.end_date_from ? data.end_date_from.split('-')[0] : ''}
-                                        onChange={(event) => setData('end_date_from', event.target.value ? `${event.target.value}-01-01` : '')}
+                                        value={
+                                            data.end_date_from
+                                                ? data.end_date_from.split(
+                                                      '-',
+                                                  )[0]
+                                                : ''
+                                        }
+                                        onChange={(event) =>
+                                            setData(
+                                                'end_date_from',
+                                                event.target.value
+                                                    ? `${event.target.value}-01-01`
+                                                    : '',
+                                            )
+                                        }
                                     />
                                 </div>
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_to">Аяқталуы дейін (жыл)</Label>
+                                    <Label htmlFor="end_date_to">
+                                        Аяқталуы дейін (жыл)
+                                    </Label>
                                     <Input
                                         id="end_date_to"
                                         type="number"
                                         min="1990"
                                         max="2100"
                                         placeholder="Мысалы: 2026"
-                                        value={data.end_date_to ? data.end_date_to.split('-')[0] : ''}
-                                        onChange={(event) => setData('end_date_to', event.target.value ? `${event.target.value}-12-31` : '')}
+                                        value={
+                                            data.end_date_to
+                                                ? data.end_date_to.split('-')[0]
+                                                : ''
+                                        }
+                                        onChange={(event) =>
+                                            setData(
+                                                'end_date_to',
+                                                event.target.value
+                                                    ? `${event.target.value}-12-31`
+                                                    : '',
+                                            )
+                                        }
                                     />
                                 </div>
                             </div>
                             <div className="mt-4 flex flex-wrap gap-2">
-                                <Button type="submit" className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]">
+                                <Button
+                                    type="submit"
+                                    className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
+                                >
                                     Қолдану
                                 </Button>
-                                <Button type="button" variant="outline" className="border-gray-200 shadow-none hover:bg-gray-50" onClick={clearFilters}>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    className="border-gray-200 shadow-none hover:bg-gray-50"
+                                    onClick={clearFilters}
+                                >
                                     Тазалау
                                 </Button>
                             </div>
                         </form>
                     )}
                 </div>
-                
+
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Жобалар саны</h3>
+                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                            Жобалар саны
+                        </h3>
                         <p className="mt-2 text-2xl font-bold text-[#0f1b3d]">
                             {stats.total_projects}
                         </p>
                     </div>
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Инвестиция көлемі</h3>
+                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                            Инвестиция көлемі
+                        </h3>
                         <p className="mt-2 text-2xl font-bold text-[#c8a44e]">
                             {formatTotalInvestment(stats.total_investment)}
                         </p>
                     </div>
                     <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-400">Мәртебесі бойынша</h3>
+                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
+                            Мәртебесі бойынша
+                        </h3>
                         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-[#0f1b3d]">
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-blue-500" /> Жоспарлау: {stats.status_counts.plan}
+                                <span className="h-2 w-2 rounded-full bg-blue-500" />{' '}
+                                Жоспарлау: {stats.status_counts.plan}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" /> Іске қосылған: {stats.status_counts.launched}
+                                <span className="h-2 w-2 rounded-full bg-emerald-500" />{' '}
+                                Іске қосылған: {stats.status_counts.launched}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-amber-500" /> Іске асырылуда: {stats.status_counts.implementation}
+                                <span className="h-2 w-2 rounded-full bg-amber-500" />{' '}
+                                Іске асырылуда:{' '}
+                                {stats.status_counts.implementation}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-red-500" /> Тоқтатылған: {stats.status_counts.suspended}
+                                <span className="h-2 w-2 rounded-full bg-red-500" />{' '}
+                                Тоқтатылған: {stats.status_counts.suspended}
                             </span>
                         </div>
                     </div>
@@ -675,7 +917,9 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    {(isSuperAdmin || isInvest) && <TableHead className="w-12"></TableHead>}
+                                    {(isSuperAdmin || isInvest) && (
+                                        <TableHead className="w-12"></TableHead>
+                                    )}
                                     <TableHead>Атауы / Компания</TableHead>
                                     <TableHead>Аймақ</TableHead>
                                     <TableHead>Жоба түрі</TableHead>
@@ -683,13 +927,20 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                     <TableHead>Инвестиция</TableHead>
                                     <TableHead>Орындаушылар</TableHead>
                                     <TableHead>Мәртебесі</TableHead>
-                                    <TableHead className="text-right">Әрекеттер</TableHead>
+                                    <TableHead className="text-right">
+                                        Әрекеттер
+                                    </TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {orderedProjects.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={(isSuperAdmin || isInvest) ? 9 : 8} className="py-12 text-center text-gray-400">
+                                        <TableCell
+                                            colSpan={
+                                                isSuperAdmin || isInvest ? 9 : 8
+                                            }
+                                            className="py-12 text-center text-gray-400"
+                                        >
                                             Деректер жоқ
                                         </TableCell>
                                     </TableRow>
@@ -699,58 +950,115 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                         strategy={verticalListSortingStrategy}
                                     >
                                         {orderedProjects.map((project) => (
-                                            <SortableProjectRow key={project.id} id={project.id} isEnabled={isSuperAdmin || isInvest}>
+                                            <SortableProjectRow
+                                                key={project.id}
+                                                id={project.id}
+                                                isEnabled={
+                                                    isSuperAdmin || isInvest
+                                                }
+                                            >
                                                 <TableCell>
                                                     <div className="flex flex-col">
                                                         <Link
-                                                            href={investmentProjectsRoutes.show.url(project.id)}
+                                                            href={investmentProjectsRoutes.show.url(
+                                                                project.id,
+                                                            )}
                                                             className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
                                                         >
-                                                            {toNormalCase(project.name)}
+                                                            {toNormalCase(
+                                                                project.name,
+                                                            )}
                                                         </Link>
                                                         {project.company_name && (
                                                             <span className="mt-0.5 text-xs text-gray-400">
-                                                                {toNormalCase(project.company_name)}
+                                                                {toNormalCase(
+                                                                    project.company_name,
+                                                                )}
                                                             </span>
                                                         )}
                                                     </div>
                                                 </TableCell>
-                                                <TableCell>{project.region?.name ?? '—'}</TableCell>
-                                                <TableCell>{project.project_type?.name ?? '—'}</TableCell>
-                                                <TableCell>{getSectorDisplay(project)}</TableCell>
-                                                <TableCell className="whitespace-nowrap">{formatInvestment(project.total_investment)}</TableCell>
                                                 <TableCell>
-                                                    {project.executors?.length > 0
-                                                        ? project.executors.map(e => e.full_name).join(', ')
+                                                    {project.region?.name ??
+                                                        '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {project.project_type
+                                                        ?.name ?? '—'}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {getSectorDisplay(project)}
+                                                </TableCell>
+                                                <TableCell className="whitespace-nowrap">
+                                                    {formatInvestment(
+                                                        project.total_investment,
+                                                    )}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {project.executors?.length >
+                                                    0
+                                                        ? project.executors
+                                                              .map(
+                                                                  (e) =>
+                                                                      e.full_name,
+                                                              )
+                                                              .join(', ')
                                                         : '—'}
                                                 </TableCell>
                                                 <TableCell>
-                                                    <Badge className={`${getStatusColor(project.status)} px-3 py-1 text-sm font-medium border-0`}>
-                                                        {getStatusLabel(project.status)}
+                                                    <Badge
+                                                        className={`${getStatusColor(project.status)} border-0 px-3 py-1 text-sm font-medium`}
+                                                    >
+                                                        {getStatusLabel(
+                                                            project.status,
+                                                        )}
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
-                                                        {(isSuperAdmin || isInvest) && (
+                                                        {(isSuperAdmin ||
+                                                            isInvest) && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 title="Басқа бетке ауыстыру"
                                                                 className="h-8 w-8 hover:bg-blue-50 hover:text-blue-700"
-                                                                onClick={() => openMoveModal(project)}
+                                                                onClick={() =>
+                                                                    openMoveModal(
+                                                                        project,
+                                                                    )
+                                                                }
                                                             >
                                                                 <MoveRight className="h-4 w-4" />
                                                             </Button>
                                                         )}
-                                                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Қарау">
-                                                            <Link href={investmentProjectsRoutes.show.url(project.id)}>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                            title="Қарау"
+                                                        >
+                                                            <Link
+                                                                href={investmentProjectsRoutes.show.url(
+                                                                    project.id,
+                                                                )}
+                                                            >
                                                                 <Eye className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
                                                         {canModify && (
                                                             <>
-                                                                <Button variant="ghost" size="icon" asChild className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]" title="Өңдеу">
-                                                                    <Link href={`${investmentProjectsRoutes.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    asChild
+                                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                                    title="Өңдеу"
+                                                                >
+                                                                    <Link
+                                                                        href={`${investmentProjectsRoutes.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}
+                                                                    >
                                                                         <Pencil className="h-4 w-4" />
                                                                     </Link>
                                                                 </Button>
@@ -758,7 +1066,11 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                                    onClick={() => handleDelete(project.id)}
+                                                                    onClick={() =>
+                                                                        handleDelete(
+                                                                            project.id,
+                                                                        )
+                                                                    }
                                                                     title="Жою"
                                                                 >
                                                                     <Trash2 className="h-4 w-4" />
@@ -778,29 +1090,46 @@ export default function Index({ projects, stats, regions, projectTypes, users, s
 
                 <Pagination paginator={projects} />
 
-                <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+                <Dialog
+                    open={isMoveModalOpen}
+                    onOpenChange={setIsMoveModalOpen}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Жобаның орнын ауыстыру</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
-                            <Label htmlFor="targetPage">Қай бетке апарамыз?</Label>
+                            <Label htmlFor="targetPage">
+                                Қай бетке апарамыз?
+                            </Label>
                             <Input
                                 id="targetPage"
                                 type="number"
                                 min={1}
                                 max={projects.last_page}
                                 value={targetPage}
-                                onChange={(e) => setTargetPage(parseInt(e.target.value) || 1)}
+                                onChange={(e) =>
+                                    setTargetPage(parseInt(e.target.value) || 1)
+                                }
                                 className="mt-2"
                             />
-                            <p className="text-sm text-gray-500 mt-2">
+                            <p className="mt-2 text-sm text-gray-500">
                                 Жалпы беттер саны: {projects.last_page}
                             </p>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)}>Болдырмау</Button>
-                            <Button onClick={handleMoveSubmit} className="bg-[#c8a44e] text-white hover:bg-[#b8943e]">Сақтау</Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsMoveModalOpen(false)}
+                            >
+                                Болдырмау
+                            </Button>
+                            <Button
+                                onClick={handleMoveSubmit}
+                                className="bg-[#c8a44e] text-white hover:bg-[#b8943e]"
+                            >
+                                Сақтау
+                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

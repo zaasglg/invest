@@ -9,12 +9,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useCanModify } from '@/hooks/use-can-modify';
@@ -45,7 +40,11 @@ interface Props {
     documents: SubsoilDocument[];
 }
 
-export default function Documents({ subsoilUser, completedDocuments, documents }: Props) {
+export default function Documents({
+    subsoilUser,
+    completedDocuments,
+    documents,
+}: Props) {
     const canModify = useCanModify();
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');
@@ -79,22 +78,18 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
             formData.append('is_completed', '1');
         }
 
-        router.post(
-            `/subsoil-users/${subsoilUser.id}/documents`,
-            formData,
-            {
-                onSuccess: () => {
-                    setFile(null);
-                    setDocumentName('');
-                    setDocumentType('');
-                    setIsCompleted(false);
-                    setIsUploading(false);
-                },
-                onError: () => {
-                    setIsUploading(false);
-                },
+        router.post(`/subsoil-users/${subsoilUser.id}/documents`, formData, {
+            onSuccess: () => {
+                setFile(null);
+                setDocumentName('');
+                setDocumentType('');
+                setIsCompleted(false);
+                setIsUploading(false);
             },
-        );
+            onError: () => {
+                setIsUploading(false);
+            },
+        });
     };
 
     const handleDelete = (documentId: number) => {
@@ -204,9 +199,7 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                                         className="space-y-4"
                                     >
                                         <div>
-                                            <Label htmlFor="file">
-                                                Файл
-                                            </Label>
+                                            <Label htmlFor="file">Файл</Label>
                                             <Input
                                                 id="file"
                                                 type="file"
@@ -217,10 +210,7 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                                             {file && (
                                                 <p className="mt-1 text-xs text-gray-500">
                                                     Таңдалды: {file.name} (
-                                                    {formatFileSize(
-                                                        file.size,
-                                                    )}
-                                                    )
+                                                    {formatFileSize(file.size)})
                                                 </p>
                                             )}
                                         </div>
@@ -267,10 +257,17 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                                                 id="is_completed"
                                                 type="checkbox"
                                                 checked={isCompleted}
-                                                onChange={(e) => setIsCompleted(e.target.checked)}
+                                                onChange={(e) =>
+                                                    setIsCompleted(
+                                                        e.target.checked,
+                                                    )
+                                                }
                                                 className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
                                             />
-                                            <Label htmlFor="is_completed" className="cursor-pointer text-sm font-medium text-gray-700">
+                                            <Label
+                                                htmlFor="is_completed"
+                                                className="cursor-pointer text-sm font-medium text-gray-700"
+                                            >
                                                 Аяқталған құжат
                                             </Label>
                                         </div>
@@ -318,8 +315,8 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                     <div
                         className={
                             canModify
-                                ? 'lg:col-span-2 space-y-6'
-                                : 'lg:col-span-3 space-y-6'
+                                ? 'space-y-6 lg:col-span-2'
+                                : 'space-y-6 lg:col-span-3'
                         }
                     >
                         {/* Completed Documents - shown first */}
@@ -327,7 +324,9 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                    <span className="text-green-800">Аяқталған құжаттар</span>
+                                    <span className="text-green-800">
+                                        Аяқталған құжаттар
+                                    </span>
                                     <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({completedDocuments.length})
                                     </span>
@@ -337,7 +336,9 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                                 {completedDocuments.length === 0 ? (
                                     <div className="py-8 text-center">
                                         <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-gray-300" />
-                                        <p className="text-sm text-gray-500">Аяқталған құжаттар жоқ</p>
+                                        <p className="text-sm text-gray-500">
+                                            Аяқталған құжаттар жоқ
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 gap-3">
@@ -412,8 +413,8 @@ export default function Documents({ subsoilUser, completedDocuments, documents }
                                             Жүктелген құжаттар жоқ
                                         </p>
                                         <p className="mt-1 text-sm text-gray-400">
-                                            Сол жақтағы пішінді пайдаланып бірінші
-                                            құжатты жүктеңіз
+                                            Сол жақтағы пішінді пайдаланып
+                                            бірінші құжатты жүктеңіз
                                         </p>
                                     </div>
                                 ) : (

@@ -79,7 +79,13 @@ export default function Issues({ sez, issues }: Props) {
 
         router.post(
             `/sezs/${sez.id}/issues`,
-            { title, description, category: category || null, severity, status },
+            {
+                title,
+                description,
+                category: category || null,
+                severity,
+                status,
+            },
             {
                 onSuccess: () => {
                     setTitle('');
@@ -128,7 +134,10 @@ export default function Issues({ sez, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: sez.region?.name || 'Аудан', href: `/regions/${sez.region?.id}` },
+                {
+                    title: sez.region?.name || 'Аудан',
+                    href: `/regions/${sez.region?.id}`,
+                },
                 { title: sez.name, href: '' },
                 { title: 'Проблемалық мәселелер', href: '' },
             ]}

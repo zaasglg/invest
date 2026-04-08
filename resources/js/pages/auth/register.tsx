@@ -30,7 +30,10 @@ export default function Register() {
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="full_name" className="text-white/80">
+                                <Label
+                                    htmlFor="full_name"
+                                    className="text-white/80"
+                                >
                                     Аты-жөні
                                 </Label>
                                 <Input
@@ -51,7 +54,10 @@ export default function Register() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="email" className="text-white/80">
+                                <Label
+                                    htmlFor="email"
+                                    className="text-white/80"
+                                >
                                     Email мекенжайы
                                 </Label>
                                 <Input
@@ -68,7 +74,10 @@ export default function Register() {
                             </div>
 
                             <div className="grid gap-2">
-                                <Label htmlFor="password" className="text-white/80">
+                                <Label
+                                    htmlFor="password"
+                                    className="text-white/80"
+                                >
                                     Құпия сөз
                                 </Label>
                                 <Input

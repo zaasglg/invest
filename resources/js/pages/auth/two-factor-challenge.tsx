@@ -33,8 +33,7 @@ export default function TwoFactorChallenge() {
 
         return {
             title: 'Аутентификация коды',
-            description:
-                'Аутентификация қолданбаңыз берген кодты енгізіңіз.',
+            description: 'Аутентификация қолданбаңыз берген кодты енгізіңіз.',
             toggleText: 'қалпына келтіру кодымен кіру',
         };
     }, [showRecoveryInput]);

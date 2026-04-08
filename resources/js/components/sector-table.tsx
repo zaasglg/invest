@@ -30,10 +30,7 @@ const formatInvestment = (value: number) => {
     return formatMoneyCompact(value);
 };
 
-export default function SectorTable({
-    sectorSummary,
-    activeRegionId,
-}: Props) {
+export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
     const data =
         activeRegionId && sectorSummary.byRegion[activeRegionId]
             ? sectorSummary.byRegion[activeRegionId]
@@ -49,24 +46,24 @@ export default function SectorTable({
     const maxInvestment = Math.max(...rows.map((r) => r.d.investment));
 
     return (
-        <div className="mx-4 mb-4 mt-4 overflow-hidden rounded-xl border border-gray-200 shadow-lg">
+        <div className="mx-4 mt-4 mb-4 overflow-hidden rounded-xl border border-gray-200 shadow-lg">
             <div className="max-h-[300px] overflow-y-auto bg-white">
                 <table className="w-full border-collapse text-left text-sm">
                     <thead className="sticky top-0 z-10 border-b border-gray-200 bg-gray-100 shadow-sm">
                         <tr>
-                            <th className="whitespace-nowrap px-4 py-3 font-bold text-gray-700">
+                            <th className="px-4 py-3 font-bold whitespace-nowrap text-gray-700">
                                 Сектор
                             </th>
-                            <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
+                            <th className="px-4 py-3 text-center font-bold whitespace-nowrap text-gray-700">
                                 Инвестициялар
                             </th>
-                            <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
+                            <th className="px-4 py-3 text-center font-bold whitespace-nowrap text-gray-700">
                                 Жобалар саны
                             </th>
-                            <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
+                            <th className="px-4 py-3 text-center font-bold whitespace-nowrap text-gray-700">
                                 Проблемалық мәселелер
                             </th>
-                            <th className="whitespace-nowrap px-4 py-3 text-center font-bold text-gray-700">
+                            <th className="px-4 py-3 text-center font-bold whitespace-nowrap text-gray-700">
                                 Жұмыс орындары
                             </th>
                         </tr>
@@ -80,16 +77,13 @@ export default function SectorTable({
                             return (
                                 <tr
                                     key={row.key}
-                                    className={`
-                                        cursor-pointer text-sm transition-colors
-                                        ${
-                                            isHighlighted
-                                                ? 'bg-[#0056D2] text-white hover:bg-[#004bb5]'
-                                                : idx % 2 === 0
-                                                  ? 'bg-white text-gray-700 hover:bg-gray-50'
-                                                  : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
-                                        }
-                                    `}
+                                    className={`cursor-pointer text-sm transition-colors ${
+                                        isHighlighted
+                                            ? 'bg-[#0056D2] text-white hover:bg-[#004bb5]'
+                                            : idx % 2 === 0
+                                              ? 'bg-white text-gray-700 hover:bg-gray-50'
+                                              : 'bg-gray-50 text-gray-700 hover:bg-gray-100'
+                                    } `}
                                 >
                                     <td className="flex items-center gap-3 px-4 py-3 font-medium">
                                         {isHighlighted ? (

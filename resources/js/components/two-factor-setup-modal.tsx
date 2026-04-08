@@ -79,7 +79,6 @@ function TwoFactorSetupStep({
                                         dangerouslySetInnerHTML={{
                                             __html: qrCodeSvg,
                                         }}
-
                                     />
                                 ) : (
                                     <Spinner />

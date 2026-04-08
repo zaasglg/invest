@@ -25,10 +25,7 @@ export default function Pagination<T>({
     };
 
     // Build page numbers to show (with ellipsis)
-    const pages = buildPageNumbers(
-        paginator.current_page,
-        paginator.last_page,
-    );
+    const pages = buildPageNumbers(paginator.current_page, paginator.last_page);
 
     return (
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3.5 shadow-sm sm:flex-row">
@@ -103,10 +100,7 @@ export default function Pagination<T>({
  * Build an array of page numbers with ellipsis markers.
  * Always show first, last, and a window around the current page.
  */
-function buildPageNumbers(
-    current: number,
-    last: number,
-): (number | '...')[] {
+function buildPageNumbers(current: number, last: number): (number | '...')[] {
     if (last <= 7) {
         return Array.from({ length: last }, (_, i) => i + 1);
     }

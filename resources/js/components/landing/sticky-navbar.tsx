@@ -27,17 +27,14 @@ export function StickyNavbar() {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    const scrollTo = useCallback(
-        (href: string) => {
-            setMobileOpen(false);
-            const id = href.replace('#', '');
-            const el = document.getElementById(id);
-            if (el) {
-                el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        },
-        [],
-    );
+    const scrollTo = useCallback((href: string) => {
+        setMobileOpen(false);
+        const id = href.replace('#', '');
+        const el = document.getElementById(id);
+        if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, []);
 
     return (
         <header
@@ -50,10 +47,7 @@ export function StickyNavbar() {
         >
             <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:h-20 sm:px-6 lg:px-8">
                 {/* Logo */}
-                <Link
-                    href="/"
-                    className="flex items-center gap-3"
-                >
+                <Link href="/" className="flex items-center gap-3">
                     <img
                         src="/assets/images/logo-2.png"
                         alt="Turkistan Invest"
@@ -112,12 +106,10 @@ export function StickyNavbar() {
             <div
                 className={cn(
                     'overflow-hidden transition-all duration-300 lg:hidden',
-                    mobileOpen
-                        ? 'max-h-96 opacity-100'
-                        : 'max-h-0 opacity-0',
+                    mobileOpen ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0',
                 )}
             >
-                <div className="border-t border-white/10 bg-[#0f1b3d]/98 px-4 pb-6 pt-4 backdrop-blur-md">
+                <div className="border-t border-white/10 bg-[#0f1b3d]/98 px-4 pt-4 pb-6 backdrop-blur-md">
                     {navLinks.map((link) => (
                         <button
                             key={link.href}

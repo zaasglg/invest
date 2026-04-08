@@ -154,7 +154,7 @@ export function StatisticsSection() {
         >
             {/* Background decoration */}
             <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,#1a2d5e_0%,transparent_70%)]" />
-            <div className="absolute right-0 top-0 h-64 w-64 rounded-full bg-[#c8a44e]/5 blur-3xl" />
+            <div className="absolute top-0 right-0 h-64 w-64 rounded-full bg-[#c8a44e]/5 blur-3xl" />
             <div className="absolute bottom-0 left-0 h-48 w-48 rounded-full bg-blue-500/5 blur-3xl" />
 
             <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
@@ -172,9 +172,9 @@ export function StatisticsSection() {
                         </span>
                     </h2>
                     <p className="mt-4 text-base leading-relaxed text-white/50 sm:text-lg">
-                        Turkistan region is one of the fastest-growing
-                        economies in Central Asia, consistently outpacing
-                        national growth metrics.
+                        Turkistan region is one of the fastest-growing economies
+                        in Central Asia, consistently outpacing national growth
+                        metrics.
                     </p>
                 </div>
 

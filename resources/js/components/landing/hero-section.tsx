@@ -19,12 +19,12 @@ export function HeroSection() {
             />
 
             {/* Floating decorative elements */}
-            <div className="absolute right-0 top-1/4 h-96 w-96 rounded-full bg-[#c8a44e]/5 blur-3xl" />
+            <div className="absolute top-1/4 right-0 h-96 w-96 rounded-full bg-[#c8a44e]/5 blur-3xl" />
             <div className="absolute bottom-1/4 left-0 h-72 w-72 rounded-full bg-blue-500/5 blur-3xl" />
 
             {/* Glowing line accents */}
-            <div className="absolute left-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-[#c8a44e]/20 to-transparent" />
-            <div className="absolute right-0 top-0 h-full w-px bg-gradient-to-b from-transparent via-[#c8a44e]/20 to-transparent" />
+            <div className="absolute top-0 left-0 h-full w-px bg-gradient-to-b from-transparent via-[#c8a44e]/20 to-transparent" />
+            <div className="absolute top-0 right-0 h-full w-px bg-gradient-to-b from-transparent via-[#c8a44e]/20 to-transparent" />
 
             <div className="relative z-10 mx-auto max-w-7xl px-4 py-32 sm:px-6 lg:px-8">
                 <div className="grid items-center gap-12 lg:grid-cols-2 lg:gap-20">
@@ -32,14 +32,14 @@ export function HeroSection() {
                     <div className="max-w-2xl">
                         {/* Badge */}
                         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-[#c8a44e]/30 bg-[#c8a44e]/10 px-4 py-1.5 sm:mb-8">
-                            <span className="h-2 w-2 rounded-full bg-[#c8a44e] animate-pulse" />
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-[#c8a44e]" />
                             <span className="text-xs font-semibold tracking-wider text-[#c8a44e] uppercase sm:text-sm">
                                 Gateway to Central Asia
                             </span>
                         </div>
 
                         {/* Headline */}
-                        <h1 className="text-4xl font-extrabold leading-[1.1] tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
+                        <h1 className="text-4xl leading-[1.1] font-extrabold tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
                             Invest in the{' '}
                             <span className="bg-gradient-to-r from-[#c8a44e] to-[#e3c97a] bg-clip-text text-transparent">
                                 Future
@@ -122,8 +122,8 @@ export function HeroSection() {
                                 </div>
                             </div>
                             {/* Orbiting dots */}
-                            <div className="absolute -right-2 top-1/2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#c8a44e] shadow-lg shadow-[#c8a44e]/50" />
-                            <div className="absolute left-1/2 top-0 h-2 w-2 -translate-x-1/2 rounded-full bg-white/30" />
+                            <div className="absolute top-1/2 -right-2 h-3 w-3 -translate-y-1/2 rounded-full bg-[#c8a44e] shadow-lg shadow-[#c8a44e]/50" />
+                            <div className="absolute top-0 left-1/2 h-2 w-2 -translate-x-1/2 rounded-full bg-white/30" />
                             <div className="absolute bottom-4 left-8 h-2 w-2 rounded-full bg-[#c8a44e]/40" />
                         </div>
                     </div>

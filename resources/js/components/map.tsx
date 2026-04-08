@@ -2,10 +2,15 @@ import 'leaflet/dist/leaflet.css';
 import { Link } from '@inertiajs/react';
 import L from 'leaflet';
 
-
 import icon from 'leaflet/dist/images/marker-icon.png';
 import iconShadow from 'leaflet/dist/images/marker-shadow.png';
-import { ChevronRight, ChevronDown, ChevronUp, X, Navigation } from 'lucide-react';
+import {
+    ChevronRight,
+    ChevronDown,
+    ChevronUp,
+    X,
+    Navigation,
+} from 'lucide-react';
 import React from 'react';
 import { useEffect, useMemo, useState } from 'react';
 import {
@@ -419,17 +424,18 @@ function MapController({
             // Priority 1: Active Plot
             bounds = L.latLngBounds(activePlot.geometry);
             options.maxZoom = 16;
-        } else if (
-            activeRegion &&
-            activeRegion.geometry
-        ) {
+        } else if (activeRegion && activeRegion.geometry) {
             // Priority 2: Active Region
-            const points = getRegionAllPoints(activeRegion.geometry)
-                .map((p) => [p.lat, p.lng] as [number, number]);
+            const points = getRegionAllPoints(activeRegion.geometry).map(
+                (p) => [p.lat, p.lng] as [number, number],
+            );
             if (points.length > 0) {
                 bounds = L.latLngBounds(points);
             }
-        } else if ((fitBounds && regions.length > 0 && !hasInitialized.current) || resetTriggered) {
+        } else if (
+            (fitBounds && regions.length > 0 && !hasInitialized.current) ||
+            resetTriggered
+        ) {
             // Priority 3: Fit All Regions - only on initial load or explicit reset
             hasInitialized.current = true;
             const allPoints: [number, number][] = [];
@@ -470,7 +476,9 @@ function MapController({
 
 // Helper to safely get lat/lng from various geometry formats
 // Helper to safely get lat/lng from various geometry formats
-function getLatLng(point: Record<string, unknown> | unknown[] | null): { lat: number; lng: number } | null {
+function getLatLng(
+    point: Record<string, unknown> | unknown[] | null,
+): { lat: number; lng: number } | null {
     if (!point) return null;
     let lat = NaN,
         lng = NaN;
@@ -497,15 +505,22 @@ function getLatLng(point: Record<string, unknown> | unknown[] | null): { lat: nu
 // Normalize region geometry to array of polygons (multi-polygon support)
 // Old format: [{lat,lng}, ...] -> [[{lat,lng}, ...]]
 // New format: [[{lat,lng}, ...], [{lat,lng}, ...]] -> as-is
-function getRegionPolygons(geometry: unknown): { lat: number; lng: number }[][] {
-    if (!geometry || !Array.isArray(geometry) || geometry.length === 0) return [];
+function getRegionPolygons(
+    geometry: unknown,
+): { lat: number; lng: number }[][] {
+    if (!geometry || !Array.isArray(geometry) || geometry.length === 0)
+        return [];
     // Detect multi-polygon: first element is an array (not a point object)
     if (Array.isArray(geometry[0])) {
-        return geometry.map((polygon: unknown[]) =>
-            polygon
-                .map((p) => getLatLng(p as Record<string, unknown>))
-                .filter((p): p is { lat: number; lng: number } => p !== null),
-        ).filter((poly: { lat: number; lng: number }[]) => poly.length > 0);
+        return geometry
+            .map((polygon: unknown[]) =>
+                polygon
+                    .map((p) => getLatLng(p as Record<string, unknown>))
+                    .filter(
+                        (p): p is { lat: number; lng: number } => p !== null,
+                    ),
+            )
+            .filter((poly: { lat: number; lng: number }[]) => poly.length > 0);
     }
     // Single polygon: array of point objects
     const points = geometry
@@ -648,10 +663,18 @@ export default function Map({
                 }
 
                 // Find the largest polygon by area score
-                const largestPolygon = polygons.reduce((best, poly) => {
-                    const score = getRegionAreaScore(poly);
-                    return score > best.score ? { points: poly, score } : best;
-                }, { points: polygons[0], score: getRegionAreaScore(polygons[0]) });
+                const largestPolygon = polygons.reduce(
+                    (best, poly) => {
+                        const score = getRegionAreaScore(poly);
+                        return score > best.score
+                            ? { points: poly, score }
+                            : best;
+                    },
+                    {
+                        points: polygons[0],
+                        score: getRegionAreaScore(polygons[0]),
+                    },
+                );
 
                 const center = getRegionIconCenter(largestPolygon.points);
                 const areaScore = largestPolygon.score;
@@ -979,14 +1002,16 @@ export default function Map({
                                 {allPositions.map((positions, pIdx) => {
                                     const shadowPositions = positions.map(
                                         ([lat, lng]) =>
-                                            [lat + shadowOffset, lng + shadowOffset] as [
-                                                number,
-                                                number,
-                                            ],
+                                            [
+                                                lat + shadowOffset,
+                                                lng + shadowOffset,
+                                            ] as [number, number],
                                     );
 
                                     return (
-                                        <React.Fragment key={`${region.id}-${pIdx}`}>
+                                        <React.Fragment
+                                            key={`${region.id}-${pIdx}`}
+                                        >
                                             {isActive && (
                                                 <Polygon
                                                     positions={shadowPositions}
@@ -1049,7 +1074,8 @@ export default function Map({
                                                         'cursor-pointer map-region-polygon',
                                                         isActive &&
                                                             'map-live-focus map-live-focus--region',
-                                                        shouldMute && 'map-live-muted',
+                                                        shouldMute &&
+                                                            'map-live-muted',
                                                     ),
                                                 }}
                                                 eventHandlers={{
@@ -1059,9 +1085,13 @@ export default function Map({
                                                         setActiveEntity(null);
                                                     },
                                                     mouseover: () =>
-                                                        setHoveredRegionId(region.id),
+                                                        setHoveredRegionId(
+                                                            region.id,
+                                                        ),
                                                     mouseout: () =>
-                                                        setHoveredRegionId(null),
+                                                        setHoveredRegionId(
+                                                            null,
+                                                        ),
                                                 }}
                                             />
                                         </React.Fragment>
@@ -1438,15 +1468,19 @@ export default function Map({
 
             {/* Active Region Popup */}
             {activeRegion && !activeEntity && (
-                <div 
-                    className="absolute top-4 right-4 z-[400] flex w-[320px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-right-4 duration-300"
+                <div
+                    className="absolute top-4 right-4 z-[400] flex w-[320px] animate-in flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 duration-300 fade-in slide-in-from-right-4"
                     style={{ maxHeight: 'calc(100% - 32px)' }}
                 >
                     {/* Header */}
-                    <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
+                    <div className="relative flex shrink-0 items-center justify-between bg-[#0f1b3d] px-5 py-4">
                         <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">{activeRegion.subtype === 'city' ? 'Қала' : 'Аудан'}</p>
-                            <h3 className="mt-0.5 text-lg font-bold leading-tight text-white break-words">
+                            <p className="text-[10px] font-semibold tracking-widest text-[#c8a44e] uppercase">
+                                {activeRegion.subtype === 'city'
+                                    ? 'Қала'
+                                    : 'Аудан'}
+                            </p>
+                            <h3 className="mt-0.5 text-lg leading-tight font-bold break-words text-white">
                                 {activeRegion.name}
                             </h3>
                         </div>
@@ -1470,25 +1504,35 @@ export default function Map({
                             return (
                                 <div className="divide-y divide-gray-100">
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Инвестиция көлемі</span>
+                                        <span className="text-sm text-gray-500">
+                                            Инвестиция көлемі
+                                        </span>
                                         <span className="text-lg font-bold text-[#c8a44e]">
-                                            {formatInvestment(stats.investments)}
+                                            {formatInvestment(
+                                                stats.investments,
+                                            )}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">ИА-дағы жобалар</span>
+                                        <span className="text-sm text-gray-500">
+                                            ИА-дағы жобалар
+                                        </span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.izProjects}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">АЭА-дағы жобалар</span>
+                                        <span className="text-sm text-gray-500">
+                                            АЭА-дағы жобалар
+                                        </span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.sezProjects}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">Жер қойнауын пайдаланушылар</span>
+                                        <span className="text-sm text-gray-500">
+                                            Жер қойнауын пайдаланушылар
+                                        </span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.subsoilUsers}
                                         </span>
@@ -1508,7 +1552,10 @@ export default function Map({
                                 className="flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-[#0f1b3d] text-sm font-semibold text-white shadow-none hover:bg-[#1a2d5a]"
                                 size="sm"
                             >
-                                {activeRegion.subtype === 'city' ? 'Қала' : 'Аудан'} туралы толығырақ
+                                {activeRegion.subtype === 'city'
+                                    ? 'Қала'
+                                    : 'Аудан'}{' '}
+                                туралы толығырақ
                                 <ChevronRight className="h-4 w-4" />
                             </Button>
                         </Link>
@@ -1518,19 +1565,21 @@ export default function Map({
 
             {/* Active Plot Popup */}
             {activePlot && (
-                <div 
-                    className="absolute top-4 right-4 z-[400] flex w-[340px] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in slide-in-from-right-4 duration-300"
+                <div
+                    className="absolute top-4 right-4 z-[400] flex w-[340px] animate-in flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-black/5 duration-300 fade-in slide-in-from-right-4"
                     style={{ maxHeight: 'calc(100% - 32px)' }}
                 >
                     {/* Header */}
-                    <div className="relative flex items-center justify-between bg-[#0f1b3d] px-5 py-4 shrink-0">
+                    <div className="relative flex shrink-0 items-center justify-between bg-[#0f1b3d] px-5 py-4">
                         <div className="min-w-0 flex-1 pr-2">
-                            <p className="text-[10px] font-semibold uppercase tracking-widest text-[#c8a44e]">Жоба</p>
-                            <h3 className="mt-0.5 text-base font-bold leading-tight text-white break-words">
+                            <p className="text-[10px] font-semibold tracking-widest text-[#c8a44e] uppercase">
+                                Жоба
+                            </p>
+                            <h3 className="mt-0.5 text-base leading-tight font-bold break-words text-white">
                                 {activePlot.name || 'Инвестициялық жоба'}
                             </h3>
                             {activePlot.companyName && (
-                                <p className="mt-0.5 text-xs text-white/60 break-words">
+                                <p className="mt-0.5 text-xs break-words text-white/60">
                                     {activePlot.companyName}
                                 </p>
                             )}
@@ -1551,46 +1600,46 @@ export default function Map({
                             {/* Күйі */}
                             {activePlot.statusRaw && (
                                 <div className="flex items-center justify-between px-5 py-3">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                    <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                         Күйі
                                     </p>
-                                        <span
-                                            className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                                                activePlot.statusRaw === 'plan'
-                                                    ? 'bg-blue-100 text-blue-800'
-                                                    : activePlot.statusRaw ===
-                                                        'implementation'
-                                                      ? 'bg-amber-100 text-amber-800'
-                                                      : activePlot.statusRaw ===
-                                                          'launched'
-                                                        ? 'bg-green-100 text-green-800'
-                                                        : activePlot.statusRaw ===
-                                                            'suspended'
-                                                          ? 'bg-red-100 text-red-800'
-                                                          : 'bg-gray-100 text-gray-800'
-                                            }`}
-                                        >
-                                            {activePlot.statusRaw === 'plan'
-                                                ? 'Жоспарлау'
+                                    <span
+                                        className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                                            activePlot.statusRaw === 'plan'
+                                                ? 'bg-blue-100 text-blue-800'
                                                 : activePlot.statusRaw ===
                                                     'implementation'
-                                                  ? 'Іске асыру'
+                                                  ? 'bg-amber-100 text-amber-800'
                                                   : activePlot.statusRaw ===
                                                       'launched'
-                                                    ? 'Іске қосылған'
+                                                    ? 'bg-green-100 text-green-800'
                                                     : activePlot.statusRaw ===
                                                         'suspended'
-                                                      ? 'Тоқтатылған'
-                                                      : activePlot.statusRaw}
-                                        </span>
-                                    </div>
-                                )}
+                                                      ? 'bg-red-100 text-red-800'
+                                                      : 'bg-gray-100 text-gray-800'
+                                        }`}
+                                    >
+                                        {activePlot.statusRaw === 'plan'
+                                            ? 'Жоспарлау'
+                                            : activePlot.statusRaw ===
+                                                'implementation'
+                                              ? 'Іске асыру'
+                                              : activePlot.statusRaw ===
+                                                  'launched'
+                                                ? 'Іске қосылған'
+                                                : activePlot.statusRaw ===
+                                                    'suspended'
+                                                  ? 'Тоқтатылған'
+                                                  : activePlot.statusRaw}
+                                    </span>
+                                </div>
+                            )}
 
                             {/* Инвестициялар */}
                             {activePlot.totalInvestment !== undefined &&
                                 activePlot.totalInvestment !== null && (
                                     <div className="flex items-center justify-between px-5 py-3">
-                                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                             Инвестициялар
                                         </p>
                                         <p className="text-sm font-bold text-[#c8a44e]">
@@ -1606,7 +1655,7 @@ export default function Map({
                             {/* Жоба түрі */}
                             {activePlot.projectTypeName && (
                                 <div className="flex items-center justify-between px-5 py-3">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                    <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                         Жоба түрі
                                     </p>
                                     <p className="text-sm font-medium text-[#0f1b3d]">
@@ -1616,33 +1665,32 @@ export default function Map({
                             )}
 
                             {/* Мерзімдері */}
-                            {(activePlot.startDate ||
-                                activePlot.endDate) && (
+                            {(activePlot.startDate || activePlot.endDate) && (
                                 <div className="flex items-center justify-between px-5 py-3">
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                    <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                         Мерзімдері
                                     </p>
                                     <p className="text-sm font-medium text-[#0f1b3d]">
-                                            {activePlot.startDate
-                                                ? new Date(
-                                                      activePlot.startDate,
-                                                  ).getFullYear()
-                                                : '—'}
-                                            {' — '}
-                                            {activePlot.endDate
-                                                ? new Date(
-                                                      activePlot.endDate,
-                                                  ).getFullYear()
-                                                : '—'}
-                                        </p>
-                                    </div>
-                                )}
+                                        {activePlot.startDate
+                                            ? new Date(
+                                                  activePlot.startDate,
+                                              ).getFullYear()
+                                            : '—'}
+                                        {' — '}
+                                        {activePlot.endDate
+                                            ? new Date(
+                                                  activePlot.endDate,
+                                              ).getFullYear()
+                                            : '—'}
+                                    </p>
+                                </div>
+                            )}
 
                             {/* Орындаушылар */}
                             {activePlot.executorNames &&
                                 activePlot.executorNames.length > 0 && (
                                     <div className="px-5 py-3">
-                                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                        <p className="mb-1.5 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                             Орындаушылар
                                         </p>
                                         <div className="flex flex-wrap gap-1">
@@ -1666,51 +1714,47 @@ export default function Map({
                                 (activePlot.izNames &&
                                     activePlot.izNames.length > 0) ||
                                 (activePlot.subsoilNames &&
-                                    activePlot.subsoilNames.length >
-                                        0)) && (
+                                    activePlot.subsoilNames.length > 0)) && (
                                 <div className="px-5 py-3">
-                                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                    <p className="mb-1.5 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                         Секторлар
                                     </p>
-                                        <div className="flex flex-wrap gap-1">
-                                            {activePlot.sezNames?.map(
-                                                (name, i) => (
-                                                    <span
-                                                        key={`sez-${i}`}
-                                                        className="inline-flex items-center rounded-full bg-[#c8a44e]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#c8a44e]"
-                                                    >
-                                                        АЭА: {name}
-                                                    </span>
-                                                ),
-                                            )}
-                                            {activePlot.izNames?.map(
-                                                (name, i) => (
-                                                    <span
-                                                        key={`iz-${i}`}
-                                                        className="inline-flex items-center rounded-full bg-[#0f1b3d]/8 px-2.5 py-0.5 text-[10px] font-medium text-[#0f1b3d]"
-                                                    >
-                                                        ИА: {name}
-                                                    </span>
-                                                ),
-                                            )}
-                                            {activePlot.subsoilNames?.map(
-                                                (name, i) => (
-                                                    <span
-                                                        key={`su-${i}`}
-                                                        className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
-                                                    >
-                                                        Жер қойнауын пайдалану: {name}
-                                                    </span>
-                                                ),
-                                            )}
-                                        </div>
+                                    <div className="flex flex-wrap gap-1">
+                                        {activePlot.sezNames?.map((name, i) => (
+                                            <span
+                                                key={`sez-${i}`}
+                                                className="inline-flex items-center rounded-full bg-[#c8a44e]/10 px-2.5 py-0.5 text-[10px] font-medium text-[#c8a44e]"
+                                            >
+                                                АЭА: {name}
+                                            </span>
+                                        ))}
+                                        {activePlot.izNames?.map((name, i) => (
+                                            <span
+                                                key={`iz-${i}`}
+                                                className="inline-flex items-center rounded-full bg-[#0f1b3d]/8 px-2.5 py-0.5 text-[10px] font-medium text-[#0f1b3d]"
+                                            >
+                                                ИА: {name}
+                                            </span>
+                                        ))}
+                                        {activePlot.subsoilNames?.map(
+                                            (name, i) => (
+                                                <span
+                                                    key={`su-${i}`}
+                                                    className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
+                                                >
+                                                    Жер қойнауын пайдалану:{' '}
+                                                    {name}
+                                                </span>
+                                            ),
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
                             {/* Сипаттама */}
                             {activePlot.description && (
                                 <div className="px-5 py-3">
-                                    <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+                                    <p className="mb-0.5 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
                                         Сипаттама
                                     </p>
                                     <p className="line-clamp-3 text-sm leading-snug text-gray-600">
@@ -1764,88 +1808,108 @@ export default function Map({
                         <div className="absolute inset-x-5 bottom-4 z-[400] sm:inset-x-8 lg:inset-x-10">
                             <div className="mx-auto w-full max-w-[1360px] overflow-hidden rounded-xl border border-white/20 bg-white/70 shadow-xl ring-1 ring-black/5 backdrop-blur-md">
                                 <button
-                                    onClick={() => setIsTableCollapsed(!isTableCollapsed)}
+                                    onClick={() =>
+                                        setIsTableCollapsed(!isTableCollapsed)
+                                    }
                                     className="flex w-full items-center justify-center gap-1.5 border-b border-gray-200/50 bg-[#0f1b3d]/5 px-4 py-2 text-xs font-semibold text-[#0f1b3d] transition-colors hover:bg-[#0f1b3d]/10"
                                 >
                                     {isTableCollapsed ? (
-                                        <><ChevronUp className="h-3.5 w-3.5" /> Кестені көрсету</>
+                                        <>
+                                            <ChevronUp className="h-3.5 w-3.5" />{' '}
+                                            Кестені көрсету
+                                        </>
                                     ) : (
-                                        <><ChevronDown className="h-3.5 w-3.5" /> Кестені жасыру</>
+                                        <>
+                                            <ChevronDown className="h-3.5 w-3.5" />{' '}
+                                            Кестені жасыру
+                                        </>
                                     )}
                                 </button>
-                                {!isTableCollapsed && <div className="custom-scrollbar overflow-x-auto">
-                                    <table className="w-full min-w-[780px] border-collapse text-left text-sm">
-                                        <thead className="border-b border-gray-200/60 bg-[#0f1b3d]/[0.03]">
-                                            <tr className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                                                <th className="border-r border-gray-200/40 px-5 py-2.5">
-                                                    Сектор
-                                                </th>
-                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Инвестициялар
-                                                </th>
-                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Жобалар саны
-                                                </th>
-                                                <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
-                                                    Проблемалық мәселелер
-                                                </th>
-                                                <th className="px-5 py-2.5 text-center">
-                                                    Жұмыс орындары
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="bg-white/40">
-                                            {rows.map((row) => (
-                                                <tr
-                                                    key={row.key}
-                                                    className="border-b border-gray-200/30 last:border-b-0 transition-colors hover:bg-[#0f1b3d]/[0.02]"
-                                                >
-                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 font-semibold text-[#0f1b3d]">
-                                                        {row.label}
-                                                    </td>
-                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#c8a44e]">
-                                                        {formatInvestment(
-                                                            row.d.investment,
-                                                        )}
-                                                    </td>
-                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
-                                                        {formatCount(
-                                                            row.d.projectCount,
-                                                        )}
-                                                    </td>
-                                                    <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
-                                                        {row.d.problemCount > 0 ? (
-                                                            <Link
-                                                                href={`/issues?sector=${row.key}${activeRegion?.id ? `&region_id=${activeRegion.id}` : ''}`}
-                                                                className="underline decoration-dotted hover:text-[#c8a44e] hover:decoration-solid transition-colors"
-                                                            >
-                                                                {formatCount(row.d.problemCount)}
-                                                            </Link>
-                                                        ) : (
-                                                            formatCount(row.d.problemCount)
-                                                        )}
-                                                    </td>
-                                                    <td className="px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
-                                                        {formatCount(
-                                                            row.d.jobCount,
-                                                        )}
-                                                    </td>
+                                {!isTableCollapsed && (
+                                    <div className="custom-scrollbar overflow-x-auto">
+                                        <table className="w-full min-w-[780px] border-collapse text-left text-sm">
+                                            <thead className="border-b border-gray-200/60 bg-[#0f1b3d]/[0.03]">
+                                                <tr className="text-xs font-semibold tracking-wide text-gray-500 uppercase">
+                                                    <th className="border-r border-gray-200/40 px-5 py-2.5">
+                                                        Сектор
+                                                    </th>
+                                                    <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
+                                                        Инвестициялар
+                                                    </th>
+                                                    <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
+                                                        Жобалар саны
+                                                    </th>
+                                                    <th className="border-r border-gray-200/40 px-5 py-2.5 text-center">
+                                                        Проблемалық мәселелер
+                                                    </th>
+                                                    <th className="px-5 py-2.5 text-center">
+                                                        Жұмыс орындары
+                                                    </th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>}
+                                            </thead>
+                                            <tbody className="bg-white/40">
+                                                {rows.map((row) => (
+                                                    <tr
+                                                        key={row.key}
+                                                        className="border-b border-gray-200/30 transition-colors last:border-b-0 hover:bg-[#0f1b3d]/[0.02]"
+                                                    >
+                                                        <td className="border-r border-gray-200/30 px-5 py-2.5 font-semibold text-[#0f1b3d]">
+                                                            {row.label}
+                                                        </td>
+                                                        <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#c8a44e]">
+                                                            {formatInvestment(
+                                                                row.d
+                                                                    .investment,
+                                                            )}
+                                                        </td>
+                                                        <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
+                                                            {formatCount(
+                                                                row.d
+                                                                    .projectCount,
+                                                            )}
+                                                        </td>
+                                                        <td className="border-r border-gray-200/30 px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
+                                                            {row.d
+                                                                .problemCount >
+                                                            0 ? (
+                                                                <Link
+                                                                    href={`/issues?sector=${row.key}${activeRegion?.id ? `&region_id=${activeRegion.id}` : ''}`}
+                                                                    className="underline decoration-dotted transition-colors hover:text-[#c8a44e] hover:decoration-solid"
+                                                                >
+                                                                    {formatCount(
+                                                                        row.d
+                                                                            .problemCount,
+                                                                    )}
+                                                                </Link>
+                                                            ) : (
+                                                                formatCount(
+                                                                    row.d
+                                                                        .problemCount,
+                                                                )
+                                                            )}
+                                                        </td>
+                                                        <td className="px-5 py-2.5 text-center text-lg font-bold text-[#0f1b3d]">
+                                                            {formatCount(
+                                                                row.d.jobCount,
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     );
                 })()}
 
             {/* Reset View Button */}
-            <div className="absolute bottom-6 right-6 z-[500] md:bottom-8 md:right-5">
+            <div className="absolute right-6 bottom-6 z-[500] md:right-5 md:bottom-8">
                 <Button
-                    variant="default" 
+                    variant="default"
                     size="icon"
-                    className="h-12 w-12 rounded-full bg-white shadow-xl ring-1 ring-black/5 hover:bg-gray-50 text-[#0f1b3d] border-0"
+                    className="h-12 w-12 rounded-full border-0 bg-white text-[#0f1b3d] shadow-xl ring-1 ring-black/5 hover:bg-gray-50"
                     onClick={() => {
                         setActivePlot(null);
                         setActiveEntity(null);
@@ -1856,7 +1920,7 @@ export default function Map({
                     }}
                     title="Картаны қалпына келтіру"
                 >
-                     <Navigation className="h-6 w-6 text-[#0f1b3d]" />
+                    <Navigation className="h-6 w-6 text-[#0f1b3d]" />
                 </Button>
             </div>
         </div>

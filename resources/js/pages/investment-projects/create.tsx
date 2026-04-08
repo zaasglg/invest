@@ -1,5 +1,12 @@
 import { Head, useForm, Link } from '@inertiajs/react';
-import { ArrowLeft, ArrowRight, Check, FileText, Info, MapPin } from 'lucide-react';
+import {
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    FileText,
+    Info,
+    MapPin,
+} from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
 import LocationPicker from '@/components/location-picker';
@@ -31,7 +38,6 @@ interface ProjectType {
     id: number;
     name: string;
 }
-
 
 interface User {
     id: number;
@@ -74,7 +80,17 @@ interface Props {
     investUsers?: InvestUser[];
 }
 
-export default function Create({ regions, projectTypes, users, sezList, industrialZones, isDistrictScoped, userRegionId, isSuperAdmin, investUsers = [] }: Props) {
+export default function Create({
+    regions,
+    projectTypes,
+    users,
+    sezList,
+    industrialZones,
+    isDistrictScoped,
+    userRegionId,
+    isSuperAdmin,
+    investUsers = [],
+}: Props) {
     // Find user's district and its parent oblast for pre-selection
     const userDistrict = useMemo(() => {
         if (!userRegionId) return null;
@@ -102,7 +118,7 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         start_date: '',
         end_date: '',
         executor_ids: [] as string[],
-        geometry: [] as { lat: number, lng: number }[],
+        geometry: [] as { lat: number; lng: number }[],
         infrastructure: {
             gas: { needed: false, capacity: '' },
             water: { needed: false, capacity: '' },
@@ -112,29 +128,37 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         created_by: '' as string,
     });
 
-    const [selectedOblastId, setSelectedOblastId] = useState<string>(userOblastId);
+    const [selectedOblastId, setSelectedOblastId] =
+        useState<string>(userOblastId);
     const [currentStep, setCurrentStep] = useState(1);
 
-    const oblasts = useMemo(() => regions.filter(r => r.type === 'oblast'), [regions]);
+    const oblasts = useMemo(
+        () => regions.filter((r) => r.type === 'oblast'),
+        [regions],
+    );
 
     const districts = useMemo(() => {
         if (!selectedOblastId) return [];
-        return regions.filter(r => r.parent_id === parseInt(selectedOblastId));
+        return regions.filter(
+            (r) => r.parent_id === parseInt(selectedOblastId),
+        );
     }, [regions, selectedOblastId]);
 
     const availableSez = useMemo(() => {
         if (!data.region_id) return [];
-        return sezList.filter(s => s.region_id === parseInt(data.region_id));
+        return sezList.filter((s) => s.region_id === parseInt(data.region_id));
     }, [sezList, data.region_id]);
 
     const availableIndustrialZones = useMemo(() => {
         if (!data.region_id) return [];
-        return industrialZones.filter(iz => iz.region_id === parseInt(data.region_id));
+        return industrialZones.filter(
+            (iz) => iz.region_id === parseInt(data.region_id),
+        );
     }, [industrialZones, data.region_id]);
 
     const selectedRegion = useMemo(() => {
         if (!data.region_id) return null;
-        return regions.find(r => r.id === parseInt(data.region_id)) || null;
+        return regions.find((r) => r.id === parseInt(data.region_id)) || null;
     }, [regions, data.region_id]);
 
     const regionBoundary = useMemo(() => {
@@ -142,17 +166,34 @@ export default function Create({ regions, projectTypes, users, sezList, industri
     }, [selectedRegion]);
 
     const overlayEntities = useMemo(() => {
-        const entities: { id: number; name: string; type: 'sez' | 'iz'; location?: { lat: number; lng: number }[] | null }[] = [];
+        const entities: {
+            id: number;
+            name: string;
+            type: 'sez' | 'iz';
+            location?: { lat: number; lng: number }[] | null;
+        }[] = [];
         const currentSectors = data.sector;
-        currentSectors.forEach(s => {
+        currentSectors.forEach((s) => {
             const [type, idStr] = s.split('-');
             const id = parseInt(idStr);
             if (type === 'sez') {
-                const sez = sezList.find(x => x.id === id);
-                if (sez) entities.push({ id: sez.id, name: sez.name, type: 'sez', location: sez.location });
+                const sez = sezList.find((x) => x.id === id);
+                if (sez)
+                    entities.push({
+                        id: sez.id,
+                        name: sez.name,
+                        type: 'sez',
+                        location: sez.location,
+                    });
             } else if (type === 'industrial_zone') {
-                const iz = industrialZones.find(x => x.id === id);
-                if (iz) entities.push({ id: iz.id, name: iz.name, type: 'iz', location: iz.location });
+                const iz = industrialZones.find((x) => x.id === id);
+                if (iz)
+                    entities.push({
+                        id: iz.id,
+                        name: iz.name,
+                        type: 'iz',
+                        location: iz.location,
+                    });
             }
         });
         return entities;
@@ -171,7 +212,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         if (checked) {
             setData('executor_ids', [...currentIds, userId]);
         } else {
-            setData('executor_ids', currentIds.filter(id => id !== userId));
+            setData(
+                'executor_ids',
+                currentIds.filter((id) => id !== userId),
+            );
         }
     };
 
@@ -180,7 +224,10 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         if (checked) {
             setData('sector', [...currentSectors, sectorValue]);
         } else {
-            setData('sector', currentSectors.filter(s => s !== sectorValue));
+            setData(
+                'sector',
+                currentSectors.filter((s) => s !== sectorValue),
+            );
         }
     };
 
@@ -189,7 +236,9 @@ export default function Create({ regions, projectTypes, users, sezList, industri
         post(investmentProjects.store.url());
     };
 
-    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [validationErrors, setValidationErrors] = useState<
+        Record<string, string>
+    >({});
 
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
@@ -239,20 +288,30 @@ export default function Create({ regions, projectTypes, users, sezList, industri
     ];
 
     return (
-        <AppLayout breadcrumbs={[
-            { title: 'Инвестициялық жобалар', href: investmentProjects.index.url() },
-            { title: 'Жоба құру', href: '#' }
-        ]}>
+        <AppLayout
+            breadcrumbs={[
+                {
+                    title: 'Инвестициялық жобалар',
+                    href: investmentProjects.index.url(),
+                },
+                { title: 'Жоба құру', href: '#' },
+            ]}
+        >
             <Head title="Жоба құру" />
 
             <div className="flex h-full flex-col p-6">
-                <h1 className="mb-6 text-2xl font-bold text-[#0f1b3d]">Жоба құру</h1>
+                <h1 className="mb-6 text-2xl font-bold text-[#0f1b3d]">
+                    Жоба құру
+                </h1>
 
                 {/* Step Indicator */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between">
                         {steps.map((step, index) => (
-                            <div key={step.id} className="flex flex-1 items-center">
+                            <div
+                                key={step.id}
+                                className="flex flex-1 items-center"
+                            >
                                 <div className="flex items-center">
                                     <div
                                         className={`flex h-8 w-8 items-center justify-center rounded-full text-sm font-medium ${
@@ -302,7 +361,8 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     Негізгі ақпарат
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    Инвестициялық жоба туралы негізгі мәліметтерді толтырыңыз.
+                                    Инвестициялық жоба туралы негізгі
+                                    мәліметтерді толтырыңыз.
                                 </p>
                             </div>
 
@@ -310,8 +370,14 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                 {/* Жоба атауы және Компания - 2 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="name" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Жобаның атауы <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="name"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Жобаның атауы{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Input
                                             id="name"
@@ -319,64 +385,112 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                             onChange={(e) => {
                                                 setData('name', e.target.value);
                                                 if (validationErrors.name) {
-                                                    setValidationErrors(prev => ({ ...prev, name: '' }));
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            name: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
-                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d] ${validationErrors.name ? 'border-red-500' : ''}`}
+                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.name ? 'border-red-500' : ''}`}
                                             placeholder="Мысалы: Күн электр станциясы"
                                             autoFocus
                                         />
-                                        {(errors.name || validationErrors.name) && <span className="text-sm text-red-500">{errors.name || validationErrors.name}</span>}
+                                        {(errors.name ||
+                                            validationErrors.name) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.name ||
+                                                    validationErrors.name}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="company_name" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Компания <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="company_name"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Компания{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Input
                                             id="company_name"
                                             value={data.company_name}
                                             onChange={(e) => {
-                                                setData('company_name', e.target.value);
-                                                if (validationErrors.company_name) {
-                                                    setValidationErrors(prev => ({ ...prev, company_name: '' }));
+                                                setData(
+                                                    'company_name',
+                                                    e.target.value,
+                                                );
+                                                if (
+                                                    validationErrors.company_name
+                                                ) {
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            company_name: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
-                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d] ${validationErrors.company_name ? 'border-red-500' : ''}`}
+                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.company_name ? 'border-red-500' : ''}`}
                                             placeholder="Мысалы: Green Energy Corp"
                                         />
-                                        {(errors.company_name || validationErrors.company_name) && <span className="text-sm text-red-500">{errors.company_name || validationErrors.company_name}</span>}
+                                        {(errors.company_name ||
+                                            validationErrors.company_name) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.company_name ||
+                                                    validationErrors.company_name}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 {isSuperAdmin && investUsers.length > 0 && (
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="created_by" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="created_by"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Куратор
                                         </Label>
                                         <Select
                                             value={data.created_by}
-                                            onValueChange={(value) => setData('created_by', value)}
+                                            onValueChange={(value) =>
+                                                setData('created_by', value)
+                                            }
                                         >
-                                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:ring-0 focus:border-[#0f1b3d]">
+                                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                                 <SelectValue placeholder="Кураторды таңдаңыз" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {investUsers.map((user) => (
-                                                    <SelectItem key={user.id} value={user.id.toString()}>
+                                                    <SelectItem
+                                                        key={user.id}
+                                                        value={user.id.toString()}
+                                                    >
                                                         {user.full_name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        {errors.created_by && <span className="text-sm text-red-500">{errors.created_by}</span>}
+                                        {errors.created_by && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.created_by}
+                                            </span>
+                                        )}
                                     </div>
                                 )}
 
                                 {/* Облыс және Аудан - 2 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="oblast" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="oblast"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Облыс
                                         </Label>
                                         <Select
@@ -387,12 +501,15 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                             }}
                                             disabled={isDistrictScoped}
                                         >
-                                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:ring-0 focus:border-[#0f1b3d]">
+                                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                                 <SelectValue placeholder="Облысты таңдаңыз" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {oblasts.map((oblast) => (
-                                                    <SelectItem key={oblast.id} value={oblast.id.toString()}>
+                                                    <SelectItem
+                                                        key={oblast.id}
+                                                        value={oblast.id.toString()}
+                                                    >
                                                         {oblast.name}
                                                     </SelectItem>
                                                 ))}
@@ -401,71 +518,136 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="region_id" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Аудан / Қала <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="region_id"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Аудан / Қала{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Select
                                             value={data.region_id}
                                             onValueChange={(value) => {
                                                 setData('region_id', value);
-                                                if (validationErrors.region_id) {
-                                                    setValidationErrors(prev => ({ ...prev, region_id: '' }));
+                                                if (
+                                                    validationErrors.region_id
+                                                ) {
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            region_id: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
-                                            disabled={!selectedOblastId || isDistrictScoped}
+                                            disabled={
+                                                !selectedOblastId ||
+                                                isDistrictScoped
+                                            }
                                         >
-                                            <SelectTrigger className={`h-10 w-full border-gray-200 shadow-none focus:ring-0 focus:border-[#0f1b3d] ${validationErrors.region_id ? 'border-red-500' : ''}`}>
+                                            <SelectTrigger
+                                                className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.region_id ? 'border-red-500' : ''}`}
+                                            >
                                                 <SelectValue placeholder="Ауданды таңдаңыз" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {districts.map((district) => (
-                                                    <SelectItem key={district.id} value={district.id.toString()}>
+                                                    <SelectItem
+                                                        key={district.id}
+                                                        value={district.id.toString()}
+                                                    >
                                                         {district.name}
                                                     </SelectItem>
                                                 ))}
-                                                {selectedOblastId && districts.length === 0 && (
-                                                    <SelectItem value="none" disabled>
-                                                        Қол жетімді аудандар жоқ
-                                                    </SelectItem>
-                                                )}
+                                                {selectedOblastId &&
+                                                    districts.length === 0 && (
+                                                        <SelectItem
+                                                            value="none"
+                                                            disabled
+                                                        >
+                                                            Қол жетімді аудандар
+                                                            жоқ
+                                                        </SelectItem>
+                                                    )}
                                             </SelectContent>
                                         </Select>
-                                        {(errors.region_id || validationErrors.region_id) && <span className="text-sm text-red-500">{errors.region_id || validationErrors.region_id}</span>}
+                                        {(errors.region_id ||
+                                            validationErrors.region_id) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.region_id ||
+                                                    validationErrors.region_id}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Жоба түрі және Сектор - 2 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="project_type_id" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Жобаның түрі <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="project_type_id"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Жобаның түрі{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <Select
                                             value={data.project_type_id}
                                             onValueChange={(value) => {
-                                                setData('project_type_id', value);
-                                                if (validationErrors.project_type_id) {
-                                                    setValidationErrors(prev => ({ ...prev, project_type_id: '' }));
+                                                setData(
+                                                    'project_type_id',
+                                                    value,
+                                                );
+                                                if (
+                                                    validationErrors.project_type_id
+                                                ) {
+                                                    setValidationErrors(
+                                                        (prev) => ({
+                                                            ...prev,
+                                                            project_type_id: '',
+                                                        }),
+                                                    );
                                                 }
                                             }}
                                         >
-                                            <SelectTrigger className={`h-10 w-full border-gray-200 shadow-none focus:ring-0 focus:border-[#0f1b3d] ${validationErrors.project_type_id ? 'border-red-500' : ''}`}>
+                                            <SelectTrigger
+                                                className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.project_type_id ? 'border-red-500' : ''}`}
+                                            >
                                                 <SelectValue placeholder="Түрді таңдаңыз" />
                                             </SelectTrigger>
                                             <SelectContent>
                                                 {projectTypes.map((type) => (
-                                                    <SelectItem key={type.id} value={type.id.toString()}>
+                                                    <SelectItem
+                                                        key={type.id}
+                                                        value={type.id.toString()}
+                                                    >
                                                         {type.name}
                                                     </SelectItem>
                                                 ))}
                                             </SelectContent>
                                         </Select>
-                                        {(errors.project_type_id || validationErrors.project_type_id) && <span className="text-sm text-red-500">{errors.project_type_id || validationErrors.project_type_id}</span>}
+                                        {(errors.project_type_id ||
+                                            validationErrors.project_type_id) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.project_type_id ||
+                                                    validationErrors.project_type_id}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="sector" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Сектор <span className="text-xs font-normal normal-case text-gray-400">(міндетті емес)</span>
+                                        <Label
+                                            htmlFor="sector"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Сектор{' '}
+                                            <span className="text-xs font-normal text-gray-400 normal-case">
+                                                (міндетті емес)
+                                            </span>
                                         </Label>
                                         <div className="max-h-40 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-4">
                                             {!data.region_id ? (
@@ -474,52 +656,118 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                 </p>
                                             ) : (
                                                 <>
-                                                    {availableSez.length === 0 && availableIndustrialZones.length === 0 ? (
+                                                    {availableSez.length ===
+                                                        0 &&
+                                                    availableIndustrialZones.length ===
+                                                        0 ? (
                                                         <p className="py-2 text-center text-sm text-gray-400">
-                                                            Бұл ауданда қол жетімді секторлар жоқ
+                                                            Бұл ауданда қол
+                                                            жетімді секторлар
+                                                            жоқ
                                                         </p>
                                                     ) : (
                                                         <>
-                                                            {availableSez.length > 0 && (
+                                                            {availableSez.length >
+                                                                0 && (
                                                                 <div className="space-y-2">
-                                                                    <p className="text-xs font-medium uppercase text-gray-500">СЭЗ</p>
-                                                                    {availableSez.map((sez) => {
-                                                                        const value = `sez-${sez.id}`;
-                                                                        return (
-                                                                            <div key={value} className="flex items-center space-x-2">
-                                                                                <Checkbox
-                                                                                    id={value}
-                                                                                    checked={data.sector.includes(value)}
-                                                                                    onCheckedChange={(checked) => handleSectorChange(value, checked as boolean)}
-                                                                                    className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                                />
-                                                                                <Label htmlFor={value} className="cursor-pointer font-normal">
-                                                                                    {sez.name}
-                                                                                </Label>
-                                                                            </div>
-                                                                        );
-                                                                    })}
+                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                        СЭЗ
+                                                                    </p>
+                                                                    {availableSez.map(
+                                                                        (
+                                                                            sez,
+                                                                        ) => {
+                                                                            const value = `sez-${sez.id}`;
+                                                                            return (
+                                                                                <div
+                                                                                    key={
+                                                                                        value
+                                                                                    }
+                                                                                    className="flex items-center space-x-2"
+                                                                                >
+                                                                                    <Checkbox
+                                                                                        id={
+                                                                                            value
+                                                                                        }
+                                                                                        checked={data.sector.includes(
+                                                                                            value,
+                                                                                        )}
+                                                                                        onCheckedChange={(
+                                                                                            checked,
+                                                                                        ) =>
+                                                                                            handleSectorChange(
+                                                                                                value,
+                                                                                                checked as boolean,
+                                                                                            )
+                                                                                        }
+                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                    />
+                                                                                    <Label
+                                                                                        htmlFor={
+                                                                                            value
+                                                                                        }
+                                                                                        className="cursor-pointer font-normal"
+                                                                                    >
+                                                                                        {
+                                                                                            sez.name
+                                                                                        }
+                                                                                    </Label>
+                                                                                </div>
+                                                                            );
+                                                                        },
+                                                                    )}
                                                                 </div>
                                                             )}
-                                                            {availableIndustrialZones.length > 0 && (
+                                                            {availableIndustrialZones.length >
+                                                                0 && (
                                                                 <div className="space-y-2">
-                                                                    <p className="text-xs font-medium uppercase text-gray-500">Индустриялық аймақтар</p>
-                                                                    {availableIndustrialZones.map((iz) => {
-                                                                        const value = `industrial_zone-${iz.id}`;
-                                                                        return (
-                                                                            <div key={value} className="flex items-center space-x-2">
-                                                                                <Checkbox
-                                                                                    id={value}
-                                                                                    checked={data.sector.includes(value)}
-                                                                                    onCheckedChange={(checked) => handleSectorChange(value, checked as boolean)}
-                                                                                    className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                                />
-                                                                                <Label htmlFor={value} className="cursor-pointer font-normal">
-                                                                                    {iz.name}
-                                                                                </Label>
-                                                                            </div>
-                                                                        );
-                                                                    })}
+                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                        Индустриялық
+                                                                        аймақтар
+                                                                    </p>
+                                                                    {availableIndustrialZones.map(
+                                                                        (
+                                                                            iz,
+                                                                        ) => {
+                                                                            const value = `industrial_zone-${iz.id}`;
+                                                                            return (
+                                                                                <div
+                                                                                    key={
+                                                                                        value
+                                                                                    }
+                                                                                    className="flex items-center space-x-2"
+                                                                                >
+                                                                                    <Checkbox
+                                                                                        id={
+                                                                                            value
+                                                                                        }
+                                                                                        checked={data.sector.includes(
+                                                                                            value,
+                                                                                        )}
+                                                                                        onCheckedChange={(
+                                                                                            checked,
+                                                                                        ) =>
+                                                                                            handleSectorChange(
+                                                                                                value,
+                                                                                                checked as boolean,
+                                                                                            )
+                                                                                        }
+                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                    />
+                                                                                    <Label
+                                                                                        htmlFor={
+                                                                                            value
+                                                                                        }
+                                                                                        className="cursor-pointer font-normal"
+                                                                                    >
+                                                                                        {
+                                                                                            iz.name
+                                                                                        }
+                                                                                    </Label>
+                                                                                </div>
+                                                                            );
+                                                                        },
+                                                                    )}
                                                                 </div>
                                                             )}
                                                         </>
@@ -527,14 +775,21 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                 </>
                                             )}
                                         </div>
-                                        {errors.sector && <span className="text-sm text-red-500">{errors.sector}</span>}
+                                        {errors.sector && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.sector}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Жұмыс орындары, Қуаттылық, Инвестиция - 3 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="jobs_count" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="jobs_count"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Жұмыс орындары
                                         </Label>
                                         <Input
@@ -542,15 +797,27 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                             type="number"
                                             min="0"
                                             value={data.jobs_count}
-                                            onChange={(e) => setData('jobs_count', e.target.value)}
-                                            className="h-10 border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                            onChange={(e) =>
+                                                setData(
+                                                    'jobs_count',
+                                                    e.target.value,
+                                                )
+                                            }
+                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                             placeholder="0"
                                         />
-                                        {errors.jobs_count && <span className="text-sm text-red-500">{errors.jobs_count}</span>}
+                                        {errors.jobs_count && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.jobs_count}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="capacity" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                        <Label
+                                            htmlFor="capacity"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
                                             Қуаттылығы
                                         </Label>
                                         <div className="relative">
@@ -558,20 +825,35 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                 id="capacity"
                                                 type="text"
                                                 value={data.capacity}
-                                                onChange={(e) => setData('capacity', e.target.value)}
-                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'capacity',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 placeholder="Мысалы: 500"
                                             />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-400">
                                                 МВт/с
                                             </span>
                                         </div>
-                                        {errors.capacity && <span className="text-sm text-red-500">{errors.capacity}</span>}
+                                        {errors.capacity && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.capacity}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="total_investment" className="text-xs font-medium uppercase tracking-wide text-gray-500">
-                                            Жалпы инвестиция <span className="text-red-500">*</span>
+                                        <Label
+                                            htmlFor="total_investment"
+                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                        >
+                                            Жалпы инвестиция{' '}
+                                            <span className="text-red-500">
+                                                *
+                                            </span>
                                         </Label>
                                         <div className="relative">
                                             <Input
@@ -579,38 +861,66 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                 type="number"
                                                 step="0.01"
                                                 value={data.total_investment}
-                                                onChange={(e) => setData('total_investment', e.target.value)}
-                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'total_investment',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 placeholder="0.00"
                                             />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-gray-400">
+                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-400">
                                                 KZT
                                             </span>
                                         </div>
-                                        {(errors.total_investment || validationErrors.total_investment) && <span className="text-sm text-red-500">{errors.total_investment || validationErrors.total_investment}</span>}
+                                        {(errors.total_investment ||
+                                            validationErrors.total_investment) && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.total_investment ||
+                                                    validationErrors.total_investment}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
                                 {/* Мәртебесі - full width */}
                                 <div className="flex flex-col gap-2">
-                                    <Label htmlFor="status" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    <Label
+                                        htmlFor="status"
+                                        className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                    >
                                         Ағымдағы мәртебесі
                                     </Label>
                                     <Select
                                         value={data.status}
-                                        onValueChange={(value) => setData('status', value)}
+                                        onValueChange={(value) =>
+                                            setData('status', value)
+                                        }
                                     >
-                                        <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:ring-0 focus:border-[#0f1b3d]">
+                                        <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
                                             <SelectValue placeholder="Мәртебені таңдаңыз" />
                                         </SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="plan">Жоспарлау</SelectItem>
-                                            <SelectItem value="implementation">Іске асыру</SelectItem>
-                                            <SelectItem value="launched">Іске қосылған</SelectItem>
-                                            <SelectItem value="suspended">Тоқтатылған</SelectItem>
+                                            <SelectItem value="plan">
+                                                Жоспарлау
+                                            </SelectItem>
+                                            <SelectItem value="implementation">
+                                                Іске асыру
+                                            </SelectItem>
+                                            <SelectItem value="launched">
+                                                Іске қосылған
+                                            </SelectItem>
+                                            <SelectItem value="suspended">
+                                                Тоқтатылған
+                                            </SelectItem>
                                         </SelectContent>
                                     </Select>
-                                    {errors.status && <span className="text-sm text-red-500">{errors.status}</span>}
+                                    {errors.status && (
+                                        <span className="text-sm text-red-500">
+                                            {errors.status}
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -632,31 +942,59 @@ export default function Create({ regions, projectTypes, users, sezList, industri
 
                                     <div className="space-y-4">
                                         <div className="flex flex-col gap-2">
-                                            <Label htmlFor="description" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            <Label
+                                                htmlFor="description"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
                                                 Жоба сипаттамасы
                                             </Label>
                                             <Textarea
                                                 id="description"
                                                 value={data.description}
-                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('description', e.target.value)}
-                                                className="min-h-[100px] border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                                onChange={(
+                                                    e: React.ChangeEvent<HTMLTextAreaElement>,
+                                                ) =>
+                                                    setData(
+                                                        'description',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="min-h-[100px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 placeholder="Жобаның негізгі мақсаттары мен ауқымын сипаттаңыз..."
                                             />
-                                            {errors.description && <span className="text-sm text-red-500">{errors.description}</span>}
+                                            {errors.description && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.description}
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div className="flex flex-col gap-2">
-                                            <Label htmlFor="current_status" className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                            <Label
+                                                htmlFor="current_status"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
                                                 Ағымдағы жағдайы
                                             </Label>
                                             <Textarea
                                                 id="current_status"
                                                 value={data.current_status}
-                                                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setData('current_status', e.target.value)}
-                                                className="min-h-[80px] border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                                onChange={(
+                                                    e: React.ChangeEvent<HTMLTextAreaElement>,
+                                                ) =>
+                                                    setData(
+                                                        'current_status',
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                className="min-h-[80px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 placeholder="Жобаның қазіргі орындалу кезеңі қандай?"
                                             />
-                                            {errors.current_status && <span className="text-sm text-red-500">{errors.current_status}</span>}
+                                            {errors.current_status && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.current_status}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -673,44 +1011,91 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     <div className="space-y-4">
                                         {[
                                             { key: 'gas', label: 'Газ' },
-                                            { key: 'water', label: 'Су (Сумен қамтамасыз ету)' },
-                                            { key: 'electricity', label: 'Электр қуаты' },
-                                            { key: 'land', label: 'Жер учаскесі' },
+                                            {
+                                                key: 'water',
+                                                label: 'Су (Сумен қамтамасыз ету)',
+                                            },
+                                            {
+                                                key: 'electricity',
+                                                label: 'Электр қуаты',
+                                            },
+                                            {
+                                                key: 'land',
+                                                label: 'Жер учаскесі',
+                                            },
                                         ].map((item) => (
-                                            <div key={item.key} className="flex items-center gap-4">
+                                            <div
+                                                key={item.key}
+                                                className="flex items-center gap-4"
+                                            >
                                                 <div className="flex w-48 items-center space-x-2">
                                                     <Checkbox
                                                         id={`infra-${item.key}`}
-                                                        checked={data.infrastructure[item.key]?.needed || false}
-                                                        onCheckedChange={(checked) => {
-                                                            setData('infrastructure', {
-                                                                ...data.infrastructure,
-                                                                [item.key]: {
-                                                                    ...data.infrastructure[item.key],
-                                                                    needed: checked as boolean,
+                                                        checked={
+                                                            data.infrastructure[
+                                                                item.key
+                                                            ]?.needed || false
+                                                        }
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) => {
+                                                            setData(
+                                                                'infrastructure',
+                                                                {
+                                                                    ...data.infrastructure,
+                                                                    [item.key]:
+                                                                        {
+                                                                            ...data
+                                                                                .infrastructure[
+                                                                                item
+                                                                                    .key
+                                                                            ],
+                                                                            needed: checked as boolean,
+                                                                        },
                                                                 },
-                                                            });
+                                                            );
                                                         }}
                                                         className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
                                                     />
-                                                    <Label htmlFor={`infra-${item.key}`} className="cursor-pointer font-normal">
+                                                    <Label
+                                                        htmlFor={`infra-${item.key}`}
+                                                        className="cursor-pointer font-normal"
+                                                    >
                                                         {item.label}
                                                     </Label>
                                                 </div>
-                                                {data.infrastructure[item.key]?.needed && (
+                                                {data.infrastructure[item.key]
+                                                    ?.needed && (
                                                     <div className="flex flex-1 items-center gap-2">
                                                         <Input
-                                                            value={data.infrastructure[item.key]?.capacity || ''}
+                                                            value={
+                                                                data
+                                                                    .infrastructure[
+                                                                    item.key
+                                                                ]?.capacity ||
+                                                                ''
+                                                            }
                                                             onChange={(e) => {
-                                                                setData('infrastructure', {
-                                                                    ...data.infrastructure,
-                                                                    [item.key]: {
-                                                                        ...data.infrastructure[item.key],
-                                                                        capacity: e.target.value,
+                                                                setData(
+                                                                    'infrastructure',
+                                                                    {
+                                                                        ...data.infrastructure,
+                                                                        [item.key]:
+                                                                            {
+                                                                                ...data
+                                                                                    .infrastructure[
+                                                                                    item
+                                                                                        .key
+                                                                                ],
+                                                                                capacity:
+                                                                                    e
+                                                                                        .target
+                                                                                        .value,
+                                                                            },
                                                                     },
-                                                                });
+                                                                );
                                                             }}
-                                                            className="h-9 max-w-[200px] border-gray-200 bg-transparent shadow-none focus-visible:ring-0 focus:border-[#0f1b3d]"
+                                                            className="h-9 max-w-[200px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                             placeholder="Көлемі"
                                                         />
                                                     </div>
@@ -730,7 +1115,9 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                             Жоба құжаттары
                                         </h4>
                                         <p className="mb-3 text-sm text-gray-500">
-                                            Жоба құрылғаннан кейін сызбаларды, техникалық сипаттамаларды жүктеуге болады.
+                                            Жоба құрылғаннан кейін сызбаларды,
+                                            техникалық сипаттамаларды жүктеуге
+                                            болады.
                                         </p>
                                         <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
                                             Келесі қадамда қолжетімді
@@ -762,7 +1149,11 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                     regionBoundary={regionBoundary}
                                     overlayEntities={overlayEntities}
                                 />
-                                {errors.geometry && <span className="text-sm text-red-500">{errors.geometry}</span>}
+                                {errors.geometry && (
+                                    <span className="text-sm text-red-500">
+                                        {errors.geometry}
+                                    </span>
+                                )}
                             </div>
                         </div>
                     )}
@@ -782,45 +1173,91 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                             <div className="space-y-6">
                                 {/* Негізгі ақпарат */}
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">Негізгі ақпарат</h4>
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Негізгі ақпарат
+                                    </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
                                         <div>
-                                            <span className="text-gray-500">Жоба атауы:</span>
-                                            <p className="font-medium">{data.name || '—'}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Компания:</span>
-                                            <p className="font-medium">{data.company_name || '—'}</p>
-                                        </div>
-                                        <div>
-                                            <span className="text-gray-500">Облыс:</span>
+                                            <span className="text-gray-500">
+                                                Жоба атауы:
+                                            </span>
                                             <p className="font-medium">
-                                                {oblasts.find(o => o.id.toString() === selectedOblastId)?.name || '—'}
+                                                {data.name || '—'}
                                             </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Аудан:</span>
+                                            <span className="text-gray-500">
+                                                Компания:
+                                            </span>
                                             <p className="font-medium">
-                                                {districts.find(d => d.id.toString() === data.region_id)?.name || '—'}
+                                                {data.company_name || '—'}
                                             </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Жоба түрі:</span>
+                                            <span className="text-gray-500">
+                                                Облыс:
+                                            </span>
                                             <p className="font-medium">
-                                                {projectTypes.find(t => t.id.toString() === data.project_type_id)?.name || '—'}
+                                                {oblasts.find(
+                                                    (o) =>
+                                                        o.id.toString() ===
+                                                        selectedOblastId,
+                                                )?.name || '—'}
                                             </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Жұмыс орындары:</span>
-                                            <p className="font-medium">{data.jobs_count || '0'}</p>
+                                            <span className="text-gray-500">
+                                                Аудан:
+                                            </span>
+                                            <p className="font-medium">
+                                                {districts.find(
+                                                    (d) =>
+                                                        d.id.toString() ===
+                                                        data.region_id,
+                                                )?.name || '—'}
+                                            </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Инвестиция:</span>
-                                            <p className="font-medium">{data.total_investment ? formatMoneyCompact(parseFloat(data.total_investment)) : '—'}</p>
+                                            <span className="text-gray-500">
+                                                Жоба түрі:
+                                            </span>
+                                            <p className="font-medium">
+                                                {projectTypes.find(
+                                                    (t) =>
+                                                        t.id.toString() ===
+                                                        data.project_type_id,
+                                                )?.name || '—'}
+                                            </p>
                                         </div>
                                         <div>
-                                            <span className="text-gray-500">Қуаттылығы:</span>
-                                            <p className="font-medium">{data.capacity || '—'}</p>
+                                            <span className="text-gray-500">
+                                                Жұмыс орындары:
+                                            </span>
+                                            <p className="font-medium">
+                                                {data.jobs_count || '0'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">
+                                                Инвестиция:
+                                            </span>
+                                            <p className="font-medium">
+                                                {data.total_investment
+                                                    ? formatMoneyCompact(
+                                                          parseFloat(
+                                                              data.total_investment,
+                                                          ),
+                                                      )
+                                                    : '—'}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <span className="text-gray-500">
+                                                Қуаттылығы:
+                                            </span>
+                                            <p className="font-medium">
+                                                {data.capacity || '—'}
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
@@ -828,14 +1265,20 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                 {/* Сипаттама */}
                                 {data.description && (
                                     <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">Сипаттама</h4>
-                                        <p className="text-sm text-gray-600">{data.description}</p>
+                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">
+                                            Сипаттама
+                                        </h4>
+                                        <p className="text-sm text-gray-600">
+                                            {data.description}
+                                        </p>
                                     </div>
                                 )}
 
                                 {/* Инфрақұрылым */}
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">Инфрақұрылым</h4>
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Инфрақұрылым
+                                    </h4>
                                     <div className="flex flex-wrap gap-2">
                                         {Object.entries(data.infrastructure)
                                             .filter(([, val]) => val.needed)
@@ -846,102 +1289,225 @@ export default function Create({ regions, projectTypes, users, sezList, industri
                                                 >
                                                     {key === 'gas' && 'Газ'}
                                                     {key === 'water' && 'Су'}
-                                                    {key === 'electricity' && 'Электр'}
+                                                    {key === 'electricity' &&
+                                                        'Электр'}
                                                     {key === 'land' && 'Жер'}
                                                 </span>
                                             ))}
-                                        {Object.values(data.infrastructure).every(v => !v.needed) && (
-                                            <span className="text-sm text-gray-400">Инфрақұрылым таңдалмаған</span>
+                                        {Object.values(
+                                            data.infrastructure,
+                                        ).every((v) => !v.needed) && (
+                                            <span className="text-sm text-gray-400">
+                                                Инфрақұрылым таңдалмаған
+                                            </span>
                                         )}
                                     </div>
                                 </div>
 
                                 {/* Орындаушылар */}
                                 <div className="flex flex-col gap-2">
-                                    <Label className="text-gray-500 font-normal">Орындаушылар</Label>
-                                    <div className="border border-gray-200 rounded-md p-4 max-h-64 overflow-y-auto">
+                                    <Label className="font-normal text-gray-500">
+                                        Орындаушылар
+                                    </Label>
+                                    <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200 p-4">
                                         <>
                                             {districtUsers.length > 0 && (
                                                 <div className="mb-3">
-                                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Аудан исполнителі</p>
+                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                        Аудан исполнителі
+                                                    </p>
                                                     <div className="space-y-2">
-                                                        {districtUsers.map((user) => (
-                                                            <div key={user.id} className="flex items-center space-x-2">
-                                                                <Checkbox
-                                                                    id={`user-${user.id}`}
-                                                                    checked={data.executor_ids.includes(user.id.toString())}
-                                                                    onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                                                    className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
-                                                                />
-                                                                <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
-                                                                    <span>{user.full_name}</span>
-                                                                    {user.position && (
-                                                                        <span className="text-gray-400"> — {user.position}</span>
-                                                                    )}
-                                                                </Label>
-                                                            </div>
-                                                        ))}
+                                                        {districtUsers.map(
+                                                            (user) => (
+                                                                <div
+                                                                    key={
+                                                                        user.id
+                                                                    }
+                                                                    className="flex items-center space-x-2"
+                                                                >
+                                                                    <Checkbox
+                                                                        id={`user-${user.id}`}
+                                                                        checked={data.executor_ids.includes(
+                                                                            user.id.toString(),
+                                                                        )}
+                                                                        onCheckedChange={(
+                                                                            checked,
+                                                                        ) =>
+                                                                            handleExecutorChange(
+                                                                                user.id.toString(),
+                                                                                checked as boolean,
+                                                                            )
+                                                                        }
+                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                    />
+                                                                    <Label
+                                                                        htmlFor={`user-${user.id}`}
+                                                                        className="cursor-pointer font-normal"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                user.full_name
+                                                                            }
+                                                                        </span>
+                                                                        {user.position && (
+                                                                            <span className="text-gray-400">
+                                                                                {' '}
+                                                                                —{' '}
+                                                                                {
+                                                                                    user.position
+                                                                                }
+                                                                            </span>
+                                                                        )}
+                                                                    </Label>
+                                                                </div>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
                                             {oblastUsers.length > 0 && (
-                                                <div className={districtUsers.length > 0 ? 'border-t border-gray-200 pt-3' : ''}>
-                                                    <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">Облыс исполнителі</p>
+                                                <div
+                                                    className={
+                                                        districtUsers.length > 0
+                                                            ? 'border-t border-gray-200 pt-3'
+                                                            : ''
+                                                    }
+                                                >
+                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                        Облыс исполнителі
+                                                    </p>
                                                     <div className="space-y-2">
-                                                        {oblastUsers.map((user) => (
-                                                            <div key={user.id} className="flex items-center space-x-2">
-                                                                <Checkbox
-                                                                    id={`user-${user.id}`}
-                                                                    checked={data.executor_ids.includes(user.id.toString())}
-                                                                    onCheckedChange={(checked) => handleExecutorChange(user.id.toString(), checked as boolean)}
-                                                                    className="border-gray-200 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
-                                                                />
-                                                                <Label htmlFor={`user-${user.id}`} className="font-normal cursor-pointer">
-                                                                    <span>{user.full_name}</span>
-                                                                    {user.position && (
-                                                                        <span className="text-gray-400"> — {user.position}</span>
-                                                                    )}
-                                                                </Label>
-                                                            </div>
-                                                        ))}
+                                                        {oblastUsers.map(
+                                                            (user) => (
+                                                                <div
+                                                                    key={
+                                                                        user.id
+                                                                    }
+                                                                    className="flex items-center space-x-2"
+                                                                >
+                                                                    <Checkbox
+                                                                        id={`user-${user.id}`}
+                                                                        checked={data.executor_ids.includes(
+                                                                            user.id.toString(),
+                                                                        )}
+                                                                        onCheckedChange={(
+                                                                            checked,
+                                                                        ) =>
+                                                                            handleExecutorChange(
+                                                                                user.id.toString(),
+                                                                                checked as boolean,
+                                                                            )
+                                                                        }
+                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                    />
+                                                                    <Label
+                                                                        htmlFor={`user-${user.id}`}
+                                                                        className="cursor-pointer font-normal"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                user.full_name
+                                                                            }
+                                                                        </span>
+                                                                        {user.position && (
+                                                                            <span className="text-gray-400">
+                                                                                {' '}
+                                                                                —{' '}
+                                                                                {
+                                                                                    user.position
+                                                                                }
+                                                                            </span>
+                                                                        )}
+                                                                    </Label>
+                                                                </div>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 </div>
                                             )}
                                         </>
                                     </div>
-                                    {errors.executor_ids && <span className="text-sm text-red-500">{errors.executor_ids}</span>}
+                                    {errors.executor_ids && (
+                                        <span className="text-sm text-red-500">
+                                            {errors.executor_ids}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {/* Мерзімдер */}
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="start_date" className="text-gray-500 font-normal">Басталу жылы</Label>
+                                        <Label
+                                            htmlFor="start_date"
+                                            className="font-normal text-gray-500"
+                                        >
+                                            Басталу жылы
+                                        </Label>
                                         <Input
                                             id="start_date"
                                             type="number"
                                             min="1990"
                                             max="2100"
-                                            value={data.start_date ? data.start_date.split('-')[0] : ''}
-                                            onChange={(e) => setData('start_date', e.target.value ? `${e.target.value}-01-01` : '')}
+                                            value={
+                                                data.start_date
+                                                    ? data.start_date.split(
+                                                          '-',
+                                                      )[0]
+                                                    : ''
+                                            }
+                                            onChange={(e) =>
+                                                setData(
+                                                    'start_date',
+                                                    e.target.value
+                                                        ? `${e.target.value}-01-01`
+                                                        : '',
+                                                )
+                                            }
                                             placeholder="Мысалы: 2024"
-                                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                         />
-                                        {errors.start_date && <span className="text-sm text-red-500">{errors.start_date}</span>}
+                                        {errors.start_date && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.start_date}
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <Label htmlFor="end_date" className="text-gray-500 font-normal">Аяқталу жылы</Label>
+                                        <Label
+                                            htmlFor="end_date"
+                                            className="font-normal text-gray-500"
+                                        >
+                                            Аяқталу жылы
+                                        </Label>
                                         <Input
                                             id="end_date"
                                             type="number"
                                             min="1990"
                                             max="2100"
-                                            value={data.end_date ? data.end_date.split('-')[0] : ''}
-                                            onChange={(e) => setData('end_date', e.target.value ? `${e.target.value}-12-31` : '')}
+                                            value={
+                                                data.end_date
+                                                    ? data.end_date.split(
+                                                          '-',
+                                                      )[0]
+                                                    : ''
+                                            }
+                                            onChange={(e) =>
+                                                setData(
+                                                    'end_date',
+                                                    e.target.value
+                                                        ? `${e.target.value}-12-31`
+                                                        : '',
+                                                )
+                                            }
                                             placeholder="Мысалы: 2025"
-                                            className="shadow-none border-gray-200 focus-visible:ring-0 focus:border-[#0f1b3d] h-10 bg-transparent"
+                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                         />
-                                        {errors.end_date && <span className="text-sm text-red-500">{errors.end_date}</span>}
+                                        {errors.end_date && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.end_date}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

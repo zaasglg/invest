@@ -67,7 +67,11 @@ const statusMap: Record<string, { label: string; color: string }> = {
     resolved: { label: 'Шешілді', color: 'bg-green-100 text-green-800' },
 };
 
-export default function Issues({ project, issues, ispolnitelCanWrite = false }: Props) {
+export default function Issues({
+    project,
+    issues,
+    ispolnitelCanWrite = false,
+}: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
     // Ispolnitel can add but cannot delete
@@ -88,7 +92,13 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
 
         router.post(
             `/investment-projects/${project.id}/issues`,
-            { title, description, category: category || null, severity, status },
+            {
+                title,
+                description,
+                category: category || null,
+                severity,
+                status,
+            },
             {
                 onSuccess: () => {
                     setTitle('');
@@ -143,8 +153,14 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
     return (
         <AppLayout
             breadcrumbs={[
-                { title: project.region?.name || 'Аудан', href: project.region ? `/regions/${project.region.id}` : '' },
-                { title: project.name || 'Жоба', href: `/investment-projects/${project.id}` },
+                {
+                    title: project.region?.name || 'Аудан',
+                    href: project.region ? `/regions/${project.region.id}` : '',
+                },
+                {
+                    title: project.name || 'Жоба',
+                    href: `/investment-projects/${project.id}`,
+                },
                 { title: 'Проблемалық мәселелер', href: '' },
             ]}
         >
@@ -296,9 +312,7 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
 
                     {/* Issues list */}
                     <div
-                        className={
-                            canEdit ? 'lg:col-span-2' : 'lg:col-span-3'
-                        }
+                        className={canEdit ? 'lg:col-span-2' : 'lg:col-span-3'}
                     >
                         <Card className="shadow-none">
                             <CardHeader>
@@ -390,7 +404,8 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
                                                                         Жоғары
                                                                     </SelectItem>
                                                                     <SelectItem value="critical">
-                                                                        Сыни жағдай
+                                                                        Сыни
+                                                                        жағдай
                                                                     </SelectItem>
                                                                 </SelectContent>
                                                             </Select>
@@ -515,18 +530,18 @@ export default function Issues({ project, issues, ispolnitelCanWrite = false }: 
                                                                         <Pencil className="h-3.5 w-3.5" />
                                                                     </Button>
                                                                     {canDelete && (
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-7 w-7 text-gray-400 hover:text-red-600"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                issue.id,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Trash2 className="h-3.5 w-3.5" />
-                                                                    </Button>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-7 w-7 text-gray-400 hover:text-red-600"
+                                                                            onClick={() =>
+                                                                                handleDelete(
+                                                                                    issue.id,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                        </Button>
                                                                     )}
                                                                 </div>
                                                             )}
