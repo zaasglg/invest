@@ -439,7 +439,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
         return labels[status] || status;
     };
-
+    // Ernur krasava
     const getStatusBadgeClass = (status: string) => {
         const classes: Record<string, string> = {
             plan: 'text-blue-700 border-blue-200 bg-blue-50',
