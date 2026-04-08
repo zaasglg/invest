@@ -9,7 +9,15 @@ class GeminiService
 {
     protected string $apiKey;
 
-    protected string $apiUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+    protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
+
+    // Модельдер тізімі - бірі жұмыс істемесе келесісіне өтеді
+    protected array $models = [
+        'gemini-3-flash-preview',
+        'gemini-2.5-flash-preview-04-17',
+    ];
+
+    protected int $maxRetries = 2;
 
     public function __construct()
     {
@@ -18,71 +26,159 @@ class GeminiService
 
     public function chat(string $message, array $context = []): string
     {
-        try {
-            $systemPrompt = $this->buildSystemPrompt($context);
+        $systemPrompt = $this->buildSystemPrompt($context);
 
-            $url = $this->apiUrl.'?key='.$this->apiKey;
+        // Әр модельді кезекпен қолданып көру
+        foreach ($this->models as $modelIndex => $model) {
+            $result = $this->tryModel($model, $systemPrompt, $message);
 
-            $response = Http::timeout(60)->post($url, [
-                'contents' => [
-                    [
-                        'parts' => [
-                            ['text' => $systemPrompt."\n\nВопрос пользователя: ".$message],
-                        ],
-                    ],
-                ],
-                'generationConfig' => [
-                    'temperature' => 0.7,
-                    'topK' => 40,
-                    'topP' => 0.95,
-                    'maxOutputTokens' => 2048,
-                ],
-            ]);
-
-            if ($response->successful()) {
-                $data = $response->json();
-
-                return $data['candidates'][0]['content']['parts'][0]['text'] ?? 'Извините, не удалось получить ответ.';
+            if ($result['success']) {
+                return $result['response'];
             }
 
-            Log::error('Gemini API error', [
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
+            // 429 (лимит) немесе 503 (қолжетімсіз) болса - келесі моделге өту
+            if (in_array($result['status'], [429, 503, 500])) {
+                Log::warning("Model {$model} failed with {$result['status']}, trying next model");
+                continue;
+            }
 
-            return 'Извините, произошла ошибка при обработке запроса.';
-        } catch (\Exception $e) {
-            Log::error('Gemini service error', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-            ]);
-
-            return 'Извините, сервис временно недоступен.';
+            // Басқа қате болса - тоқтату
+            break;
         }
+
+        return 'Кешіріңіз, барлық модельдер қазір қолжетімсіз. Кейінірек қайталап көріңіз.';
+    }
+
+    protected function tryModel(string $model, string $systemPrompt, string $message): array
+    {
+        $url = $this->baseUrl.$model.':generateContent?key='.$this->apiKey;
+
+        for ($attempt = 1; $attempt <= $this->maxRetries; $attempt++) {
+            try {
+                $response = Http::withoutVerifying()
+                    ->timeout(60)
+                    ->connectTimeout(10)
+                    ->post($url, [
+                        'contents' => [
+                            [
+                                'parts' => [
+                                    ['text' => $systemPrompt."\n\nСұрақ: ".$message],
+                                ],
+                            ],
+                        ],
+                        'generationConfig' => [
+                            'temperature' => 0.7,
+                            'maxOutputTokens' => 1024,
+                        ],
+                    ]);
+
+                if ($response->successful()) {
+                    $data = $response->json();
+                    $text = $data['candidates'][0]['content']['parts'][0]['text'] ?? null;
+
+                    if ($text) {
+                        Log::info("Gemini response from model: {$model}");
+
+                        return ['success' => true, 'response' => $text, 'status' => 200];
+                    }
+                }
+
+                $status = $response->status();
+
+                // 429/503 болса - қайталамай келесі моделге өту
+                if (in_array($status, [429, 503])) {
+                    return ['success' => false, 'status' => $status, 'response' => null];
+                }
+
+                // Басқа қате болса - қайталау
+                if ($attempt < $this->maxRetries) {
+                    sleep($attempt);
+                    continue;
+                }
+
+                Log::error("Gemini API error for model {$model}", [
+                    'status' => $status,
+                    'body' => $response->body(),
+                ]);
+
+                return ['success' => false, 'status' => $status, 'response' => null];
+
+            } catch (\Exception $e) {
+                Log::error("Gemini exception for model {$model}", [
+                    'message' => $e->getMessage(),
+                ]);
+
+                if ($attempt < $this->maxRetries) {
+                    sleep($attempt);
+                    continue;
+                }
+
+                return ['success' => false, 'status' => 0, 'response' => null];
+            }
+        }
+
+        return ['success' => false, 'status' => 0, 'response' => null];
     }
 
     protected function buildSystemPrompt(array $context): string
     {
-        $prompt = 'Ты - AI помощник системы Turkistan Invest. ';
-        $prompt .= "Ты помогаешь пользователям получать информацию о:\n";
-        $prompt .= "- Регионах и их инвестиционных показателях\n";
-        $prompt .= "- Инвестиционных проектах\n";
-        $prompt .= "- СЭЗ (Специальных экономических зонах)\n";
-        $prompt .= "- Индустриальных зонах\n";
-        $prompt .= "- Недропользователях и их участках\n";
-        $prompt .= "- Проблемных вопросах по проектам\n";
-        $prompt .= "- Задачах и их статусах\n\n";
+        $prompt = <<<'SYSTEM'
+Сен - Turkistan Invest жүйесінің көмекші чат-ботысың.
 
-        if (! empty($context['database_schema'])) {
-            $prompt .= "Структура базы данных:\n".$context['database_schema']."\n\n";
-        }
+СЕНІҢ МІНДЕТТЕРІҢ:
+1. Қолданушы сұрағына ТІКЕЛЕЙ жауап бер
+2. Жүйені қалай пайдалану керектігін түсіндір
+3. Деректер берілсе - оларды талда және жауап бер
+
+ЖҮЙЕ БӨЛІМДЕРІ:
+
+📌 ИНВЕСТ ЖОБАЛАР - инвестициялық жобаларды басқару
+   • Қарау: Сол жақ мәзірден "Инвест жобалар" басу
+   • Жаңа жоба қосу: "Жоба құру" батырмасы → форманы толтыру
+   • Өзгерту: Жоба картасын ашу → "Өзгерту" батырмасы
+
+📌 СЭЗ - Арнайы экономикалық аймақтар
+   • Қарау: "СЭЗ" бөлімі
+   • Қосу: "СЭЗ құру" батырмасы
+
+📌 ИНДУСТРИАЛДЫ АЙМАҚТАР
+   • Қарау: "Индустриалды аймақтар" бөлімі
+   • Қосу: "ИА құру" батырмасы
+
+📌 НЕДРОПАЙДАЛАНУШЫЛАР - кен орындары
+   • Қарау: "Недропайдаланушылар" бөлімі
+   • Қосу: "Қосу" батырмасы → БСН, атау, қазба түрі
+
+📌 МӘСЕЛЕЛЕР - проблемалар тіркеу
+   • Жоба/СЭЗ картасын ашу → "Мәселелер" табы → "Мәселе қосу"
+
+📌 ТАПСЫРМАЛАР
+   • Жоба картасы → "Тапсырмалар" табы → "Тапсырма қосу"
+
+📌 ҚҰЖАТТАР
+   • Кез келген карта → "Құжаттар" табы → файл жүктеу
+
+📌 АЙМАҚТАР (тек админ)
+   • "Аймақтар" бөлімі → аймақ қосу/өзгерту
+
+📌 ПАЙДАЛАНУШЫЛАР (тек админ)
+   • "Пайдаланушылар" бөлімі → қолданушы қосу
+
+ЖАУАП БЕРУ ЕРЕЖЕЛЕРІ:
+- Қолданушы қай тілде сұраса, сол тілде жауап бер (қазақша/орысша)
+- Қысқа және нақты жауап бер
+- Қадамдарды нөмірлеп жаз
+- Егер деректер берілсе - оларды талдап жауап бер
+- Егер сұрақ түсініксіз болса - нақтылау сұра
+SYSTEM;
 
         if (! empty($context['query_results'])) {
-            $prompt .= "Данные по запросу:\n".json_encode($context['query_results'], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)."\n\n";
+            $data = json_encode($context['query_results'], JSON_UNESCAPED_UNICODE);
+            if (strlen($data) > 2000) {
+                $data = substr($data, 0, 2000).'...';
+            }
+            $prompt .= "\n\n--- ЖҮЙЕДЕН АЛЫНҒАН ДЕРЕКТЕР ---\n".$data;
         }
-
-        $prompt .= 'Отвечай на русском языке, кратко и по существу. ';
-        $prompt .= 'Если нужна дополнительная информация для точного ответа, попроси её у пользователя.';
 
         return $prompt;
     }
@@ -92,29 +188,40 @@ class GeminiService
         $query = mb_strtolower($query);
         $entities = [];
 
-        // Определяем о чем спрашивает пользователь
-        if (preg_match('/(регион|область|район)/ui', $query)) {
+        // Аймақтар
+        if (preg_match('/(регион|область|район|аймақ|облыс)/ui', $query)) {
             $entities[] = 'regions';
         }
-        if (preg_match('/(проект|инвестиц)/ui', $query)) {
+        // Жобалар
+        if (preg_match('/(проект|инвестиц|жоба|project)/ui', $query)) {
             $entities[] = 'investment_projects';
         }
-        if (preg_match('/(сэз|экономическ|зона)/ui', $query)) {
+        // СЭЗ
+        if (preg_match('/(сэз|сез|экономическ|зона|свободн)/ui', $query)) {
             $entities[] = 'sezs';
         }
-        if (preg_match('/(индустриальн|промышленн)/ui', $query)) {
+        // Индустриалды аймақтар
+        if (preg_match('/(индустриальн|промышленн|өндірістік)/ui', $query)) {
             $entities[] = 'industrial_zones';
         }
-        if (preg_match('/(недропользовател|участок)/ui', $query)) {
+        // Недропайдаланушылар
+        if (preg_match('/(недропользовател|недро|участок|кен|қазба)/ui', $query)) {
             $entities[] = 'subsoil_users';
         }
-        if (preg_match('/(проблем|вопрос|issue)/ui', $query)) {
+        // Мәселелер
+        if (preg_match('/(проблем|вопрос|issue|мәселе|шешілмеген)/ui', $query)) {
             $entities[] = 'issues';
         }
-        if (preg_match('/(задач|task)/ui', $query)) {
+        // Тапсырмалар
+        if (preg_match('/(задач|task|тапсырма|орында)/ui', $query)) {
             $entities[] = 'tasks';
         }
+        // Статистика
+        if (preg_match('/(статистик|санақ|қанша|сколько|неше|всего|жалпы|барлық)/ui', $query)) {
+            $entities[] = 'regions';
+            $entities[] = 'investment_projects';
+        }
 
-        return $entities;
+        return array_unique($entities);
     }
 }

@@ -51,186 +51,163 @@ class ChatContextService
     protected function getRegionsData(string $query): array
     {
         $regions = Region::with(['investmentProjects', 'sezs', 'industrialZones'])
-            ->limit(10)
-            ->get()
-            ->map(function ($region) {
-                return [
-                    'id' => $region->id,
-                    'name' => $region->name,
-                    'type' => $region->type,
-                    'projects_count' => $region->investmentProjects->count(),
-                    'sezs_count' => $region->sezs->count(),
-                    'industrial_zones_count' => $region->industrialZones->count(),
-                ];
-            });
+            ->get();
 
-        return $regions->toArray();
+        $totalProjects = 0;
+        $totalSezs = 0;
+        $totalIZ = 0;
+
+        $items = $regions->map(function ($region) use (&$totalProjects, &$totalSezs, &$totalIZ) {
+            $projectsCount = $region->investmentProjects->count();
+            $sezsCount = $region->sezs->count();
+            $izCount = $region->industrialZones->count();
+
+            $totalProjects += $projectsCount;
+            $totalSezs += $sezsCount;
+            $totalIZ += $izCount;
+
+            return [
+                'id' => $region->id,
+                'name' => $region->name,
+                'type' => $region->type,
+                'projects_count' => $projectsCount,
+                'sezs_count' => $sezsCount,
+                'industrial_zones_count' => $izCount,
+            ];
+        })->toArray();
+
+        return [
+            'total_regions' => count($items),
+            'total_projects' => $totalProjects,
+            'total_sezs' => $totalSezs,
+            'total_industrial_zones' => $totalIZ,
+            'items' => $items,
+        ];
     }
 
     protected function getProjectsData(string $query): array
     {
-        $projects = InvestmentProject::with(['region', 'issues'])
-            ->when($this->extractRegionName($query), function ($q, $regionName) {
-                $q->whereHas('region', function ($rq) use ($regionName) {
-                    $rq->where('name', 'ILIKE', "%{$regionName}%");
-                });
-            })
+        $projectsQuery = InvestmentProject::with(['region', 'issues']);
+
+        if ($regionName = $this->extractRegionName($query)) {
+            $projectsQuery->whereHas('region', fn ($q) => $q->where('name', 'ILIKE', "%{$regionName}%"));
+        }
+
+        // Жалпы санды алу
+        $totalCount = (clone $projectsQuery)->count();
+
+        $projects = $projectsQuery
             ->limit(20)
             ->get()
-            ->map(function ($project) {
-                return [
-                    'id' => $project->id,
-                    'name' => $project->name,
-                    'region' => $project->region->name ?? null,
-                    'status' => $project->current_status ?? $project->status,
-                    'total_investment' => $project->total_investment,
-                    'issues_count' => $project->issues->count(),
-                    'is_archived' => $project->is_archived,
-                ];
-            });
+            ->map(fn ($project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'region' => $project->region->name ?? null,
+                'status' => $project->current_status ?? $project->status,
+                'total_investment' => $project->total_investment,
+                'issues_count' => $project->issues->count(),
+            ])
+            ->toArray();
 
-        return $projects->toArray();
+        return [
+            'total_count' => $totalCount,
+            'shown_count' => count($projects),
+            'items' => $projects,
+        ];
     }
 
     protected function getSezData(string $query): array
     {
-        $sezs = Sez::with(['region', 'issues'])
-            ->limit(10)
-            ->get()
-            ->map(function ($sez) {
-                return [
-                    'id' => $sez->id,
-                    'name' => $sez->name,
-                    'region' => $sez->region->name ?? null,
-                    'area' => $sez->area,
-                    'issues_count' => $sez->issues->count(),
-                ];
-            });
+        $sezs = Sez::with(['region', 'issues'])->get();
+        $totalCount = $sezs->count();
 
-        return $sezs->toArray();
+        $items = $sezs->take(10)->map(fn ($sez) => [
+            'id' => $sez->id,
+            'name' => $sez->name,
+            'region' => $sez->region->name ?? null,
+            'area' => $sez->area,
+            'issues_count' => $sez->issues->count(),
+        ])->toArray();
+
+        return [
+            'total_count' => $totalCount,
+            'items' => $items,
+        ];
     }
 
     protected function getIndustrialZonesData(string $query): array
     {
-        $zones = IndustrialZone::with(['region', 'issues'])
-            ->limit(10)
-            ->get()
-            ->map(function ($zone) {
-                return [
-                    'id' => $zone->id,
-                    'name' => $zone->name,
-                    'region' => $zone->region->name ?? null,
-                    'area' => $zone->area,
-                    'issues_count' => $zone->issues->count(),
-                ];
-            });
+        $zones = IndustrialZone::with(['region', 'issues'])->get();
+        $totalCount = $zones->count();
 
-        return $zones->toArray();
+        $items = $zones->take(10)->map(fn ($zone) => [
+            'id' => $zone->id,
+            'name' => $zone->name,
+            'region' => $zone->region->name ?? null,
+            'area' => $zone->area,
+            'issues_count' => $zone->issues->count(),
+        ])->toArray();
+
+        return [
+            'total_count' => $totalCount,
+            'items' => $items,
+        ];
     }
 
     protected function getSubsoilUsersData(string $query): array
     {
-        $users = SubsoilUser::with(['region', 'issues'])
-            ->limit(10)
-            ->get()
-            ->map(function ($user) {
-                return [
-                    'id' => $user->id,
-                    'name' => $user->name,
-                    'bin' => $user->bin,
-                    'region' => $user->region->name ?? null,
-                    'mineral_type' => $user->mineral_type,
-                    'license_status' => $user->license_status,
-                    'issues_count' => $user->issues->count(),
-                ];
-            });
+        $users = SubsoilUser::with(['region', 'issues'])->get();
+        $totalCount = $users->count();
 
-        return $users->toArray();
+        $items = $users->take(10)->map(fn ($user) => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'bin' => $user->bin,
+            'region' => $user->region->name ?? null,
+            'mineral_type' => $user->mineral_type,
+            'license_status' => $user->license_status,
+            'issues_count' => $user->issues->count(),
+        ])->toArray();
+
+        return [
+            'total_count' => $totalCount,
+            'items' => $items,
+        ];
     }
 
     protected function getIssuesData(string $query): array
     {
-        $issues = [];
-
-        // Project issues
         $projectIssues = ProjectIssue::with(['project.region'])
             ->where('status', '!=', 'resolved')
-            ->limit(20)
+            ->limit(15)
             ->get()
-            ->map(function ($issue) {
-                return [
-                    'type' => 'project',
-                    'id' => $issue->id,
-                    'title' => $issue->title,
-                    'status' => $issue->status,
-                    'priority' => $issue->priority,
-                    'project' => $issue->project->name ?? null,
-                    'region' => $issue->project->region->name ?? null,
-                ];
-            });
+            ->map(fn ($issue) => [
+                'type' => 'project',
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'status' => $issue->status,
+                'priority' => $issue->priority,
+                'project' => $issue->project->name ?? null,
+            ]);
 
-        // SEZ issues
-        $sezIssues = SezIssue::with(['sez.region'])
+        $sezIssues = SezIssue::with(['sez'])
             ->where('status', '!=', 'resolved')
             ->limit(10)
             ->get()
-            ->map(function ($issue) {
-                return [
-                    'type' => 'sez',
-                    'id' => $issue->id,
-                    'title' => $issue->title,
-                    'status' => $issue->status,
-                    'priority' => $issue->priority,
-                    'sez' => $issue->sez->name ?? null,
-                    'region' => $issue->sez->region->name ?? null,
-                ];
-            });
+            ->map(fn ($issue) => [
+                'type' => 'sez',
+                'id' => $issue->id,
+                'title' => $issue->title,
+                'status' => $issue->status,
+                'sez' => $issue->sez->name ?? null,
+            ]);
 
-        // Industrial zone issues
-        $industrialIssues = IndustrialZoneIssue::with(['industrialZone.region'])
-            ->where('status', '!=', 'resolved')
-            ->limit(10)
-            ->get()
-            ->map(function ($issue) {
-                return [
-                    'type' => 'industrial_zone',
-                    'id' => $issue->id,
-                    'title' => $issue->title,
-                    'status' => $issue->status,
-                    'priority' => $issue->priority,
-                    'industrial_zone' => $issue->industrialZone->name ?? null,
-                    'region' => $issue->industrialZone->region->name ?? null,
-                ];
-            });
-
-        // Subsoil issues
-        $subsoilIssues = SubsoilIssue::with(['subsoilUser.region'])
-            ->where('status', '!=', 'resolved')
-            ->limit(10)
-            ->get()
-            ->map(function ($issue) {
-                return [
-                    'type' => 'subsoil',
-                    'id' => $issue->id,
-                    'title' => $issue->title,
-                    'status' => $issue->status,
-                    'priority' => $issue->priority,
-                    'subsoil_user' => $issue->subsoilUser->name ?? null,
-                    'region' => $issue->subsoilUser->region->name ?? null,
-                ];
-            });
-
-        return array_merge(
-            $projectIssues->toArray(),
-            $sezIssues->toArray(),
-            $industrialIssues->toArray(),
-            $subsoilIssues->toArray()
-        );
+        return array_merge($projectIssues->toArray(), $sezIssues->toArray());
     }
 
     protected function getTasksData(string $query): array
     {
-        $tasks = DB::table('project_tasks')
+        return DB::table('project_tasks')
             ->join('investment_projects', 'project_tasks.project_id', '=', 'investment_projects.id')
             ->select(
                 'project_tasks.id',
@@ -242,13 +219,11 @@ class ChatContextService
             ->limit(20)
             ->get()
             ->toArray();
-
-        return $tasks;
     }
 
     protected function extractRegionName(string $query): ?string
     {
-        $regions = ['Туркестанская', 'Шымкент', 'Кентау', 'Арысь'];
+        $regions = ['Туркестанская', 'Шымкент', 'Кентау', 'Арысь', 'Түркістан'];
 
         foreach ($regions as $region) {
             if (stripos($query, $region) !== false) {

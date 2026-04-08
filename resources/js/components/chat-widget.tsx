@@ -9,15 +9,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { router } from '@inertiajs/react';
-import { BotMessageSquare, Loader2, Send, Trash2, X } from 'lucide-react';
+import { BotMessageSquare, Loader2, Send, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 interface Message {
     id: number;
     role: 'user' | 'assistant';
     content: string;
-    created_at: string;
 }
 
 export function ChatWidget() {
@@ -28,26 +26,10 @@ export function ChatWidget() {
     const scrollRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (isOpen && messages.length === 0) {
-            loadHistory();
-        }
-    }, [isOpen]);
-
-    useEffect(() => {
         if (scrollRef.current) {
             scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }
     }, [messages]);
-
-    const loadHistory = async () => {
-        try {
-            const response = await fetch('/chat/history');
-            const data = await response.json();
-            setMessages(data.messages || []);
-        } catch (error) {
-            console.error('Failed to load chat history:', error);
-        }
-    };
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -56,12 +38,11 @@ export function ChatWidget() {
         setInput('');
         setIsLoading(true);
 
-        // Добавляем сообщение пользователя сразу
+        // Қолданушы хабарламасын қосу
         const tempUserMsg: Message = {
             id: Date.now(),
             role: 'user',
             content: userMessage,
-            created_at: new Date().toISOString(),
         };
         setMessages((prev) => [...prev, tempUserMsg]);
 
@@ -80,12 +61,11 @@ export function ChatWidget() {
 
             const data = await response.json();
 
-            // Добавляем ответ бота
+            // AI жауабын қосу
             const botMessage: Message = {
                 id: Date.now() + 1,
                 role: 'assistant',
                 content: data.message,
-                created_at: new Date().toISOString(),
             };
             setMessages((prev) => [...prev, botMessage]);
         } catch (error) {
@@ -93,32 +73,11 @@ export function ChatWidget() {
             const errorMessage: Message = {
                 id: Date.now() + 1,
                 role: 'assistant',
-                content:
-                    'Извините, произошла ошибка при отправке сообщения. Попробуйте позже.',
-                created_at: new Date().toISOString(),
+                content: 'Кешіріңіз, қате орын алды. Кейінірек қайталап көріңіз.',
             };
             setMessages((prev) => [...prev, errorMessage]);
         } finally {
             setIsLoading(false);
-        }
-    };
-
-    const clearHistory = async () => {
-        if (!confirm('Вы уверены, что хотите очистить историю чата?')) return;
-
-        try {
-            await fetch('/chat/clear', {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN':
-                        document
-                            .querySelector('meta[name="csrf-token"]')
-                            ?.getAttribute('content') || '',
-                },
-            });
-            setMessages([]);
-        } catch (error) {
-            console.error('Failed to clear history:', error);
         }
     };
 
@@ -131,7 +90,7 @@ export function ChatWidget() {
 
     return (
         <>
-            {/* Кнопка открытия чата */}
+            {/* Чатты ашу батырмасы */}
             {!isOpen && (
                 <Button
                     onClick={() => setIsOpen(true)}
@@ -142,36 +101,24 @@ export function ChatWidget() {
                 </Button>
             )}
 
-            {/* Окно чата */}
+            {/* Чат терезесі */}
             {isOpen && (
                 <Card className="fixed right-6 bottom-6 z-50 flex h-[600px] w-[400px] flex-col shadow-2xl">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b pb-4">
                         <div className="flex items-center gap-2">
                             <BotMessageSquare className="h-5 w-5" />
                             <CardTitle className="text-lg">
-                                AI Помощник
+                                AI Көмекші
                             </CardTitle>
                         </div>
-                        <div className="flex gap-1">
-                            {messages.length > 0 && (
-                                <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={clearHistory}
-                                    className="h-8 w-8"
-                                >
-                                    <Trash2 className="h-4 w-4" />
-                                </Button>
-                            )}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setIsOpen(false)}
-                                className="h-8 w-8"
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </div>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setIsOpen(false)}
+                            className="h-8 w-8"
+                        >
+                            <X className="h-4 w-4" />
+                        </Button>
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden p-0">
@@ -184,11 +131,10 @@ export function ChatWidget() {
                                     <BotMessageSquare className="h-12 w-12 opacity-20" />
                                     <div>
                                         <p className="font-medium">
-                                            Привет! Я ваш AI помощник
+                                            Сәлем! Мен сіздің AI көмекшіңізмін
                                         </p>
                                         <p className="mt-1 text-sm">
-                                            Задайте вопрос о проектах, регионах,
-                                            проблемах
+                                            Жобалар, аймақтар, мәселелер туралы сұраңыз
                                         </p>
                                     </div>
                                 </div>
@@ -229,7 +175,7 @@ export function ChatWidget() {
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={handleKeyPress}
-                                placeholder="Задайте вопрос..."
+                                placeholder="Сұрақ қойыңыз..."
                                 disabled={isLoading}
                                 className="flex-1"
                             />
