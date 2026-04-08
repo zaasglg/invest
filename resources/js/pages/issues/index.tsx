@@ -135,7 +135,7 @@ export default function IssuesIndex({
                             <h1 className="text-2xl font-bold">
                                 Проблемалық мәселелер
                             </h1>
-                            <p className="text-muted-foreground text-sm">
+                            <p className="text-sm text-muted-foreground">
                                 Барлық секторлардағы проблемалық мәселелер (
                                 {issues.length})
                             </p>
@@ -185,7 +185,9 @@ export default function IssuesIndex({
                             </div>
                             <div className="w-full sm:w-56">
                                 <Select
-                                    value={filters.region_id?.toString() ?? 'all'}
+                                    value={
+                                        filters.region_id?.toString() ?? 'all'
+                                    }
                                     onValueChange={(value) =>
                                         handleFilterChange(
                                             'region_id',
@@ -220,8 +222,8 @@ export default function IssuesIndex({
                     {issues.length === 0 ? (
                         <Card>
                             <CardContent className="flex flex-col items-center justify-center py-12">
-                                <AlertTriangle className="text-muted-foreground mb-4 h-12 w-12" />
-                                <p className="text-muted-foreground text-lg">
+                                <AlertTriangle className="mb-4 h-12 w-12 text-muted-foreground" />
+                                <p className="text-lg text-muted-foreground">
                                     Проблемалық мәселелер табылмады
                                 </p>
                             </CardContent>
@@ -268,10 +270,10 @@ export default function IssuesIndex({
                                             <h3 className="font-semibold">
                                                 {issue.title}
                                             </h3>
-                                            <p className="text-muted-foreground mt-1 text-sm line-clamp-2">
+                                            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                                                 {issue.description}
                                             </p>
-                                            <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-3 text-xs">
+                                            <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
                                                 <span>
                                                     <strong>Объект:</strong>{' '}
                                                     {issue.entity_name}

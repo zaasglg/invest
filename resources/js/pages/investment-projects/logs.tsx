@@ -73,8 +73,7 @@ export default function Logs({ project, logs }: Props) {
                         Логирование
                     </h1>
                     <p className="mt-1 text-sm text-gray-500">
-                        {project.region?.name} •{' '}
-                        {project.project_type?.name}
+                        {project.region?.name} • {project.project_type?.name}
                     </p>
                 </div>
 
@@ -93,9 +92,7 @@ export default function Logs({ project, logs }: Props) {
                         {logs.data.length === 0 ? (
                             <div className="py-12 text-center">
                                 <ScrollText className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                                <p className="text-gray-500">
-                                    Логтар жоқ
-                                </p>
+                                <p className="text-gray-500">Логтар жоқ</p>
                             </div>
                         ) : (
                             <div className="space-y-3">

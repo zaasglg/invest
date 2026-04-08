@@ -23,12 +23,7 @@ import React, { useState, useMemo, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -169,12 +164,9 @@ export default function Show({
         null,
     );
     const [completionComment, setCompletionComment] = useState('');
-    const [completionDocuments, setCompletionDocuments] = useState<File[]>(
-        [],
-    );
+    const [completionDocuments, setCompletionDocuments] = useState<File[]>([]);
     const [completionPhotos, setCompletionPhotos] = useState<File[]>([]);
-    const [isSubmittingCompletion, setIsSubmittingCompletion] =
-        useState(false);
+    const [isSubmittingCompletion, setIsSubmittingCompletion] = useState(false);
     const [completionFileError, setCompletionFileError] = useState<
         string | null
     >(null);
@@ -185,9 +177,7 @@ export default function Show({
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [reviewCompletion, setReviewCompletion] =
         useState<TaskCompletionItem | null>(null);
-    const [reviewTask, setReviewTask] = useState<SubsoilTaskItem | null>(
-        null,
-    );
+    const [reviewTask, setReviewTask] = useState<SubsoilTaskItem | null>(null);
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
 
@@ -205,7 +195,8 @@ export default function Show({
         });
     }, [assignableUsers, userSearch]);
 
-    const selectedUser = assignableUsers.find((u) => u.id === taskAssignedTo) || null;
+    const selectedUser =
+        assignableUsers.find((u) => u.id === taskAssignedTo) || null;
 
     const tasks = subsoilUser.tasks ?? [];
 
@@ -254,10 +245,9 @@ export default function Show({
 
     const handleTaskDelete = (taskId: number) => {
         if (confirm('Осы кезеңді жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/subsoil-users/${subsoilUser.id}/tasks/${taskId}`,
-                { preserveScroll: true },
-            );
+            router.delete(`/subsoil-users/${subsoilUser.id}/tasks/${taskId}`, {
+                preserveScroll: true,
+            });
         }
     };
 
@@ -359,14 +349,11 @@ export default function Show({
         setIsSubmittingCompletion(true);
 
         const formData = new FormData();
-        if (completionComment)
-            formData.append('comment', completionComment);
+        if (completionComment) formData.append('comment', completionComment);
         completionDocuments.forEach((file) =>
             formData.append('documents[]', file),
         );
-        completionPhotos.forEach((file) =>
-            formData.append('photos[]', file),
-        );
+        completionPhotos.forEach((file) => formData.append('photos[]', file));
 
         router.post(
             `/subsoil-users/${subsoilUser.id}/tasks/${completionTaskId}/completions`,
@@ -420,10 +407,7 @@ export default function Show({
         );
     };
 
-    const licenseStatusMap: Record<
-        string,
-        { label: string; color: string }
-    > = {
+    const licenseStatusMap: Record<string, { label: string; color: string }> = {
         active: {
             label: 'Белсенді',
             color: 'bg-green-100 text-green-800',
@@ -462,15 +446,14 @@ export default function Show({
                     href={`/subsoil-users`}
                     className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                 >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге
-                    қайту
+                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
                 </Link>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}
                     <div className="space-y-6 lg:col-span-2">
                         {/* Banner + Info */}
-                        <Card className="overflow-hidden shadow-none py-0">
+                        <Card className="overflow-hidden py-0 shadow-none">
                             {/* Banner Header */}
                             <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
@@ -521,7 +504,8 @@ export default function Show({
                                                 БСН
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {subsoilUser.bin || 'Көрсетілмеген'}
+                                                {subsoilUser.bin ||
+                                                    'Көрсетілмеген'}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
@@ -557,9 +541,8 @@ export default function Show({
                                             <p className="text-sm font-bold text-[#0f1b3d]">
                                                 {subsoilUser.total_area !=
                                                     null &&
-                                                Number(
-                                                    subsoilUser.total_area,
-                                                ) > 0
+                                                Number(subsoilUser.total_area) >
+                                                    0
                                                     ? `${Number(subsoilUser.total_area).toLocaleString('kk-KZ')} га`
                                                     : 'Көрсетілмеген'}
                                             </p>
@@ -593,7 +576,7 @@ export default function Show({
                                     <FileText className="h-5 w-5 text-gray-500" />
                                     {subsoilUser.name}
                                 </h2>
-                                <p className="whitespace-pre-wrap leading-relaxed text-gray-700">
+                                <p className="leading-relaxed whitespace-pre-wrap text-gray-700">
                                     {subsoilUser.description ||
                                         'Сипаттама жоқ.'}
                                 </p>
@@ -616,15 +599,39 @@ export default function Show({
                                 {issues.length > 0 ? (
                                     <div className="space-y-3">
                                         {issues.map((issue) => {
-                                            const severityMap: Record<string, { label: string; color: string }> = {
-                                                low: { label: 'Төмен', color: 'bg-blue-100 text-blue-800' },
-                                                medium: { label: 'Орта', color: 'bg-amber-100 text-amber-800' },
-                                                high: { label: 'Жоғары', color: 'bg-red-100 text-red-800' },
+                                            const severityMap: Record<
+                                                string,
+                                                { label: string; color: string }
+                                            > = {
+                                                low: {
+                                                    label: 'Төмен',
+                                                    color: 'bg-blue-100 text-blue-800',
+                                                },
+                                                medium: {
+                                                    label: 'Орта',
+                                                    color: 'bg-amber-100 text-amber-800',
+                                                },
+                                                high: {
+                                                    label: 'Жоғары',
+                                                    color: 'bg-red-100 text-red-800',
+                                                },
                                             };
-                                            const issueStatusMap: Record<string, { label: string; color: string }> = {
-                                                open: { label: 'Ашық', color: 'bg-red-100 text-red-800' },
-                                                in_progress: { label: 'Жұмыста', color: 'bg-amber-100 text-amber-800' },
-                                                resolved: { label: 'Шешілді', color: 'bg-green-100 text-green-800' },
+                                            const issueStatusMap: Record<
+                                                string,
+                                                { label: string; color: string }
+                                            > = {
+                                                open: {
+                                                    label: 'Ашық',
+                                                    color: 'bg-red-100 text-red-800',
+                                                },
+                                                in_progress: {
+                                                    label: 'Жұмыста',
+                                                    color: 'bg-amber-100 text-amber-800',
+                                                },
+                                                resolved: {
+                                                    label: 'Шешілді',
+                                                    color: 'bg-green-100 text-green-800',
+                                                },
                                             };
                                             return (
                                                 <div
@@ -640,14 +647,22 @@ export default function Show({
                                                                 <Badge
                                                                     className={`${severityMap[issue.severity]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
                                                                 >
-                                                                    {severityMap[issue.severity]?.label || issue.severity}
+                                                                    {severityMap[
+                                                                        issue
+                                                                            .severity
+                                                                    ]?.label ||
+                                                                        issue.severity}
                                                                 </Badge>
                                                             )}
                                                             {issue.status && (
                                                                 <Badge
                                                                     className={`${issueStatusMap[issue.status]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
                                                                 >
-                                                                    {issueStatusMap[issue.status]?.label || issue.status}
+                                                                    {issueStatusMap[
+                                                                        issue
+                                                                            .status
+                                                                    ]?.label ||
+                                                                        issue.status}
                                                                 </Badge>
                                                             )}
                                                         </div>
@@ -689,19 +704,33 @@ export default function Show({
                                                 <SelectValue />
                                             </SelectTrigger>
                                             <SelectContent>
-                                                <SelectItem value="all">Барлық кезеңдер</SelectItem>
-                                                <SelectItem value="new">Жаңа</SelectItem>
-                                                <SelectItem value="in_progress">Орындалуда</SelectItem>
-                                                <SelectItem value="done">Орындалды</SelectItem>
-                                                <SelectItem value="rejected">Қабылданбады</SelectItem>
-                                                <SelectItem value="overdue">Мерзімі өткен</SelectItem>
+                                                <SelectItem value="all">
+                                                    Барлық кезеңдер
+                                                </SelectItem>
+                                                <SelectItem value="new">
+                                                    Жаңа
+                                                </SelectItem>
+                                                <SelectItem value="in_progress">
+                                                    Орындалуда
+                                                </SelectItem>
+                                                <SelectItem value="done">
+                                                    Орындалды
+                                                </SelectItem>
+                                                <SelectItem value="rejected">
+                                                    Қабылданбады
+                                                </SelectItem>
+                                                <SelectItem value="overdue">
+                                                    Мерзімі өткен
+                                                </SelectItem>
                                             </SelectContent>
                                         </Select>
                                         {canModify && !isIspolnitel && (
                                             <Button
                                                 size="icon"
                                                 className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
-                                                onClick={() => setShowTaskModal(true)}
+                                                onClick={() =>
+                                                    setShowTaskModal(true)
+                                                }
                                             >
                                                 <Plus className="h-5 w-5" />
                                             </Button>
@@ -713,7 +742,9 @@ export default function Show({
                                 {filteredTasks.length === 0 ? (
                                     <div className="py-12 text-center">
                                         <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                                        <p className="text-gray-500">Кезеңдер жоқ</p>
+                                        <p className="text-gray-500">
+                                            Кезеңдер жоқ
+                                        </p>
                                         <p className="mt-1 text-sm text-gray-400">
                                             Жаңа кезең қосу үшін + басыңыз
                                         </p>
@@ -727,116 +758,186 @@ export default function Show({
                                             const pendingCompletion =
                                                 task.completions?.find(
                                                     (c) =>
-                                                        c.status ===
-                                                        'pending',
+                                                        c.status === 'pending',
                                                 );
-                                            const latestCompletion =
-                                                task.completions?.length
-                                                    ? task.completions[
-                                                          task.completions
-                                                              .length - 1
-                                                      ]
-                                                    : null;
+                                            const latestCompletion = task
+                                                .completions?.length
+                                                ? task.completions[
+                                                      task.completions.length -
+                                                          1
+                                                  ]
+                                                : null;
 
                                             return (
-                                            <div
-                                                key={task.id}
-                                                className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
-                                            >
-                                                <div className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`} />
-                                                <div className="min-w-0 flex-1">
-                                                    <p className="font-semibold text-[#0f1b3d]">
-                                                        {task.title}:
-                                                    </p>
-                                                    {/* {task.description && (
+                                                <div
+                                                    key={task.id}
+                                                    className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
+                                                >
+                                                    <div
+                                                        className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
+                                                    />
+                                                    <div className="min-w-0 flex-1">
+                                                        <p className="font-semibold text-[#0f1b3d]">
+                                                            {task.title}:
+                                                        </p>
+                                                        {/* {task.description && (
                                                         <p className="mt-0.5 text-sm text-gray-600">
                                                             {task.description}
                                                         </p>
                                                     )} */}
-                                                    <p className="text-sm text-gray-500">
-                                                        {task.start_date && (
-                                                            <>
-                                                                {new Date(task.start_date).toLocaleDateString('kk-KZ', { day: 'numeric', month: 'long', year: 'numeric' })}
-                                                                {' — '}
-                                                            </>
-                                                        )}
-                                                        {task.due_date
-                                                            ? new Date(task.due_date).toLocaleDateString('kk-KZ', { day: 'numeric', month: 'long', year: 'numeric' })
-                                                            : 'Мерзімі көрсетілмеген'}
-                                                    </p>
-                                                    {task.assignee && (
-                                                        <p className="mt-1 text-sm text-gray-500">
-                                                            {task.assignee.baskarma_type === 'oblast'
-                                                                ? 'Облыстық:'
-                                                                : task.assignee.baskarma_type === 'district'
-                                                                    ? 'Аудандық:'
-                                                                    : ''}
-                                                            {' '}
-                                                            {task.assignee.full_name || task.assignee.name || '—'}
-                                                            {task.assignee.position && ` — ${task.assignee.position}`}
-                                                        </p>
-                                                    )}
-                                                    {/* Overdue badge */}
-                                                    {isTaskOverdue(task) && (
-                                                        <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
-                                                            Мерзімі өткен
-                                                        </Badge>
-                                                    )}
-                                                    {/* Status badge for completion */}
-                                                    {latestCompletion && (
-                                                        <div>
-                                                            <Badge className={`mt-1 text-xs border-0 ${
-                                                                latestCompletion.status === 'approved' ? 'bg-green-100 text-green-700' :
-                                                                latestCompletion.status === 'rejected' ? 'bg-red-100 text-red-700' :
-                                                                'bg-amber-100 text-amber-700'
-                                                            }`}>
-                                                                {latestCompletion.status === 'approved' ? 'Қабылданды' :
-                                                                 latestCompletion.status === 'rejected' ? 'Қабылданбады' :
-                                                                 'Тексеруде'}
-                                                            </Badge>
-                                                            {latestCompletion.status === 'rejected' && latestCompletion.reviewer_comment && (
-                                                                <p className="mt-1 text-xs text-red-600">
-                                                                    <span className="font-semibold">Себебі:</span> {latestCompletion.reviewer_comment}
-                                                                </p>
+                                                        <p className="text-sm text-gray-500">
+                                                            {task.start_date && (
+                                                                <>
+                                                                    {new Date(
+                                                                        task.start_date,
+                                                                    ).toLocaleDateString(
+                                                                        'kk-KZ',
+                                                                        {
+                                                                            day: 'numeric',
+                                                                            month: 'long',
+                                                                            year: 'numeric',
+                                                                        },
+                                                                    )}
+                                                                    {' — '}
+                                                                </>
                                                             )}
-                                                        </div>
-                                                    )}
+                                                            {task.due_date
+                                                                ? new Date(
+                                                                      task.due_date,
+                                                                  ).toLocaleDateString(
+                                                                      'kk-KZ',
+                                                                      {
+                                                                          day: 'numeric',
+                                                                          month: 'long',
+                                                                          year: 'numeric',
+                                                                      },
+                                                                  )
+                                                                : 'Мерзімі көрсетілмеген'}
+                                                        </p>
+                                                        {task.assignee && (
+                                                            <p className="mt-1 text-sm text-gray-500">
+                                                                {task.assignee
+                                                                    .baskarma_type ===
+                                                                'oblast'
+                                                                    ? 'Облыстық:'
+                                                                    : task
+                                                                            .assignee
+                                                                            .baskarma_type ===
+                                                                        'district'
+                                                                      ? 'Аудандық:'
+                                                                      : ''}{' '}
+                                                                {task.assignee
+                                                                    .full_name ||
+                                                                    task
+                                                                        .assignee
+                                                                        .name ||
+                                                                    '—'}
+                                                                {task.assignee
+                                                                    .position &&
+                                                                    ` — ${task.assignee.position}`}
+                                                            </p>
+                                                        )}
+                                                        {/* Overdue badge */}
+                                                        {isTaskOverdue(
+                                                            task,
+                                                        ) && (
+                                                            <Badge className="mt-1 mr-1 border-0 bg-red-100 text-xs text-red-700">
+                                                                Мерзімі өткен
+                                                            </Badge>
+                                                        )}
+                                                        {/* Status badge for completion */}
+                                                        {latestCompletion && (
+                                                            <div>
+                                                                <Badge
+                                                                    className={`mt-1 border-0 text-xs ${
+                                                                        latestCompletion.status ===
+                                                                        'approved'
+                                                                            ? 'bg-green-100 text-green-700'
+                                                                            : latestCompletion.status ===
+                                                                                'rejected'
+                                                                              ? 'bg-red-100 text-red-700'
+                                                                              : 'bg-amber-100 text-amber-700'
+                                                                    }`}
+                                                                >
+                                                                    {latestCompletion.status ===
+                                                                    'approved'
+                                                                        ? 'Қабылданды'
+                                                                        : latestCompletion.status ===
+                                                                            'rejected'
+                                                                          ? 'Қабылданбады'
+                                                                          : 'Тексеруде'}
+                                                                </Badge>
+                                                                {latestCompletion.status ===
+                                                                    'rejected' &&
+                                                                    latestCompletion.reviewer_comment && (
+                                                                        <p className="mt-1 text-xs text-red-600">
+                                                                            <span className="font-semibold">
+                                                                                Себебі:
+                                                                            </span>{' '}
+                                                                            {
+                                                                                latestCompletion.reviewer_comment
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                    <div className="flex items-center gap-2">
+                                                        {isIspolnitel &&
+                                                            isAssignedToMe &&
+                                                            (task.status ===
+                                                                'new' ||
+                                                                task.status ===
+                                                                    'rejected') && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 border-cyan-300 text-xs text-cyan-700 hover:bg-cyan-50"
+                                                                    onClick={() =>
+                                                                        handleOpenCompletionModal(
+                                                                            task.id,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Upload className="mr-1 h-3.5 w-3.5" />
+                                                                    Жіберу
+                                                                </Button>
+                                                            )}
+                                                        {canModify &&
+                                                            !isIspolnitel &&
+                                                            pendingCompletion && (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="h-8 border-amber-300 text-xs text-amber-700 hover:bg-amber-50"
+                                                                    onClick={() =>
+                                                                        handleOpenReview(
+                                                                            task,
+                                                                            pendingCompletion,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Eye className="mr-1 h-3.5 w-3.5" />
+                                                                    Тексеру
+                                                                </Button>
+                                                            )}
+                                                        {canModify &&
+                                                            !isIspolnitel && (
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                                    onClick={() =>
+                                                                        handleTaskDelete(
+                                                                            task.id,
+                                                                        )
+                                                                    }
+                                                                >
+                                                                    <Trash2 className="h-4 w-4" />
+                                                                </Button>
+                                                            )}
+                                                    </div>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    {isIspolnitel && isAssignedToMe && (task.status === 'new' || task.status === 'rejected') && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 text-xs border-cyan-300 text-cyan-700 hover:bg-cyan-50"
-                                                            onClick={() => handleOpenCompletionModal(task.id)}
-                                                        >
-                                                            <Upload className="mr-1 h-3.5 w-3.5" />
-                                                            Жіберу
-                                                        </Button>
-                                                    )}
-                                                    {canModify && !isIspolnitel && pendingCompletion && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            className="h-8 text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
-                                                            onClick={() => handleOpenReview(task, pendingCompletion)}
-                                                        >
-                                                            <Eye className="mr-1 h-3.5 w-3.5" />
-                                                            Тексеру
-                                                        </Button>
-                                                    )}
-                                                    {canModify && !isIspolnitel && (
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                            onClick={() => handleTaskDelete(task.id)}
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
-                                                </div>
-                                            </div>
                                             );
                                         })}
                                     </div>
@@ -991,7 +1092,9 @@ export default function Show({
                                 </Label>
                                 <Input
                                     value={taskTitle}
-                                    onChange={(e) => setTaskTitle(e.target.value)}
+                                    onChange={(e) =>
+                                        setTaskTitle(e.target.value)
+                                    }
                                     placeholder="Тақырып"
                                     className="mt-1.5"
                                     required
@@ -1004,9 +1107,11 @@ export default function Show({
                                 </Label>
                                 <textarea
                                     value={taskDescription}
-                                    onChange={(e) => setTaskDescription(e.target.value)}
+                                    onChange={(e) =>
+                                        setTaskDescription(e.target.value)
+                                    }
                                     placeholder="Сипаттама"
-                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                     rows={3}
                                 />
                             </div>
@@ -1019,7 +1124,9 @@ export default function Show({
                                     <Input
                                         type="date"
                                         value={taskStartDate}
-                                        onChange={(e) => setTaskStartDate(e.target.value)}
+                                        onChange={(e) =>
+                                            setTaskStartDate(e.target.value)
+                                        }
                                         className="mt-1.5"
                                     />
                                 </div>
@@ -1030,7 +1137,9 @@ export default function Show({
                                     <Input
                                         type="date"
                                         value={taskDueDate}
-                                        onChange={(e) => setTaskDueDate(e.target.value)}
+                                        onChange={(e) =>
+                                            setTaskDueDate(e.target.value)
+                                        }
                                         className="mt-1.5"
                                     />
                                 </div>
@@ -1041,10 +1150,12 @@ export default function Show({
                                     Жауаптыны тағайындау
                                 </Label>
                                 <div className="relative mt-1.5">
-                                    <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                                    <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
                                     <Input
                                         value={userSearch}
-                                        onChange={(e) => setUserSearch(e.target.value)}
+                                        onChange={(e) =>
+                                            setUserSearch(e.target.value)
+                                        }
                                         placeholder="Іздеу"
                                         className="pl-9"
                                     />
@@ -1067,20 +1178,27 @@ export default function Show({
                                                         ? 'border-t border-gray-100'
                                                         : ''
                                                 }`}
-                                                onClick={() => setTaskAssignedTo(u.id)}
+                                                onClick={() =>
+                                                    setTaskAssignedTo(u.id)
+                                                }
                                             >
                                                 <span className="text-gray-700">
                                                     <span className="mr-2 text-gray-400">
                                                         {idx + 1}
                                                     </span>
-                                                    {u.baskarma_type === 'oblast'
+                                                    {u.baskarma_type ===
+                                                    'oblast'
                                                         ? 'Облыстық'
-                                                        : u.baskarma_type === 'district'
-                                                            ? 'Аудандық'
-                                                            : ''}
-                                                    {u.baskarma_type ? ': ' : ''}
+                                                        : u.baskarma_type ===
+                                                            'district'
+                                                          ? 'Аудандық'
+                                                          : ''}
+                                                    {u.baskarma_type
+                                                        ? ': '
+                                                        : ''}
                                                     {u.full_name || '—'}
-                                                    {u.position && ` — ${u.position}`}
+                                                    {u.position &&
+                                                        ` — ${u.position}`}
                                                 </span>
                                                 {taskAssignedTo === u.id && (
                                                     <span className="rounded-md bg-cyan-500 px-3 py-1 text-xs font-medium text-white">
@@ -1140,9 +1258,7 @@ export default function Show({
                             </h3>
                             <button
                                 type="button"
-                                onClick={() =>
-                                    setShowCompletionModal(false)
-                                }
+                                onClick={() => setShowCompletionModal(false)}
                                 className="text-white/80 transition-colors hover:text-white"
                             >
                                 <X className="h-5 w-5" />
@@ -1153,12 +1269,18 @@ export default function Show({
                             className="space-y-5 p-6"
                         >
                             {(() => {
-                                const task = tasks.find((t) => t.id === completionTaskId);
+                                const task = tasks.find(
+                                    (t) => t.id === completionTaskId,
+                                );
                                 return task ? (
                                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                        <h4 className="text-sm font-semibold text-[#0f1b3d]">{task.title}</h4>
+                                        <h4 className="text-sm font-semibold text-[#0f1b3d]">
+                                            {task.title}
+                                        </h4>
                                         {task.description && (
-                                            <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">{task.description}</p>
+                                            <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">
+                                                {task.description}
+                                            </p>
                                         )}
                                     </div>
                                 ) : null;
@@ -1175,9 +1297,7 @@ export default function Show({
                                     Құжаттар (файлдар)
                                     <span className="ml-1 font-normal text-gray-400">
                                         (макс.{' '}
-                                        {MAX_COMPLETION_FILE_SIZE /
-                                            1024 /
-                                            1024}
+                                        {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}
                                         MB)
                                     </span>
                                 </Label>
@@ -1202,9 +1322,7 @@ export default function Show({
                                     Суреттер
                                     <span className="ml-1 font-normal text-gray-400">
                                         (макс.{' '}
-                                        {MAX_COMPLETION_FILE_SIZE /
-                                            1024 /
-                                            1024}
+                                        {MAX_COMPLETION_FILE_SIZE / 1024 / 1024}
                                         MB)
                                     </span>
                                 </Label>
@@ -1218,8 +1336,7 @@ export default function Show({
                                 />
                                 {completionPhotos.length > 0 && (
                                     <p className="mt-1 text-xs text-gray-500">
-                                        {completionPhotos.length} сурет
-                                        таңдалды
+                                        {completionPhotos.length} сурет таңдалды
                                     </p>
                                 )}
                             </div>
@@ -1231,12 +1348,10 @@ export default function Show({
                                 <textarea
                                     value={completionComment}
                                     onChange={(e) =>
-                                        setCompletionComment(
-                                            e.target.value,
-                                        )
+                                        setCompletionComment(e.target.value)
                                     }
                                     placeholder="Пікір енгізіңіз..."
-                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                    className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                     rows={4}
                                 />
                             </div>
@@ -1294,7 +1409,7 @@ export default function Show({
                         <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
                             {reviewTask && (
                                 <div className="rounded-lg border border-gray-200 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                         Тапсырма
                                     </p>
                                     <p className="mt-1 font-semibold text-[#0f1b3d]">
@@ -1309,12 +1424,12 @@ export default function Show({
                             )}
 
                             <div className="rounded-lg border border-gray-200 p-4">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                     Жіберуші
                                 </p>
                                 <p className="mt-1 font-medium text-[#0f1b3d]">
-                                    {reviewCompletion.submitter
-                                        ?.full_name || '—'}
+                                    {reviewCompletion.submitter?.full_name ||
+                                        '—'}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                     {new Date(
@@ -1325,10 +1440,10 @@ export default function Show({
 
                             {reviewCompletion.comment && (
                                 <div className="rounded-lg border border-gray-200 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                         Пікір
                                     </p>
-                                    <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                                    <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
                                         {reviewCompletion.comment}
                                     </p>
                                 </div>
@@ -1337,7 +1452,7 @@ export default function Show({
                             {reviewCompletion.files &&
                                 reviewCompletion.files.length > 0 && (
                                     <div>
-                                        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Файлдар
                                         </p>
                                         <div className="space-y-2">
@@ -1365,9 +1480,7 @@ export default function Show({
                                                         )}
                                                         <div className="min-w-0 flex-1">
                                                             <p className="truncate text-sm font-medium text-[#0f1b3d]">
-                                                                {
-                                                                    file.file_name
-                                                                }
+                                                                {file.file_name}
                                                             </p>
                                                             <p className="text-xs text-gray-400">
                                                                 {file.type ===
@@ -1399,20 +1512,16 @@ export default function Show({
                                     <textarea
                                         value={reviewComment}
                                         onChange={(e) =>
-                                            setReviewComment(
-                                                e.target.value,
-                                            )
+                                            setReviewComment(e.target.value)
                                         }
                                         placeholder="Пікір жазыңыз..."
-                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400"
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                         rows={3}
                                     />
                                 </div>
                                 <div className="flex justify-center gap-3">
                                     <Button
-                                        onClick={() =>
-                                            handleReview('approved')
-                                        }
+                                        onClick={() => handleReview('approved')}
                                         className="bg-emerald-500 px-8 hover:bg-emerald-600"
                                         disabled={isReviewing}
                                     >
@@ -1420,9 +1529,7 @@ export default function Show({
                                         Иә
                                     </Button>
                                     <Button
-                                        onClick={() =>
-                                            handleReview('rejected')
-                                        }
+                                        onClick={() => handleReview('rejected')}
                                         className="bg-red-500 px-8 hover:bg-red-600"
                                         disabled={isReviewing}
                                     >

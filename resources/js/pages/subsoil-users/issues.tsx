@@ -86,9 +86,7 @@ export default function Issues({ subsoilUser, issues }: Props) {
 
     const handleDelete = (issueId: number) => {
         if (confirm('Бұл мәселені жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/subsoil-users/${subsoilUser.id}/issues/${issueId}`,
-            );
+            router.delete(`/subsoil-users/${subsoilUser.id}/issues/${issueId}`);
         }
     };
 
@@ -122,7 +120,10 @@ export default function Issues({ subsoilUser, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: subsoilUser.region?.name || 'Аймақ', href: `/regions/${subsoilUser.region?.id}` },
+                {
+                    title: subsoilUser.region?.name || 'Аймақ',
+                    href: `/regions/${subsoilUser.region?.id}`,
+                },
                 {
                     title: subsoilUser.name,
                     href: `/subsoil-users/${subsoilUser.id}`,
@@ -130,9 +131,7 @@ export default function Issues({ subsoilUser, issues }: Props) {
                 { title: 'Проблемалық мәселелер', href: '' },
             ]}
         >
-            <Head
-                title={`Проблемалық мәселелер - ${subsoilUser.name}`}
-            />
+            <Head title={`Проблемалық мәселелер - ${subsoilUser.name}`} />
 
             <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-6 p-6">
                 <div>

@@ -88,8 +88,9 @@ interface Props {
 }
 
 export default function NotificationsIndex({ notifications }: Props) {
-    const [viewCompletion, setViewCompletion] =
-        useState<Completion | null>(null);
+    const [viewCompletion, setViewCompletion] = useState<Completion | null>(
+        null,
+    );
     const [viewTask, setViewTask] = useState<Task | null>(null);
     const [reviewSource, setReviewSource] = useState<{
         type: 'investment' | 'subsoil';
@@ -134,19 +135,21 @@ export default function NotificationsIndex({ notifications }: Props) {
         router.post('/notifications/read-all', {}, { preserveScroll: true });
     };
 
-    const handleViewCompletion = (
-        notification: NotificationItem,
-    ) => {
+    const handleViewCompletion = (notification: NotificationItem) => {
         if (!notification.is_read) {
             handleMarkAsRead(notification.id);
         }
         if (notification.subsoil_completion) {
             setViewCompletion(notification.subsoil_completion);
-            setViewTask(notification.subsoil_task ? {
-                id: notification.subsoil_task.id,
-                title: notification.subsoil_task.title,
-                status: '',
-            } : null);
+            setViewTask(
+                notification.subsoil_task
+                    ? {
+                          id: notification.subsoil_task.id,
+                          title: notification.subsoil_task.title,
+                          status: '',
+                      }
+                    : null,
+            );
             setReviewSource({
                 type: 'subsoil',
                 subsoilUserId: notification.subsoil_task?.subsoil_user_id,
@@ -164,15 +167,14 @@ export default function NotificationsIndex({ notifications }: Props) {
         }
     };
 
-    const handleReview = (
-        status: 'approved' | 'rejected',
-    ) => {
+    const handleReview = (status: 'approved' | 'rejected') => {
         if (!viewCompletion || !viewTask) return;
         setIsReviewing(true);
 
-        const url = reviewSource?.type === 'subsoil'
-            ? `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/review`
-            : `/investment-projects/${viewTask.project?.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/review`;
+        const url =
+            reviewSource?.type === 'subsoil'
+                ? `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/review`
+                : `/investment-projects/${viewTask.project?.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/review`;
 
         router.put(
             url,
@@ -193,9 +195,7 @@ export default function NotificationsIndex({ notifications }: Props) {
         );
     };
 
-    const unreadCount = notifications.data.filter(
-        (n) => !n.is_read,
-    ).length;
+    const unreadCount = notifications.data.filter((n) => !n.is_read).length;
 
     return (
         <AppLayout
@@ -234,9 +234,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                 {notifications.data.length === 0 ? (
                     <div className="rounded-xl border border-gray-100 bg-white py-16 text-center shadow-sm">
                         <Bell className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                        <p className="text-gray-400">
-                            Хабарламалар жоқ
-                        </p>
+                        <p className="text-gray-400">Хабарламалар жоқ</p>
                     </div>
                 ) : (
                     <div className="space-y-3">
@@ -273,11 +271,16 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     notification.id,
                                                 );
                                             }
-                                            if (notification.subsoil_task?.subsoil_user) {
+                                            if (
+                                                notification.subsoil_task
+                                                    ?.subsoil_user
+                                            ) {
                                                 router.visit(
                                                     `/subsoil-users/${notification.subsoil_task.subsoil_user.id}`,
                                                 );
-                                            } else if (notification.task?.project) {
+                                            } else if (
+                                                notification.task?.project
+                                            ) {
                                                 router.visit(
                                                     `/investment-projects/${notification.task.project.id}`,
                                                 );
@@ -314,11 +317,13 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     }
                                                 </p>
                                             )}
-                                            {notification.subsoil_task?.subsoil_user && (
+                                            {notification.subsoil_task
+                                                ?.subsoil_user && (
                                                 <p className="mt-1 text-xs text-gray-500">
                                                     Жер қойнауын пайдаланушы:{' '}
                                                     {
-                                                        notification.subsoil_task
+                                                        notification
+                                                            .subsoil_task
                                                             .subsoil_user.name
                                                     }
                                                 </p>
@@ -329,7 +334,8 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                 ).toLocaleString('kk-KZ')}
                                             </p>
                                         </div>
-                                        {(notification.completion || notification.subsoil_completion) &&
+                                        {(notification.completion ||
+                                            notification.subsoil_completion) &&
                                             notification.type ===
                                                 'completion_submitted' && (
                                                 <div className="flex items-center gap-1 text-xs text-gray-400">
@@ -343,9 +349,9 @@ export default function NotificationsIndex({ notifications }: Props) {
                         })}
 
                         {/* Pagination */}
-                        <Pagination 
-                            paginator={notifications} 
-                            preserveScroll={true} 
+                        <Pagination
+                            paginator={notifications}
+                            preserveScroll={true}
                         />
                     </div>
                 )}
@@ -376,7 +382,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {/* Task info */}
                                 {viewTask && (
                                     <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Тапсырма
                                         </p>
                                         <p className="mt-1 font-semibold text-[#0f1b3d]">
@@ -392,12 +398,12 @@ export default function NotificationsIndex({ notifications }: Props) {
 
                                 {/* Who submitted */}
                                 <div className="rounded-lg border border-gray-200 p-4">
-                                    <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                         Жіберген
                                     </p>
                                     <p className="mt-1 font-medium text-[#0f1b3d]">
-                                        {viewCompletion.submitter
-                                            ?.full_name || '—'}
+                                        {viewCompletion.submitter?.full_name ||
+                                            '—'}
                                     </p>
                                     <p className="text-xs text-gray-500">
                                         {new Date(
@@ -409,10 +415,10 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {/* Comment */}
                                 {viewCompletion.comment && (
                                     <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Пікір
                                         </p>
-                                        <p className="mt-1 whitespace-pre-wrap text-sm text-gray-700">
+                                        <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
                                             {viewCompletion.comment}
                                         </p>
                                     </div>
@@ -422,9 +428,9 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {viewCompletion.files &&
                                     viewCompletion.files.length > 0 && (
                                         <div>
-                                                <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">
-                                                    Файлдар
-                                                </p>
+                                            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Файлдар
+                                            </p>
                                             <div className="space-y-2">
                                                 {viewCompletion.files.map(
                                                     (file) => (
@@ -466,9 +472,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="text-blue-600 hover:text-blue-800"
-                                                                onClick={(
-                                                                    e,
-                                                                ) =>
+                                                                onClick={(e) =>
                                                                     e.stopPropagation()
                                                                 }
                                                             >
@@ -484,7 +488,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 {/* Status badge if already reviewed */}
                                 {viewCompletion.status !== 'pending' && (
                                     <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">
+                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Нәтиже
                                         </p>
                                         <Badge
@@ -511,29 +515,44 @@ export default function NotificationsIndex({ notifications }: Props) {
                                 )}
 
                                 {/* Navigate to project/subsoil to resubmit (for ispolnitel seeing rejection) */}
-                                {viewCompletion.status !== 'pending' && (viewTask?.project || reviewSource?.type === 'subsoil') && (
-                                    <div className="flex justify-center border-t border-gray-200 pt-4">
-                                        <Button
-                                            variant="outline"
-                                            onClick={() => {
-                                                if (reviewSource?.type === 'subsoil' && reviewSource.subsoilUserId) {
-                                                    setViewCompletion(null);
-                                                    setViewTask(null);
-                                                    setReviewSource(null);
-                                                    router.visit(`/subsoil-users/${reviewSource.subsoilUserId}`);
-                                                } else if (viewTask?.project) {
-                                                    setViewCompletion(null);
-                                                    setViewTask(null);
-                                                    setReviewSource(null);
-                                                    router.visit(`/investment-projects/${viewTask.project!.id}`);
-                                                }
-                                            }}
-                                        >
-                                            <Flag className="mr-2 h-4 w-4" />
-                                            {reviewSource?.type === 'subsoil' ? 'Объектіге өту' : 'Жобаға өту'}
-                                        </Button>
-                                    </div>
-                                )}
+                                {viewCompletion.status !== 'pending' &&
+                                    (viewTask?.project ||
+                                        reviewSource?.type === 'subsoil') && (
+                                        <div className="flex justify-center border-t border-gray-200 pt-4">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => {
+                                                    if (
+                                                        reviewSource?.type ===
+                                                            'subsoil' &&
+                                                        reviewSource.subsoilUserId
+                                                    ) {
+                                                        setViewCompletion(null);
+                                                        setViewTask(null);
+                                                        setReviewSource(null);
+                                                        router.visit(
+                                                            `/subsoil-users/${reviewSource.subsoilUserId}`,
+                                                        );
+                                                    } else if (
+                                                        viewTask?.project
+                                                    ) {
+                                                        setViewCompletion(null);
+                                                        setViewTask(null);
+                                                        setReviewSource(null);
+                                                        router.visit(
+                                                            `/investment-projects/${viewTask.project!.id}`,
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <Flag className="mr-2 h-4 w-4" />
+                                                {reviewSource?.type ===
+                                                'subsoil'
+                                                    ? 'Объектіге өту'
+                                                    : 'Жобаға өту'}
+                                            </Button>
+                                        </div>
+                                    )}
 
                                 {/* Review form (only for pending) */}
                                 {viewCompletion.status === 'pending' && (
@@ -550,16 +569,14 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                     )
                                                 }
                                                 placeholder="Пікір енгізіңіз..."
-                                                className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:outline-none focus:ring-1 focus:ring-[#c8a44e]"
+                                                className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
                                                 rows={3}
                                             />
                                         </div>
                                         <div className="flex justify-end gap-3">
                                             <Button
                                                 onClick={() =>
-                                                    handleReview(
-                                                        'approved',
-                                                    )
+                                                    handleReview('approved')
                                                 }
                                                 className="bg-emerald-500 hover:bg-emerald-600"
                                                 disabled={isReviewing}
@@ -569,9 +586,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                                             </Button>
                                             <Button
                                                 onClick={() =>
-                                                    handleReview(
-                                                        'rejected',
-                                                    )
+                                                    handleReview('rejected')
                                                 }
                                                 className="bg-red-500 hover:bg-red-600"
                                                 disabled={isReviewing}

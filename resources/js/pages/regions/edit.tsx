@@ -1,6 +1,8 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
-import LocationPicker, { normalizeToMultiPolygon } from '@/components/location-picker';
+import LocationPicker, {
+    normalizeToMultiPolygon,
+} from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -24,7 +26,9 @@ interface Region {
     type: string;
     subtype: string | null;
     parent_id: number | null;
-    geometry?: { lat: number; lng: number }[][] | { lat: number; lng: number }[];
+    geometry?:
+        | { lat: number; lng: number }[][]
+        | { lat: number; lng: number }[];
 }
 
 interface Props {
@@ -54,7 +58,10 @@ function resolveRegionIconPath(icon: string | null | undefined): string | null {
 
 // Normalize corrupted geometry where lat/lng might be arrays instead of numbers
 function normalizeGeometry(
-    geometry?: { lat: number | number[] | string; lng: number | number[] | string }[],
+    geometry?: {
+        lat: number | number[] | string;
+        lng: number | number[] | string;
+    }[],
 ): { lat: number; lng: number }[] {
     if (!geometry || !Array.isArray(geometry)) return [];
     const result: { lat: number; lng: number }[] = [];
@@ -211,9 +218,7 @@ export default function Edit({ region, parents }: Props) {
                                     <SelectItem value="district">
                                         Аудан
                                     </SelectItem>
-                                    <SelectItem value="city">
-                                        Қала
-                                    </SelectItem>
+                                    <SelectItem value="city">Қала</SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.subtype && (
@@ -314,8 +319,7 @@ export default function Edit({ region, parents }: Props) {
                             </div>
                         )}
                         <p className="text-xs text-gray-500">
-                            Файл жүктелмесе, ағымдағы белгіше
-                            өзгеріссіз қалады.
+                            Файл жүктелмесе, ағымдағы белгіше өзгеріссіз қалады.
                         </p>
                         {errors.icon_file && (
                             <span className="text-sm text-red-500">
@@ -371,7 +375,10 @@ export default function Edit({ region, parents }: Props) {
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <Button disabled={processing} className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                        <Button
+                            disabled={processing}
+                            className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                        >
                             Жаңарту
                         </Button>
                         <Link

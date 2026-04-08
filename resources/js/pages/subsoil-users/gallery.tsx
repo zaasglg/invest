@@ -11,12 +11,7 @@ import {
 import React, { useState } from 'react';
 import PhotoLightbox from '@/components/photo-lightbox';
 import { Button } from '@/components/ui/button';
-import {
-    Card,
-    CardContent,
-    CardHeader,
-    CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -66,9 +61,7 @@ export default function Gallery({
     const [photos, setPhotos] = useState<FileList | null>(null);
     const [galleryDate, setGalleryDate] = useState('');
     const [description, setDescription] = useState('');
-    const [photoType, setPhotoType] = useState<'gallery' | 'render'>(
-        'gallery',
-    );
+    const [photoType, setPhotoType] = useState<'gallery' | 'render'>('gallery');
     const [isUploading, setIsUploading] = useState(false);
     const [previewUrls, setPreviewUrls] = useState<string[]>([]);
     const [uploadError, setUploadError] = useState<string>('');
@@ -141,19 +134,15 @@ export default function Gallery({
         }
         formData.append('photo_type', photoType);
 
-        router.post(
-            `/subsoil-users/${subsoilUser.id}/gallery`,
-            formData,
-            {
-                onSuccess: () => {
-                    clearPhotos();
-                    setIsUploading(false);
-                },
-                onError: () => {
-                    setIsUploading(false);
-                },
+        router.post(`/subsoil-users/${subsoilUser.id}/gallery`, formData, {
+            onSuccess: () => {
+                clearPhotos();
+                setIsUploading(false);
             },
-        );
+            onError: () => {
+                setIsUploading(false);
+            },
+        });
     };
 
     const handleDelete = (photoId: number) => {
@@ -174,17 +163,11 @@ export default function Gallery({
     };
 
     const sortedDatedGallery = Object.entries(datedGallery)
-        .sort(
-            (a, b) =>
-                new Date(b[0]).getTime() - new Date(a[0]).getTime(),
-        )
-        .reduce(
-            (acc, [date, photos]) => {
-                acc[date] = photos;
-                return acc;
-            },
-            {} as DatedGallery,
-        );
+        .sort((a, b) => new Date(b[0]).getTime() - new Date(a[0]).getTime())
+        .reduce((acc, [date, photos]) => {
+            acc[date] = photos;
+            return acc;
+        }, {} as DatedGallery);
 
     return (
         <AppLayout
@@ -284,9 +267,7 @@ export default function Gallery({
                                                     type="file"
                                                     multiple
                                                     accept="image/*"
-                                                    onChange={
-                                                        handlePhotoChange
-                                                    }
+                                                    onChange={handlePhotoChange}
                                                     className="hidden"
                                                 />
                                                 <label
@@ -317,9 +298,7 @@ export default function Gallery({
                                                     <div className="flex items-center justify-between text-sm">
                                                         <span className="text-gray-600">
                                                             Таңдалды:{' '}
-                                                            {
-                                                                previewUrls.length
-                                                            }
+                                                            {previewUrls.length}
                                                         </span>
                                                         <button
                                                             type="button"
@@ -334,24 +313,20 @@ export default function Gallery({
                                                     <div className="grid grid-cols-3 gap-2">
                                                         {previewUrls
                                                             .slice(0, 6)
-                                                            .map(
-                                                                (url, idx) => (
-                                                                    <div
-                                                                        key={
-                                                                            idx
+                                                            .map((url, idx) => (
+                                                                <div
+                                                                    key={idx}
+                                                                    className="relative aspect-square"
+                                                                >
+                                                                    <img
+                                                                        src={
+                                                                            url
                                                                         }
-                                                                        className="relative aspect-square"
-                                                                    >
-                                                                        <img
-                                                                            src={
-                                                                                url
-                                                                            }
-                                                                            alt={`Preview ${idx + 1}`}
-                                                                            className="h-full w-full rounded border object-cover"
-                                                                        />
-                                                                    </div>
-                                                                ),
-                                                            )}
+                                                                        alt={`Preview ${idx + 1}`}
+                                                                        className="h-full w-full rounded border object-cover"
+                                                                    />
+                                                                </div>
+                                                            ))}
                                                         {previewUrls.length >
                                                             6 && (
                                                             <div className="relative flex aspect-square items-center justify-center rounded border bg-gray-100">
@@ -619,13 +594,15 @@ function PhotoCard({
                 <div className="absolute top-2 left-2 z-10">
                     <span className="inline-flex items-center gap-1 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                         <Calendar className="h-2.5 w-2.5" />
-                        {formatDateTime(photo.gallery_date || photo.created_at!)}
+                        {formatDateTime(
+                            photo.gallery_date || photo.created_at!,
+                        )}
                     </span>
                 </div>
             )}
             {/* Description overlay */}
             {photo.description && (
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-2">
+                <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent p-2">
                     <p className="truncate text-xs text-white">
                         {photo.description}
                     </p>

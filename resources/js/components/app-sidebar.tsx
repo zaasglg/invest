@@ -43,7 +43,11 @@ export function AppSidebar() {
             <SidebarHeader className="border-b border-sidebar-border/50 bg-gradient-to-b from-sidebar-accent/30 to-transparent">
                 <SidebarMenu>
                     <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild className="hover:bg-transparent">
+                        <SidebarMenuButton
+                            size="lg"
+                            asChild
+                            className="hover:bg-transparent"
+                        >
                             <Link href={dashboard()} prefetch>
                                 <AppLogo />
                             </Link>

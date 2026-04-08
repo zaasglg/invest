@@ -16,10 +16,7 @@ type Props = {
     canResetPassword: boolean;
 };
 
-export default function Login({
-    status,
-    canResetPassword,
-}: Props) {
+export default function Login({ status, canResetPassword }: Props) {
     return (
         <AuthLayout
             title="Аккаунтыңызға кіріңіз"
@@ -36,7 +33,10 @@ export default function Login({
                     <>
                         <div className="grid gap-6">
                             <div className="grid gap-2">
-                                <Label htmlFor="email" className="text-white/80">
+                                <Label
+                                    htmlFor="email"
+                                    className="text-white/80"
+                                >
                                     Email мекенжайы
                                 </Label>
                                 <Input
@@ -55,7 +55,10 @@ export default function Login({
 
                             <div className="grid gap-2">
                                 <div className="flex items-center">
-                                    <Label htmlFor="password" className="text-white/80">
+                                    <Label
+                                        htmlFor="password"
+                                        className="text-white/80"
+                                    >
                                         Құпия сөз
                                     </Label>
                                     {canResetPassword && (
@@ -86,16 +89,19 @@ export default function Login({
                                     id="remember"
                                     name="remember"
                                     tabIndex={3}
-                                    className="border-white/20 data-[state=checked]:bg-[#c8a44e] data-[state=checked]:border-[#c8a44e]"
+                                    className="border-white/20 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
                                 />
-                                <Label htmlFor="remember" className="text-white/60">
+                                <Label
+                                    htmlFor="remember"
+                                    className="text-white/60"
+                                >
                                     Мені есте сақтау
                                 </Label>
                             </div>
 
                             <Button
                                 type="submit"
-                                className="mt-4 w-full bg-[#c8a44e] text-[#0f1b3d] font-bold hover:bg-[#e3c97a] shadow-lg shadow-[#c8a44e]/20"
+                                className="mt-4 w-full bg-[#c8a44e] font-bold text-[#0f1b3d] shadow-lg shadow-[#c8a44e]/20 hover:bg-[#e3c97a]"
                                 tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
@@ -104,7 +110,6 @@ export default function Login({
                                 Кіру
                             </Button>
                         </div>
-
                     </>
                 )}
             </Form>

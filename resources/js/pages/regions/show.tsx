@@ -46,8 +46,8 @@ import {
     TableHead,
     TableHeader,
     TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+} from '@/components/ui/table';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
 
@@ -71,8 +71,8 @@ interface InfrastructureData {
 interface Region {
     id: number;
     name: string;
-    geometry: { lat: number, lng: number }[] | null;
-    location?: { lat: number, lng: number }[] | null;
+    geometry: { lat: number; lng: number }[] | null;
+    location?: { lat: number; lng: number }[] | null;
 }
 
 interface Sez {
@@ -82,7 +82,7 @@ interface Sez {
     total_area: number;
     description: string;
     infrastructure?: InfrastructureData | null;
-    location?: { lat: number, lng: number }[] | null;
+    location?: { lat: number; lng: number }[] | null;
     issues_count?: number;
 }
 
@@ -93,7 +93,7 @@ interface IndustrialZone {
     total_area: number;
     description: string;
     infrastructure?: InfrastructureData | null;
-    location?: { lat: number, lng: number }[] | null;
+    location?: { lat: number; lng: number }[] | null;
     issues_count?: number;
 }
 interface SubsoilUser {
@@ -104,7 +104,7 @@ interface SubsoilUser {
     license_status: string;
     license_start: string | null;
     license_end: string | null;
-    location?: { lat: number, lng: number }[] | null;
+    location?: { lat: number; lng: number }[] | null;
     issues_count?: number;
 }
 
@@ -157,7 +157,14 @@ function SortableProjectRow({
     onClick: () => void;
     children: React.ReactNode;
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
     return (
         <tr
             ref={setNodeRef}
@@ -168,19 +175,21 @@ function SortableProjectRow({
                 position: isDragging ? 'relative' : undefined,
                 zIndex: isDragging ? 10 : undefined,
             }}
-            className={`border-b cursor-pointer transition-colors ${
-                isSelected ? 'bg-[#0f1b3d]/5 border-l-2 border-l-[#0f1b3d]' : 'hover:bg-gray-50'
+            className={`cursor-pointer border-b transition-colors ${
+                isSelected
+                    ? 'border-l-2 border-l-[#0f1b3d] bg-[#0f1b3d]/5'
+                    : 'hover:bg-gray-50'
             }`}
             onClick={onClick}
         >
-            <td className="w-6 py-3 pl-3 pr-0">
+            <td className="w-6 py-3 pr-0 pl-3">
                 <button
                     {...attributes}
                     {...listeners}
                     className={`touch-none ${
                         canReorder
-                            ? 'cursor-grab active:cursor-grabbing text-gray-300 hover:text-gray-500'
-                            : 'cursor-default text-gray-200 pointer-events-none'
+                            ? 'cursor-grab text-gray-300 hover:text-gray-500 active:cursor-grabbing'
+                            : 'pointer-events-none cursor-default text-gray-200'
                     }`}
                     onClick={(e) => e.stopPropagation()}
                     tabIndex={-1}
@@ -194,23 +203,48 @@ function SortableProjectRow({
     );
 }
 
-export default function Show({ region, projects, sezs, industrialZones, subsoilUsers, stats }: Props) {
+export default function Show({
+    region,
+    projects,
+    sezs,
+    industrialZones,
+    subsoilUsers,
+    stats,
+}: Props) {
     const { auth, csrf_token } = usePage().props;
-    const isSuperAdmin = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'superadmin';
-    const isInvest = (auth as { user: { role_model?: { name?: string | null } | null } }).user?.role_model?.name === 'invest';
+    const isSuperAdmin =
+        (auth as { user: { role_model?: { name?: string | null } | null } })
+            .user?.role_model?.name === 'superadmin';
+    const isInvest =
+        (auth as { user: { role_model?: { name?: string | null } | null } })
+            .user?.role_model?.name === 'invest';
 
     const [activeTab, setActiveTab] = useState('all');
-    const [selectedEntityId, setSelectedEntityId] = useState<number | null>(null);
-    const [selectedEntityType, setSelectedEntityType] = useState<'sez' | 'iz' | 'subsoil' | null>(null);
-    const [mapSelectedEntityId, setMapSelectedEntityId] = useState<number | null>(null);
-    const [mapSelectedEntityType, setMapSelectedEntityType] = useState<'sez' | 'iz' | 'subsoil' | null>(null);
+    const [selectedEntityId, setSelectedEntityId] = useState<number | null>(
+        null,
+    );
+    const [selectedEntityType, setSelectedEntityType] = useState<
+        'sez' | 'iz' | 'subsoil' | null
+    >(null);
+    const [mapSelectedEntityId, setMapSelectedEntityId] = useState<
+        number | null
+    >(null);
+    const [mapSelectedEntityType, setMapSelectedEntityType] = useState<
+        'sez' | 'iz' | 'subsoil' | null
+    >(null);
 
     // Selected entity IDs per tab for filtering projects
     const [selectedSezId, setSelectedSezId] = useState<number | null>(null);
     const [selectedIzId, setSelectedIzId] = useState<number | null>(null);
-    const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(null);
-    const [selectedSubsoilStatus, setSelectedSubsoilStatus] = useState<string | null>(null);
-    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(null);
+    const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(
+        null,
+    );
+    const [selectedSubsoilStatus, setSelectedSubsoilStatus] = useState<
+        string | null
+    >(null);
+    const [selectedProjectId, setSelectedProjectId] = useState<number | null>(
+        null,
+    );
 
     // Pagination state
     const ITEMS_PER_PAGE = 10;
@@ -220,7 +254,8 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     const [subsoilPage, setSubsoilPage] = useState(1);
 
     // Local ordered copy of projects for drag-and-drop reordering
-    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(projects);
+    const [orderedProjects, setOrderedProjects] =
+        useState<InvestmentProject[]>(projects);
 
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
@@ -240,7 +275,10 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         setSelectedEntityType(type);
     };
 
-    const handleMapEntitySelect = (id: number | null, type: 'sez' | 'iz' | 'subsoil' | null) => {
+    const handleMapEntitySelect = (
+        id: number | null,
+        type: 'sez' | 'iz' | 'subsoil' | null,
+    ) => {
         setMapSelectedEntityId(id);
         setMapSelectedEntityType(type);
         setAllPage(1);
@@ -285,45 +323,70 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     // Filtered projects for each tab
     const sezProjects = React.useMemo(() => {
         if (selectedSezId) {
-            return orderedProjects.filter(p => p.sezs?.some(s => s.id === selectedSezId));
+            return orderedProjects.filter((p) =>
+                p.sezs?.some((s) => s.id === selectedSezId),
+            );
         }
-        return orderedProjects.filter(p => p.sezs && p.sezs.length > 0);
+        return orderedProjects.filter((p) => p.sezs && p.sezs.length > 0);
     }, [orderedProjects, selectedSezId]);
 
     const izProjects = React.useMemo(() => {
         if (selectedIzId) {
-            return orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === selectedIzId));
+            return orderedProjects.filter((p) =>
+                p.industrial_zones?.some((z) => z.id === selectedIzId),
+            );
         }
-        return orderedProjects.filter(p => p.industrial_zones && p.industrial_zones.length > 0);
+        return orderedProjects.filter(
+            (p) => p.industrial_zones && p.industrial_zones.length > 0,
+        );
     }, [orderedProjects, selectedIzId]);
 
     const subsoilProjects = React.useMemo(() => {
         if (selectedSubsoilId) {
-            return orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === selectedSubsoilId));
+            return orderedProjects.filter((p) =>
+                p.subsoil_users?.some((s) => s.id === selectedSubsoilId),
+            );
         }
-        return orderedProjects.filter(p => p.subsoil_users && p.subsoil_users.length > 0);
+        return orderedProjects.filter(
+            (p) => p.subsoil_users && p.subsoil_users.length > 0,
+        );
     }, [orderedProjects, selectedSubsoilId]);
 
     // Filtered subsoil users by status
     const filteredSubsoilUsers = React.useMemo(() => {
         if (selectedSubsoilStatus) {
-            return subsoilUsers.filter(su => su.license_status === selectedSubsoilStatus);
+            return subsoilUsers.filter(
+                (su) => su.license_status === selectedSubsoilStatus,
+            );
         }
         return subsoilUsers;
     }, [subsoilUsers, selectedSubsoilStatus]);
 
     // Reset pagination when filters change
-    React.useEffect(() => { setSezPage(1); }, [selectedSezId]);
-    React.useEffect(() => { setIzPage(1); }, [selectedIzId]);
-    React.useEffect(() => { setSubsoilPage(1); }, [selectedSubsoilStatus]);
-    React.useEffect(() => { setAllPage(1); }, [mapSelectedEntityId, mapSelectedEntityType]);
+    React.useEffect(() => {
+        setSezPage(1);
+    }, [selectedSezId]);
+    React.useEffect(() => {
+        setIzPage(1);
+    }, [selectedIzId]);
+    React.useEffect(() => {
+        setSubsoilPage(1);
+    }, [selectedSubsoilStatus]);
+    React.useEffect(() => {
+        setAllPage(1);
+    }, [mapSelectedEntityId, mapSelectedEntityType]);
 
     // Subsoil status counts
     const subsoilStatusCounts = React.useMemo(() => {
-        const counts: Record<string, number> = { active: 0, expired: 0, suspended: 0, illegal: 0 };
-        subsoilUsers.forEach(su => {
+        const counts: Record<string, number> = {
+            active: 0,
+            expired: 0,
+            suspended: 0,
+            illegal: 0,
+        };
+        subsoilUsers.forEach((su) => {
             if (counts[su.license_status] !== undefined) {
-                counts[su.license_status]++
+                counts[su.license_status]++;
             }
         });
         return counts;
@@ -332,7 +395,9 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     // Total subsoil area
     const totalSubsoilArea = React.useMemo(() => {
         const users = selectedSubsoilStatus
-            ? subsoilUsers.filter(su => su.license_status === selectedSubsoilStatus)
+            ? subsoilUsers.filter(
+                  (su) => su.license_status === selectedSubsoilStatus,
+              )
             : subsoilUsers;
         return users.reduce((acc, su) => acc + Number(su.total_area || 0), 0);
     }, [subsoilUsers, selectedSubsoilStatus]);
@@ -347,7 +412,11 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         }).format(area);
     };
 
-    const renderPagination = (totalItems: number, currentPage: number, setPage: (page: number) => void) => {
+    const renderPagination = (
+        totalItems: number,
+        currentPage: number,
+        setPage: (page: number) => void,
+    ) => {
         const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
         if (totalPages <= 1) return null;
 
@@ -357,12 +426,17 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         if (endPage - startPage + 1 < maxVisible) {
             startPage = Math.max(1, endPage - maxVisible + 1);
         }
-        const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+        const pages = Array.from(
+            { length: endPage - startPage + 1 },
+            (_, i) => startPage + i,
+        );
 
         return (
             <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
                 <span className="text-xs text-gray-500">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} / {totalItems}
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                    {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} /{' '}
+                    {totalItems}
                 </span>
                 <div className="flex items-center gap-1">
                     <Button
@@ -376,8 +450,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                     </Button>
                     {startPage > 1 && (
                         <>
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs" onClick={() => setPage(1)}>1</Button>
-                            {startPage > 2 && <span className="text-xs text-gray-400 px-1">…</span>}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-xs"
+                                onClick={() => setPage(1)}
+                            >
+                                1
+                            </Button>
+                            {startPage > 2 && (
+                                <span className="px-1 text-xs text-gray-400">
+                                    …
+                                </span>
+                            )}
                         </>
                     )}
                     {pages.map((p) => (
@@ -393,8 +478,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                     ))}
                     {endPage < totalPages && (
                         <>
-                            {endPage < totalPages - 1 && <span className="text-xs text-gray-400 px-1">…</span>}
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-xs" onClick={() => setPage(totalPages)}>{totalPages}</Button>
+                            {endPage < totalPages - 1 && (
+                                <span className="px-1 text-xs text-gray-400">
+                                    …
+                                </span>
+                            )}
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0 text-xs"
+                                onClick={() => setPage(totalPages)}
+                            >
+                                {totalPages}
+                            </Button>
                         </>
                     )}
                     <Button
@@ -415,15 +511,21 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         const sectors: string[] = [];
 
         if (project.sezs && project.sezs.length > 0) {
-            sectors.push(...project.sezs.map(sez => `АЭА: ${sez.name}`));
+            sectors.push(...project.sezs.map((sez) => `АЭА: ${sez.name}`));
         }
 
         if (project.industrial_zones && project.industrial_zones.length > 0) {
-            sectors.push(...project.industrial_zones.map(iz => `ИА: ${iz.name}`));
+            sectors.push(
+                ...project.industrial_zones.map((iz) => `ИА: ${iz.name}`),
+            );
         }
 
         if (project.subsoil_users && project.subsoil_users.length > 0) {
-            sectors.push(...project.subsoil_users.map(su => `Жер қойнауын пайдалану: ${su.name}`));
+            sectors.push(
+                ...project.subsoil_users.map(
+                    (su) => `Жер қойнауын пайдалану: ${su.name}`,
+                ),
+            );
         }
 
         return sectors.length > 0 ? sectors.join(', ') : '—';
@@ -451,61 +553,118 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         return classes[status] || 'text-gray-700 border-gray-200 bg-gray-50';
     };
 
-    const licenseStatusMap: Record<string, { label: string; color?: string }> = {
-        active: { label: 'Белсенді', color: 'bg-green-100 text-green-800' },
-        expired: { label: 'Мерзімі өткен', color: 'bg-gray-100 text-gray-800' },
-        suspended: { label: 'Тоқтатылған', color: 'bg-amber-100 text-amber-800' },
-        illegal: { label: 'Заңсыз', color: 'bg-red-600 text-white' },
-    };
+    const licenseStatusMap: Record<string, { label: string; color?: string }> =
+        {
+            active: { label: 'Белсенді', color: 'bg-green-100 text-green-800' },
+            expired: {
+                label: 'Мерзімі өткен',
+                color: 'bg-gray-100 text-gray-800',
+            },
+            suspended: {
+                label: 'Тоқтатылған',
+                color: 'bg-amber-100 text-amber-800',
+            },
+            illegal: { label: 'Заңсыз', color: 'bg-red-600 text-white' },
+        };
 
-    const renderInfrastructureCard = (title: string, data?: InfrastructureData | null) => {
+    const renderInfrastructureCard = (
+        title: string,
+        data?: InfrastructureData | null,
+    ) => {
         if (!data) return null;
 
         const items = [
-            { key: 'electricity', name: "Электрмен жабдықтау", icon: Zap, val: data.electricity, unit: 'МВт' },
-            { key: 'gas', name: "Газ", icon: Flame, val: data.gas, unit: 'м³/сағ' },
-            { key: 'water', name: "Сумен жабдықтау", icon: Droplets, val: data.water, unit: 'м³/тәу' },
-            { key: 'roads', name: "Жолдар", icon: Car, val: data.roads, unit: 'км' },
-            { key: 'railway', name: "Теміржол тұйығы", icon: TrainFront, val: data.railway, unit: 'км' },
-            { key: 'internet', name: "Интернет", icon: Wifi, val: data.internet, unit: '' },
-        ].filter(i => i.val && i.val.available !== undefined);
+            {
+                key: 'electricity',
+                name: 'Электрмен жабдықтау',
+                icon: Zap,
+                val: data.electricity,
+                unit: 'МВт',
+            },
+            {
+                key: 'gas',
+                name: 'Газ',
+                icon: Flame,
+                val: data.gas,
+                unit: 'м³/сағ',
+            },
+            {
+                key: 'water',
+                name: 'Сумен жабдықтау',
+                icon: Droplets,
+                val: data.water,
+                unit: 'м³/тәу',
+            },
+            {
+                key: 'roads',
+                name: 'Жолдар',
+                icon: Car,
+                val: data.roads,
+                unit: 'км',
+            },
+            {
+                key: 'railway',
+                name: 'Теміржол тұйығы',
+                icon: TrainFront,
+                val: data.railway,
+                unit: 'км',
+            },
+            {
+                key: 'internet',
+                name: 'Интернет',
+                icon: Wifi,
+                val: data.internet,
+                unit: '',
+            },
+        ].filter((i) => i.val && i.val.available !== undefined);
 
         if (items.length === 0) return null;
 
         return (
-            <Card className="border-gray-100 shadow-none mt-6">
-                <CardHeader className="pb-4 border-b border-gray-100">
-                    <CardTitle className="text-base font-semibold text-[#0f1b3d]">{title}</CardTitle>
+            <Card className="mt-6 border-gray-100 shadow-none">
+                <CardHeader className="border-b border-gray-100 pb-4">
+                    <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                        {title}
+                    </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
                     <div className="divide-y divide-gray-100">
                         {items.map((item, idx) => {
-                             const active = item.val?.available;
-                             const detail = item.val?.capacity || item.val?.type || item.val?.distance || '';
-                             
-                             return (
-                                <div key={idx} className="flex items-center justify-between p-4 hover:bg-gray-50/50 transition-colors">
+                            const active = item.val?.available;
+                            const detail =
+                                item.val?.capacity ||
+                                item.val?.type ||
+                                item.val?.distance ||
+                                '';
+
+                            return (
+                                <div
+                                    key={idx}
+                                    className="flex items-center justify-between p-4 transition-colors hover:bg-gray-50/50"
+                                >
                                     <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-gray-50 rounded-md text-gray-500">
+                                        <div className="rounded-md bg-gray-50 p-2 text-gray-500">
                                             <item.icon className="h-4 w-4" />
                                         </div>
-                                        <span className="font-medium text-sm text-gray-700">{item.name}</span>
+                                        <span className="text-sm font-medium text-gray-700">
+                                            {item.name}
+                                        </span>
                                     </div>
-                                    <div className="text-right flex flex-col items-end">
-                                        <Badge variant="outline" className={`
-                                            ${active ? 'text-emerald-700 bg-emerald-50 border-emerald-100' : 'text-amber-700 bg-amber-50 border-amber-100'}
-                                            font-medium mb-0.5 border text-[10px] px-1.5 py-0 h-5
-                                        `}>
+                                    <div className="flex flex-col items-end text-right">
+                                        <Badge
+                                            variant="outline"
+                                            className={` ${active ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'} mb-0.5 h-5 border px-1.5 py-0 text-[10px] font-medium`}
+                                        >
                                             {active ? 'Қолжетімді' : 'Жоқ'}
                                         </Badge>
                                         {detail && (
-                                            <div className="text-[10px] text-gray-400 font-medium mt-0.5">
+                                            <div className="mt-0.5 text-[10px] font-medium text-gray-400">
                                                 {detail}
                                             </div>
                                         )}
                                     </div>
                                 </div>
-                             )
+                            );
                         })}
                     </div>
                 </CardContent>
@@ -514,19 +673,32 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
     };
 
     // Derived stats
-    const totalSezArea = sezs.reduce((acc, curr) => acc + Number(curr.total_area), 0);
+    const totalSezArea = sezs.reduce(
+        (acc, curr) => acc + Number(curr.total_area),
+        0,
+    );
 
-    const totalIzArea = industrialZones.reduce((acc, curr) => acc + Number(curr.total_area), 0);
+    const totalIzArea = industrialZones.reduce(
+        (acc, curr) => acc + Number(curr.total_area),
+        0,
+    );
 
     // Helper to safely get lat/lng
-    function getLatLng(point: Record<string, unknown> | unknown[] | null): { lat: number, lng: number } | null {
+    function getLatLng(
+        point: Record<string, unknown> | unknown[] | null,
+    ): { lat: number; lng: number } | null {
         if (!point) return null;
-        let lat = NaN, lng = NaN;
+        let lat = NaN,
+            lng = NaN;
 
         if (Array.isArray(point) && point.length >= 2) {
             lat = Number(point[0]);
             lng = Number(point[1]);
-        } else if (typeof point === 'object' && 'lat' in point && 'lng' in point) {
+        } else if (
+            typeof point === 'object' &&
+            'lat' in point &&
+            'lng' in point
+        ) {
             // Handle corrupted data where lat/lng are arrays instead of numbers
             let rawLat = point.lat;
             let rawLng = point.lng;
@@ -544,17 +716,29 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     // Calculate map center (supports multi-polygon)
     let mapCenter: [number, number] | undefined = undefined;
-    if (region.geometry && Array.isArray(region.geometry) && region.geometry.length > 0) {
+    if (
+        region.geometry &&
+        Array.isArray(region.geometry) &&
+        region.geometry.length > 0
+    ) {
         // Flatten multi-polygon or single polygon to all points
-        const allGeo = Array.isArray(region.geometry[0]) ? region.geometry : [region.geometry];
+        const allGeo = Array.isArray(region.geometry[0])
+            ? region.geometry
+            : [region.geometry];
         const points = (allGeo as unknown[][])
             .flat()
             .map((p) => getLatLng(p as Record<string, unknown>))
             .filter((p): p is { lat: number; lng: number } => p !== null);
         if (points.length > 0) {
             mapCenter = [
-                points.reduce((sum: number, p: { lat: number }) => sum + p.lat, 0) / points.length,
-                points.reduce((sum: number, p: { lng: number }) => sum + p.lng, 0) / points.length
+                points.reduce(
+                    (sum: number, p: { lat: number }) => sum + p.lat,
+                    0,
+                ) / points.length,
+                points.reduce(
+                    (sum: number, p: { lng: number }) => sum + p.lng,
+                    0,
+                ) / points.length,
             ];
         }
     }
@@ -568,15 +752,24 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
     );
 
     const saveProjectOrder = (newOrder: InvestmentProject[]) => {
-        const csrfToken = (csrf_token as string) || 
-            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+        const csrfToken =
+            (csrf_token as string) ||
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ||
+            '';
         fetch(`/regions/${region.id}/projects/reorder`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfToken,
+            },
             body: JSON.stringify({ project_ids: newOrder.map((p) => p.id) }),
         });
     };
@@ -592,12 +785,19 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         saveProjectOrder(newOrder);
     };
 
-    const [downloadingPresentations, setDownloadingPresentations] = useState(false);
+    const [downloadingPresentations, setDownloadingPresentations] =
+        useState(false);
 
-    const handleBulkPresentationDownload = (projectList: InvestmentProject[], currentPage: number) => {
+    const handleBulkPresentationDownload = (
+        projectList: InvestmentProject[],
+        currentPage: number,
+    ) => {
         const paginatedIds = projectList
-            .slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
-            .map(p => p.id);
+            .slice(
+                (currentPage - 1) * ITEMS_PER_PAGE,
+                currentPage * ITEMS_PER_PAGE,
+            )
+            .map((p) => p.id);
 
         if (paginatedIds.length === 0) return;
 
@@ -610,9 +810,13 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         form.style.display = 'none';
 
         // CSRF token
-        const csrfTokenValue = (csrf_token as string) || 
-            document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        
+        const csrfTokenValue =
+            (csrf_token as string) ||
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') ||
+            '';
+
         if (csrfTokenValue) {
             const csrfInput = document.createElement('input');
             csrfInput.type = 'hidden';
@@ -621,7 +825,7 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
             form.appendChild(csrfInput);
         }
 
-        paginatedIds.forEach(id => {
+        paginatedIds.forEach((id) => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'project_ids[]';
@@ -645,38 +849,73 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
         >
             <Head title={region.name} />
 
-            <div className="flex flex-col gap-6 p-4 md:p-8 max-w-[1600px]">
+            <div className="flex max-w-[1600px] flex-col gap-6 p-4 md:p-8">
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b border-gray-100 pb-6">
+                <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-100 pb-6 md:flex-row md:items-end">
                     <div>
-                        <div className="flex items-center gap-3 mb-2">
+                        <div className="mb-2 flex items-center gap-3">
                             <Globe className="h-8 w-8 text-[#0f1b3d]" />
-                            <h1 className="text-3xl font-semibold tracking-tight text-[#0f1b3d] flex items-center gap-2">
+                            <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight text-[#0f1b3d]">
                                 {region.name}
-                                {selectedSezId && sezs.find(s => s.id === selectedSezId) && (
-                                    <>
-                                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                                        <span className="text-violet-600">{sezs.find(s => s.id === selectedSezId)?.name}</span>
-                                    </>
-                                )}
-                                {selectedIzId && industrialZones.find(z => z.id === selectedIzId) && (
-                                    <>
-                                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                                        <span className="text-amber-600">{industrialZones.find(z => z.id === selectedIzId)?.name}</span>
-                                    </>
-                                )}
-                                {selectedSubsoilId && subsoilUsers.find(s => s.id === selectedSubsoilId) && (
-                                    <>
-                                        <ChevronRight className="h-5 w-5 text-gray-400" />
-                                        <span className="text-gray-600">{subsoilUsers.find(s => s.id === selectedSubsoilId)?.name}</span>
-                                    </>
-                                )}
+                                {selectedSezId &&
+                                    sezs.find(
+                                        (s) => s.id === selectedSezId,
+                                    ) && (
+                                        <>
+                                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                                            <span className="text-violet-600">
+                                                {
+                                                    sezs.find(
+                                                        (s) =>
+                                                            s.id ===
+                                                            selectedSezId,
+                                                    )?.name
+                                                }
+                                            </span>
+                                        </>
+                                    )}
+                                {selectedIzId &&
+                                    industrialZones.find(
+                                        (z) => z.id === selectedIzId,
+                                    ) && (
+                                        <>
+                                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                                            <span className="text-amber-600">
+                                                {
+                                                    industrialZones.find(
+                                                        (z) =>
+                                                            z.id ===
+                                                            selectedIzId,
+                                                    )?.name
+                                                }
+                                            </span>
+                                        </>
+                                    )}
+                                {selectedSubsoilId &&
+                                    subsoilUsers.find(
+                                        (s) => s.id === selectedSubsoilId,
+                                    ) && (
+                                        <>
+                                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                                            <span className="text-gray-600">
+                                                {
+                                                    subsoilUsers.find(
+                                                        (s) =>
+                                                            s.id ===
+                                                            selectedSubsoilId,
+                                                    )?.name
+                                                }
+                                            </span>
+                                        </>
+                                    )}
                             </h1>
                         </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm text-gray-500 font-medium">
+                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-gray-500">
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Аумағы:</span>
-                                <span className="text-[#0f1b3d]">{formatArea(stats.totalArea)} га</span>
+                                <span className="text-[#0f1b3d]">
+                                    {formatArea(stats.totalArea)} га
+                                </span>
                             </div>
                             {/* <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Күйі:</span>
@@ -684,40 +923,70 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             </div> */}
                             <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Облыс:</span>
-                                <span className="text-[#0f1b3d] flex items-center cursor-pointer hover:underline">
-                                    <Link href="/dashboard">Түркістан облысы</Link> <ChevronRight className="h-4 w-4" />
+                                <span className="flex cursor-pointer items-center text-[#0f1b3d] hover:underline">
+                                    <Link href="/dashboard">
+                                        Түркістан облысы
+                                    </Link>{' '}
+                                    <ChevronRight className="h-4 w-4" />
                                 </span>
                             </div>
                         </div>
                     </div>
                     <div className="flex gap-3">
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 text-green-700 rounded-md border border-green-200 text-sm font-medium">
-                            <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс істеуде
+                        <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700">
+                            <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс
+                            істеуде
                         </div>
                     </div>
                 </div>
 
-                <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                <Tabs
+                    value={activeTab}
+                    onValueChange={handleTabChange}
+                    className="w-full"
+                >
+                    <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
                         {/* Left Column (Map & Projects) */}
-                        <div className="lg:col-span-8 space-y-8">
+                        <div className="space-y-8 lg:col-span-8">
                             {/* Map Container */}
-                            <div className="relative rounded-xl overflow-hidden border border-gray-100 bg-white group">
-                                <div className="h-[500px] w-full relative z-0">
-                                    <Map 
-                                        regions={[region]} 
+                            <div className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                <div className="relative z-0 h-[500px] w-full">
+                                    <Map
+                                        regions={[region]}
                                         projects={mapProjects}
-                                        sezs={activeTab === 'sez' || activeTab === 'all' ? sezs : []}
-                                        industrialZones={activeTab === 'iz' || activeTab === 'all' ? industrialZones : []}
-                                        subsoilUsers={activeTab === 'subsoil' ? filteredSubsoilUsers : activeTab === 'all' ? subsoilUsers : []}
-                                        selectedEntityId={selectedEntityId ?? mapSelectedEntityId}
-                                        selectedEntityType={selectedEntityType ?? mapSelectedEntityType}
+                                        sezs={
+                                            activeTab === 'sez' ||
+                                            activeTab === 'all'
+                                                ? sezs
+                                                : []
+                                        }
+                                        industrialZones={
+                                            activeTab === 'iz' ||
+                                            activeTab === 'all'
+                                                ? industrialZones
+                                                : []
+                                        }
+                                        subsoilUsers={
+                                            activeTab === 'subsoil'
+                                                ? filteredSubsoilUsers
+                                                : activeTab === 'all'
+                                                  ? subsoilUsers
+                                                  : []
+                                        }
+                                        selectedEntityId={
+                                            selectedEntityId ??
+                                            mapSelectedEntityId
+                                        }
+                                        selectedEntityType={
+                                            selectedEntityType ??
+                                            mapSelectedEntityType
+                                        }
                                         selectedProjectId={selectedProjectId}
-                                        zoom={13} 
-                                        center={mapCenter} 
-                                        className="h-full w-full" 
-                                        fitBounds={true} 
-                                        showPolygons={true} 
+                                        zoom={13}
+                                        center={mapCenter}
+                                        className="h-full w-full"
+                                        fitBounds={true}
+                                        showPolygons={true}
                                         activeTab={activeTab}
                                         interactive={true}
                                         onEntitySelect={handleMapEntitySelect}
@@ -725,41 +994,99 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                     />
                                 </div>
 
-                                <div className="absolute bottom-4 left-4 bg-white/90 backdrop-blur-sm border border-gray-100 p-3 rounded-lg z-[400] text-sm space-y-1.5">
+                                <div className="absolute bottom-4 left-4 z-[400] space-y-1.5 rounded-lg border border-gray-100 bg-white/90 p-3 text-sm backdrop-blur-sm">
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Аудан</span>
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#3b82f6',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Аудан
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#8b5cf6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">АЭА</span>
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#8b5cf6',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            АЭА
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#f59e0b' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Индустриялық аймақ</span>
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#f59e0b',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Индустриялық аймақ
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#4b5563' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Жер қойнауын пайдаланушы</span>
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#4b5563',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Жер қойнауын пайдаланушы
+                                        </span>
                                     </div>
-                                    <div className="border-t border-gray-200 pt-1.5 mt-1">
-                                        <span className="font-semibold text-gray-700 text-[10px] uppercase tracking-wide">Инвестициялық жобалар</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Жоспарлау</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#22c55e' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Іске қосылған</span>
-                                    </div>
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#eab308' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Іске асыру</span>
+                                    <div className="mt-1 border-t border-gray-200 pt-1.5">
+                                        <span className="text-[10px] font-semibold tracking-wide text-gray-700 uppercase">
+                                            Инвестициялық жобалар
+                                        </span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
-                                        <div className="w-3 h-3 rounded-sm" style={{ backgroundColor: '#ef4444' }}></div>
-                                        <span className="font-medium text-gray-600 text-xs">Тоқтатылған</span>
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#3b82f6',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Жоспарлау
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2.5">
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#22c55e',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Іске қосылған
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2.5">
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#eab308',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Іске асыру
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2.5">
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#ef4444',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Тоқтатылған
+                                        </span>
                                     </div>
                                 </div>
 
@@ -777,34 +1104,89 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                             {/* Projects / Tabs Section */}
                             <div className="w-full">
-                                <TabsContent value="all" className="mt-0 space-y-4">
-                                    <div className="flex items-center justify-between mb-4">
+                                <TabsContent
+                                    value="all"
+                                    className="mt-0 space-y-4"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
-                                            {mapSelectedEntityType === 'sez' ? `АЭА жобалары` :
-                                             mapSelectedEntityType === 'iz' ? `ИА жобалары` :
-                                             mapSelectedEntityType === 'subsoil' ? `Жер қойнауын пайдаланушы жобалары` :
-                                             'Инвестициялық жобалар'}
+                                            {mapSelectedEntityType === 'sez'
+                                                ? `АЭА жобалары`
+                                                : mapSelectedEntityType === 'iz'
+                                                  ? `ИА жобалары`
+                                                  : mapSelectedEntityType ===
+                                                      'subsoil'
+                                                    ? `Жер қойнауын пайдаланушы жобалары`
+                                                    : 'Инвестициялық жобалар'}
                                         </h2>
                                         <div className="flex items-center gap-2">
                                             {mapSelectedEntityType && (
-                                                <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setMapSelectedEntityId(null); setMapSelectedEntityType(null); }}>
+                                                <Button
+                                                    variant="ghost"
+                                                    className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                    onClick={() => {
+                                                        setMapSelectedEntityId(
+                                                            null,
+                                                        );
+                                                        setMapSelectedEntityType(
+                                                            null,
+                                                        );
+                                                    }}
+                                                >
                                                     Сүзгіні қалпына келтіру
                                                 </Button>
                                             )}
                                             <Button
                                                 variant="outline"
                                                 size="sm"
-                                                className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
-                                                disabled={downloadingPresentations}
+                                                className="h-8 gap-1.5 border-[#0f1b3d]/20 text-xs text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                                disabled={
+                                                    downloadingPresentations
+                                                }
                                                 onClick={() => {
-                                                    const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
-                                                        ? orderedProjects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
-                                                        : mapSelectedEntityType === 'iz' && mapSelectedEntityId
-                                                        ? orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
-                                                        : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
-                                                        ? orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
-                                                        : orderedProjects;
-                                                    handleBulkPresentationDownload(filteredProjects, allPage);
+                                                    const filteredProjects =
+                                                        mapSelectedEntityType ===
+                                                            'sez' &&
+                                                        mapSelectedEntityId
+                                                            ? orderedProjects.filter(
+                                                                  (p) =>
+                                                                      p.sezs?.some(
+                                                                          (s) =>
+                                                                              s.id ===
+                                                                              mapSelectedEntityId,
+                                                                      ),
+                                                              )
+                                                            : mapSelectedEntityType ===
+                                                                    'iz' &&
+                                                                mapSelectedEntityId
+                                                              ? orderedProjects.filter(
+                                                                    (p) =>
+                                                                        p.industrial_zones?.some(
+                                                                            (
+                                                                                z,
+                                                                            ) =>
+                                                                                z.id ===
+                                                                                mapSelectedEntityId,
+                                                                        ),
+                                                                )
+                                                              : mapSelectedEntityType ===
+                                                                      'subsoil' &&
+                                                                  mapSelectedEntityId
+                                                                ? orderedProjects.filter(
+                                                                      (p) =>
+                                                                          p.subsoil_users?.some(
+                                                                              (
+                                                                                  s,
+                                                                              ) =>
+                                                                                  s.id ===
+                                                                                  mapSelectedEntityId,
+                                                                          ),
+                                                                  )
+                                                                : orderedProjects;
+                                                    handleBulkPresentationDownload(
+                                                        filteredProjects,
+                                                        allPage,
+                                                    );
                                                 }}
                                             >
                                                 <Presentation className="h-3.5 w-3.5" />
@@ -817,166 +1199,373 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                             </Link> */}
                                         </div>
                                     </div>
-                                    <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
+                                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
                                         {(() => {
-                                            const filteredProjects = mapSelectedEntityType === 'sez' && mapSelectedEntityId
-                                                ? orderedProjects.filter(p => p.sezs?.some(s => s.id === mapSelectedEntityId))
-                                                : mapSelectedEntityType === 'iz' && mapSelectedEntityId
-                                                ? orderedProjects.filter(p => p.industrial_zones?.some(z => z.id === mapSelectedEntityId))
-                                                : mapSelectedEntityType === 'subsoil' && mapSelectedEntityId
-                                                ? orderedProjects.filter(p => p.subsoil_users?.some(s => s.id === mapSelectedEntityId))
-                                                : orderedProjects;
-                                            const paginatedAll = filteredProjects.slice((allPage - 1) * ITEMS_PER_PAGE, allPage * ITEMS_PER_PAGE);
+                                            const filteredProjects =
+                                                mapSelectedEntityType ===
+                                                    'sez' && mapSelectedEntityId
+                                                    ? orderedProjects.filter(
+                                                          (p) =>
+                                                              p.sezs?.some(
+                                                                  (s) =>
+                                                                      s.id ===
+                                                                      mapSelectedEntityId,
+                                                              ),
+                                                      )
+                                                    : mapSelectedEntityType ===
+                                                            'iz' &&
+                                                        mapSelectedEntityId
+                                                      ? orderedProjects.filter(
+                                                            (p) =>
+                                                                p.industrial_zones?.some(
+                                                                    (z) =>
+                                                                        z.id ===
+                                                                        mapSelectedEntityId,
+                                                                ),
+                                                        )
+                                                      : mapSelectedEntityType ===
+                                                              'subsoil' &&
+                                                          mapSelectedEntityId
+                                                        ? orderedProjects.filter(
+                                                              (p) =>
+                                                                  p.subsoil_users?.some(
+                                                                      (s) =>
+                                                                          s.id ===
+                                                                          mapSelectedEntityId,
+                                                                  ),
+                                                          )
+                                                        : orderedProjects;
+                                            const paginatedAll =
+                                                filteredProjects.slice(
+                                                    (allPage - 1) *
+                                                        ITEMS_PER_PAGE,
+                                                    allPage * ITEMS_PER_PAGE,
+                                                );
                                             return (
                                                 <>
-                                                    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                                    <DndContext
+                                                        sensors={sensors}
+                                                        collisionDetection={
+                                                            closestCenter
+                                                        }
+                                                        onDragEnd={
+                                                            handleDragEnd
+                                                        }
+                                                    >
                                                         <Table>
                                                             <TableHeader className="bg-[#F0F4FA]">
                                                                 <TableRow>
                                                                     <TableHead className="w-6" />
-                                                                    <TableHead>Жоба</TableHead>
-                                                                    <TableHead>Сектор</TableHead>
-                                                                    <TableHead>Күйі</TableHead>
-                                                                    <TableHead>Жоба түрі</TableHead>
-                                                                    <TableHead className="text-right">Инвестициялар</TableHead>
+                                                                    <TableHead>
+                                                                        Жоба
+                                                                    </TableHead>
+                                                                    <TableHead>
+                                                                        Сектор
+                                                                    </TableHead>
+                                                                    <TableHead>
+                                                                        Күйі
+                                                                    </TableHead>
+                                                                    <TableHead>
+                                                                        Жоба
+                                                                        түрі
+                                                                    </TableHead>
+                                                                    <TableHead className="text-right">
+                                                                        Инвестициялар
+                                                                    </TableHead>
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
-                                                                {paginatedAll.length > 0 ? (
-                                                                    <SortableContext items={paginatedAll.map(p => p.id)} strategy={verticalListSortingStrategy}>
-                                                                        {paginatedAll.map((project) => (
-                                                                            <SortableProjectRow
-                                                                                key={project.id}
-                                                                                id={project.id}
-                                                                                isSelected={selectedProjectId === project.id}
-                                                                                canReorder={isSuperAdmin || isInvest}
-                                                                                onClick={() => handleProjectSelect(project.id)}
-                                                                            >
-                                                                                <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                                                    <Link
-                                                                                        href={`/investment-projects/${project.id}`}
-                                                                                        className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                                        onClick={(e) => e.stopPropagation()}
-                                                                                    >
-                                                                                        {project.name}
-                                                                                    </Link>
-                                                                                </TableCell>
-                                                                                <TableCell className="text-gray-500 text-sm py-3">
-                                                                                    {getSectorDisplay(project)}
-                                                                                </TableCell>
-                                                                                <TableCell className="py-3">
-                                                                                    <Badge
-                                                                                        variant="outline"
-                                                                                        className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                                                    >
-                                                                                        {getStatusLabel(project.status)}
-                                                                                    </Badge>
-                                                                                </TableCell>
-                                                                                <TableCell className="text-gray-700 font-medium text-sm py-3">
-                                                                                    {project.project_type?.name ?? '—'}
-                                                                                </TableCell>
-                                                                                <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                                                    {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
-                                                                                </TableCell>
-                                                                            </SortableProjectRow>
-                                                                        ))}
+                                                                {paginatedAll.length >
+                                                                0 ? (
+                                                                    <SortableContext
+                                                                        items={paginatedAll.map(
+                                                                            (
+                                                                                p,
+                                                                            ) =>
+                                                                                p.id,
+                                                                        )}
+                                                                        strategy={
+                                                                            verticalListSortingStrategy
+                                                                        }
+                                                                    >
+                                                                        {paginatedAll.map(
+                                                                            (
+                                                                                project,
+                                                                            ) => (
+                                                                                <SortableProjectRow
+                                                                                    key={
+                                                                                        project.id
+                                                                                    }
+                                                                                    id={
+                                                                                        project.id
+                                                                                    }
+                                                                                    isSelected={
+                                                                                        selectedProjectId ===
+                                                                                        project.id
+                                                                                    }
+                                                                                    canReorder={
+                                                                                        isSuperAdmin ||
+                                                                                        isInvest
+                                                                                    }
+                                                                                    onClick={() =>
+                                                                                        handleProjectSelect(
+                                                                                            project.id,
+                                                                                        )
+                                                                                    }
+                                                                                >
+                                                                                    <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                                        <Link
+                                                                                            href={`/investment-projects/${project.id}`}
+                                                                                            className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                            onClick={(
+                                                                                                e,
+                                                                                            ) =>
+                                                                                                e.stopPropagation()
+                                                                                            }
+                                                                                        >
+                                                                                            {
+                                                                                                project.name
+                                                                                            }
+                                                                                        </Link>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="py-3 text-sm text-gray-500">
+                                                                                        {getSectorDisplay(
+                                                                                            project,
+                                                                                        )}
+                                                                                    </TableCell>
+                                                                                    <TableCell className="py-3">
+                                                                                        <Badge
+                                                                                            variant="outline"
+                                                                                            className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                                        >
+                                                                                            {getStatusLabel(
+                                                                                                project.status,
+                                                                                            )}
+                                                                                        </Badge>
+                                                                                    </TableCell>
+                                                                                    <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                                        {project
+                                                                                            .project_type
+                                                                                            ?.name ??
+                                                                                            '—'}
+                                                                                    </TableCell>
+                                                                                    <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                                        {project.total_investment
+                                                                                            ? formatCurrency(
+                                                                                                  Number(
+                                                                                                      project.total_investment,
+                                                                                                  ),
+                                                                                              )
+                                                                                            : '—'}
+                                                                                    </TableCell>
+                                                                                </SortableProjectRow>
+                                                                            ),
+                                                                        )}
                                                                     </SortableContext>
                                                                 ) : (
                                                                     <TableRow>
-                                                                        <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                                                                            Жобалар туралы деректер жоқ
+                                                                        <TableCell
+                                                                            colSpan={
+                                                                                6
+                                                                            }
+                                                                            className="py-8 text-center text-gray-500"
+                                                                        >
+                                                                            Жобалар
+                                                                            туралы
+                                                                            деректер
+                                                                            жоқ
                                                                         </TableCell>
                                                                     </TableRow>
                                                                 )}
                                                             </TableBody>
                                                         </Table>
                                                     </DndContext>
-                                                    {renderPagination(filteredProjects.length, allPage, setAllPage)}
+                                                    {renderPagination(
+                                                        filteredProjects.length,
+                                                        allPage,
+                                                        setAllPage,
+                                                    )}
                                                 </>
                                             );
                                         })()}
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="sez" className="mt-0 space-y-4">
-                                    <div className="flex items-center justify-between mb-4">
+                                <TabsContent
+                                    value="sez"
+                                    className="mt-0 space-y-4"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSezId
-                                                ? `Жобалар: ${sezs.find(s => s.id === selectedSezId)?.name || 'АЭА'}`
+                                                ? `Жобалар: ${sezs.find((s) => s.id === selectedSezId)?.name || 'АЭА'}`
                                                 : 'АЭА жобалары'}
                                         </h2>
                                         {selectedSezId && (
-                                            <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSezId(null); setSelectedEntityId(null); setSelectedEntityType(null); }}>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                onClick={() => {
+                                                    setSelectedSezId(null);
+                                                    setSelectedEntityId(null);
+                                                    setSelectedEntityType(null);
+                                                }}
+                                            >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
-                                            disabled={downloadingPresentations || sezProjects.length === 0}
-                                            onClick={() => handleBulkPresentationDownload(sezProjects, sezPage)}
+                                            className="h-8 gap-1.5 border-[#0f1b3d]/20 text-xs text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                            disabled={
+                                                downloadingPresentations ||
+                                                sezProjects.length === 0
+                                            }
+                                            onClick={() =>
+                                                handleBulkPresentationDownload(
+                                                    sezProjects,
+                                                    sezPage,
+                                                )
+                                            }
                                         >
                                             <Presentation className="h-3.5 w-3.5" />
                                             Презентация
                                         </Button>
                                     </div>
-                                    <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
-                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                        <DndContext
+                                            sensors={sensors}
+                                            collisionDetection={closestCenter}
+                                            onDragEnd={handleDragEnd}
+                                        >
                                             <Table>
                                                 <TableHeader className="bg-[#F0F4FA]">
                                                     <TableRow>
                                                         <TableHead className="w-6" />
-                                                        <TableHead>Жоба</TableHead>
-                                                        <TableHead>Сектор</TableHead>
-                                                        <TableHead>Күйі</TableHead>
-                                                        <TableHead>Жоба түрі</TableHead>
-                                                        <TableHead className="text-right">Инвестициялар</TableHead>
+                                                        <TableHead>
+                                                            Жоба
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Сектор
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Күйі
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Жоба түрі
+                                                        </TableHead>
+                                                        <TableHead className="text-right">
+                                                            Инвестициялар
+                                                        </TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {sezProjects.length > 0 ? (
-                                                        <SortableContext items={sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map(p => p.id)} strategy={verticalListSortingStrategy}>
-                                                            {sezProjects.slice((sezPage - 1) * ITEMS_PER_PAGE, sezPage * ITEMS_PER_PAGE).map((project) => (
-                                                                <SortableProjectRow
-                                                                    key={project.id}
-                                                                    id={project.id}
-                                                                    isSelected={selectedProjectId === project.id}
-                                                                    canReorder={isSuperAdmin || isInvest}
-                                                                    onClick={() => handleProjectSelect(project.id)}
-                                                                >
-                                                                    <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                                        <Link
-                                                                            href={`/investment-projects/${project.id}`}
-                                                                            className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                            onClick={(e) => e.stopPropagation()}
+                                                        <SortableContext
+                                                            items={sezProjects
+                                                                .slice(
+                                                                    (sezPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    sezPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (p) => p.id,
+                                                                )}
+                                                            strategy={
+                                                                verticalListSortingStrategy
+                                                            }
+                                                        >
+                                                            {sezProjects
+                                                                .slice(
+                                                                    (sezPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    sezPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        project,
+                                                                    ) => (
+                                                                        <SortableProjectRow
+                                                                            key={
+                                                                                project.id
+                                                                            }
+                                                                            id={
+                                                                                project.id
+                                                                            }
+                                                                            isSelected={
+                                                                                selectedProjectId ===
+                                                                                project.id
+                                                                            }
+                                                                            canReorder={
+                                                                                isSuperAdmin ||
+                                                                                isInvest
+                                                                            }
+                                                                            onClick={() =>
+                                                                                handleProjectSelect(
+                                                                                    project.id,
+                                                                                )
+                                                                            }
                                                                         >
-                                                                            {project.name}
-                                                                        </Link>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-gray-500 text-sm py-3">
-                                                                        {getSectorDisplay(project)}
-                                                                    </TableCell>
-                                                                    <TableCell className="py-3">
-                                                                        <Badge
-                                                                            variant="outline"
-                                                                            className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                                        >
-                                                                            {getStatusLabel(project.status)}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-gray-700 font-medium text-sm py-3">
-                                                                                    {project.project_type?.name ?? '—'}
-                                                                                </TableCell>
-                                                                    <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                                        {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
-                                                                    </TableCell>
-                                                                </SortableProjectRow>
-                                                            ))}
+                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                                <Link
+                                                                                    href={`/investment-projects/${project.id}`}
+                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                    onClick={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        e.stopPropagation()
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        project.name
+                                                                                    }
+                                                                                </Link>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm text-gray-500">
+                                                                                {getSectorDisplay(
+                                                                                    project,
+                                                                                )}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3">
+                                                                                <Badge
+                                                                                    variant="outline"
+                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                                >
+                                                                                    {getStatusLabel(
+                                                                                        project.status,
+                                                                                    )}
+                                                                                </Badge>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                                {project
+                                                                                    .project_type
+                                                                                    ?.name ??
+                                                                                    '—'}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                                {project.total_investment
+                                                                                    ? formatCurrency(
+                                                                                          Number(
+                                                                                              project.total_investment,
+                                                                                          ),
+                                                                                      )
+                                                                                    : '—'}
+                                                                            </TableCell>
+                                                                        </SortableProjectRow>
+                                                                    ),
+                                                                )}
                                                         </SortableContext>
                                                     ) : (
                                                         <TableRow>
-                                                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                                            <TableCell
+                                                                colSpan={5}
+                                                                className="py-8 text-center text-gray-500"
+                                                            >
                                                                 Жобалар жоқ
                                                             </TableCell>
                                                         </TableRow>
@@ -984,89 +1573,189 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        {renderPagination(sezProjects.length, sezPage, setSezPage)}
+                                        {renderPagination(
+                                            sezProjects.length,
+                                            sezPage,
+                                            setSezPage,
+                                        )}
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="iz" className="mt-0 space-y-4">
-                                    <div className="flex items-center justify-between mb-4">
+                                <TabsContent
+                                    value="iz"
+                                    className="mt-0 space-y-4"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedIzId
-                                                ? `Жобалар: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИА'}`
+                                                ? `Жобалар: ${industrialZones.find((z) => z.id === selectedIzId)?.name || 'ИА'}`
                                                 : 'ИА жобалары'}
                                         </h2>
                                         {selectedIzId && (
-                                            <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedIzId(null); setSelectedEntityId(null); setSelectedEntityType(null); }}>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                onClick={() => {
+                                                    setSelectedIzId(null);
+                                                    setSelectedEntityId(null);
+                                                    setSelectedEntityType(null);
+                                                }}
+                                            >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                         <Button
                                             variant="outline"
                                             size="sm"
-                                            className="h-8 text-xs gap-1.5 border-[#0f1b3d]/20 text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
-                                            disabled={downloadingPresentations || izProjects.length === 0}
-                                            onClick={() => handleBulkPresentationDownload(izProjects, izPage)}
+                                            className="h-8 gap-1.5 border-[#0f1b3d]/20 text-xs text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                            disabled={
+                                                downloadingPresentations ||
+                                                izProjects.length === 0
+                                            }
+                                            onClick={() =>
+                                                handleBulkPresentationDownload(
+                                                    izProjects,
+                                                    izPage,
+                                                )
+                                            }
                                         >
                                             <Presentation className="h-3.5 w-3.5" />
                                             Презентация
                                         </Button>
                                     </div>
-                                    <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
-                                        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+                                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                        <DndContext
+                                            sensors={sensors}
+                                            collisionDetection={closestCenter}
+                                            onDragEnd={handleDragEnd}
+                                        >
                                             <Table>
                                                 <TableHeader className="bg-[#F0F4FA]">
                                                     <TableRow>
                                                         <TableHead className="w-6" />
-                                                        <TableHead>Жоба</TableHead>
-                                                        <TableHead>Сектор</TableHead>
-                                                        <TableHead>Күйі</TableHead>
-                                                        <TableHead>Жоба түрі</TableHead>
-                                                        <TableHead className="text-right">Инвестициялар</TableHead>
+                                                        <TableHead>
+                                                            Жоба
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Сектор
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Күйі
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Жоба түрі
+                                                        </TableHead>
+                                                        <TableHead className="text-right">
+                                                            Инвестициялар
+                                                        </TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {izProjects.length > 0 ? (
-                                                        <SortableContext items={izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map(p => p.id)} strategy={verticalListSortingStrategy}>
-                                                            {izProjects.slice((izPage - 1) * ITEMS_PER_PAGE, izPage * ITEMS_PER_PAGE).map((project) => (
-                                                                <SortableProjectRow
-                                                                    key={project.id}
-                                                                    id={project.id}
-                                                                    isSelected={selectedProjectId === project.id}
-                                                                    canReorder={isSuperAdmin || isInvest}
-                                                                    onClick={() => handleProjectSelect(project.id)}
-                                                                >
-                                                                    <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                                        <Link
-                                                                            href={`/investment-projects/${project.id}`}
-                                                                            className="hover:text-[#c8a44e] hover:underline transition-colors"
-                                                                            onClick={(e) => e.stopPropagation()}
+                                                        <SortableContext
+                                                            items={izProjects
+                                                                .slice(
+                                                                    (izPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    izPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (p) => p.id,
+                                                                )}
+                                                            strategy={
+                                                                verticalListSortingStrategy
+                                                            }
+                                                        >
+                                                            {izProjects
+                                                                .slice(
+                                                                    (izPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    izPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        project,
+                                                                    ) => (
+                                                                        <SortableProjectRow
+                                                                            key={
+                                                                                project.id
+                                                                            }
+                                                                            id={
+                                                                                project.id
+                                                                            }
+                                                                            isSelected={
+                                                                                selectedProjectId ===
+                                                                                project.id
+                                                                            }
+                                                                            canReorder={
+                                                                                isSuperAdmin ||
+                                                                                isInvest
+                                                                            }
+                                                                            onClick={() =>
+                                                                                handleProjectSelect(
+                                                                                    project.id,
+                                                                                )
+                                                                            }
                                                                         >
-                                                                            {project.name}
-                                                                        </Link>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-gray-500 text-sm py-3">
-                                                                        {getSectorDisplay(project)}
-                                                                    </TableCell>
-                                                                    <TableCell className="py-3">
-                                                                        <Badge
-                                                                            variant="outline"
-                                                                            className={`${getStatusBadgeClass(project.status)} font-medium border px-2 py-0.5 text-xs rounded-md shadow-none`}
-                                                                        >
-                                                                            {getStatusLabel(project.status)}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-gray-700 font-medium text-sm py-3">
-                                                                                    {project.project_type?.name ?? '—'}
-                                                                                </TableCell>
-                                                                    <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                                        {project.total_investment ? formatCurrency(Number(project.total_investment)) : '—'}
-                                                                    </TableCell>
-                                                                </SortableProjectRow>
-                                                            ))}
+                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                                <Link
+                                                                                    href={`/investment-projects/${project.id}`}
+                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                    onClick={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        e.stopPropagation()
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        project.name
+                                                                                    }
+                                                                                </Link>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm text-gray-500">
+                                                                                {getSectorDisplay(
+                                                                                    project,
+                                                                                )}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3">
+                                                                                <Badge
+                                                                                    variant="outline"
+                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                                >
+                                                                                    {getStatusLabel(
+                                                                                        project.status,
+                                                                                    )}
+                                                                                </Badge>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                                {project
+                                                                                    .project_type
+                                                                                    ?.name ??
+                                                                                    '—'}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                                {project.total_investment
+                                                                                    ? formatCurrency(
+                                                                                          Number(
+                                                                                              project.total_investment,
+                                                                                          ),
+                                                                                      )
+                                                                                    : '—'}
+                                                                            </TableCell>
+                                                                        </SortableProjectRow>
+                                                                    ),
+                                                                )}
                                                         </SortableContext>
                                                     ) : (
                                                         <TableRow>
-                                                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                                                            <TableCell
+                                                                colSpan={5}
+                                                                className="py-8 text-center text-gray-500"
+                                                            >
                                                                 Жобалар жоқ
                                                             </TableCell>
                                                         </TableRow>
@@ -1074,116 +1763,209 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        {renderPagination(izProjects.length, izPage, setIzPage)}
+                                        {renderPagination(
+                                            izProjects.length,
+                                            izPage,
+                                            setIzPage,
+                                        )}
                                     </div>
                                 </TabsContent>
 
-                                <TabsContent value="subsoil" className="mt-0 space-y-4">
-                                    <div className="flex items-center justify-between mb-4">
+                                <TabsContent
+                                    value="subsoil"
+                                    className="mt-0 space-y-4"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
                                         <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
                                             {selectedSubsoilStatus
                                                 ? `Жер қойнауын пайдаланушылар: ${licenseStatusMap[selectedSubsoilStatus]?.label || selectedSubsoilStatus}`
                                                 : 'Жер қойнауын пайдаланушылар'}
                                         </h2>
                                         {selectedSubsoilStatus && (
-                                            <Button variant="ghost" className="text-gray-500 hover:text-gray-700 hover:bg-gray-100 text-sm h-auto py-1 px-2" onClick={() => { setSelectedSubsoilStatus(null); }}>
+                                            <Button
+                                                variant="ghost"
+                                                className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                onClick={() => {
+                                                    setSelectedSubsoilStatus(
+                                                        null,
+                                                    );
+                                                }}
+                                            >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
                                         )}
                                     </div>
-                                    <div className="rounded-xl border border-gray-100 overflow-hidden bg-white">
+                                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
                                         <Table>
                                             <TableHeader className="bg-[#F0F4FA]">
                                                 <TableRow>
                                                     <TableHead>Атауы</TableHead>
-                                                    <TableHead>Минерал түрі</TableHead>
-                                                    <TableHead>Лицензия күйі</TableHead>
-                                                    <TableHead className="text-right">Аумағы (га)</TableHead>
+                                                    <TableHead>
+                                                        Минерал түрі
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Лицензия күйі
+                                                    </TableHead>
+                                                    <TableHead className="text-right">
+                                                        Аумағы (га)
+                                                    </TableHead>
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredSubsoilUsers.length > 0 ? filteredSubsoilUsers.slice((subsoilPage - 1) * ITEMS_PER_PAGE, subsoilPage * ITEMS_PER_PAGE).map((su) => (
-                                                    <TableRow
-                                                        key={su.id}
-                                                        className={`cursor-pointer transition-colors ${selectedSubsoilId === su.id ? 'bg-gray-100 border-l-2 border-l-gray-500' : 'hover:bg-gray-50'}`}
-                                                        onClick={() => {
-                                                            const newId = selectedSubsoilId === su.id ? null : su.id;
-                                                            setSelectedSubsoilId(newId);
-                                                            if (newId) {
-                                                                handleSelectEntity(newId, 'subsoil');
-                                                            } else {
-                                                                setSelectedEntityId(null);
-                                                                setSelectedEntityType(null);
-                                                            }
-                                                        }}
-                                                    >
-                                                        <TableCell className="font-medium text-[#0f1b3d] max-w-[250px] py-3 break-words">
-                                                            <div className="flex items-center gap-2">
-                                                                <Pickaxe className="h-4 w-4 text-gray-400 shrink-0" />
-                                                                <Link
-                                                                    href={`/subsoil-users/${su.id}`}
-                                                                    className="hover:text-[#0f1b3d] hover:underline transition-colors break-words"
-                                                                    onClick={(e) => e.stopPropagation()}
-                                                                >
-                                                                    {su.name}
-                                                                </Link>
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="text-gray-500 text-sm py-3">
-                                                            {su.mineral_type}
-                                                        </TableCell>
-                                                        <TableCell className="py-3">
-                                                            <Badge
-                                                                variant="outline"
-                                                                className={`${licenseStatusMap[su.license_status]?.color || 'bg-gray-100 text-gray-800'} font-medium border-0 px-2 py-0.5 text-xs rounded-md shadow-none`}
+                                                {filteredSubsoilUsers.length >
+                                                0 ? (
+                                                    filteredSubsoilUsers
+                                                        .slice(
+                                                            (subsoilPage - 1) *
+                                                                ITEMS_PER_PAGE,
+                                                            subsoilPage *
+                                                                ITEMS_PER_PAGE,
+                                                        )
+                                                        .map((su) => (
+                                                            <TableRow
+                                                                key={su.id}
+                                                                className={`cursor-pointer transition-colors ${selectedSubsoilId === su.id ? 'border-l-2 border-l-gray-500 bg-gray-100' : 'hover:bg-gray-50'}`}
+                                                                onClick={() => {
+                                                                    const newId =
+                                                                        selectedSubsoilId ===
+                                                                        su.id
+                                                                            ? null
+                                                                            : su.id;
+                                                                    setSelectedSubsoilId(
+                                                                        newId,
+                                                                    );
+                                                                    if (newId) {
+                                                                        handleSelectEntity(
+                                                                            newId,
+                                                                            'subsoil',
+                                                                        );
+                                                                    } else {
+                                                                        setSelectedEntityId(
+                                                                            null,
+                                                                        );
+                                                                        setSelectedEntityType(
+                                                                            null,
+                                                                        );
+                                                                    }
+                                                                }}
                                                             >
-                                                                {licenseStatusMap[su.license_status]?.label || su.license_status}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell className="text-[#0f1b3d] font-semibold text-right text-sm py-3">
-                                                            {su.total_area ? formatArea(Number(su.total_area)) : '—'}
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )) : (
+                                                                <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Pickaxe className="h-4 w-4 shrink-0 text-gray-400" />
+                                                                        <Link
+                                                                            href={`/subsoil-users/${su.id}`}
+                                                                            className="break-words transition-colors hover:text-[#0f1b3d] hover:underline"
+                                                                            onClick={(
+                                                                                e,
+                                                                            ) =>
+                                                                                e.stopPropagation()
+                                                                            }
+                                                                        >
+                                                                            {
+                                                                                su.name
+                                                                            }
+                                                                        </Link>
+                                                                    </div>
+                                                                </TableCell>
+                                                                <TableCell className="py-3 text-sm text-gray-500">
+                                                                    {
+                                                                        su.mineral_type
+                                                                    }
+                                                                </TableCell>
+                                                                <TableCell className="py-3">
+                                                                    <Badge
+                                                                        variant="outline"
+                                                                        className={`${licenseStatusMap[su.license_status]?.color || 'bg-gray-100 text-gray-800'} rounded-md border-0 px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                    >
+                                                                        {licenseStatusMap[
+                                                                            su
+                                                                                .license_status
+                                                                        ]
+                                                                            ?.label ||
+                                                                            su.license_status}
+                                                                    </Badge>
+                                                                </TableCell>
+                                                                <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                    {su.total_area
+                                                                        ? formatArea(
+                                                                              Number(
+                                                                                  su.total_area,
+                                                                              ),
+                                                                          )
+                                                                        : '—'}
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        ))
+                                                ) : (
                                                     <TableRow>
-                                                        <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                                            Жер қойнауын пайдаланушылар жоқ
+                                                        <TableCell
+                                                            colSpan={4}
+                                                            className="py-8 text-center text-gray-500"
+                                                        >
+                                                            Жер қойнауын
+                                                            пайдаланушылар жоқ
                                                         </TableCell>
                                                     </TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
-                                        {renderPagination(filteredSubsoilUsers.length, subsoilPage, setSubsoilPage)}
+                                        {renderPagination(
+                                            filteredSubsoilUsers.length,
+                                            subsoilPage,
+                                            setSubsoilPage,
+                                        )}
                                     </div>
                                 </TabsContent>
                             </div>
                         </div>
 
                         {/* Right Column (Sidebar) */}
-                        <div className="lg:col-span-4 space-y-6">
-                            <TabsList className="bg-gray-100 p-1 rounded-lg w-full justify-start h-12">
-                                <TabsTrigger value="all" className="flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm">Барлығы</TabsTrigger>
-                                <TabsTrigger value="sez" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${stats.sezIssuesCount > 0 ? '' : ''}`}>
-                                    <Building2 className={`w-4 h-4 ${stats.sezIssuesCount > 0 ? '' : ''}`} /> АЭА
+                        <div className="space-y-6 lg:col-span-4">
+                            <TabsList className="h-12 w-full justify-start rounded-lg bg-gray-100 p-1">
+                                <TabsTrigger
+                                    value="all"
+                                    className="flex-1 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm"
+                                >
+                                    Барлығы
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="sez"
+                                    className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${stats.sezIssuesCount > 0 ? '' : ''}`}
+                                >
+                                    <Building2
+                                        className={`h-4 w-4 ${stats.sezIssuesCount > 0 ? '' : ''}`}
+                                    />{' '}
+                                    АЭА
                                     {stats.sezIssuesCount > 0 && (
-                                        <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                                        <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                                             {stats.sezIssuesCount}
                                         </span>
                                     )}
                                 </TabsTrigger>
-                                <TabsTrigger value="iz" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${stats.izIssuesCount > 0 ? '' : ''}`}>
-                                    <Factory className={`w-4 h-4 ${stats.izIssuesCount > 0 ? '' : ''}`} /> ИА
+                                <TabsTrigger
+                                    value="iz"
+                                    className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${stats.izIssuesCount > 0 ? '' : ''}`}
+                                >
+                                    <Factory
+                                        className={`h-4 w-4 ${stats.izIssuesCount > 0 ? '' : ''}`}
+                                    />{' '}
+                                    ИА
                                     {stats.izIssuesCount > 0 && (
-                                        <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                                        <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                                             {stats.izIssuesCount}
                                         </span>
                                     )}
                                 </TabsTrigger>
-                                <TabsTrigger value="subsoil" className={`flex-1 data-[state=active]:bg-white data-[state=active]:shadow-sm rounded-md py-2 text-sm flex items-center gap-2 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600 bg-red-100 data-[state=active]:bg-red-200' : ''}`}>
-                                    <Pickaxe className={`w-4 h-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`} />
+                                <TabsTrigger
+                                    value="subsoil"
+                                    className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${subsoilStatusCounts.illegal > 0 ? 'bg-red-100 text-red-600 data-[state=active]:bg-red-200' : ''}`}
+                                >
+                                    <Pickaxe
+                                        className={`h-4 w-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`}
+                                    />
                                     Недро
                                     {subsoilStatusCounts.illegal > 0 && (
-                                        <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white leading-none">
+                                        <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                                             {subsoilStatusCounts.illegal}
                                         </span>
                                     )}
@@ -1191,29 +1973,54 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             </TabsList>
 
                             {/* Common Stats for ALL */}
-                            <TabsContent value="all" className="space-y-6 mt-0">
+                            <TabsContent value="all" className="mt-0 space-y-6">
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Негізгі көрсеткіштер</CardTitle>
+                                    <CardHeader className="border-b border-gray-100 pb-4">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            Негізгі көрсеткіштер
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-y-8 gap-x-4">
-                                            <div >
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectsCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
-                                            </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(stats.totalArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
-                                            </div>
-                                            
+                                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                             <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(stats.totalInvestment)}</div>
-                                                <div className="text-xs font-medium text-gray-500">Инвестициялар</div>
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {stats.projectsCount}
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Жобалар саны
+                                                </div>
                                             </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.projectIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
+                                            <div className="border-l border-gray-100 pl-4">
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {formatArea(
+                                                        stats.totalArea,
+                                                    )}{' '}
+                                                    <span className="text-sm font-medium text-gray-500">
+                                                        га
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Жалпы аумағы
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {formatCurrency(
+                                                        stats.totalInvestment,
+                                                    )}
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Инвестициялар
+                                                </div>
+                                            </div>
+                                            <div className="border-l border-gray-100 pl-4">
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {stats.projectIssuesCount}
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Проблемалық мәселелер
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1221,38 +2028,83 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
                             </TabsContent>
 
                             {/* SEZ Stats */}
-                            <TabsContent value="sez" className="space-y-6 mt-0">
+                            <TabsContent value="sez" className="mt-0 space-y-6">
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-4 border-b border-gray-100">
+                                    <CardHeader className="border-b border-gray-100 pb-4">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedSezId
-                                                ? `Көрсеткіштер: ${sezs.find(s => s.id === selectedSezId)?.name || 'АЭА'}`
+                                                ? `Көрсеткіштер: ${sezs.find((s) => s.id === selectedSezId)?.name || 'АЭА'}`
                                                 : 'АЭА көрсеткіштері'}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         {(() => {
-                                            const selectedSez = selectedSezId ? sezs.find(s => s.id === selectedSezId) : null;
-                                            const displayArea = selectedSez ? Number(selectedSez.total_area) : totalSezArea;
-                                            const displayInvestment = sezProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
-                                            const displayIssues = selectedSez ? (selectedSez.issues_count ?? 0) : stats.sezIssuesCount;
+                                            const selectedSez = selectedSezId
+                                                ? sezs.find(
+                                                      (s) =>
+                                                          s.id ===
+                                                          selectedSezId,
+                                                  )
+                                                : null;
+                                            const displayArea = selectedSez
+                                                ? Number(selectedSez.total_area)
+                                                : totalSezArea;
+                                            const displayInvestment =
+                                                sezProjects.reduce(
+                                                    (acc, curr) =>
+                                                        acc +
+                                                        Number(
+                                                            curr.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
+                                            const displayIssues = selectedSez
+                                                ? (selectedSez.issues_count ??
+                                                  0)
+                                                : stats.sezIssuesCount;
                                             return (
-                                                <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{sezProjects.length}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {sezProjects.length}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жобалар саны
+                                                        </div>
                                                     </div>
-                                                    <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                        <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatArea(
+                                                                displayArea,
+                                                            )}{' '}
+                                                            <span className="text-sm font-medium text-gray-500">
+                                                                га
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жалпы аумағы
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Жоспарланған инвестициялар</div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatCurrency(
+                                                                displayInvestment,
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жоспарланған
+                                                            инвестициялар
+                                                        </div>
                                                     </div>
-                                                    <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {displayIssues}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Проблемалық
+                                                            мәселелер
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -1262,105 +2114,189 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 {/* SEZ List */}
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">АЭА тізімі</CardTitle>
+                                    <CardHeader className="border-b border-gray-100 pb-3">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            АЭА тізімі
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {sezs.length > 0 ? (
                                             <div className="divide-y divide-gray-100">
                                                 <div
-                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                    className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
                                                         selectedSezId === null
-                                                            ? 'bg-violet-50 border-l-2 border-l-violet-500'
+                                                            ? 'border-l-2 border-l-violet-500 bg-violet-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
                                                     onClick={() => {
                                                         setSelectedSezId(null);
-                                                        setSelectedEntityId(null);
-                                                        setSelectedEntityType(null);
+                                                        setSelectedEntityId(
+                                                            null,
+                                                        );
+                                                        setSelectedEntityType(
+                                                            null,
+                                                        );
                                                     }}
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
-                                                        <span className="text-sm font-medium text-[#0f1b3d]">Все</span>
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <Building2 className="h-4 w-4 shrink-0 text-violet-500" />
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">
+                                                            Все
+                                                        </span>
                                                     </div>
-                                                    <Badge variant="secondary" className="text-[10px]">{sezs.length} зон</Badge>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px]"
+                                                    >
+                                                        {sezs.length} зон
+                                                    </Badge>
                                                 </div>
                                                 {sezs.map((sez) => (
                                                     <div
                                                         key={sez.id}
-                                                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                                                            selectedSezId === sez.id
-                                                                ? 'bg-violet-50 border-l-2 border-l-violet-500'
+                                                        className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                            selectedSezId ===
+                                                            sez.id
+                                                                ? 'border-l-2 border-l-violet-500 bg-violet-50'
                                                                 : 'hover:bg-gray-50'
                                                         }`}
                                                         onClick={() => {
-                                                            setSelectedSezId(sez.id);
-                                                            handleSelectEntity(sez.id, 'sez');
+                                                            setSelectedSezId(
+                                                                sez.id,
+                                                            );
+                                                            handleSelectEntity(
+                                                                sez.id,
+                                                                'sez',
+                                                            );
                                                         }}
                                                     >
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <Building2 className="h-4 w-4 text-violet-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-[#0f1b3d] break-words">{sez.name}</span>
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <Building2 className="h-4 w-4 shrink-0 text-violet-500" />
+                                                            <span className="text-sm font-medium break-words text-[#0f1b3d]">
+                                                                {sez.name}
+                                                            </span>
                                                         </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="flex shrink-0 items-center gap-2">
                                                             <Link
                                                                 href={`/sezs/${sez.id}`}
-                                                                className="text-violet-500 hover:text-violet-700 transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-violet-500 transition-colors hover:text-violet-700"
+                                                                onClick={(e) =>
+                                                                    e.stopPropagation()
+                                                                }
                                                             >
                                                                 <ExternalLink className="h-3.5 w-3.5" />
                                                             </Link>
-                                                            <Badge variant="secondary" className="text-[10px]">{sez.status === 'active' ? 'Белсенді' : 'Дамушы'}</Badge>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px]"
+                                                            >
+                                                                {sez.status ===
+                                                                'active'
+                                                                    ? 'Белсенді'
+                                                                    : 'Дамушы'}
+                                                            </Badge>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="p-4 text-center text-sm text-gray-500">АЭА жоқ</p>
+                                            <p className="p-4 text-center text-sm text-gray-500">
+                                                АЭА жоқ
+                                            </p>
                                         )}
                                     </CardContent>
                                 </Card>
 
-                                {selectedSezId && (() => {
-                                    const sez = sezs.find(s => s.id === selectedSezId);
-                                    return sez ? renderInfrastructureCard(`Инфрақұрылым: ${sez.name}`, sez.infrastructure) : null;
-                                })()}
+                                {selectedSezId &&
+                                    (() => {
+                                        const sez = sezs.find(
+                                            (s) => s.id === selectedSezId,
+                                        );
+                                        return sez
+                                            ? renderInfrastructureCard(
+                                                  `Инфрақұрылым: ${sez.name}`,
+                                                  sez.infrastructure,
+                                              )
+                                            : null;
+                                    })()}
                             </TabsContent>
 
                             {/* IZ Stats */}
-                            <TabsContent value="iz" className="space-y-6 mt-0">
+                            <TabsContent value="iz" className="mt-0 space-y-6">
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-4 border-b border-gray-100">
+                                    <CardHeader className="border-b border-gray-100 pb-4">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
                                             {selectedIzId
-                                                ? `Көрсеткіштер: ${industrialZones.find(z => z.id === selectedIzId)?.name || 'ИА'}`
+                                                ? `Көрсеткіштер: ${industrialZones.find((z) => z.id === selectedIzId)?.name || 'ИА'}`
                                                 : 'ИА көрсеткіштері'}
                                         </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         {(() => {
-                                            const selectedIz = selectedIzId ? industrialZones.find(z => z.id === selectedIzId) : null;
-                                            const displayArea = selectedIz ? Number(selectedIz.total_area) : totalIzArea;
-                                            const displayInvestment = izProjects.reduce((acc, curr) => acc + Number(curr.total_investment || 0), 0);
-                                            const displayIssues = selectedIz ? (selectedIz.issues_count ?? 0) : stats.izIssuesCount;
+                                            const selectedIz = selectedIzId
+                                                ? industrialZones.find(
+                                                      (z) =>
+                                                          z.id === selectedIzId,
+                                                  )
+                                                : null;
+                                            const displayArea = selectedIz
+                                                ? Number(selectedIz.total_area)
+                                                : totalIzArea;
+                                            const displayInvestment =
+                                                izProjects.reduce(
+                                                    (acc, curr) =>
+                                                        acc +
+                                                        Number(
+                                                            curr.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
+                                            const displayIssues = selectedIz
+                                                ? (selectedIz.issues_count ?? 0)
+                                                : stats.izIssuesCount;
                                             return (
-                                                <div className="grid grid-cols-2 gap-y-8 gap-x-4">
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{izProjects.length}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {izProjects.length}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жобалар саны
+                                                        </div>
                                                     </div>
-                                                    <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(displayArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                        <div className="text-xs font-medium text-gray-500">Жалпы аумағы</div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatArea(
+                                                                displayArea,
+                                                            )}{' '}
+                                                            <span className="text-sm font-medium text-gray-500">
+                                                                га
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жалпы аумағы
+                                                        </div>
                                                     </div>
                                                     <div>
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatCurrency(displayInvestment)}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Жоспарланған инвестициялар</div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatCurrency(
+                                                                displayInvestment,
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жоспарланған
+                                                            инвестициялар
+                                                        </div>
                                                     </div>
-                                                    <div className="pl-4 border-l border-gray-100">
-                                                        <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{displayIssues}</div>
-                                                        <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {displayIssues}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Проблемалық
+                                                            мәселелер
+                                                        </div>
                                                     </div>
                                                 </div>
                                             );
@@ -1370,93 +2306,157 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 {/* IZ List */}
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">ИА тізімі</CardTitle>
+                                    <CardHeader className="border-b border-gray-100 pb-3">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            ИА тізімі
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         {industrialZones.length > 0 ? (
                                             <div className="divide-y divide-gray-100">
                                                 <div
-                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
+                                                    className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
                                                         selectedIzId === null
-                                                            ? 'bg-amber-50 border-l-2 border-l-amber-500'
+                                                            ? 'border-l-2 border-l-amber-500 bg-amber-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
                                                     onClick={() => {
                                                         setSelectedIzId(null);
-                                                        setSelectedEntityId(null);
-                                                        setSelectedEntityType(null);
+                                                        setSelectedEntityId(
+                                                            null,
+                                                        );
+                                                        setSelectedEntityType(
+                                                            null,
+                                                        );
                                                     }}
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                        <span className="text-sm font-medium text-[#0f1b3d]">Барлығы</span>
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <Factory className="h-4 w-4 shrink-0 text-amber-500" />
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">
+                                                            Барлығы
+                                                        </span>
                                                     </div>
-                                                    <Badge variant="secondary" className="text-[10px]">{industrialZones.length} аймақ</Badge>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px]"
+                                                    >
+                                                        {industrialZones.length}{' '}
+                                                        аймақ
+                                                    </Badge>
                                                 </div>
                                                 {industrialZones.map((iz) => (
                                                     <div
                                                         key={iz.id}
-                                                        className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                                                            selectedIzId === iz.id
-                                                                ? 'bg-amber-50 border-l-2 border-l-amber-500'
+                                                        className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                            selectedIzId ===
+                                                            iz.id
+                                                                ? 'border-l-2 border-l-amber-500 bg-amber-50'
                                                                 : 'hover:bg-gray-50'
                                                         }`}
                                                         onClick={() => {
-                                                            setSelectedIzId(iz.id);
-                                                            handleSelectEntity(iz.id, 'iz');
+                                                            setSelectedIzId(
+                                                                iz.id,
+                                                            );
+                                                            handleSelectEntity(
+                                                                iz.id,
+                                                                'iz',
+                                                            );
                                                         }}
                                                     >
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            <Factory className="h-4 w-4 text-amber-500 shrink-0" />
-                                                            <span className="text-sm font-medium text-[#0f1b3d] break-words">{iz.name}</span>
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <Factory className="h-4 w-4 shrink-0 text-amber-500" />
+                                                            <span className="text-sm font-medium break-words text-[#0f1b3d]">
+                                                                {iz.name}
+                                                            </span>
                                                         </div>
-                                                        <div className="flex items-center gap-2 shrink-0">
+                                                        <div className="flex shrink-0 items-center gap-2">
                                                             <Link
                                                                 href={`/industrial-zones/${iz.id}`}
-                                                                className="text-amber-500 hover:text-amber-700 transition-colors"
-                                                                onClick={(e) => e.stopPropagation()}
+                                                                className="text-amber-500 transition-colors hover:text-amber-700"
+                                                                onClick={(e) =>
+                                                                    e.stopPropagation()
+                                                                }
                                                             >
                                                                 <ExternalLink className="h-3.5 w-3.5" />
                                                             </Link>
-                                                            <Badge variant="secondary" className="text-[10px]">{iz.status === 'active' ? 'Белсенді' : 'Дамушы'}</Badge>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px]"
+                                                            >
+                                                                {iz.status ===
+                                                                'active'
+                                                                    ? 'Белсенді'
+                                                                    : 'Дамушы'}
+                                                            </Badge>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <p className="p-4 text-center text-sm text-gray-500">ИА жоқ</p>
+                                            <p className="p-4 text-center text-sm text-gray-500">
+                                                ИА жоқ
+                                            </p>
                                         )}
                                     </CardContent>
                                 </Card>
 
-                                {selectedIzId && (() => {
-                                    const iz = industrialZones.find(z => z.id === selectedIzId);
-                                    return iz ? renderInfrastructureCard(`Инфрақұрылым: ${iz.name}`, iz.infrastructure) : null;
-                                })()}
+                                {selectedIzId &&
+                                    (() => {
+                                        const iz = industrialZones.find(
+                                            (z) => z.id === selectedIzId,
+                                        );
+                                        return iz
+                                            ? renderInfrastructureCard(
+                                                  `Инфрақұрылым: ${iz.name}`,
+                                                  iz.infrastructure,
+                                              )
+                                            : null;
+                                    })()}
                             </TabsContent>
 
                             {/* Subsoil Stats */}
-                            <TabsContent value="subsoil" className="space-y-6 mt-0">
+                            <TabsContent
+                                value="subsoil"
+                                className="mt-0 space-y-6"
+                            >
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-4 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Жер қойнауын пайдалану көрсеткіштері</CardTitle>
+                                    <CardHeader className="border-b border-gray-100 pb-4">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            Жер қойнауын пайдалану көрсеткіштері
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-6">
                                         <div className="grid grid-cols-3 gap-x-4">
                                             <div>
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">
-                                                    {selectedSubsoilStatus ? filteredSubsoilUsers.length : subsoilUsers.length}
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {selectedSubsoilStatus
+                                                        ? filteredSubsoilUsers.length
+                                                        : subsoilUsers.length}
                                                 </div>
-                                                <div className="text-xs font-medium text-gray-500">Жобалар саны</div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Жобалар саны
+                                                </div>
                                             </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{formatArea(totalSubsoilArea)} <span className="text-sm font-medium text-gray-500">га</span></div>
-                                                <div className="text-xs font-medium text-gray-500">Аумағы</div>
+                                            <div className="border-l border-gray-100 pl-4">
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {formatArea(
+                                                        totalSubsoilArea,
+                                                    )}{' '}
+                                                    <span className="text-sm font-medium text-gray-500">
+                                                        га
+                                                    </span>
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Аумағы
+                                                </div>
                                             </div>
-                                            <div className="pl-4 border-l border-gray-100">
-                                                <div className="text-2xl font-semibold tracking-tight text-[#0f1b3d] mb-1">{stats.subsoilIssuesCount}</div>
-                                                <div className="text-xs font-medium text-gray-500">Проблемалық мәселелер</div>
+                                            <div className="border-l border-gray-100 pl-4">
+                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                    {stats.subsoilIssuesCount}
+                                                </div>
+                                                <div className="text-xs font-medium text-gray-500">
+                                                    Проблемалық мәселелер
+                                                </div>
                                             </div>
                                         </div>
                                     </CardContent>
@@ -1464,52 +2464,114 @@ export default function Show({ region, projects, sezs, industrialZones, subsoilU
 
                                 {/* Status Filter */}
                                 <Card className="border-gray-100 shadow-none">
-                                    <CardHeader className="pb-3 border-b border-gray-100">
-                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">Лицензия күйі</CardTitle>
+                                    <CardHeader className="border-b border-gray-100 pb-3">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            Лицензия күйі
+                                        </CardTitle>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <div className="divide-y divide-gray-100">
                                             <div
-                                                className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                                                    selectedSubsoilStatus === null
-                                                        ? 'bg-gray-50 border-l-2 border-l-gray-500'
+                                                className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                    selectedSubsoilStatus ===
+                                                    null
+                                                        ? 'border-l-2 border-l-gray-500 bg-gray-50'
                                                         : 'hover:bg-gray-50'
                                                 }`}
-                                                onClick={() => setSelectedSubsoilStatus(null)}
+                                                onClick={() =>
+                                                    setSelectedSubsoilStatus(
+                                                        null,
+                                                    )
+                                                }
                                             >
-                                                <div className="flex items-center gap-2 min-w-0">
-                                                    <Pickaxe className="h-4 w-4 text-gray-500 shrink-0" />
-                                                    <span className="text-sm font-medium text-[#0f1b3d]">Барлық күйлер</span>
+                                                <div className="flex min-w-0 items-center gap-2">
+                                                    <Pickaxe className="h-4 w-4 shrink-0 text-gray-500" />
+                                                    <span className="text-sm font-medium text-[#0f1b3d]">
+                                                        Барлық күйлер
+                                                    </span>
                                                 </div>
-                                                <Badge variant="secondary" className="text-[10px]">{subsoilUsers.length}</Badge>
+                                                <Badge
+                                                    variant="secondary"
+                                                    className="text-[10px]"
+                                                >
+                                                    {subsoilUsers.length}
+                                                </Badge>
                                             </div>
                                             {[
-                                                { key: 'active', label: 'Белсенді', color: 'text-green-700', bg: 'bg-green-50', border: 'border-l-green-500', icon: 'bg-green-100' },
-                                                { key: 'expired', label: 'Мерзімі өткен', color: 'text-gray-700', bg: 'bg-gray-50', border: 'border-l-gray-500', icon: 'bg-gray-300' },
-                                                { key: 'suspended', label: 'Тоқтатылған', color: 'text-amber-700', bg: 'bg-amber-50', border: 'border-l-amber-500', icon: 'bg-amber-100' },
-                                                { key: 'illegal', label: 'Заңсыз', color: 'text-red-700', bg: 'bg-red-50', border: 'border-l-red-600', icon: 'bg-red-600' },
+                                                {
+                                                    key: 'active',
+                                                    label: 'Белсенді',
+                                                    color: 'text-green-700',
+                                                    bg: 'bg-green-50',
+                                                    border: 'border-l-green-500',
+                                                    icon: 'bg-green-100',
+                                                },
+                                                {
+                                                    key: 'expired',
+                                                    label: 'Мерзімі өткен',
+                                                    color: 'text-gray-700',
+                                                    bg: 'bg-gray-50',
+                                                    border: 'border-l-gray-500',
+                                                    icon: 'bg-gray-300',
+                                                },
+                                                {
+                                                    key: 'suspended',
+                                                    label: 'Тоқтатылған',
+                                                    color: 'text-amber-700',
+                                                    bg: 'bg-amber-50',
+                                                    border: 'border-l-amber-500',
+                                                    icon: 'bg-amber-100',
+                                                },
+                                                {
+                                                    key: 'illegal',
+                                                    label: 'Заңсыз',
+                                                    color: 'text-red-700',
+                                                    bg: 'bg-red-50',
+                                                    border: 'border-l-red-600',
+                                                    icon: 'bg-red-600',
+                                                },
                                             ].map((status) => (
                                                 <div
                                                     key={status.key}
-                                                    className={`flex items-center justify-between p-3 cursor-pointer transition-colors ${
-                                                        selectedSubsoilStatus === status.key
+                                                    className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                        selectedSubsoilStatus ===
+                                                        status.key
                                                             ? `${status.bg} border-l-2 ${status.border}`
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() => setSelectedSubsoilStatus(selectedSubsoilStatus === status.key ? null : status.key)}
+                                                    onClick={() =>
+                                                        setSelectedSubsoilStatus(
+                                                            selectedSubsoilStatus ===
+                                                                status.key
+                                                                ? null
+                                                                : status.key,
+                                                        )
+                                                    }
                                                 >
-                                                    <div className="flex items-center gap-2 min-w-0">
-                                                        <div className={`w-2.5 h-2.5 rounded-full ${status.icon}`}></div>
-                                                        <span className={`text-sm font-medium ${selectedSubsoilStatus === status.key ? status.color : 'text-gray-700'}`}>{status.label}</span>
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <div
+                                                            className={`h-2.5 w-2.5 rounded-full ${status.icon}`}
+                                                        ></div>
+                                                        <span
+                                                            className={`text-sm font-medium ${selectedSubsoilStatus === status.key ? status.color : 'text-gray-700'}`}
+                                                        >
+                                                            {status.label}
+                                                        </span>
                                                     </div>
-                                                    <Badge variant="secondary" className="text-[10px]">{subsoilStatusCounts[status.key] || 0}</Badge>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px]"
+                                                    >
+                                                        {subsoilStatusCounts[
+                                                            status.key
+                                                        ] || 0}
+                                                    </Badge>
                                                 </div>
                                             ))}
                                         </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
-
                         </div>
                     </div>
                 </Tabs>

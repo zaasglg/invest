@@ -83,4 +83,9 @@ class Region extends Model
     {
         return $this->hasMany(SubsoilUser::class);
     }
+
+    public function investmentProjects()
+    {
+        return $this->hasMany(InvestmentProject::class);
+    }
 }

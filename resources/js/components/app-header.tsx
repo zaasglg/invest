@@ -55,7 +55,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             <div className="border-b border-white/10 bg-[#0f1b3d]">
                 <div className="mx-auto flex h-16 items-center md:max-w-7xl">
                     {/* Logo */}
-                    <Link href="/dashboard" className="mr-4 flex shrink-0 items-center gap-2.5">
+                    <Link
+                        href="/dashboard"
+                        className="mr-4 flex shrink-0 items-center gap-2.5"
+                    >
                         <img
                             src="/assets/images/logo-3.png"
                             alt="Turkistan Invest"
@@ -65,7 +68,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             <span className="text-xs font-bold tracking-wider text-white">
                                 Түркістан
                             </span>
-                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e] pt-0.5">
+                            <span className="pt-0.5 text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
                                 ОБЛЫСЫ
                             </span>
                         </div>
@@ -131,7 +134,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     {/* Desktop Navigation */}
                     <div className="ml-2 hidden h-full min-w-0 flex-1 items-center overflow-hidden lg:flex">
-                        <NavigationMenu className="flex h-full items-stretch max-w-full">
+                        <NavigationMenu className="flex h-full max-w-full items-stretch">
                             <NavigationMenuList className="flex h-full items-stretch gap-0.5">
                                 {filteredHeaderNavItems.map((item, index) => (
                                     <NavigationMenuItem
@@ -153,7 +156,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             {item.title}
                                         </Link>
                                         {isCurrentUrl(item.href) && (
-                                            <div className="absolute bottom-0 left-2 right-2 h-0.5 translate-y-px rounded-full bg-[#c8a44e]" />
+                                            <div className="absolute right-2 bottom-0 left-2 h-0.5 translate-y-px rounded-full bg-[#c8a44e]" />
                                         )}
                                     </NavigationMenuItem>
                                 ))}
@@ -174,7 +177,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                         {(page.props as any)
                                             .unreadNotificationsCount > 0 && (
-                                            <span className="absolute right-0.5 top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                                            <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
                                                 {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                                 {
                                                     (page.props as any)

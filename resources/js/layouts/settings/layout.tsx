@@ -61,7 +61,7 @@ export default function SettingsLayout({ children }: PropsWithChildren) {
                                     className={cn(
                                         'w-full justify-start rounded-lg text-gray-500 shadow-none hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]',
                                         {
-                                            'bg-[#0f1b3d]/5 text-[#0f1b3d] font-semibold':
+                                            'bg-[#0f1b3d]/5 font-semibold text-[#0f1b3d]':
                                                 isCurrentUrl(item.href),
                                         },
                                     )}

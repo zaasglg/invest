@@ -110,8 +110,8 @@ export function SectorsBentoGrid() {
                     </h2>
                     <p className="mt-4 text-base leading-relaxed text-gray-500 sm:text-lg">
                         Turkistan region offers investment potential across
-                        multiple high-growth sectors with government backing
-                        and international partnerships.
+                        multiple high-growth sectors with government backing and
+                        international partnerships.
                     </p>
                 </div>
 
@@ -157,7 +157,7 @@ export function SectorsBentoGrid() {
                                     <span className="text-2xl font-extrabold text-[#0f1b3d]">
                                         {sector.stats}
                                     </span>
-                                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wide">
+                                    <span className="text-xs font-medium tracking-wide text-gray-400 uppercase">
                                         {sector.statsLabel}
                                     </span>
                                 </div>

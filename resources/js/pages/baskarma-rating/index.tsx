@@ -59,7 +59,7 @@ function StackedTaskBar({
             {/* 1. Completed (Top - Green) */}
             <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100">
                 <div
-                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-green-500 text-[10px] font-bold text-white transition-all"
+                    className="absolute top-0 left-0 flex h-full items-center justify-center bg-green-500 text-[10px] font-bold text-white transition-all"
                     style={{ width: `${completedPercent}%` }}
                 >
                     {completed > 0 && completed}
@@ -69,7 +69,7 @@ function StackedTaskBar({
             {/* 2. Active (Middle - Yellow) */}
             <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100">
                 <div
-                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-amber-400 text-[10px] font-bold text-white transition-all"
+                    className="absolute top-0 left-0 flex h-full items-center justify-center bg-amber-400 text-[10px] font-bold text-white transition-all"
                     style={{ width: `${activePercent}%` }}
                 >
                     {active > 0 && active}
@@ -79,7 +79,7 @@ function StackedTaskBar({
             {/* 3. Overdue (Bottom - Red) */}
             <div className="relative h-5 w-full overflow-hidden rounded-sm bg-gray-100">
                 <div
-                    className="absolute left-0 top-0 flex h-full items-center justify-center bg-red-500 text-[10px] font-bold text-white transition-all"
+                    className="absolute top-0 left-0 flex h-full items-center justify-center bg-red-500 text-[10px] font-bold text-white transition-all"
                     style={{ width: `${overduePercent}%` }}
                 >
                     {overdue > 0 && overdue}
@@ -106,9 +106,7 @@ function KpdBar({ kpd }: { kpd: number }) {
                     style={{ width: `${kpd}%` }}
                 />
             </div>
-            <span className="text-sm font-medium text-gray-700">
-                {kpd}%
-            </span>
+            <span className="text-sm font-medium text-gray-700">{kpd}%</span>
         </div>
     );
 }
@@ -134,117 +132,120 @@ function RatingTable({
             </CardHeader>
             <CardContent className="p-0">
                 {ratings.length === 0 ? (
-                    <div className="px-6 pb-6 pt-2 text-center text-gray-400">
+                    <div className="px-6 pt-2 pb-6 text-center text-gray-400">
                         Тіркелген исполнительдер жоқ
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                    <Table className="min-w-[900px]">
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-12 text-center">
-                                    №
-                                </TableHead>
-                                <TableHead className="w-[72px]" />
-                                <TableHead>АТА</TableHead>
-                                <TableHead>Телефон</TableHead>
-                                <TableHead>Исполнитель</TableHead>
-                                <TableHead className="text-center">
-                                    Жобалар
-                                </TableHead>
-                                <TableHead>Тапсырмалар</TableHead>
-                                <TableHead>КПД</TableHead>
-                                <TableHead className="w-12" />
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {ratings.map((item, index) => (
-                                <TableRow key={item.id}>
-                                    <TableCell className="text-center font-medium text-gray-500">
-                                        {index + 1}
-                                    </TableCell>
-                                    <TableCell className="px-2">
-                                        {item.avatar_url ? (
-                                            <img
-                                                src={item.avatar_url}
-                                                alt={item.full_name}
-                                                className="h-14 w-14 rounded-full border border-gray-200 object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
-                                                <UserIcon className="h-7 w-7 text-gray-400" />
-                                            </div>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <p className="font-semibold text-[#0f1b3d]">
-                                            {item.full_name}
-                                        </p>
-                                    </TableCell>
-                                    <TableCell>
-                                        {item.phone ? (
-                                            <span className="flex items-center gap-1 text-sm text-gray-600">
-                                                <Phone className="h-3.5 w-3.5 text-gray-400" />
-                                                {item.phone}
-                                            </span>
-                                        ) : (
-                                            <span className="text-sm text-gray-400">—</span>
-                                        )}
-                                    </TableCell>
-                                    <TableCell>
-                                        <div>
-                                            <p className="text-sm font-medium text-[#0f1b3d]">
-                                                {item.position || '—'}
-                                            </p>
-                                            {item.region && (
-                                                <p className="text-xs text-gray-400">
-                                                    {item.region}
-                                                </p>
-                                            )}
-                                        </div>
-                                    </TableCell>
-                                    <TableCell className="text-center font-semibold">
-                                        {item.project_count}
-                                    </TableCell>
-                                    <TableCell>
-                                        <StackedTaskBar
-                                            active={item.active}
-                                            completed={item.completed}
-                                            overdue={item.overdue}
-                                            total={item.total}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        <KpdBar kpd={item.kpd} />
-                                    </TableCell>
-                                    <TableCell>
-                                        {!allowedIds || allowedIds.includes(item.id) ? (
-                                        <Link
-                                            href={`/baskarma-rating/${item.id}`}
-                                        >
-                                            <Button
-                                                variant="outline"
-                                                size="icon"
-                                                className="h-8 w-8 border-[#c8a44e] bg-[#c8a44e] text-white hover:bg-[#b8943e] hover:text-white"
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-                                        </Link>
-                                        ) : (
-                                        <Button
-                                            variant="outline"
-                                            size="icon"
-                                            className="h-8 w-8 cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
-                                            disabled
-                                        >
-                                            <Eye className="h-4 w-4" />
-                                        </Button>
-                                        )}
-                                    </TableCell>
+                        <Table className="min-w-[900px]">
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead className="w-12 text-center">
+                                        №
+                                    </TableHead>
+                                    <TableHead className="w-[72px]" />
+                                    <TableHead>АТА</TableHead>
+                                    <TableHead>Телефон</TableHead>
+                                    <TableHead>Исполнитель</TableHead>
+                                    <TableHead className="text-center">
+                                        Жобалар
+                                    </TableHead>
+                                    <TableHead>Тапсырмалар</TableHead>
+                                    <TableHead>КПД</TableHead>
+                                    <TableHead className="w-12" />
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {ratings.map((item, index) => (
+                                    <TableRow key={item.id}>
+                                        <TableCell className="text-center font-medium text-gray-500">
+                                            {index + 1}
+                                        </TableCell>
+                                        <TableCell className="px-2">
+                                            {item.avatar_url ? (
+                                                <img
+                                                    src={item.avatar_url}
+                                                    alt={item.full_name}
+                                                    className="h-14 w-14 rounded-full border border-gray-200 object-cover"
+                                                />
+                                            ) : (
+                                                <div className="flex h-14 w-14 items-center justify-center rounded-full border border-gray-200 bg-gray-50">
+                                                    <UserIcon className="h-7 w-7 text-gray-400" />
+                                                </div>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <p className="font-semibold text-[#0f1b3d]">
+                                                {item.full_name}
+                                            </p>
+                                        </TableCell>
+                                        <TableCell>
+                                            {item.phone ? (
+                                                <span className="flex items-center gap-1 text-sm text-gray-600">
+                                                    <Phone className="h-3.5 w-3.5 text-gray-400" />
+                                                    {item.phone}
+                                                </span>
+                                            ) : (
+                                                <span className="text-sm text-gray-400">
+                                                    —
+                                                </span>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <div>
+                                                <p className="text-sm font-medium text-[#0f1b3d]">
+                                                    {item.position || '—'}
+                                                </p>
+                                                {item.region && (
+                                                    <p className="text-xs text-gray-400">
+                                                        {item.region}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-center font-semibold">
+                                            {item.project_count}
+                                        </TableCell>
+                                        <TableCell>
+                                            <StackedTaskBar
+                                                active={item.active}
+                                                completed={item.completed}
+                                                overdue={item.overdue}
+                                                total={item.total}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <KpdBar kpd={item.kpd} />
+                                        </TableCell>
+                                        <TableCell>
+                                            {!allowedIds ||
+                                            allowedIds.includes(item.id) ? (
+                                                <Link
+                                                    href={`/baskarma-rating/${item.id}`}
+                                                >
+                                                    <Button
+                                                        variant="outline"
+                                                        size="icon"
+                                                        className="h-8 w-8 border-[#c8a44e] bg-[#c8a44e] text-white hover:bg-[#b8943e] hover:text-white"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </Link>
+                                            ) : (
+                                                <Button
+                                                    variant="outline"
+                                                    size="icon"
+                                                    className="h-8 w-8 cursor-not-allowed border-gray-200 bg-gray-100 text-gray-400"
+                                                    disabled
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            )}
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
                 )}
             </CardContent>
@@ -260,8 +261,10 @@ export default function BaskarmaRating({
     const [tab, setTab] = useState<'district' | 'oblast'>('district');
 
     return (
-            <AppLayout
-            breadcrumbs={[{ title: 'Пайдалы қызмет коэффициенттері', href: '' }]}
+        <AppLayout
+            breadcrumbs={[
+                { title: 'Пайдалы қызмет коэффициенттері', href: '' },
+            ]}
         >
             <Head title="Пайдалы қызмет коэффициенттері" />
 
@@ -319,14 +322,18 @@ export default function BaskarmaRating({
                         <RatingTable
                             ratings={districtRatings}
                             title="Аудандық әкімдіктер"
-                            icon={<BarChart3 className="h-5 w-5 text-blue-600" />}
+                            icon={
+                                <BarChart3 className="h-5 w-5 text-blue-600" />
+                            }
                             allowedIds={allowedIds}
                         />
                     ) : (
                         <RatingTable
                             ratings={oblastRatings}
                             title="Басқармалар"
-                            icon={<BarChart3 className="h-5 w-5 text-purple-600" />}
+                            icon={
+                                <BarChart3 className="h-5 w-5 text-purple-600" />
+                            }
                             allowedIds={allowedIds}
                         />
                     )}

@@ -66,21 +66,49 @@ export default function ProjectDocumentsUpload({
         const typeLower = type.toLowerCase();
 
         if (typeLower === 'pdf') {
-            return <div className={`${iconClass} bg-red-100 text-red-600 rounded flex items-center justify-center font-bold text-xs flex-shrink-0`}>PDF</div>;
+            return (
+                <div
+                    className={`${iconClass} flex flex-shrink-0 items-center justify-center rounded bg-red-100 text-xs font-bold text-red-600`}
+                >
+                    PDF
+                </div>
+            );
         } else if (['doc', 'docx'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-blue-100 text-blue-600 rounded flex items-center justify-center font-bold text-xs flex-shrink-0`}>DOC</div>;
+            return (
+                <div
+                    className={`${iconClass} flex flex-shrink-0 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-600`}
+                >
+                    DOC
+                </div>
+            );
         } else if (['xls', 'xlsx'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-green-100 text-green-600 rounded flex items-center justify-center font-bold text-xs flex-shrink-0`}>XLS</div>;
+            return (
+                <div
+                    className={`${iconClass} flex flex-shrink-0 items-center justify-center rounded bg-green-100 text-xs font-bold text-green-600`}
+                >
+                    XLS
+                </div>
+            );
         } else if (['jpg', 'jpeg', 'png', 'gif'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-purple-100 text-purple-600 rounded flex items-center justify-center font-bold text-xs flex-shrink-0`}>IMG</div>;
+            return (
+                <div
+                    className={`${iconClass} flex flex-shrink-0 items-center justify-center rounded bg-purple-100 text-xs font-bold text-purple-600`}
+                >
+                    IMG
+                </div>
+            );
         }
 
-        return <FileText className={`${iconClass} text-gray-400 flex-shrink-0`} />;
+        return (
+            <FileText className={`${iconClass} flex-shrink-0 text-gray-400`} />
+        );
     };
 
     const handleDeleteExisting = (documentId: number) => {
         if (confirm('Бұл құжатты жоюға сенімдісіз бе?')) {
-            router.delete(`/investment-projects/${projectId}/documents/${documentId}`);
+            router.delete(
+                `/investment-projects/${projectId}/documents/${documentId}`,
+            );
         }
     };
 
@@ -89,24 +117,30 @@ export default function ProjectDocumentsUpload({
             {/* Existing Documents */}
             {existingDocuments.length > 0 && (
                 <div className="flex flex-col gap-2">
-                    <Label className="text-neutral-500 font-normal">Жүктелген құжаттар</Label>
-                    <div className="border border-neutral-200 rounded-md p-3 space-y-2">
+                    <Label className="font-normal text-neutral-500">
+                        Жүктелген құжаттар
+                    </Label>
+                    <div className="space-y-2 rounded-md border border-neutral-200 p-3">
                         {existingDocuments.map((doc) => (
                             <div
                                 key={doc.id}
-                                className="flex items-center gap-3 p-2 bg-gray-50 rounded"
+                                className="flex items-center gap-3 rounded bg-gray-50 p-2"
                             >
                                 {getFileIcon(doc.type)}
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium truncate">{doc.name}</p>
-                                    <p className="text-xs text-gray-500">{doc.type.toUpperCase()}</p>
+                                <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium">
+                                        {doc.name}
+                                    </p>
+                                    <p className="text-xs text-gray-500">
+                                        {doc.type.toUpperCase()}
+                                    </p>
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <a
                                         href={`/storage/${doc.file_path}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded"
+                                        className="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600"
                                         title="Жүктеу"
                                     >
                                         <Download className="h-4 w-4" />
@@ -115,8 +149,10 @@ export default function ProjectDocumentsUpload({
                                         type="button"
                                         variant="ghost"
                                         size="icon"
-                                        onClick={() => handleDeleteExisting(doc.id)}
-                                        className="h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                        onClick={() =>
+                                            handleDeleteExisting(doc.id)
+                                        }
+                                        className="h-8 w-8 text-gray-500 hover:bg-red-50 hover:text-red-600"
                                     >
                                         <X className="h-4 w-4" />
                                     </Button>
@@ -130,12 +166,14 @@ export default function ProjectDocumentsUpload({
             {/* New Documents Upload */}
             {!readOnly && (
                 <div className="flex flex-col gap-2">
-                    <Label className="text-neutral-500 font-normal">
-                        {projectId ? 'Құжаттар қосу' : 'Құжаттар (сақтағаннан кейін жүктеледі)'}
+                    <Label className="font-normal text-neutral-500">
+                        {projectId
+                            ? 'Құжаттар қосу'
+                            : 'Құжаттар (сақтағаннан кейін жүктеледі)'}
                     </Label>
-                    <div className="border border-neutral-200 border-dashed rounded-md p-4">
-                        <div className="flex items-center justify-center gap-3 mb-3">
-                            <label className="cursor-pointer flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
+                    <div className="rounded-md border border-dashed border-neutral-200 p-4">
+                        <div className="mb-3 flex items-center justify-center gap-3">
+                            <label className="flex cursor-pointer items-center gap-2 text-sm text-gray-600 hover:text-gray-900">
                                 <Upload className="h-4 w-4" />
                                 <span>Файл таңдау</span>
                                 <input
@@ -151,34 +189,50 @@ export default function ProjectDocumentsUpload({
                         </div>
 
                         {documents.length > 0 && (
-                            <div className="space-y-2 mt-3">
+                            <div className="mt-3 space-y-2">
                                 {documents.map((doc, index) => (
                                     <div
                                         key={index}
-                                        className="flex items-start gap-3 p-3 bg-gray-50 rounded border border-gray-200"
+                                        className="flex items-start gap-3 rounded border border-gray-200 bg-gray-50 p-3"
                                     >
                                         {getFileIcon(doc.type || 'file')}
-                                        <div className="flex-1 grid grid-cols-2 gap-2">
+                                        <div className="grid flex-1 grid-cols-2 gap-2">
                                             <div>
-                                                <Label htmlFor={`doc-name-${index}`} className="text-xs text-gray-500">
+                                                <Label
+                                                    htmlFor={`doc-name-${index}`}
+                                                    className="text-xs text-gray-500"
+                                                >
                                                     Атауы
                                                 </Label>
                                                 <Input
                                                     id={`doc-name-${index}`}
                                                     value={doc.name}
-                                                    onChange={(e) => updateDocumentName(index, e.target.value)}
+                                                    onChange={(e) =>
+                                                        updateDocumentName(
+                                                            index,
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="h-8 text-sm"
                                                     placeholder="Құжат атауы"
                                                 />
                                             </div>
                                             <div>
-                                                <Label htmlFor={`doc-type-${index}`} className="text-xs text-gray-500">
+                                                <Label
+                                                    htmlFor={`doc-type-${index}`}
+                                                    className="text-xs text-gray-500"
+                                                >
                                                     Түрі (қосымша)
                                                 </Label>
                                                 <Input
                                                     id={`doc-type-${index}`}
                                                     value={doc.type || ''}
-                                                    onChange={(e) => updateDocumentType(index, e.target.value)}
+                                                    onChange={(e) =>
+                                                        updateDocumentType(
+                                                            index,
+                                                            e.target.value,
+                                                        )
+                                                    }
                                                     className="h-8 text-sm"
                                                     placeholder="Мысалы: келісімшарт"
                                                 />
@@ -188,8 +242,10 @@ export default function ProjectDocumentsUpload({
                                             type="button"
                                             variant="ghost"
                                             size="icon"
-                                            onClick={() => removeDocument(index)}
-                                            className="flex-shrink-0 h-8 w-8 text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                            onClick={() =>
+                                                removeDocument(index)
+                                            }
+                                            className="h-8 w-8 flex-shrink-0 text-gray-500 hover:bg-red-50 hover:text-red-600"
                                         >
                                             <X className="h-4 w-4" />
                                         </Button>
@@ -198,11 +254,12 @@ export default function ProjectDocumentsUpload({
                             </div>
                         )}
 
-                        {documents.length === 0 && existingDocuments.length === 0 && (
-                            <p className="text-center text-sm text-gray-400 py-2">
-                                Жүктелген құжаттар жоқ
-                            </p>
-                        )}
+                        {documents.length === 0 &&
+                            existingDocuments.length === 0 && (
+                                <p className="py-2 text-center text-sm text-gray-400">
+                                    Жүктелген құжаттар жоқ
+                                </p>
+                            )}
                     </div>
 
                     {/* Hidden inputs for form submission */}

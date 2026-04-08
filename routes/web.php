@@ -167,4 +167,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 });
 
+Route::middleware(['auth', 'verified'])->prefix('chat')->name('chat.')->group(function () {
+    Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
+    Route::get('history', [\App\Http\Controllers\ChatController::class, 'history'])->name('history');
+    Route::delete('clear', [\App\Http\Controllers\ChatController::class, 'clear'])->name('clear');
+});
+
 require __DIR__.'/settings.php';

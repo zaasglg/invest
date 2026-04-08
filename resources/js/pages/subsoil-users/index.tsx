@@ -60,18 +60,14 @@ interface Props {
     filters: Partial<Filters>;
 }
 
-const getStatusLabel = (
-    status: SubsoilUser['license_status'],
-) => {
+const getStatusLabel = (status: SubsoilUser['license_status']) => {
     if (status === 'active') return 'Белсенді';
     if (status === 'expired') return 'Мерзімі өткен';
     if (status === 'illegal') return 'Заңсыз';
     return 'Тоқтатылған';
 };
 
-const getStatusColor = (
-    status: SubsoilUser['license_status'],
-) => {
+const getStatusColor = (status: SubsoilUser['license_status']) => {
     if (status === 'active') return 'bg-green-100 text-green-800';
     if (status === 'expired') return 'bg-gray-100 text-gray-800';
     if (status === 'illegal') return 'bg-red-600 text-white';
@@ -168,17 +164,12 @@ export default function Index({
                         <form onSubmit={submitFilters} className="mt-4">
                             <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                                 <div className="space-y-1.5">
-                                    <Label htmlFor="search">
-                                        Іздеу
-                                    </Label>
+                                    <Label htmlFor="search">Іздеу</Label>
                                     <Input
                                         id="search"
                                         value={data.search}
                                         onChange={(e) =>
-                                            setData(
-                                                'search',
-                                                e.target.value,
-                                            )
+                                            setData('search', e.target.value)
                                         }
                                         placeholder="Атауы немесе БСН"
                                     />
@@ -246,10 +237,7 @@ export default function Index({
                                         </SelectTrigger>
                                         <SelectContent>
                                             {mineralTypes.map((mt) => (
-                                                <SelectItem
-                                                    key={mt}
-                                                    value={mt}
-                                                >
+                                                <SelectItem key={mt} value={mt}>
                                                     {mt}
                                                 </SelectItem>
                                             ))}
@@ -281,9 +269,7 @@ export default function Index({
                     <Table>
                         <TableHeader>
                             <TableRow>
-                                <TableHead className="w-[80px]">
-                                    ID
-                                </TableHead>
+                                <TableHead className="w-[80px]">ID</TableHead>
                                 <TableHead>Атауы</TableHead>
                                 <TableHead>БСН</TableHead>
                                 <TableHead>Аймақ</TableHead>
@@ -338,13 +324,8 @@ export default function Index({
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {formatDate(
-                                                user.license_start,
-                                            )}{' '}
-                                            —{' '}
-                                            {formatDate(
-                                                user.license_end,
-                                            )}
+                                            {formatDate(user.license_start)} —{' '}
+                                            {formatDate(user.license_end)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
@@ -373,9 +354,12 @@ export default function Index({
                                                             title="Өңдеу"
                                                         >
                                                             <Link
-                                                                href={subsoilUsersRoutes.edit.url(
-                                                                    user.id,
-                                                                ) + `?return_to=${encodeURIComponent(url)}`}
+                                                                href={
+                                                                    subsoilUsersRoutes.edit.url(
+                                                                        user.id,
+                                                                    ) +
+                                                                    `?return_to=${encodeURIComponent(url)}`
+                                                                }
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Link>
@@ -383,7 +367,7 @@ export default function Index({
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8 hover:bg-red-50 text-red-500 hover:text-red-700"
+                                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
                                                             onClick={() =>
                                                                 handleDelete(
                                                                     user.id,

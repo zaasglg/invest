@@ -1,5 +1,12 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { ArrowLeft, Upload, FileText, Trash2, Download, CheckCircle2 } from 'lucide-react';
+import {
+    ArrowLeft,
+    Upload,
+    FileText,
+    Trash2,
+    Download,
+    CheckCircle2,
+} from 'lucide-react';
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -41,7 +48,13 @@ interface Props {
     ispolnitelCanWrite?: boolean;
 }
 
-export default function Documents({ project, completedDocuments, documents, canDownload, ispolnitelCanWrite = false }: Props) {
+export default function Documents({
+    project,
+    completedDocuments,
+    documents,
+    canDownload,
+    ispolnitelCanWrite = false,
+}: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
     // Ispolnitel can add but cannot delete
@@ -95,7 +108,9 @@ export default function Documents({ project, completedDocuments, documents, canD
 
     const handleDelete = (documentId: number) => {
         if (confirm('Осы құжатты жоюға сенімдісіз бе?')) {
-            router.delete(`/investment-projects/${project.id}/documents/${documentId}`);
+            router.delete(
+                `/investment-projects/${project.id}/documents/${documentId}`,
+            );
         }
     };
 
@@ -104,13 +119,37 @@ export default function Documents({ project, completedDocuments, documents, canD
 
         const typeLower = type.toLowerCase();
         if (typeLower === 'pdf') {
-            return <div className={`${iconClass} bg-red-100 text-red-600 rounded-lg flex items-center justify-center font-bold text-sm`}>PDF</div>;
+            return (
+                <div
+                    className={`${iconClass} flex items-center justify-center rounded-lg bg-red-100 text-sm font-bold text-red-600`}
+                >
+                    PDF
+                </div>
+            );
         } else if (['doc', 'docx'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-blue-100 text-[#0f1b3d] rounded-lg flex items-center justify-center font-bold text-sm`}>DOC</div>;
+            return (
+                <div
+                    className={`${iconClass} flex items-center justify-center rounded-lg bg-blue-100 text-sm font-bold text-[#0f1b3d]`}
+                >
+                    DOC
+                </div>
+            );
         } else if (['xls', 'xlsx'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-green-100 text-green-600 rounded-lg flex items-center justify-center font-bold text-sm`}>XLS</div>;
+            return (
+                <div
+                    className={`${iconClass} flex items-center justify-center rounded-lg bg-green-100 text-sm font-bold text-green-600`}
+                >
+                    XLS
+                </div>
+            );
         } else if (['jpg', 'jpeg', 'png', 'gif'].includes(typeLower)) {
-            return <div className={`${iconClass} bg-purple-100 text-purple-600 rounded-lg flex items-center justify-center font-bold text-sm`}>IMG</div>;
+            return (
+                <div
+                    className={`${iconClass} flex items-center justify-center rounded-lg bg-purple-100 text-sm font-bold text-purple-600`}
+                >
+                    IMG
+                </div>
+            );
         }
 
         return <FileText className={`${iconClass} text-gray-400`} />;
@@ -125,162 +164,232 @@ export default function Documents({ project, completedDocuments, documents, canD
     return (
         <AppLayout
             breadcrumbs={[
-                { title: project.region?.name || 'Аудан', href: project.region ? `/regions/${project.region.id}` : '' },
-                { title: project.name || 'Жоба', href: `/investment-projects/${project.id}` },
+                {
+                    title: project.region?.name || 'Аудан',
+                    href: project.region ? `/regions/${project.region.id}` : '',
+                },
+                {
+                    title: project.name || 'Жоба',
+                    href: `/investment-projects/${project.id}`,
+                },
                 { title: 'Құжаттар', href: '' },
             ]}
         >
             <Head title={`Құжаттар - ${project.name}`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6 w-full max-w-6xl mx-auto">
+            <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <Link href={`/investment-projects/${project.id}`} className="inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] mb-2 transition-colors">
-                            <ArrowLeft className="h-4 w-4 mr-1" /> Жобаға қайту
+                        <Link
+                            href={`/investment-projects/${project.id}`}
+                            className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
+                        >
+                            <ArrowLeft className="mr-1 h-4 w-4" /> Жобаға қайту
                         </Link>
-                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">Жоба құжаттары</h1>
-                        <p className="text-sm text-gray-500 mt-1">{project.name}</p>
+                        <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
+                            Жоба құжаттары
+                        </h1>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {project.name}
+                        </p>
                     </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Upload Form */}
                     {canEdit && (
-                    <div className="lg:col-span-1">
-                        <Card className="shadow-none">
-                            <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
-                                    <Upload className="h-5 w-5 text-gray-500" />
-                                    Құжат жүктеу
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                <form onSubmit={handleUpload} className="space-y-4">
-                                    <div>
-                                        <Label htmlFor="file">Файл</Label>
-                                        <Input
-                                            id="file"
-                                            type="file"
-                                            onChange={handleFileChange}
-                                            className="mt-1"
-                                            required
-                                        />
-                                        {file && (
-                                            <p className="text-xs text-gray-500 mt-1">
-                                                Таңдалды: {file.name} ({formatFileSize(file.size)})
-                                            </p>
-                                        )}
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="name">Құжат атауы</Label>
-                                        <Input
-                                            id="name"
-                                            type="text"
-                                            value={documentName}
-                                            onChange={(e) => setDocumentName(e.target.value)}
-                                            placeholder="Атауын енгізіңіз"
-                                            className="mt-1"
-                                            required
-                                        />
-                                    </div>
-
-                                    <div>
-                                        <Label htmlFor="type">Құжат түрі (қосымша)</Label>
-                                        <Input
-                                            id="type"
-                                            type="text"
-                                            value={documentType}
-                                            onChange={(e) => setDocumentType(e.target.value)}
-                                            placeholder="Мысалы: келісімшарт, есеп"
-                                            className="mt-1"
-                                        />
-                                    </div>
-
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            id="is_completed"
-                                            type="checkbox"
-                                            checked={isCompleted}
-                                            onChange={(e) => setIsCompleted(e.target.checked)}
-                                            className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                                        />
-                                        <Label htmlFor="is_completed" className="text-sm font-medium text-gray-700 cursor-pointer">
-                                            Аяқталған құжат
-                                        </Label>
-                                    </div>
-
-                                    <Button
-                                        type="submit"
-                                        className="w-full"
-                                        disabled={!file || !documentName || isUploading}
+                        <div className="lg:col-span-1">
+                            <Card className="shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Upload className="h-5 w-5 text-gray-500" />
+                                        Құжат жүктеу
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <form
+                                        onSubmit={handleUpload}
+                                        className="space-y-4"
                                     >
-                                        {isUploading ? 'Жүктелуде...' : 'Жүктеу'}
-                                    </Button>
-                                </form>
-                            </CardContent>
-                        </Card>
+                                        <div>
+                                            <Label htmlFor="file">Файл</Label>
+                                            <Input
+                                                id="file"
+                                                type="file"
+                                                onChange={handleFileChange}
+                                                className="mt-1"
+                                                required
+                                            />
+                                            {file && (
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    Таңдалды: {file.name} (
+                                                    {formatFileSize(file.size)})
+                                                </p>
+                                            )}
+                                        </div>
 
-                        {/* Project Info */}
-                        <Card className="shadow-none mt-4">
-                            <CardHeader>
-                                <CardTitle className="text-sm font-medium text-gray-500">Жоба туралы ақпарат</CardTitle>
-                            </CardHeader>
-                            <CardContent className="space-y-2 text-sm">
-                                <div>
-                                    <span className="text-gray-500">Облыс:</span>{' '}
-                                    <span className="font-medium">{project.region?.name || 'Көрсетілмеген'}</span>
-                                </div>
-                                <div>
-                                    <span className="text-gray-500">Түрі:</span>{' '}
-                                    <span className="font-medium">{project.project_type?.name || 'Көрсетілмеген'}</span>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    </div>
+                                        <div>
+                                            <Label htmlFor="name">
+                                                Құжат атауы
+                                            </Label>
+                                            <Input
+                                                id="name"
+                                                type="text"
+                                                value={documentName}
+                                                onChange={(e) =>
+                                                    setDocumentName(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Атауын енгізіңіз"
+                                                className="mt-1"
+                                                required
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="type">
+                                                Құжат түрі (қосымша)
+                                            </Label>
+                                            <Input
+                                                id="type"
+                                                type="text"
+                                                value={documentType}
+                                                onChange={(e) =>
+                                                    setDocumentType(
+                                                        e.target.value,
+                                                    )
+                                                }
+                                                placeholder="Мысалы: келісімшарт, есеп"
+                                                className="mt-1"
+                                            />
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                id="is_completed"
+                                                type="checkbox"
+                                                checked={isCompleted}
+                                                onChange={(e) =>
+                                                    setIsCompleted(
+                                                        e.target.checked,
+                                                    )
+                                                }
+                                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                            />
+                                            <Label
+                                                htmlFor="is_completed"
+                                                className="cursor-pointer text-sm font-medium text-gray-700"
+                                            >
+                                                Аяқталған құжат
+                                            </Label>
+                                        </div>
+
+                                        <Button
+                                            type="submit"
+                                            className="w-full"
+                                            disabled={
+                                                !file ||
+                                                !documentName ||
+                                                isUploading
+                                            }
+                                        >
+                                            {isUploading
+                                                ? 'Жүктелуде...'
+                                                : 'Жүктеу'}
+                                        </Button>
+                                    </form>
+                                </CardContent>
+                            </Card>
+
+                            {/* Project Info */}
+                            <Card className="mt-4 shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="text-sm font-medium text-gray-500">
+                                        Жоба туралы ақпарат
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-2 text-sm">
+                                    <div>
+                                        <span className="text-gray-500">
+                                            Облыс:
+                                        </span>{' '}
+                                        <span className="font-medium">
+                                            {project.region?.name ||
+                                                'Көрсетілмеген'}
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <span className="text-gray-500">
+                                            Түрі:
+                                        </span>{' '}
+                                        <span className="font-medium">
+                                            {project.project_type?.name ||
+                                                'Көрсетілмеген'}
+                                        </span>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
                     )}
 
                     {/* Documents List */}
-                    <div className={canEdit ? 'lg:col-span-2 space-y-6' : 'lg:col-span-3 space-y-6'}>
+                    <div
+                        className={
+                            canEdit
+                                ? 'space-y-6 lg:col-span-2'
+                                : 'space-y-6 lg:col-span-3'
+                        }
+                    >
                         {/* Completed Documents - shown first */}
-                        <Card className="shadow-none border-green-200">
+                        <Card className="border-green-200 shadow-none">
                             <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-lg">
                                     <CheckCircle2 className="h-5 w-5 text-green-600" />
-                                    <span className="text-green-800">Аяқталған құжаттар</span>
-                                    <span className="text-sm font-normal text-gray-500 ml-2">
+                                    <span className="text-green-800">
+                                        Аяқталған құжаттар
+                                    </span>
+                                    <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({completedDocuments.length})
                                     </span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 {completedDocuments.length === 0 ? (
-                                    <div className="text-center py-8">
-                                        <CheckCircle2 className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                                        <p className="text-gray-500 text-sm">Аяқталған құжаттар жоқ</p>
+                                    <div className="py-8 text-center">
+                                        <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-gray-300" />
+                                        <p className="text-sm text-gray-500">
+                                            Аяқталған құжаттар жоқ
+                                        </p>
                                     </div>
                                 ) : (
                                     <div className="grid grid-cols-1 gap-3">
                                         {completedDocuments.map((document) => (
                                             <div
                                                 key={document.id}
-                                                className="flex items-center gap-4 p-4 border border-green-200 rounded-lg bg-green-50/50 hover:bg-green-50 transition-colors"
+                                                className="flex items-center gap-4 rounded-lg border border-green-200 bg-green-50/50 p-4 transition-colors hover:bg-green-50"
                                             >
                                                 {getFileIcon(document.type)}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-[#0f1b3d] truncate">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate font-medium text-[#0f1b3d]">
                                                         {document.name}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
-                                                        {document.type.toUpperCase()} • {new Date(document.created_at).toLocaleDateString('kk-KZ')}
+                                                        {document.type.toUpperCase()}{' '}
+                                                        •{' '}
+                                                        {new Date(
+                                                            document.created_at,
+                                                        ).toLocaleDateString(
+                                                            'kk-KZ',
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {canDownload && (
                                                         <a
                                                             href={`/investment-projects/${project.id}/documents/${document.id}/download`}
-                                                            className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
+                                                            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                             title="Жүктеу"
                                                         >
                                                             <Download className="h-4 w-4" />
@@ -290,8 +399,12 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            onClick={() => handleDelete(document.id)}
-                                                            className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    document.id,
+                                                                )
+                                                            }
+                                                            className="text-gray-500 hover:bg-red-50 hover:text-red-600"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>
@@ -307,21 +420,24 @@ export default function Documents({ project, completedDocuments, documents, canD
                         {/* Regular Documents */}
                         <Card className="shadow-none">
                             <CardHeader>
-                                <CardTitle className="text-lg flex items-center gap-2">
+                                <CardTitle className="flex items-center gap-2 text-lg">
                                     <FileText className="h-5 w-5 text-gray-500" />
                                     Жүктелген құжаттар
-                                    <span className="text-sm font-normal text-gray-500 ml-2">
+                                    <span className="ml-2 text-sm font-normal text-gray-500">
                                         ({documents.length})
                                     </span>
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
                                 {documents.length === 0 ? (
-                                    <div className="text-center py-12">
-                                        <FileText className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                                        <p className="text-gray-500">Жүктелген құжаттар жоқ</p>
-                                        <p className="text-sm text-gray-400 mt-1">
-                                            Бірінші құжатты сол жақтағы пішін арқылы жүктеңіз
+                                    <div className="py-12 text-center">
+                                        <FileText className="mx-auto mb-4 h-12 w-12 text-gray-300" />
+                                        <p className="text-gray-500">
+                                            Жүктелген құжаттар жоқ
+                                        </p>
+                                        <p className="mt-1 text-sm text-gray-400">
+                                            Бірінші құжатты сол жақтағы пішін
+                                            арқылы жүктеңіз
                                         </p>
                                     </div>
                                 ) : (
@@ -329,22 +445,28 @@ export default function Documents({ project, completedDocuments, documents, canD
                                         {documents.map((document) => (
                                             <div
                                                 key={document.id}
-                                                className="flex items-center gap-4 p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                                                className="flex items-center gap-4 rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50"
                                             >
                                                 {getFileIcon(document.type)}
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="font-medium text-[#0f1b3d] truncate">
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="truncate font-medium text-[#0f1b3d]">
                                                         {document.name}
                                                     </p>
                                                     <p className="text-xs text-gray-500">
-                                                        {document.type.toUpperCase()} • {new Date(document.created_at).toLocaleDateString('kk-KZ')}
+                                                        {document.type.toUpperCase()}{' '}
+                                                        •{' '}
+                                                        {new Date(
+                                                            document.created_at,
+                                                        ).toLocaleDateString(
+                                                            'kk-KZ',
+                                                        )}
                                                     </p>
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     {canDownload && (
                                                         <a
                                                             href={`/investment-projects/${project.id}/documents/${document.id}/download`}
-                                                            className="p-2 text-gray-500 hover:text-[#0f1b3d] hover:bg-[#0f1b3d]/5 rounded-lg transition-colors"
+                                                            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
                                                             title="Жүктеу"
                                                         >
                                                             <Download className="h-4 w-4" />
@@ -354,8 +476,12 @@ export default function Documents({ project, completedDocuments, documents, canD
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            onClick={() => handleDelete(document.id)}
-                                                            className="text-gray-500 hover:text-red-600 hover:bg-red-50"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    document.id,
+                                                                )
+                                                            }
+                                                            className="text-gray-500 hover:bg-red-50 hover:text-red-600"
                                                         >
                                                             <Trash2 className="h-4 w-4" />
                                                         </Button>

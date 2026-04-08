@@ -34,10 +34,10 @@ export function AboutSection() {
                                     </h3>
                                     <p className="text-sm leading-relaxed text-white/50 sm:text-base">
                                         Located in the heart of the Silk Road,
-                                        Turkistan is a rapidly modernizing region
-                                        with a population of over 2 million people
-                                        and a centuries-old heritage of trade and
-                                        cultural exchange.
+                                        Turkistan is a rapidly modernizing
+                                        region with a population of over 2
+                                        million people and a centuries-old
+                                        heritage of trade and cultural exchange.
                                     </p>
                                 </div>
 
@@ -68,7 +68,7 @@ export function AboutSection() {
                                             <div className="text-lg font-bold text-white sm:text-xl">
                                                 {item.value}
                                             </div>
-                                            <div className="text-[10px] text-white/40 uppercase tracking-wide sm:text-xs">
+                                            <div className="text-[10px] tracking-wide text-white/40 uppercase sm:text-xs">
                                                 {item.label}
                                             </div>
                                         </div>
@@ -78,7 +78,7 @@ export function AboutSection() {
                         </div>
 
                         {/* Decorative card offset */}
-                        <div className="absolute -bottom-4 -right-4 -z-10 h-full w-full rounded-3xl border border-[#c8a44e]/10 bg-[#c8a44e]/5" />
+                        <div className="absolute -right-4 -bottom-4 -z-10 h-full w-full rounded-3xl border border-[#c8a44e]/10 bg-[#c8a44e]/5" />
                     </div>
 
                     {/* Right: text content */}
@@ -105,10 +105,10 @@ export function AboutSection() {
                             </p>
                             <p>
                                 With modern infrastructure projects underway,
-                                including a new international airport, a high-speed
-                                rail link, and world-class SEZ facilities, the
-                                region offers unparalleled access to Central Asian
-                                markets.
+                                including a new international airport, a
+                                high-speed rail link, and world-class SEZ
+                                facilities, the region offers unparalleled
+                                access to Central Asian markets.
                             </p>
                             <p>
                                 Our investment portal provides transparent,

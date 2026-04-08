@@ -49,11 +49,16 @@ export function formatMoneyCompact(
     };
 
     if (absoluteAmount >= 1_000_000_000_000) {
-        return formatWithTrim(amount / 1_000_000_000_000) + ` трлн${currencySuffix}`;
+        return (
+            formatWithTrim(amount / 1_000_000_000_000) +
+            ` трлн${currencySuffix}`
+        );
     }
 
     if (absoluteAmount >= 1_000_000_000) {
-        return formatWithTrim(amount / 1_000_000_000) + ` млрд${currencySuffix}`;
+        return (
+            formatWithTrim(amount / 1_000_000_000) + ` млрд${currencySuffix}`
+        );
     }
 
     if (absoluteAmount >= 1_000_000) {

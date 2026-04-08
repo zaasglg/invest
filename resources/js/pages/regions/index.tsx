@@ -18,7 +18,13 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogFooter,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import Pagination from '@/components/pagination';
@@ -80,11 +86,18 @@ function SortableRegionRow({
     children: React.ReactNode;
     isEnabled: boolean;
 }) {
-    const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id });
     if (!isEnabled) {
         return <TableRow>{children}</TableRow>;
     }
-    
+
     return (
         <TableRow
             ref={setNodeRef}
@@ -95,10 +108,14 @@ function SortableRegionRow({
                 position: isDragging ? 'relative' : undefined,
                 zIndex: isDragging ? 10 : undefined,
             }}
-            className="hover:bg-gray-50 transition-colors"
+            className="transition-colors hover:bg-gray-50"
         >
-            <TableCell className="w-6 py-3 pl-3 pr-0">
-                <div {...attributes} {...listeners} className="cursor-grab hover:bg-gray-100 p-1 rounded">
+            <TableCell className="w-6 py-3 pr-0 pl-3">
+                <div
+                    {...attributes}
+                    {...listeners}
+                    className="cursor-grab rounded p-1 hover:bg-gray-100"
+                >
                     <GripVertical className="h-4 w-4 text-gray-400" />
                 </div>
             </TableCell>
@@ -111,7 +128,9 @@ export default function Index({ regions: regionsData }: Props) {
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
 
-    const [orderedRegions, setOrderedRegions] = useState<Region[]>(regionsData.data);
+    const [orderedRegions, setOrderedRegions] = useState<Region[]>(
+        regionsData.data,
+    );
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [regionToMove, setRegionToMove] = useState<Region | null>(null);
     const [targetPage, setTargetPage] = useState<number>(1);
@@ -125,11 +144,15 @@ export default function Index({ regions: regionsData }: Props) {
     const handleMoveSubmit = () => {
         if (!regionToMove) return;
 
-        router.post(`/regions/${regionToMove.id}/move-to-page`, {
-            target_page: targetPage
-        }, {
-            onSuccess: () => setIsMoveModalOpen(false)
-        });
+        router.post(
+            `/regions/${regionToMove.id}/move-to-page`,
+            {
+                target_page: targetPage,
+            },
+            {
+                onSuccess: () => setIsMoveModalOpen(false),
+            },
+        );
     };
 
     useEffect(() => {
@@ -138,31 +161,39 @@ export default function Index({ regions: regionsData }: Props) {
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
     );
 
     const saveOrder = (newOrder: Region[]) => {
-        const csrfTokenValue = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-            
+        const csrfTokenValue =
+            document
+                .querySelector('meta[name="csrf-token"]')
+                ?.getAttribute('content') || '';
+
         fetch('/regions/reorder', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfTokenValue },
-            body: JSON.stringify({ 
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrfTokenValue,
+            },
+            body: JSON.stringify({
                 region_ids: newOrder.map((r) => r.id),
-                page: regionsData.current_page || 1
+                page: regionsData.current_page || 1,
             }),
         });
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
         if (!isSuperAdmin) return;
-        
+
         const { active, over } = event;
         if (!over || active.id === over.id) return;
-        
+
         const oldIndex = orderedRegions.findIndex((r) => r.id === active.id);
         const newIndex = orderedRegions.findIndex((r) => r.id === over.id);
-        
+
         const newOrder = arrayMove(orderedRegions, oldIndex, newIndex);
         setOrderedRegions(newOrder);
         saveOrder(newOrder);
@@ -185,7 +216,11 @@ export default function Index({ regions: regionsData }: Props) {
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Аймақтар
                     </h1>
-                    <Button asChild size="sm" className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                    <Button
+                        asChild
+                        size="sm"
+                        className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                    >
                         <Link href={regions.create.url()}>Жаңа қосу</Link>
                     </Button>
                 </div>
@@ -199,8 +234,12 @@ export default function Index({ regions: regionsData }: Props) {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    {isSuperAdmin && <TableHead className="w-12"></TableHead>}
-                                    <TableHead className="w-[80px]">ID</TableHead>
+                                    {isSuperAdmin && (
+                                        <TableHead className="w-12"></TableHead>
+                                    )}
+                                    <TableHead className="w-[80px]">
+                                        ID
+                                    </TableHead>
                                     <TableHead>Атауы</TableHead>
                                     <TableHead>Түрі</TableHead>
                                     <TableHead>Түсі</TableHead>
@@ -216,16 +255,23 @@ export default function Index({ regions: regionsData }: Props) {
                                     strategy={verticalListSortingStrategy}
                                 >
                                     {orderedRegions.map((region) => (
-                                        <SortableRegionRow key={region.id} id={region.id} isEnabled={isSuperAdmin}>
+                                        <SortableRegionRow
+                                            key={region.id}
+                                            id={region.id}
+                                            isEnabled={isSuperAdmin}
+                                        >
                                             <TableCell className="font-medium text-gray-400">
                                                 #{region.id}
                                             </TableCell>
-                                            <TableCell className="font-semibold text-[#0f1b3d]">{region.name}</TableCell>
+                                            <TableCell className="font-semibold text-[#0f1b3d]">
+                                                {region.name}
+                                            </TableCell>
                                             <TableCell>
                                                 <span className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium">
                                                     {region.type === 'oblast'
                                                         ? 'Облыс'
-                                                        : region.subtype === 'city'
+                                                        : region.subtype ===
+                                                            'city'
                                                           ? 'Қала'
                                                           : 'Аудан'}
                                                 </span>
@@ -241,7 +287,8 @@ export default function Index({ regions: regionsData }: Props) {
                                                         }}
                                                     />
                                                     <span className="font-mono text-xs text-gray-500 uppercase">
-                                                        {region.color || '#3B82F6'}
+                                                        {region.color ||
+                                                            '#3B82F6'}
                                                     </span>
                                                 </div>
                                             </TableCell>
@@ -256,7 +303,9 @@ export default function Index({ regions: regionsData }: Props) {
                                                         <div className="flex items-center gap-2">
                                                             {iconPath && (
                                                                 <img
-                                                                    src={iconPath}
+                                                                    src={
+                                                                        iconPath
+                                                                    }
                                                                     alt={`${region.name} белгішесі`}
                                                                     className="h-5 w-5 object-contain"
                                                                 />
@@ -269,13 +318,15 @@ export default function Index({ regions: regionsData }: Props) {
                                                     );
                                                 })()}
                                             </TableCell>
-                                            <TableCell className="space-x-2 text-right flex justify-end">
+                                            <TableCell className="flex justify-end space-x-2 text-right">
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
                                                     title="Басқа бетке ауыстыру"
                                                     className="h-8 w-8 transition-colors hover:bg-blue-50 hover:text-blue-700"
-                                                    onClick={() => openMoveModal(region)}
+                                                    onClick={() =>
+                                                        openMoveModal(region)
+                                                    }
                                                 >
                                                     <MoveRight className="h-4 w-4" />
                                                 </Button>
@@ -313,7 +364,8 @@ export default function Index({ regions: regionsData }: Props) {
                                             colSpan={isSuperAdmin ? 7 : 6}
                                             className="py-12 text-center text-gray-400"
                                         >
-                                            Мәлімет жоқ. Бірінші аймақты құрыңыз.
+                                            Мәлімет жоқ. Бірінші аймақты
+                                            құрыңыз.
                                         </TableCell>
                                     </TableRow>
                                 )}
@@ -324,29 +376,46 @@ export default function Index({ regions: regionsData }: Props) {
 
                 <Pagination paginator={regionsData} />
 
-                <Dialog open={isMoveModalOpen} onOpenChange={setIsMoveModalOpen}>
+                <Dialog
+                    open={isMoveModalOpen}
+                    onOpenChange={setIsMoveModalOpen}
+                >
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Аймақтың орнын ауыстыру</DialogTitle>
                         </DialogHeader>
                         <div className="py-4">
-                            <Label htmlFor="targetPage">Қай бетке апарамыз?</Label>
+                            <Label htmlFor="targetPage">
+                                Қай бетке апарамыз?
+                            </Label>
                             <Input
                                 id="targetPage"
                                 type="number"
                                 min={1}
                                 max={regionsData.last_page}
                                 value={targetPage}
-                                onChange={(e) => setTargetPage(parseInt(e.target.value) || 1)}
+                                onChange={(e) =>
+                                    setTargetPage(parseInt(e.target.value) || 1)
+                                }
                                 className="mt-2"
                             />
-                            <p className="text-sm text-gray-500 mt-2">
+                            <p className="mt-2 text-sm text-gray-500">
                                 Жалпы беттер саны: {regionsData.last_page}
                             </p>
                         </div>
                         <DialogFooter>
-                            <Button variant="outline" onClick={() => setIsMoveModalOpen(false)}>Болдырмау</Button>
-                            <Button onClick={handleMoveSubmit} className="bg-[#c8a44e] text-white hover:bg-[#b8943e]">Сақтау</Button>
+                            <Button
+                                variant="outline"
+                                onClick={() => setIsMoveModalOpen(false)}
+                            >
+                                Болдырмау
+                            </Button>
+                            <Button
+                                onClick={handleMoveSubmit}
+                                className="bg-[#c8a44e] text-white hover:bg-[#b8943e]"
+                            >
+                                Сақтау
+                            </Button>
                         </DialogFooter>
                     </DialogContent>
                 </Dialog>

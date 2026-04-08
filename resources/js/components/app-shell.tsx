@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { SidebarProvider } from '@/components/ui/sidebar';
+import { ChatWidget } from '@/components/chat-widget';
 import type { SharedData } from '@/types';
 
 type Props = {
@@ -13,9 +14,17 @@ export function AppShell({ children, variant = 'header' }: Props) {
 
     if (variant === 'header') {
         return (
-            <div className="flex min-h-screen w-full flex-col overflow-x-hidden">{children}</div>
+            <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
+                {children}
+                <ChatWidget />
+            </div>
         );
     }
 
-    return <SidebarProvider defaultOpen={isOpen}>{children}</SidebarProvider>;
+    return (
+        <SidebarProvider defaultOpen={isOpen}>
+            {children}
+            <ChatWidget />
+        </SidebarProvider>
+    );
 }

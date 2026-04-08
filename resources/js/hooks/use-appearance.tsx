@@ -27,6 +27,6 @@ export function useAppearance(): UseAppearanceReturn {
     return {
         appearance: 'light',
         resolvedAppearance: 'light',
-        updateAppearance
+        updateAppearance,
     } as const;
 }

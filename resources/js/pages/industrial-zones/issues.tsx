@@ -79,7 +79,13 @@ export default function Issues({ industrialZone, issues }: Props) {
 
         router.post(
             `/industrial-zones/${industrialZone.id}/issues`,
-            { title, description, category: category || null, severity, status },
+            {
+                title,
+                description,
+                category: category || null,
+                severity,
+                status,
+            },
             {
                 onSuccess: () => {
                     setTitle('');
@@ -134,7 +140,10 @@ export default function Issues({ industrialZone, issues }: Props) {
     return (
         <AppLayout
             breadcrumbs={[
-                { title: industrialZone.region?.name || 'Аймақ', href: `/regions/${industrialZone.region?.id}` },
+                {
+                    title: industrialZone.region?.name || 'Аймақ',
+                    href: `/regions/${industrialZone.region?.id}`,
+                },
                 {
                     title: industrialZone.name,
                     href: `/industrial-zones/${industrialZone.id}`,
@@ -142,9 +151,7 @@ export default function Issues({ industrialZone, issues }: Props) {
                 { title: 'Проблемалық мәселелер', href: '' },
             ]}
         >
-            <Head
-                title={`Проблемалық мәселелер - ${industrialZone.name}`}
-            />
+            <Head title={`Проблемалық мәселелер - ${industrialZone.name}`} />
 
             <div className="mx-auto flex h-full w-full max-w-6xl flex-1 flex-col gap-6 p-6">
                 <div>

@@ -16,7 +16,7 @@ export default function AppearanceToggleTab({
         >
             <button
                 className={cn(
-                    'flex items-center rounded-md px-3.5 py-1.5 transition-colors bg-white shadow-xs'
+                    'flex items-center rounded-md bg-white px-3.5 py-1.5 shadow-xs transition-colors',
                 )}
             >
                 <Sun className="-ml-1 h-4 w-4" />
