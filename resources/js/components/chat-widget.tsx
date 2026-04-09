@@ -23,13 +23,13 @@ export function ChatWidget() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        if (bottomRef.current) {
+            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
         }
-    }, [messages]);
+    }, [messages, isLoading]);
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -124,7 +124,6 @@ export function ChatWidget() {
                     <CardContent className="flex-1 overflow-hidden p-0">
                         <ScrollArea
                             className="h-full px-4 py-4"
-                            ref={scrollRef}
                         >
                             {messages.length === 0 ? (
                                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground">
@@ -176,6 +175,7 @@ export function ChatWidget() {
                                             </div>
                                         </div>
                                     )}
+                                    <div ref={bottomRef} />
                                 </div>
                             )}
                         </ScrollArea>
