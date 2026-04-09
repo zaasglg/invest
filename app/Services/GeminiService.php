@@ -13,8 +13,7 @@ class GeminiService
 
     // Модельдер тізімі - бірі жұмыс істемесе келесісіне өтеді
     protected array $models = [
-        'gemini-3-flash-preview',
-        'gemini-2.5-flash-preview-04-17',
+        'gemini-3.1-flash-lite-preview'
     ];
 
     protected int $maxRetries = 2;

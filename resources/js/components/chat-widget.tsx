@@ -164,6 +164,18 @@ export function ChatWidget() {
                                             </div>
                                         </div>
                                     ))}
+                                    {isLoading && (
+                                        <div className="flex justify-start">
+                                            <div className="flex max-w-[80%] items-center gap-3 rounded-lg bg-muted px-4 py-2 text-muted-foreground">
+                                                <div className="flex items-center gap-1 mt-1">
+                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]"></div>
+                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]"></div>
+                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"></div>
+                                                </div>
+                                                <p className="text-sm">Ойланып жатыр...</p>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </ScrollArea>
