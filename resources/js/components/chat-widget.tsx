@@ -163,19 +163,21 @@ export function ChatWidget() {
                                             </div>
                                         </div>
                                     ))}
+                                    {/* AI ойланып жатыр индикаторы */}
                                     {isLoading && (
                                         <div className="flex justify-start">
-                                            <div className="flex max-w-[80%] items-center gap-3 rounded-lg bg-muted px-4 py-2 text-muted-foreground">
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]"></div>
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]"></div>
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"></div>
+                                            <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3">
+                                                <div className="flex gap-1">
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
                                                 </div>
-                                                <p className="text-sm">Ойланып жатыр...</p>
+                                                <span className="text-sm text-muted-foreground">
+                                                    AI ойланып жатыр...
+                                                </span>
                                             </div>
                                         </div>
                                     )}
-                                    <div ref={bottomRef} />
                                 </div>
                             )}
                         </ScrollArea>
