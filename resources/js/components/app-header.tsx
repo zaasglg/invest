@@ -53,7 +53,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         <>
             {/* ── Main nav bar ── */}
             <div className="border-b border-white/10 bg-[#0f1b3d]">
-                <div className="mx-auto flex h-16 items-center md:max-w-7xl">
+                <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Logo */}
                     <Link
                         href="/dashboard"
@@ -133,9 +133,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     {/* Desktop Navigation */}
-                    <div className="ml-2 hidden h-full min-w-0 flex-1 items-center overflow-hidden lg:flex">
-                        <NavigationMenu className="flex h-full max-w-full items-stretch">
-                            <NavigationMenuList className="flex h-full items-stretch gap-0.5">
+                    <div className="ml-2 hidden h-full min-w-0 flex-1 items-center lg:flex">
+                        <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                            <NavigationMenu className="flex h-full w-max max-w-none items-stretch justify-start">
+                                <NavigationMenuList className="flex h-full flex-nowrap items-stretch justify-start gap-0.5">
                                 {filteredHeaderNavItems.map((item, index) => (
                                     <NavigationMenuItem
                                         key={index}
@@ -145,7 +146,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             href={item.href}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
-                                                'h-9 cursor-pointer rounded-lg bg-transparent px-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
+                                                'h-9 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
                                                 isCurrentUrl(item.href) &&
                                                     'text-white',
                                             )}
@@ -160,8 +161,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                         )}
                                     </NavigationMenuItem>
                                 ))}
-                            </NavigationMenuList>
-                        </NavigationMenu>
+                                </NavigationMenuList>
+                            </NavigationMenu>
+                        </div>
                     </div>
 
                     {/* Right side: notifications + avatar */}
