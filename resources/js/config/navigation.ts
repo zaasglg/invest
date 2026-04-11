@@ -13,6 +13,7 @@ import {
 import { dashboard } from '@/routes';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentProjects from '@/routes/investment-projects';
+import * as promZones from '@/routes/prom-zones';
 import * as projectTypes from '@/routes/project-types';
 import * as regions from '@/routes/regions';
 import * as roles from '@/routes/roles';
@@ -38,6 +39,11 @@ export const zoneNavItems: NavItem[] = [
     {
         title: 'ИА',
         href: industrialZones.index.url(),
+        icon: Factory,
+    },
+    {
+        title: 'Пром зона',
+        href: promZones.index.url(),
         icon: Factory,
     },
     {

@@ -40,10 +40,12 @@ class AppServiceProvider extends ServiceProvider
             \App\Models\Region::class,
             \App\Models\Sez::class,
             \App\Models\IndustrialZone::class,
+            \App\Models\PromZone::class,
             \App\Models\InvestmentProject::class,
             \App\Models\SubsoilUser::class,
             \App\Models\SezIssue::class,
             \App\Models\IndustrialZoneIssue::class,
+            \App\Models\PromZoneIssue::class,
             \App\Models\SubsoilIssue::class,
             \App\Models\ProjectIssue::class,
         ];

@@ -87,6 +87,7 @@ interface InvestmentProject {
     project_type?: ProjectType;
     sezs?: SectorEntity[];
     industrial_zones?: SectorEntity[];
+    prom_zones?: SectorEntity[];
     subsoil_users?: SectorEntity[];
     total_investment?: number;
     jobs_count?: number | null;
@@ -348,6 +349,17 @@ export default function Show({
         if (industrialZonesList.length > 0) {
             details.push(
                 `Индустриялық аймақтар: ${industrialZonesList
+                    .map((item) => item.name)
+                    .join(', ')}`,
+            );
+        }
+
+        const promZonesList = project.prom_zones?.length
+            ? project.prom_zones
+            : [];
+        if (promZonesList.length > 0) {
+            details.push(
+                `Пром зоналар: ${promZonesList
                     .map((item) => item.name)
                     .join(', ')}`,
             );

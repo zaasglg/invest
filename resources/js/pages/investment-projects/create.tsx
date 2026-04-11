@@ -62,6 +62,13 @@ interface IndustrialZone {
     location?: { lat: number; lng: number }[] | null;
 }
 
+interface PromZone {
+    id: number;
+    name: string;
+    region_id: number;
+    location?: { lat: number; lng: number }[] | null;
+}
+
 interface InvestUser {
     id: number;
     full_name: string;
@@ -74,6 +81,7 @@ interface Props {
     users: User[];
     sezList: Sez[];
     industrialZones: IndustrialZone[];
+    promZones: PromZone[];
     isDistrictScoped?: boolean;
     userRegionId?: number | null;
     isSuperAdmin?: boolean;
@@ -86,6 +94,7 @@ export default function Create({
     users,
     sezList,
     industrialZones,
+    promZones,
     isDistrictScoped,
     userRegionId,
     isSuperAdmin,
@@ -156,6 +165,11 @@ export default function Create({
         );
     }, [industrialZones, data.region_id]);
 
+    const availablePromZones = useMemo(() => {
+        if (!data.region_id) return [];
+        return promZones.filter((prom) => prom.region_id === parseInt(data.region_id));
+    }, [promZones, data.region_id]);
+
     const selectedRegion = useMemo(() => {
         if (!data.region_id) return null;
         return regions.find((r) => r.id === parseInt(data.region_id)) || null;
@@ -169,7 +183,7 @@ export default function Create({
         const entities: {
             id: number;
             name: string;
-            type: 'sez' | 'iz';
+            type: 'sez' | 'iz' | 'prom';
             location?: { lat: number; lng: number }[] | null;
         }[] = [];
         const currentSectors = data.sector;
@@ -194,10 +208,19 @@ export default function Create({
                         type: 'iz',
                         location: iz.location,
                     });
+            } else if (type === 'prom_zone') {
+                const promZone = promZones.find((x) => x.id === id);
+                if (promZone)
+                    entities.push({
+                        id: promZone.id,
+                        name: promZone.name,
+                        type: 'prom',
+                        location: promZone.location,
+                    });
             }
         });
         return entities;
-    }, [data.sector, sezList, industrialZones]);
+    }, [data.sector, sezList, industrialZones, promZones]);
 
     const districtUsers = useMemo(() => {
         return users.filter((u) => u.region_id && u.baskarma_type !== 'oblast');
@@ -659,6 +682,8 @@ export default function Create({
                                                     {availableSez.length ===
                                                         0 &&
                                                     availableIndustrialZones.length ===
+                                                        0 &&
+                                                    availablePromZones.length ===
                                                         0 ? (
                                                         <p className="py-2 text-center text-sm text-gray-400">
                                                             Бұл ауданда қол
@@ -762,6 +787,57 @@ export default function Create({
                                                                                     >
                                                                                         {
                                                                                             iz.name
+                                                                                        }
+                                                                                    </Label>
+                                                                                </div>
+                                                                            );
+                                                                        },
+                                                                    )}
+                                                                </div>
+                                                            )}
+                                                            {availablePromZones.length >
+                                                                0 && (
+                                                                <div className="space-y-2">
+                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                        Пром зоналар
+                                                                    </p>
+                                                                    {availablePromZones.map(
+                                                                        (
+                                                                            promZone,
+                                                                        ) => {
+                                                                            const value = `prom_zone-${promZone.id}`;
+                                                                            return (
+                                                                                <div
+                                                                                    key={
+                                                                                        value
+                                                                                    }
+                                                                                    className="flex items-center space-x-2"
+                                                                                >
+                                                                                    <Checkbox
+                                                                                        id={
+                                                                                            value
+                                                                                        }
+                                                                                        checked={data.sector.includes(
+                                                                                            value,
+                                                                                        )}
+                                                                                        onCheckedChange={(
+                                                                                            checked,
+                                                                                        ) =>
+                                                                                            handleSectorChange(
+                                                                                                value,
+                                                                                                checked as boolean,
+                                                                                            )
+                                                                                        }
+                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                    />
+                                                                                    <Label
+                                                                                        htmlFor={
+                                                                                            value
+                                                                                        }
+                                                                                        className="cursor-pointer font-normal"
+                                                                                    >
+                                                                                        {
+                                                                                            promZone.name
                                                                                         }
                                                                                     </Label>
                                                                                 </div>

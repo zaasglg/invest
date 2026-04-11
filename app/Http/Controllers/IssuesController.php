@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\IndustrialZoneIssue;
+use App\Models\PromZoneIssue;
 use App\Models\ProjectIssue;
 use App\Models\Region;
 use App\Models\SezIssue;
@@ -113,6 +114,37 @@ class IssuesController extends Controller
             }
         }
 
+        if ($sector === 'prom' || ! $sector) {
+            $query = PromZoneIssue::with(['promZone.region']);
+            if ($regionId) {
+                $query->whereHas('promZone', function ($q) use ($regionId) {
+                    $q->where('region_id', $regionId);
+                });
+            }
+            $promIssues = $query->latest()->get()->map(function ($issue) {
+                return [
+                    'id' => $issue->id,
+                    'type' => 'prom',
+                    'type_label' => 'Пром зона',
+                    'title' => $issue->title,
+                    'description' => $issue->description,
+                    'category' => $issue->category,
+                    'severity' => $issue->severity,
+                    'status' => $issue->status,
+                    'entity_id' => $issue->prom_zone_id,
+                    'entity_name' => $issue->promZone?->name ?? 'Белгісіз пром зона',
+                    'region_name' => $issue->promZone?->region?->name ?? null,
+                    'created_at' => $issue->created_at,
+                ];
+            });
+
+            if (! $sector) {
+                $issues = $issues->merge($promIssues);
+            } else {
+                $issues = $promIssues;
+            }
+        }
+
         if ($sector === 'nedro' || ! $sector) {
             $query = SubsoilIssue::with(['subsoilUser.region']);
             if ($regionId) {
@@ -158,6 +190,7 @@ class IssuesController extends Controller
             'invest' => 'Turkistan Invest',
             'sez' => 'АЭА',
             'iz' => 'ИА',
+            'prom' => 'Пром зона',
             'nedro' => 'Жер қойнауын пайдалану',
         ];
 

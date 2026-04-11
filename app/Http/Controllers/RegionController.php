@@ -121,7 +121,13 @@ class RegionController extends Controller
             },
             'industrialZones.issues',
         ]);
-        $projectsQuery = InvestmentProject::active()->with(['sezs', 'industrialZones', 'subsoilUsers', 'projectType', 'executors'])
+        $region->load([
+            'promZones' => function ($query) {
+                $query->withCount('issues');
+            },
+            'promZones.issues',
+        ]);
+        $projectsQuery = InvestmentProject::active()->with(['sezs', 'industrialZones', 'promZones', 'subsoilUsers', 'projectType', 'executors'])
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
 
@@ -148,6 +154,12 @@ class RegionController extends Controller
             $region->industrialZones->pluck('id')
         )->count();
 
+        // Prom zone issues count
+        $promIssuesCount = \App\Models\PromZoneIssue::whereIn(
+            'prom_zone_id',
+            $region->promZones->pluck('id')
+        )->count();
+
         // Subsoil issues count
         $subsoilIssuesCount = \App\Models\SubsoilIssue::whereIn(
             'subsoil_user_id',
@@ -159,6 +171,7 @@ class RegionController extends Controller
             'projects' => $projects,
             'sezs' => $region->sezs,
             'industrialZones' => $region->industrialZones,
+            'promZones' => $region->promZones,
             'subsoilUsers' => $region->subsoilUsers,
             'stats' => [
                 'totalArea' => round($totalArea, 2),
@@ -167,6 +180,7 @@ class RegionController extends Controller
                 'projectIssuesCount' => $projectIssuesCount,
                 'sezIssuesCount' => $sezIssuesCount,
                 'izIssuesCount' => $izIssuesCount,
+                'promIssuesCount' => $promIssuesCount,
                 'subsoilIssuesCount' => $subsoilIssuesCount,
             ],
         ]);

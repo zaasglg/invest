@@ -52,7 +52,7 @@ function normalizePoint(point: any): LatLng | null {
 interface OverlayEntity {
     id: number;
     name: string;
-    type: 'sez' | 'iz' | 'subsoil';
+    type: 'sez' | 'iz' | 'prom' | 'subsoil';
     location?: LatLng[] | null;
 }
 
@@ -172,6 +172,7 @@ function FitBoundsController({
 const entityColors: Record<string, { color: string; fill: string }> = {
     sez: { color: '#7c3aed', fill: '#8b5cf6' },
     iz: { color: '#d97706', fill: '#f59e0b' },
+    prom: { color: '#0f766e', fill: '#14b8a6' },
     subsoil: { color: '#1f2937', fill: '#4b5563' },
 };
 

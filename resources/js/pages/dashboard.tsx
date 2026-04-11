@@ -25,6 +25,7 @@ interface SectorRow {
 interface SectorData {
     sez: SectorRow;
     iz: SectorRow;
+    prom: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
 }
@@ -39,6 +40,7 @@ interface Props {
     regionStats: {
         investments: Record<number, number>;
         izProjects: Record<number, number>;
+        promProjects: Record<number, number>;
         sezProjects: Record<number, number>;
         subsoilUsers: Record<number, number>;
     };

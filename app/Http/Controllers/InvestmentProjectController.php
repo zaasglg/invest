@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\IndustrialZone;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
+use App\Models\PromZone;
 use App\Models\ProjectType;
 use App\Models\Region;
 use App\Models\Sez;
@@ -49,6 +50,7 @@ class InvestmentProjectController extends Controller
             'executors',
             'sezs',
             'industrialZones',
+            'promZones',
             'subsoilUsers',
         ]);
 
@@ -102,6 +104,14 @@ class InvestmentProjectController extends Controller
                 $projectsQuery->whereHas('industrialZones', function ($query) use ($sectorId) {
                     if ($sectorId) {
                         $query->where('industrial_zones.id', $sectorId);
+                    }
+                });
+            }
+
+            if ($sectorType === 'prom_zone') {
+                $projectsQuery->whereHas('promZones', function ($query) use ($sectorId) {
+                    if ($sectorId) {
+                        $query->where('prom_zones.id', $sectorId);
                     }
                 });
             }
@@ -172,6 +182,7 @@ class InvestmentProjectController extends Controller
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'industrialZones' => IndustrialZone::select('id', 'name', 'region_id')->orderBy('name')->get(),
+            'promZones' => PromZone::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'subsoilUsers' => SubsoilUser::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'filters' => $filters,
         ]);
@@ -233,6 +244,7 @@ class InvestmentProjectController extends Controller
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
+        $promZoneQuery = PromZone::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             // Include user's district and its parent oblast
@@ -244,6 +256,7 @@ class InvestmentProjectController extends Controller
             $regionsQuery->whereIn('id', $regionIds);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
+            $promZoneQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -254,6 +267,7 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
+        $promZones = $promZoneQuery->get();
 
         // Get invest-role users for curator selection (superadmin only)
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
@@ -274,6 +288,7 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
+            'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'investUsers' => $investUsers,
         ]);
@@ -321,6 +336,10 @@ class InvestmentProjectController extends Controller
                         if (! IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
                             $fail("ИА ({$id}) сіздің ауданыңызда емес.");
                         }
+                    } elseif ($type === 'prom_zone') {
+                        if (! PromZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Пром зона ({$id}) сіздің ауданыңызда емес.");
+                        }
                     }
                 },
             ],
@@ -351,6 +370,7 @@ class InvestmentProjectController extends Controller
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
+        $promZoneIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -358,6 +378,8 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
+            } elseif ($parsed['type'] === 'prom_zone') {
+                $promZoneIds[] = $parsed['id'];
             }
         }
 
@@ -374,6 +396,7 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $project->sezs()->sync($sezIds);
         $project->industrialZones()->sync($izIds);
+        $project->promZones()->sync($promZoneIds);
 
         KpiLog::log($project->id, 'Жаңа жоба құрылды: "' . $project->name . '"');
 
@@ -395,6 +418,7 @@ class InvestmentProjectController extends Controller
             'tasks.completions.files',
             'sezs',
             'industrialZones',
+            'promZones',
             'subsoilUsers',
         ])
             ->withCount('photos')
@@ -519,16 +543,18 @@ class InvestmentProjectController extends Controller
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
-        $investmentProject->load(['sezs', 'industrialZones']);
+        $investmentProject->load(['sezs', 'industrialZones', 'promZones']);
 
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
         $izQuery = IndustrialZone::select('id', 'name', 'region_id', 'location');
+        $promZoneQuery = PromZone::select('id', 'name', 'region_id', 'location');
 
         if ($isDistrictScoped) {
             $regionsQuery->where('id', $user->region_id);
             $sezQuery->where('region_id', $user->region_id);
             $izQuery->where('region_id', $user->region_id);
+            $promZoneQuery->where('region_id', $user->region_id);
         }
 
         $regions = $regionsQuery->get();
@@ -539,6 +565,7 @@ class InvestmentProjectController extends Controller
             ->get();
         $sezList = $sezQuery->get();
         $industrialZones = $izQuery->get();
+        $promZones = $promZoneQuery->get();
 
         // Формируем массив sector на основе many-to-many связей
         $sector = [];
@@ -551,6 +578,11 @@ class InvestmentProjectController extends Controller
         // Загружаем все связанные ИЗ
         foreach ($investmentProject->industrialZones as $iz) {
             $sector[] = "industrial_zone-{$iz->id}";
+        }
+
+        // Загружаем все связанные промзоны
+        foreach ($investmentProject->promZones as $promZone) {
+            $sector[] = "prom_zone-{$promZone->id}";
         }
 
         $projectData = $investmentProject->load(['region', 'projectType', 'creator', 'executors', 'documents'])
@@ -579,6 +611,7 @@ class InvestmentProjectController extends Controller
             'users' => $users,
             'sezList' => $sezList,
             'industrialZones' => $industrialZones,
+            'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'investUsers' => $investUsers,
         ]);
@@ -660,6 +693,10 @@ class InvestmentProjectController extends Controller
                         if (! IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
                             $fail("ИА ({$id}) сіздің ауданыңызда емес.");
                         }
+                    } elseif ($type === 'prom_zone') {
+                        if (! PromZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
+                            $fail("Пром зона ({$id}) сіздің ауданыңызда емес.");
+                        }
                     }
                 },
             ],
@@ -692,6 +729,7 @@ class InvestmentProjectController extends Controller
         $sectors = $validated['sector'] ?? [];
         $sezIds = [];
         $izIds = [];
+        $promZoneIds = [];
 
         foreach ($sectors as $sector) {
             $parsed = $this->parseSector($sector);
@@ -699,6 +737,8 @@ class InvestmentProjectController extends Controller
                 $sezIds[] = $parsed['id'];
             } elseif ($parsed['type'] === 'industrial_zone') {
                 $izIds[] = $parsed['id'];
+            } elseif ($parsed['type'] === 'prom_zone') {
+                $promZoneIds[] = $parsed['id'];
             }
         }
 
@@ -713,6 +753,7 @@ class InvestmentProjectController extends Controller
         // Sync many-to-many связи с секторами
         $investmentProject->sezs()->sync($sezIds);
         $investmentProject->industrialZones()->sync($izIds);
+        $investmentProject->promZones()->sync($promZoneIds);
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
 
@@ -752,6 +793,7 @@ class InvestmentProjectController extends Controller
             'photos',
             'sezs',
             'industrialZones',
+            'promZones',
             'subsoilUsers',
         ]);
 

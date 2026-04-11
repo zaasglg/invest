@@ -64,6 +64,7 @@ const typeColorMap: Record<string, string> = {
     invest: 'bg-indigo-100 text-indigo-800',
     sez: 'bg-purple-100 text-purple-800',
     iz: 'bg-cyan-100 text-cyan-800',
+    prom: 'bg-teal-100 text-teal-800',
     nedro: 'bg-orange-100 text-orange-800',
 };
 
@@ -86,6 +87,8 @@ function getEntityLink(type: string, entityId: number): string {
             return `/sezs/${entityId}/issues`;
         case 'iz':
             return `/industrial-zones/${entityId}/issues`;
+        case 'prom':
+            return `/prom-zones/${entityId}/issues`;
         case 'nedro':
             return `/subsoil-users/${entityId}/issues`;
         default:

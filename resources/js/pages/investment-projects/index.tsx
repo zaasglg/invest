@@ -92,6 +92,12 @@ interface IndustrialZone {
     region_id: number;
 }
 
+interface PromZone {
+    id: number;
+    name: string;
+    region_id: number;
+}
+
 interface SubsoilUser {
     id: number;
     name: string;
@@ -113,6 +119,7 @@ interface InvestmentProject {
     executors: User[];
     sezs?: Sez[];
     industrial_zones?: IndustrialZone[];
+    prom_zones?: PromZone[];
     subsoil_users?: SubsoilUser[];
 }
 
@@ -152,6 +159,7 @@ interface Props {
     users: User[];
     sezs: Sez[];
     industrialZones: IndustrialZone[];
+    promZones: PromZone[];
     subsoilUsers: SubsoilUser[];
     filters: Partial<Filters>;
 }
@@ -211,6 +219,7 @@ export default function Index({
     users,
     sezs,
     industrialZones,
+    promZones,
     subsoilUsers,
     filters,
 }: Props) {
@@ -352,6 +361,15 @@ export default function Index({
                 label: iz.name,
             }));
         }
+        if (data.sector_type === 'prom_zone') {
+            const filtered = regionId
+                ? promZones.filter((prom) => prom.region_id === regionId)
+                : promZones;
+            return filtered.map((prom) => ({
+                value: String(prom.id),
+                label: prom.name,
+            }));
+        }
         if (data.sector_type === 'subsoil') {
             const filtered = regionId
                 ? subsoilUsers.filter((su) => su.region_id === regionId)
@@ -362,7 +380,14 @@ export default function Index({
             }));
         }
         return [];
-    }, [data.sector_type, data.region_id, sezs, industrialZones, subsoilUsers]);
+    }, [
+        data.sector_type,
+        data.region_id,
+        sezs,
+        industrialZones,
+        promZones,
+        subsoilUsers,
+    ]);
 
     // Егер аймақ не сектор түрі өзгерсе, сектор мәнін тазалау
     const filteredUsers = useMemo(() => {
@@ -399,6 +424,12 @@ export default function Index({
         if (project.industrial_zones && project.industrial_zones.length > 0) {
             sectors.push(
                 ...project.industrial_zones.map((iz) => `ИА: ${iz.name}`),
+            );
+        }
+
+        if (project.prom_zones && project.prom_zones.length > 0) {
+            sectors.push(
+                ...project.prom_zones.map((prom) => `Пром зона: ${prom.name}`),
             );
         }
 
@@ -668,6 +699,9 @@ export default function Index({
                                             </SelectItem>
                                             <SelectItem value="industrial_zone">
                                                 ИА
+                                            </SelectItem>
+                                            <SelectItem value="prom_zone">
+                                                Пром зона
                                             </SelectItem>
                                         </SelectContent>
                                     </Select>
