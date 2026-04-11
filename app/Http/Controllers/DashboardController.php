@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\IndustrialZone;
 use App\Models\IndustrialZoneIssue;
 use App\Models\InvestmentProject;
+use App\Models\PromZoneIssue;
 use App\Models\ProjectIssue;
 use App\Models\Region;
 use App\Models\Sez;
@@ -139,11 +140,19 @@ class DashboardController extends Controller
                 ->pluck('cnt', 'region_id')
                 ->toArray();
 
+            $promProjects = InvestmentProject::active()->join('investment_project_prom_zone as ippz', 'investment_projects.id', '=', 'ippz.investment_project_id')
+                ->join('prom_zones as pz', 'ippz.prom_zone_id', '=', 'pz.id')
+                ->selectRaw('pz.region_id as region_id, COUNT(DISTINCT investment_projects.id) as cnt')
+                ->groupBy('pz.region_id')
+                ->pluck('cnt', 'region_id')
+                ->toArray();
+
             return [
                 'investments' => $investments,
                 'izProjects' => $izProjects,
                 'sezProjects' => $sezProjects,
                 'subsoilUsers' => $subsoilUsers,
+                'promProjects' => $promProjects,
             ];
         });
 
@@ -165,24 +174,28 @@ class DashboardController extends Controller
             // Job counts per sector
             $sezJobCount = (int) InvestmentProject::active()->whereHas('sezs')->sum('jobs_count');
             $izJobCount = (int) InvestmentProject::active()->whereHas('industrialZones')->sum('jobs_count');
+            $promJobCount = (int) InvestmentProject::active()->whereHas('promZones')->sum('jobs_count');
             $subsoilJobCount = (int) InvestmentProject::active()->whereHas('subsoilUsers')->sum('jobs_count');
             $investJobCount = (int) InvestmentProject::active()->sum('jobs_count');
 
             // Project counts per sector (how many investment projects belong to each sector)
             $sezProjectCount = InvestmentProject::active()->whereHas('sezs')->count();
             $izProjectCount = InvestmentProject::active()->whereHas('industrialZones')->count();
+            $promProjectCount = InvestmentProject::active()->whereHas('promZones')->count();
             $subsoilProjectCount = InvestmentProject::active()->whereHas('subsoilUsers')->count();
             $investProjectCount = InvestmentProject::active()->count();
 
             // Investment from projects (not from SEZ/IZ entities)
             $sezInvestment = (float) InvestmentProject::active()->whereHas('sezs')->sum('total_investment');
             $izInvestment = (float) InvestmentProject::active()->whereHas('industrialZones')->sum('total_investment');
+            $promInvestment = (float) InvestmentProject::active()->whereHas('promZones')->sum('total_investment');
             $nedroInvestment = (float) InvestmentProject::active()->whereHas('subsoilUsers')->sum('total_investment');
             $investInvestment = (float) InvestmentProject::active()->sum('total_investment');
 
             // Issue counts
             $sezIssues = SezIssue::count();
             $izIssues = IndustrialZoneIssue::count();
+            $promIssues = PromZoneIssue::count();
             $subsoilIssues = SubsoilIssue::count();
             $projectIssues = ProjectIssue::count();
 
@@ -198,6 +211,12 @@ class DashboardController extends Controller
                     'projectCount' => $izProjectCount,
                     'problemCount' => $izIssues ?: 0,
                     'jobCount' => $izJobCount,
+                ],
+                'prom' => [
+                    'investment' => $promInvestment,
+                    'projectCount' => $promProjectCount,
+                    'problemCount' => $promIssues ?: 0,
+                    'jobCount' => $promJobCount,
                 ],
                 'nedro' => [
                     'investment' => $nedroInvestment,
@@ -224,6 +243,11 @@ class DashboardController extends Controller
                 ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment, COALESCE(SUM(jobs_count), 0) as jobs')
                 ->groupBy('region_id')->get()->keyBy('region_id');
 
+            // Prom Zone project count, investment & jobs by region (through pivot)
+            $promProjectsByRegion = InvestmentProject::active()->whereHas('promZones')
+                ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment, COALESCE(SUM(jobs_count), 0) as jobs')
+                ->groupBy('region_id')->get()->keyBy('region_id');
+
             // Subsoil project count, investment & jobs by region (through pivot)
             $nedroByRegion = InvestmentProject::active()->whereHas('subsoilUsers')
                 ->selectRaw('region_id, COUNT(*) as cnt, COALESCE(SUM(total_investment), 0) as investment, COALESCE(SUM(jobs_count), 0) as jobs')
@@ -243,6 +267,10 @@ class DashboardController extends Controller
                 ->selectRaw('industrial_zones.region_id, COUNT(*) as cnt')
                 ->groupBy('industrial_zones.region_id')->pluck('cnt', 'region_id')->toArray();
 
+            $promIssuesByRegion = PromZoneIssue::join('prom_zones', 'prom_zone_issues.prom_zone_id', '=', 'prom_zones.id')
+                ->selectRaw('prom_zones.region_id, COUNT(*) as cnt')
+                ->groupBy('prom_zones.region_id')->pluck('cnt', 'region_id')->toArray();
+
             $subsoilIssuesByRegion = SubsoilIssue::join('subsoil_users', 'subsoil_issues.subsoil_user_id', '=', 'subsoil_users.id')
                 ->selectRaw('subsoil_users.region_id, COUNT(*) as cnt')
                 ->groupBy('subsoil_users.region_id')->pluck('cnt', 'region_id')->toArray();
@@ -258,6 +286,7 @@ class DashboardController extends Controller
             foreach ($regionIds as $rid) {
                 $sezProj = $sezProjectsByRegion->get($rid);
                 $izProj = $izProjectsByRegion->get($rid);
+                $promProj = $promProjectsByRegion->get($rid);
                 $nedroProj = $nedroByRegion->get($rid);
                 $investProj = $investProjectsByRegion->get($rid);
 
@@ -273,6 +302,12 @@ class DashboardController extends Controller
                         'projectCount' => (int) ($izProj?->cnt ?? 0),
                         'problemCount' => (int) ($izIssuesByRegion[$rid] ?? 0),
                         'jobCount' => (int) ($izProj?->jobs ?? 0),
+                    ],
+                    'prom' => [
+                        'investment' => (float) ($promProj?->investment ?? 0),
+                        'projectCount' => (int) ($promProj?->cnt ?? 0),
+                        'problemCount' => (int) ($promIssuesByRegion[$rid] ?? 0),
+                        'jobCount' => (int) ($promProj?->jobs ?? 0),
                     ],
                     'nedro' => [
                         'investment' => (float) ($nedroProj?->investment ?? 0),

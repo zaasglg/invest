@@ -23,13 +23,30 @@ export function ChatWidget() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (bottomRef.current) {
-            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        const viewport = scrollAreaRef.current?.querySelector(
+            '[data-radix-scroll-area-viewport]',
+        ) as HTMLDivElement | null;
+
+        if (viewport) {
+            viewport.scrollTo({ top: viewport.scrollHeight, behavior });
         }
+
+        bottomRef.current?.scrollIntoView({ behavior, block: 'end' });
+    };
+
+    useEffect(() => {
+        scrollToBottom('smooth');
     }, [messages, isLoading]);
+
+    useEffect(() => {
+        if (isOpen) {
+            requestAnimationFrame(() => scrollToBottom('auto'));
+        }
+    }, [isOpen]);
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -122,9 +139,7 @@ export function ChatWidget() {
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden p-0">
-                        <ScrollArea
-                            className="h-full px-4 py-4"
-                        >
+                        <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-4">
                             {messages.length === 0 ? (
                                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground">
                                     <BotMessageSquare className="h-12 w-12 opacity-20" />
@@ -178,6 +193,7 @@ export function ChatWidget() {
                                             </div>
                                         </div>
                                     )}
+                                    <div ref={bottomRef} />
                                 </div>
                             )}
                         </ScrollArea>
@@ -188,7 +204,7 @@ export function ChatWidget() {
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={handleKeyPress}
+                                onKeyDown={handleKeyPress}
                                 placeholder="Сұрақ қойыңыз..."
                                 disabled={isLoading}
                                 className="flex-1"

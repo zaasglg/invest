@@ -143,7 +143,7 @@ class CheckRoleAccess
 
                 // Block write actions on SEZ, IZ, Subsoil, and main project edit/create
                 if ($this->isWriteAction($request)) {
-                    $ispolnitelReadOnly = ['sezs', 'industrial-zones', 'subsoil-users'];
+                    $ispolnitelReadOnly = ['sezs', 'industrial-zones', 'prom-zones', 'subsoil-users'];
                     if ($this->isMatchingRoute($request, $ispolnitelReadOnly)) {
                         abort(403, 'Сізде деректерді өзгерту құқығы жоқ.');
                     }
@@ -283,6 +283,14 @@ class CheckRoleAccess
             $iz = $request->route('industrialZone') ?? $request->route('industrial_zone');
             if ($iz && is_object($iz) && $iz->region_id !== $user->region_id) {
                 abort(403, 'Сізге бұл ИА-ға кіруге рұқсат етілмеген.');
+            }
+        }
+
+        // Check Prom Zone routes
+        if (str_starts_with($routeName, 'prom-zones.')) {
+            $promZone = $request->route('promZone') ?? $request->route('prom_zone');
+            if ($promZone && is_object($promZone) && $promZone->region_id !== $user->region_id) {
+                abort(403, 'Сізге бұл Пром зонаға кіруге рұқсат етілмеген.');
             }
         }
 

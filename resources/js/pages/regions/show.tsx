@@ -96,6 +96,18 @@ interface IndustrialZone {
     location?: { lat: number; lng: number }[] | null;
     issues_count?: number;
 }
+
+interface PromZone {
+    id: number;
+    name: string;
+    status: string;
+    total_area: number;
+    description: string;
+    infrastructure?: InfrastructureData | null;
+    location?: { lat: number; lng: number }[] | null;
+    issues_count?: number;
+}
+
 interface SubsoilUser {
     id: number;
     name: string;
@@ -122,6 +134,7 @@ interface InvestmentProject {
     executors?: { id: number; name: string; full_name?: string }[];
     sezs?: Sez[];
     industrial_zones?: IndustrialZone[];
+    prom_zones?: PromZone[];
     subsoil_users?: SubsoilUser[];
 }
 
@@ -132,6 +145,7 @@ interface Stats {
     projectIssuesCount: number;
     sezIssuesCount: number;
     izIssuesCount: number;
+    promIssuesCount: number;
     subsoilIssuesCount: number;
 }
 
@@ -140,6 +154,7 @@ interface Props {
     projects: InvestmentProject[];
     sezs: Sez[];
     industrialZones: IndustrialZone[];
+    promZones: PromZone[];
     subsoilUsers: SubsoilUser[];
     stats: Stats;
 }
@@ -208,6 +223,7 @@ export default function Show({
     projects,
     sezs,
     industrialZones,
+    promZones,
     subsoilUsers,
     stats,
 }: Props) {
@@ -224,18 +240,19 @@ export default function Show({
         null,
     );
     const [selectedEntityType, setSelectedEntityType] = useState<
-        'sez' | 'iz' | 'subsoil' | null
+        'sez' | 'iz' | 'prom' | 'subsoil' | null
     >(null);
     const [mapSelectedEntityId, setMapSelectedEntityId] = useState<
         number | null
     >(null);
     const [mapSelectedEntityType, setMapSelectedEntityType] = useState<
-        'sez' | 'iz' | 'subsoil' | null
+        'sez' | 'iz' | 'prom' | 'subsoil' | null
     >(null);
 
     // Selected entity IDs per tab for filtering projects
     const [selectedSezId, setSelectedSezId] = useState<number | null>(null);
     const [selectedIzId, setSelectedIzId] = useState<number | null>(null);
+    const [selectedPromId, setSelectedPromId] = useState<number | null>(null);
     const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(
         null,
     );
@@ -251,6 +268,7 @@ export default function Show({
     const [allPage, setAllPage] = useState(1);
     const [sezPage, setSezPage] = useState(1);
     const [izPage, setIzPage] = useState(1);
+    const [promPage, setPromPage] = useState(1);
     const [subsoilPage, setSubsoilPage] = useState(1);
 
     // Local ordered copy of projects for drag-and-drop reordering
@@ -261,23 +279,28 @@ export default function Show({
         setActiveTab(tab);
         setSelectedSezId(null);
         setSelectedIzId(null);
+        setSelectedPromId(null);
         setSelectedSubsoilId(null);
         setSelectedSubsoilStatus(null);
         setSelectedProjectId(null);
         setAllPage(1);
         setSezPage(1);
         setIzPage(1);
+        setPromPage(1);
         setSubsoilPage(1);
     };
 
-    const handleSelectEntity = (id: number, type: 'sez' | 'iz' | 'subsoil') => {
+    const handleSelectEntity = (
+        id: number,
+        type: 'sez' | 'iz' | 'prom' | 'subsoil',
+    ) => {
         setSelectedEntityId(id);
         setSelectedEntityType(type);
     };
 
     const handleMapEntitySelect = (
         id: number | null,
-        type: 'sez' | 'iz' | 'subsoil' | null,
+        type: 'sez' | 'iz' | 'prom' | 'subsoil' | null,
     ) => {
         setMapSelectedEntityId(id);
         setMapSelectedEntityType(type);
@@ -287,6 +310,7 @@ export default function Show({
             setActiveTab('sez');
             setSelectedSezId(id);
             setSelectedIzId(null);
+            setSelectedPromId(null);
             setSelectedSubsoilId(null);
             setSelectedEntityId(id);
             setSelectedEntityType('sez');
@@ -294,14 +318,24 @@ export default function Show({
             setActiveTab('iz');
             setSelectedIzId(id);
             setSelectedSezId(null);
+            setSelectedPromId(null);
             setSelectedSubsoilId(null);
             setSelectedEntityId(id);
             setSelectedEntityType('iz');
+        } else if (id && type === 'prom') {
+            setActiveTab('prom');
+            setSelectedPromId(id);
+            setSelectedSezId(null);
+            setSelectedIzId(null);
+            setSelectedSubsoilId(null);
+            setSelectedEntityId(id);
+            setSelectedEntityType('prom');
         } else if (id && type === 'subsoil') {
             setActiveTab('subsoil');
             setSelectedSubsoilId(id);
             setSelectedSezId(null);
             setSelectedIzId(null);
+            setSelectedPromId(null);
             setSelectedEntityId(id);
             setSelectedEntityType('subsoil');
         }
@@ -341,6 +375,17 @@ export default function Show({
         );
     }, [orderedProjects, selectedIzId]);
 
+    const promProjects = React.useMemo(() => {
+        if (selectedPromId) {
+            return orderedProjects.filter((p) =>
+                p.prom_zones?.some((z) => z.id === selectedPromId),
+            );
+        }
+        return orderedProjects.filter(
+            (p) => p.prom_zones && p.prom_zones.length > 0,
+        );
+    }, [orderedProjects, selectedPromId]);
+
     const subsoilProjects = React.useMemo(() => {
         if (selectedSubsoilId) {
             return orderedProjects.filter((p) =>
@@ -369,6 +414,9 @@ export default function Show({
     React.useEffect(() => {
         setIzPage(1);
     }, [selectedIzId]);
+    React.useEffect(() => {
+        setPromPage(1);
+    }, [selectedPromId]);
     React.useEffect(() => {
         setSubsoilPage(1);
     }, [selectedSubsoilStatus]);
@@ -517,6 +565,12 @@ export default function Show({
         if (project.industrial_zones && project.industrial_zones.length > 0) {
             sectors.push(
                 ...project.industrial_zones.map((iz) => `ИА: ${iz.name}`),
+            );
+        }
+
+        if (project.prom_zones && project.prom_zones.length > 0) {
+            sectors.push(
+                ...project.prom_zones.map((prom) => `Пром зона: ${prom.name}`),
             );
         }
 
@@ -683,6 +737,11 @@ export default function Show({
         0,
     );
 
+    const totalPromArea = promZones.reduce(
+        (acc, curr) => acc + Number(curr.total_area),
+        0,
+    );
+
     // Helper to safely get lat/lng
     function getLatLng(
         point: Record<string, unknown> | unknown[] | null,
@@ -746,9 +805,17 @@ export default function Show({
     const mapProjects = React.useMemo(() => {
         if (activeTab === 'sez') return sezProjects;
         if (activeTab === 'iz') return izProjects;
+        if (activeTab === 'prom') return promProjects;
         if (activeTab === 'subsoil') return subsoilProjects;
         return orderedProjects;
-    }, [activeTab, orderedProjects, sezProjects, izProjects, subsoilProjects]);
+    }, [
+        activeTab,
+        orderedProjects,
+        sezProjects,
+        izProjects,
+        promProjects,
+        subsoilProjects,
+    ]);
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -908,6 +975,23 @@ export default function Show({
                                             </span>
                                         </>
                                     )}
+                                {selectedPromId &&
+                                    promZones.find(
+                                        (z) => z.id === selectedPromId,
+                                    ) && (
+                                        <>
+                                            <ChevronRight className="h-5 w-5 text-gray-400" />
+                                            <span className="text-emerald-600">
+                                                {
+                                                    promZones.find(
+                                                        (z) =>
+                                                            z.id ===
+                                                            selectedPromId,
+                                                    )?.name
+                                                }
+                                            </span>
+                                        </>
+                                    )}
                             </h1>
                         </div>
                         <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-gray-500">
@@ -964,6 +1048,12 @@ export default function Show({
                                             activeTab === 'iz' ||
                                             activeTab === 'all'
                                                 ? industrialZones
+                                                : []
+                                        }
+                                        promZones={
+                                            activeTab === 'prom' ||
+                                            activeTab === 'all'
+                                                ? promZones
                                                 : []
                                         }
                                         subsoilUsers={
@@ -1026,6 +1116,17 @@ export default function Show({
                                         ></div>
                                         <span className="text-xs font-medium text-gray-600">
                                             Индустриялық аймақ
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center gap-2.5">
+                                        <div
+                                            className="h-3 w-3 rounded-sm"
+                                            style={{
+                                                backgroundColor: '#10b981',
+                                            }}
+                                        ></div>
+                                        <span className="text-xs font-medium text-gray-600">
+                                            Пром зона
                                         </span>
                                     </div>
                                     <div className="flex items-center gap-2.5">
@@ -1114,6 +1215,9 @@ export default function Show({
                                                 ? `АЭА жобалары`
                                                 : mapSelectedEntityType === 'iz'
                                                   ? `ИА жобалары`
+                                                                                                    : mapSelectedEntityType ===
+                                                                                                            'prom'
+                                                                                                        ? `Пром зона жобалары`
                                                   : mapSelectedEntityType ===
                                                       'subsoil'
                                                     ? `Жер қойнауын пайдаланушы жобалары`
@@ -1170,6 +1274,19 @@ export default function Show({
                                                                         ),
                                                                 )
                                                               : mapSelectedEntityType ===
+                                                                      'prom' &&
+                                                                  mapSelectedEntityId
+                                                                ? orderedProjects.filter(
+                                                                      (p) =>
+                                                                          p.prom_zones?.some(
+                                                                              (
+                                                                                  z,
+                                                                              ) =>
+                                                                                  z.id ===
+                                                                                  mapSelectedEntityId,
+                                                                          ),
+                                                                  )
+                                                              : mapSelectedEntityType ===
                                                                       'subsoil' &&
                                                                   mapSelectedEntityId
                                                                 ? orderedProjects.filter(
@@ -1223,6 +1340,17 @@ export default function Show({
                                                                         mapSelectedEntityId,
                                                                 ),
                                                         )
+                                                      : mapSelectedEntityType ===
+                                                              'prom' &&
+                                                          mapSelectedEntityId
+                                                        ? orderedProjects.filter(
+                                                              (p) =>
+                                                                  p.prom_zones?.some(
+                                                                      (z) =>
+                                                                          z.id ===
+                                                                          mapSelectedEntityId,
+                                                                  ),
+                                                          )
                                                       : mapSelectedEntityType ===
                                                               'subsoil' &&
                                                           mapSelectedEntityId
@@ -1772,6 +1900,196 @@ export default function Show({
                                 </TabsContent>
 
                                 <TabsContent
+                                    value="prom"
+                                    className="mt-0 space-y-4"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <h2 className="text-xl font-semibold tracking-tight text-[#0f1b3d]">
+                                            {selectedPromId
+                                                ? `Жобалар: ${promZones.find((z) => z.id === selectedPromId)?.name || 'Пром зона'}`
+                                                : 'Пром зона жобалары'}
+                                        </h2>
+                                        {selectedPromId && (
+                                            <Button
+                                                variant="ghost"
+                                                className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                                                onClick={() => {
+                                                    setSelectedPromId(null);
+                                                    setSelectedEntityId(null);
+                                                    setSelectedEntityType(null);
+                                                }}
+                                            >
+                                                Сүзгіні қалпына келтіру
+                                            </Button>
+                                        )}
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 gap-1.5 border-[#0f1b3d]/20 text-xs text-[#0f1b3d] hover:bg-[#0f1b3d]/5"
+                                            disabled={
+                                                downloadingPresentations ||
+                                                promProjects.length === 0
+                                            }
+                                            onClick={() =>
+                                                handleBulkPresentationDownload(
+                                                    promProjects,
+                                                    promPage,
+                                                )
+                                            }
+                                        >
+                                            <Presentation className="h-3.5 w-3.5" />
+                                            Презентация
+                                        </Button>
+                                    </div>
+                                    <div className="overflow-hidden rounded-xl border border-gray-100 bg-white">
+                                        <DndContext
+                                            sensors={sensors}
+                                            collisionDetection={closestCenter}
+                                            onDragEnd={handleDragEnd}
+                                        >
+                                            <Table>
+                                                <TableHeader className="bg-[#F0F4FA]">
+                                                    <TableRow>
+                                                        <TableHead className="w-6" />
+                                                        <TableHead>
+                                                            Жоба
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Сектор
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Күйі
+                                                        </TableHead>
+                                                        <TableHead>
+                                                            Жоба түрі
+                                                        </TableHead>
+                                                        <TableHead className="text-right">
+                                                            Инвестициялар
+                                                        </TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {promProjects.length > 0 ? (
+                                                        <SortableContext
+                                                            items={promProjects
+                                                                .slice(
+                                                                    (promPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    promPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (p) => p.id,
+                                                                )}
+                                                            strategy={
+                                                                verticalListSortingStrategy
+                                                            }
+                                                        >
+                                                            {promProjects
+                                                                .slice(
+                                                                    (promPage -
+                                                                        1) *
+                                                                        ITEMS_PER_PAGE,
+                                                                    promPage *
+                                                                        ITEMS_PER_PAGE,
+                                                                )
+                                                                .map(
+                                                                    (
+                                                                        project,
+                                                                    ) => (
+                                                                        <SortableProjectRow
+                                                                            key={
+                                                                                project.id
+                                                                            }
+                                                                            id={
+                                                                                project.id
+                                                                            }
+                                                                            isSelected={
+                                                                                selectedProjectId ===
+                                                                                project.id
+                                                                            }
+                                                                            canReorder={
+                                                                                isSuperAdmin ||
+                                                                                isInvest
+                                                                            }
+                                                                            onClick={() =>
+                                                                                handleProjectSelect(
+                                                                                    project.id,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                                <Link
+                                                                                    href={`/investment-projects/${project.id}`}
+                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                    onClick={(
+                                                                                        e,
+                                                                                    ) =>
+                                                                                        e.stopPropagation()
+                                                                                    }
+                                                                                >
+                                                                                    {
+                                                                                        project.name
+                                                                                    }
+                                                                                </Link>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm text-gray-500">
+                                                                                {getSectorDisplay(
+                                                                                    project,
+                                                                                )}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3">
+                                                                                <Badge
+                                                                                    variant="outline"
+                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                                >
+                                                                                    {getStatusLabel(
+                                                                                        project.status,
+                                                                                    )}
+                                                                                </Badge>
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                                {project
+                                                                                    .project_type
+                                                                                    ?.name ??
+                                                                                    '—'}
+                                                                            </TableCell>
+                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                                {project.total_investment
+                                                                                    ? formatCurrency(
+                                                                                          Number(
+                                                                                              project.total_investment,
+                                                                                          ),
+                                                                                      )
+                                                                                    : '—'}
+                                                                            </TableCell>
+                                                                        </SortableProjectRow>
+                                                                    ),
+                                                                )}
+                                                        </SortableContext>
+                                                    ) : (
+                                                        <TableRow>
+                                                            <TableCell
+                                                                colSpan={5}
+                                                                className="py-8 text-center text-gray-500"
+                                                            >
+                                                                Жобалар жоқ
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    )}
+                                                </TableBody>
+                                            </Table>
+                                        </DndContext>
+                                        {renderPagination(
+                                            promProjects.length,
+                                            promPage,
+                                            setPromPage,
+                                        )}
+                                    </div>
+                                </TabsContent>
+
+                                <TabsContent
                                     value="subsoil"
                                     className="mt-0 space-y-4"
                                 >
@@ -1953,6 +2271,20 @@ export default function Show({
                                     {stats.izIssuesCount > 0 && (
                                         <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
                                             {stats.izIssuesCount}
+                                        </span>
+                                    )}
+                                </TabsTrigger>
+                                <TabsTrigger
+                                    value="prom"
+                                    className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${stats.promIssuesCount > 0 ? '' : ''}`}
+                                >
+                                    <Factory
+                                        className={`h-4 w-4 ${stats.promIssuesCount > 0 ? '' : ''}`}
+                                    />{' '}
+                                    Пром
+                                    {stats.promIssuesCount > 0 && (
+                                        <span className="inline-flex items-center justify-center rounded-full bg-gray-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
+                                            {stats.promIssuesCount}
                                         </span>
                                     )}
                                 </TabsTrigger>
@@ -2409,6 +2741,202 @@ export default function Show({
                                             ? renderInfrastructureCard(
                                                   `Инфрақұрылым: ${iz.name}`,
                                                   iz.infrastructure,
+                                              )
+                                            : null;
+                                    })()}
+                            </TabsContent>
+
+                            {/* Prom Stats */}
+                            <TabsContent value="prom" className="mt-0 space-y-6">
+                                <Card className="border-gray-100 shadow-none">
+                                    <CardHeader className="border-b border-gray-100 pb-4">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            {selectedPromId
+                                                ? `Көрсеткіштер: ${promZones.find((z) => z.id === selectedPromId)?.name || 'Пром зона'}`
+                                                : 'Пром зона көрсеткіштері'}
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-6">
+                                        {(() => {
+                                            const selectedProm = selectedPromId
+                                                ? promZones.find(
+                                                      (z) =>
+                                                          z.id ===
+                                                          selectedPromId,
+                                                  )
+                                                : null;
+                                            const displayArea = selectedProm
+                                                ? Number(selectedProm.total_area)
+                                                : totalPromArea;
+                                            const displayInvestment =
+                                                promProjects.reduce(
+                                                    (acc, curr) =>
+                                                        acc +
+                                                        Number(
+                                                            curr.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
+                                            const displayIssues = selectedProm
+                                                ? (selectedProm.issues_count ??
+                                                  0)
+                                                : stats.promIssuesCount;
+                                            return (
+                                                <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                                                    <div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {
+                                                                promProjects.length
+                                                            }
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жобалар саны
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatArea(
+                                                                displayArea,
+                                                            )}{' '}
+                                                            <span className="text-sm font-medium text-gray-500">
+                                                                га
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жалпы аумағы
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {formatCurrency(
+                                                                displayInvestment,
+                                                            )}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Жоспарланған
+                                                            инвестициялар
+                                                        </div>
+                                                    </div>
+                                                    <div className="border-l border-gray-100 pl-4">
+                                                        <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
+                                                            {displayIssues}
+                                                        </div>
+                                                        <div className="text-xs font-medium text-gray-500">
+                                                            Проблемалық
+                                                            мәселелер
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
+                                    </CardContent>
+                                </Card>
+
+                                {/* Prom List */}
+                                <Card className="border-gray-100 shadow-none">
+                                    <CardHeader className="border-b border-gray-100 pb-3">
+                                        <CardTitle className="text-base font-semibold text-[#0f1b3d]">
+                                            Пром зона тізімі
+                                        </CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        {promZones.length > 0 ? (
+                                            <div className="divide-y divide-gray-100">
+                                                <div
+                                                    className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                        selectedPromId === null
+                                                            ? 'border-l-2 border-l-emerald-500 bg-emerald-50'
+                                                            : 'hover:bg-gray-50'
+                                                    }`}
+                                                    onClick={() => {
+                                                        setSelectedPromId(null);
+                                                        setSelectedEntityId(
+                                                            null,
+                                                        );
+                                                        setSelectedEntityType(
+                                                            null,
+                                                        );
+                                                    }}
+                                                >
+                                                    <div className="flex min-w-0 items-center gap-2">
+                                                        <Factory className="h-4 w-4 shrink-0 text-emerald-500" />
+                                                        <span className="text-sm font-medium text-[#0f1b3d]">
+                                                            Барлығы
+                                                        </span>
+                                                    </div>
+                                                    <Badge
+                                                        variant="secondary"
+                                                        className="text-[10px]"
+                                                    >
+                                                        {promZones.length} зон
+                                                    </Badge>
+                                                </div>
+                                                {promZones.map((prom) => (
+                                                    <div
+                                                        key={prom.id}
+                                                        className={`flex cursor-pointer items-center justify-between p-3 transition-colors ${
+                                                            selectedPromId ===
+                                                            prom.id
+                                                                ? 'border-l-2 border-l-emerald-500 bg-emerald-50'
+                                                                : 'hover:bg-gray-50'
+                                                        }`}
+                                                        onClick={() => {
+                                                            setSelectedPromId(
+                                                                prom.id,
+                                                            );
+                                                            handleSelectEntity(
+                                                                prom.id,
+                                                                'prom',
+                                                            );
+                                                        }}
+                                                    >
+                                                        <div className="flex min-w-0 items-center gap-2">
+                                                            <Factory className="h-4 w-4 shrink-0 text-emerald-500" />
+                                                            <span className="text-sm font-medium break-words text-[#0f1b3d]">
+                                                                {prom.name}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex shrink-0 items-center gap-2">
+                                                            <Link
+                                                                href={`/prom-zones/${prom.id}`}
+                                                                className="text-emerald-500 transition-colors hover:text-emerald-700"
+                                                                onClick={(e) =>
+                                                                    e.stopPropagation()
+                                                                }
+                                                            >
+                                                                <ExternalLink className="h-3.5 w-3.5" />
+                                                            </Link>
+                                                            <Badge
+                                                                variant="secondary"
+                                                                className="text-[10px]"
+                                                            >
+                                                                {prom.status ===
+                                                                'active'
+                                                                    ? 'Белсенді'
+                                                                    : 'Дамушы'}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <p className="p-4 text-center text-sm text-gray-500">
+                                                Пром зона жоқ
+                                            </p>
+                                        )}
+                                    </CardContent>
+                                </Card>
+
+                                {selectedPromId &&
+                                    (() => {
+                                        const prom = promZones.find(
+                                            (z) => z.id === selectedPromId,
+                                        );
+                                        return prom
+                                            ? renderInfrastructureCard(
+                                                  `Инфрақұрылым: ${prom.name}`,
+                                                  prom.infrastructure,
                                               )
                                             : null;
                                     })()}

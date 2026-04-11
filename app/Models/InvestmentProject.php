@@ -76,6 +76,11 @@ class InvestmentProject extends Model
         return $this->belongsToMany(SubsoilUser::class, 'investment_project_subsoil_user');
     }
 
+    public function promZones()
+    {
+        return $this->belongsToMany(PromZone::class, 'investment_project_prom_zone');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

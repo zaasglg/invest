@@ -45,6 +45,7 @@ interface Region {
 interface RegionStats {
     investments: number;
     izProjects: number;
+    promProjects: number;
     sezProjects: number;
     subsoilUsers: number;
 }
@@ -63,6 +64,7 @@ interface InvestmentProject {
     executors?: { id: number; name: string; full_name?: string }[];
     sezs?: { id: number; name: string }[];
     industrial_zones?: { id: number; name: string }[];
+    prom_zones?: { id: number; name: string }[];
     subsoil_users?: { id: number; name: string }[];
 }
 
@@ -76,6 +78,7 @@ interface SectorRow {
 interface SectorData {
     sez: SectorRow;
     iz: SectorRow;
+    prom: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
 }
@@ -101,6 +104,14 @@ interface MapIndustrialZone {
     location?: { lat: number; lng: number }[] | null;
 }
 
+interface MapPromZone {
+    id: number;
+    name: string;
+    status?: string;
+    total_area?: number;
+    location?: { lat: number; lng: number }[] | null;
+}
+
 interface MapSubsoilUser {
     id: number;
     name: string;
@@ -111,7 +122,7 @@ interface MapSubsoilUser {
 interface ActiveEntity {
     id: number;
     name: string;
-    type: 'sez' | 'iz' | 'subsoil';
+    type: 'sez' | 'iz' | 'prom' | 'subsoil';
     status?: string;
     total_area?: number;
     mineral_type?: string;
@@ -166,14 +177,16 @@ type Props = {
     projects?: InvestmentProject[];
     sezs?: MapSez[];
     industrialZones?: MapIndustrialZone[];
+    promZones?: MapPromZone[];
     subsoilUsers?: MapSubsoilUser[];
     selectedEntityId?: number | null;
-    selectedEntityType?: 'sez' | 'iz' | 'subsoil' | null;
+    selectedEntityType?: 'sez' | 'iz' | 'prom' | 'subsoil' | null;
     selectedProjectId?: number | null;
     selectedRegion?: Region | null;
     regionStats?: {
         investments: Record<number, number>;
         izProjects: Record<number, number>;
+        promProjects: Record<number, number>;
         sezProjects: Record<number, number>;
         subsoilUsers: Record<number, number>;
     };
@@ -186,7 +199,7 @@ type Props = {
     interactive?: boolean;
     onEntitySelect?: (
         id: number | null,
-        type: 'sez' | 'iz' | 'subsoil' | null,
+        type: 'sez' | 'iz' | 'prom' | 'subsoil' | null,
     ) => void;
     onProjectSelect?: (id: number | null) => void;
 };
@@ -206,9 +219,11 @@ interface Plot {
     executorNames?: string[];
     sezIds: number[];
     izIds: number[];
+    promIds: number[];
     subsoilIds: number[];
     sezNames?: string[];
     izNames?: string[];
+    promNames?: string[];
     subsoilNames?: string[];
 }
 
@@ -580,6 +595,7 @@ export default function Map({
     projects = [],
     sezs = [],
     industrialZones = [],
+    promZones = [],
     subsoilUsers = [],
     selectedEntityId = null,
     selectedEntityType = null,
@@ -789,6 +805,28 @@ export default function Map({
                         positions,
                     };
                 }
+            } else if (selectedEntityType === 'prom') {
+                const prom = promZones.find((p) => p.id === selectedEntityId);
+                if (prom) {
+                    const positions = (
+                        Array.isArray(prom.location) ? prom.location : []
+                    )
+                        .map((p) => {
+                            const pt = getLatLng(p);
+                            return pt
+                                ? ([pt.lat, pt.lng] as [number, number])
+                                : null;
+                        })
+                        .filter((p): p is [number, number] => p !== null);
+                    entity = {
+                        id: prom.id,
+                        name: prom.name,
+                        type: 'prom',
+                        status: prom.status,
+                        total_area: prom.total_area,
+                        positions,
+                    };
+                }
             }
             if (entity) {
                 setActiveEntity(entity);
@@ -804,6 +842,7 @@ export default function Map({
         selectedEntityType,
         sezs,
         industrialZones,
+        promZones,
         subsoilUsers,
     ]);
     // Sync external selectedProjectId with activePlot
@@ -860,9 +899,11 @@ export default function Map({
                         [],
                     sezIds: project.sezs?.map((s) => s.id) ?? [],
                     izIds: project.industrial_zones?.map((z) => z.id) ?? [],
+                    promIds: project.prom_zones?.map((z) => z.id) ?? [],
                     subsoilIds: project.subsoil_users?.map((s) => s.id) ?? [],
                     sezNames: project.sezs?.map((s) => s.name) ?? [],
                     izNames: project.industrial_zones?.map((z) => z.name) ?? [],
+                    promNames: project.prom_zones?.map((z) => z.name) ?? [],
                     subsoilNames:
                         project.subsoil_users?.map((s) => s.name) ?? [],
                 };
@@ -875,12 +916,14 @@ export default function Map({
     const getRegionStats = (regionId: number): RegionStats => {
         const investments = regionStats?.investments?.[regionId] ?? 0;
         const izProjects = regionStats?.izProjects?.[regionId] ?? 0;
+        const promProjects = regionStats?.promProjects?.[regionId] ?? 0;
         const sezProjects = regionStats?.sezProjects?.[regionId] ?? 0;
         const subsoilUsers = regionStats?.subsoilUsers?.[regionId] ?? 0;
 
         return {
             investments: Number(investments) || 0,
             izProjects: Number(izProjects) || 0,
+            promProjects: Number(promProjects) || 0,
             sezProjects: Number(sezProjects) || 0,
             subsoilUsers: Number(subsoilUsers) || 0,
         };
@@ -1293,6 +1336,90 @@ export default function Map({
                         );
                     })}
 
+                {/* Prom Layer */}
+                {(activeTab === 'all' || activeTab === 'prom') &&
+                    promZones.map((prom) => {
+                        const positions = (
+                            Array.isArray(prom.location) ? prom.location : []
+                        )
+                            .map((point) => {
+                                const pt = getLatLng(point);
+                                return pt ? [pt.lat, pt.lng] : null;
+                            })
+                            .filter((p): p is [number, number] => p !== null);
+
+                        if (positions.length === 0) return null;
+                        const isSelected =
+                            activeEntity?.type === 'prom' &&
+                            activeEntity?.id === prom.id;
+                        const shouldMute = hasSelection && !isSelected;
+
+                        return (
+                            <React.Fragment key={`prom-${prom.id}`}>
+                                {isSelected && (
+                                    <Polygon
+                                        positions={positions}
+                                        interactive={false}
+                                        pathOptions={{
+                                            color: '#34d399',
+                                            weight: 10,
+                                            opacity: 0.35,
+                                            fillOpacity: 0,
+                                            className:
+                                                'map-live-halo map-live-halo--prom',
+                                        }}
+                                    />
+                                )}
+                                <Polygon
+                                    positions={positions}
+                                    pathOptions={{
+                                        color: '#0f766e',
+                                        fillColor: '#14b8a6',
+                                        fillOpacity: isSelected
+                                            ? 0.15
+                                            : shouldMute
+                                              ? 0.14
+                                              : 0.5,
+                                        weight: isSelected ? 3 : 2,
+                                        opacity: isSelected
+                                            ? 1
+                                            : shouldMute
+                                              ? 0.45
+                                              : 0.95,
+                                        dashArray: isSelected
+                                            ? ''
+                                            : shouldMute
+                                              ? '2, 6'
+                                              : undefined,
+                                        className: cx(
+                                            'map-entity-polygon map-entity-polygon--prom',
+                                            isSelected &&
+                                                'map-live-focus map-live-focus--prom',
+                                            shouldMute && 'map-live-muted',
+                                        ),
+                                    }}
+                                    eventHandlers={{
+                                        click: (e) => {
+                                            L.DomEvent.stopPropagation(e);
+                                            const entity = {
+                                                id: prom.id,
+                                                name: prom.name,
+                                                type: 'prom' as const,
+                                                status: prom.status,
+                                                total_area: prom.total_area,
+                                                positions,
+                                            };
+                                            setActiveEntity(entity);
+                                            setActivePlot(null);
+                                            setActiveRegion(null);
+                                            onEntitySelect?.(prom.id, 'prom');
+                                        },
+                                    }}
+                                />
+                            </React.Fragment>
+                        );
+                    })}
+
                 {/* Subsoil Layer */}
                 {(activeTab === 'all' || activeTab === 'subsoil') &&
                     subsoilUsers.map((su) => {
@@ -1384,6 +1511,8 @@ export default function Map({
                             return plot.sezIds.includes(activeEntity.id);
                         if (activeEntity.type === 'iz')
                             return plot.izIds.includes(activeEntity.id);
+                        if (activeEntity.type === 'prom')
+                            return plot.promIds.includes(activeEntity.id);
                         if (activeEntity.type === 'subsoil')
                             return plot.subsoilIds.includes(activeEntity.id);
                         return true;
@@ -1527,6 +1656,14 @@ export default function Map({
                                         </span>
                                         <span className="text-lg font-bold text-[#0f1b3d]">
                                             {stats.sezProjects}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-5 py-3.5">
+                                        <span className="text-sm text-gray-500">
+                                            Пром зонадағы жобалар
+                                        </span>
+                                        <span className="text-lg font-bold text-[#0f1b3d]">
+                                            {stats.promProjects}
                                         </span>
                                     </div>
                                     <div className="flex items-center justify-between px-5 py-3.5">
@@ -1713,6 +1850,8 @@ export default function Map({
                                 activePlot.sezNames.length > 0) ||
                                 (activePlot.izNames &&
                                     activePlot.izNames.length > 0) ||
+                                (activePlot.promNames &&
+                                    activePlot.promNames.length > 0) ||
                                 (activePlot.subsoilNames &&
                                     activePlot.subsoilNames.length > 0)) && (
                                 <div className="px-5 py-3">
@@ -1734,6 +1873,14 @@ export default function Map({
                                                 className="inline-flex items-center rounded-full bg-[#0f1b3d]/8 px-2.5 py-0.5 text-[10px] font-medium text-[#0f1b3d]"
                                             >
                                                 ИА: {name}
+                                            </span>
+                                        ))}
+                                        {activePlot.promNames?.map((name, i) => (
+                                            <span
+                                                key={`prom-${i}`}
+                                                className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-medium text-teal-800"
+                                            >
+                                                Пром зона: {name}
                                             </span>
                                         ))}
                                         {activePlot.subsoilNames?.map(
@@ -1797,6 +1944,11 @@ export default function Map({
                             },
                             { key: 'sez', label: 'АЭА', d: data.sez },
                             { key: 'iz', label: 'ИА', d: data.iz },
+                            {
+                                key: 'prom',
+                                label: 'Пром зона',
+                                d: data.prom,
+                            },
                             {
                                 key: 'nedro',
                                 label: 'Жер қойнауын пайдалану',

@@ -41,6 +41,9 @@ Route::resource('sezs', \App\Http\Controllers\SezController::class)
 Route::resource('industrial-zones', \App\Http\Controllers\IndustrialZoneController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
+Route::resource('prom-zones', \App\Http\Controllers\PromZoneController::class)
+    ->middleware(['auth', 'verified', 'role.access']);
+
 Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
@@ -115,6 +118,13 @@ Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verifie
     Route::post('issues', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'store'])->name('industrial-zones.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'update'])->name('industrial-zones.issues.update');
     Route::delete('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'destroy'])->name('industrial-zones.issues.destroy');
+});
+
+Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('issues', [\App\Http\Controllers\PromZoneIssueController::class, 'index'])->name('prom-zones.issues.index');
+    Route::post('issues', [\App\Http\Controllers\PromZoneIssueController::class, 'store'])->name('prom-zones.issues.store');
+    Route::put('issues/{issue}', [\App\Http\Controllers\PromZoneIssueController::class, 'update'])->name('prom-zones.issues.update');
+    Route::delete('issues/{issue}', [\App\Http\Controllers\PromZoneIssueController::class, 'destroy'])->name('prom-zones.issues.destroy');
 });
 
 Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
