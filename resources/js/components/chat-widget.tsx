@@ -23,13 +23,30 @@ export function ChatWidget() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isLoading, setIsLoading] = useState(false);
+    const scrollAreaRef = useRef<HTMLDivElement>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        if (bottomRef.current) {
-            bottomRef.current.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (behavior: ScrollBehavior = 'smooth') => {
+        const viewport = scrollAreaRef.current?.querySelector(
+            '[data-radix-scroll-area-viewport]',
+        ) as HTMLDivElement | null;
+
+        if (viewport) {
+            viewport.scrollTo({ top: viewport.scrollHeight, behavior });
         }
+
+        bottomRef.current?.scrollIntoView({ behavior, block: 'end' });
+    };
+
+    useEffect(() => {
+        scrollToBottom('smooth');
     }, [messages, isLoading]);
+
+    useEffect(() => {
+        if (isOpen) {
+            requestAnimationFrame(() => scrollToBottom('auto'));
+        }
+    }, [isOpen]);
 
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
@@ -122,9 +139,7 @@ export function ChatWidget() {
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden p-0">
-                        <ScrollArea
-                            className="h-full px-4 py-4"
-                        >
+                        <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-4">
                             {messages.length === 0 ? (
                                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground">
                                     <BotMessageSquare className="h-12 w-12 opacity-20" />
@@ -163,15 +178,18 @@ export function ChatWidget() {
                                             </div>
                                         </div>
                                     ))}
+                                    {/* AI ойланып жатыр индикаторы */}
                                     {isLoading && (
                                         <div className="flex justify-start">
-                                            <div className="flex max-w-[80%] items-center gap-3 rounded-lg bg-muted px-4 py-2 text-muted-foreground">
-                                                <div className="flex items-center gap-1 mt-1">
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.3s]"></div>
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground [animation-delay:-0.15s]"></div>
-                                                    <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted-foreground"></div>
+                                            <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3">
+                                                <div className="flex gap-1">
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.3s]" />
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400 [animation-delay:-0.15s]" />
+                                                    <span className="h-2 w-2 animate-bounce rounded-full bg-gray-400" />
                                                 </div>
-                                                <p className="text-sm">Ойланып жатыр...</p>
+                                                <span className="text-sm text-muted-foreground">
+                                                    AI ойланып жатыр...
+                                                </span>
                                             </div>
                                         </div>
                                     )}
@@ -186,7 +204,7 @@ export function ChatWidget() {
                             <Input
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={handleKeyPress}
+                                onKeyDown={handleKeyPress}
                                 placeholder="Сұрақ қойыңыз..."
                                 disabled={isLoading}
                                 className="flex-1"
