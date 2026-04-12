@@ -99,7 +99,14 @@ class SezController extends Controller
 
     public function show(Sez $sez)
     {
-        $sez->load(['region', 'issues']);
+        $sez->load(['region', 'issues'])
+            ->loadCount('photos');
+
+        $mainGalleryPhotos = $sez->photos()
+            ->where('photo_type', 'gallery')
+            ->latest()
+            ->get();
+        $renderPhotos = $sez->photos()->renderPhotos()->latest()->get();
 
         $investmentProjects = $sez->investmentProjects()
             ->where('is_archived', false)
@@ -111,6 +118,8 @@ class SezController extends Controller
         return Inertia::render('sezs/show', [
             'sez' => $sez,
             'investmentProjects' => $investmentProjects,
+            'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 

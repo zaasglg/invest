@@ -107,6 +107,11 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
 });
 
 Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('gallery', [\App\Http\Controllers\SezPhotoController::class, 'index'])->name('sezs.gallery.index');
+    Route::post('gallery', [\App\Http\Controllers\SezPhotoController::class, 'store'])->name('sezs.gallery.store');
+    Route::put('gallery/{photo}', [\App\Http\Controllers\SezPhotoController::class, 'update'])->name('sezs.gallery.update');
+    Route::delete('gallery/{photo}', [\App\Http\Controllers\SezPhotoController::class, 'destroy'])->name('sezs.gallery.destroy');
+
     Route::get('issues', [\App\Http\Controllers\SezIssueController::class, 'index'])->name('sezs.issues.index');
     Route::post('issues', [\App\Http\Controllers\SezIssueController::class, 'store'])->name('sezs.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\SezIssueController::class, 'update'])->name('sezs.issues.update');
@@ -114,6 +119,11 @@ Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->gr
 });
 
 Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'index'])->name('industrial-zones.gallery.index');
+    Route::post('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'store'])->name('industrial-zones.gallery.store');
+    Route::put('gallery/{photo}', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'update'])->name('industrial-zones.gallery.update');
+    Route::delete('gallery/{photo}', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'destroy'])->name('industrial-zones.gallery.destroy');
+
     Route::get('issues', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'index'])->name('industrial-zones.issues.index');
     Route::post('issues', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'store'])->name('industrial-zones.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'update'])->name('industrial-zones.issues.update');
@@ -121,6 +131,11 @@ Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verifie
 });
 
 Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+    Route::get('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'index'])->name('prom-zones.gallery.index');
+    Route::post('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'store'])->name('prom-zones.gallery.store');
+    Route::put('gallery/{photo}', [\App\Http\Controllers\PromZonePhotoController::class, 'update'])->name('prom-zones.gallery.update');
+    Route::delete('gallery/{photo}', [\App\Http\Controllers\PromZonePhotoController::class, 'destroy'])->name('prom-zones.gallery.destroy');
+
     Route::get('issues', [\App\Http\Controllers\PromZoneIssueController::class, 'index'])->name('prom-zones.issues.index');
     Route::post('issues', [\App\Http\Controllers\PromZoneIssueController::class, 'store'])->name('prom-zones.issues.store');
     Route::put('issues/{issue}', [\App\Http\Controllers\PromZoneIssueController::class, 'update'])->name('prom-zones.issues.update');

@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SubsoilPhoto;
-use App\Models\SubsoilUser;
+use App\Models\IndustrialZone;
+use App\Models\IndustrialZonePhoto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-class SubsoilPhotoController extends Controller
+class IndustrialZonePhotoController extends Controller
 {
-    public function index(SubsoilUser $subsoilUser)
+    public function index(IndustrialZone $industrialZone)
     {
-        $mainGalleryPhotos = $subsoilUser->photos()
+        $mainGalleryPhotos = $industrialZone->photos()
             ->mainGallery()
             ->latest()
             ->get()
@@ -22,7 +22,7 @@ class SubsoilPhotoController extends Controller
                 return $photo;
             });
 
-        $datedGalleryPhotos = $subsoilUser->photos()
+        $datedGalleryPhotos = $industrialZone->photos()
             ->where('photo_type', 'gallery')
             ->whereNotNull('gallery_date')
             ->latest('gallery_date')
@@ -39,20 +39,20 @@ class SubsoilPhotoController extends Controller
             })
             ->toArray();
 
-        $renderPhotos = $subsoilUser->photos()
+        $renderPhotos = $industrialZone->photos()
             ->renderPhotos()
             ->latest()
             ->get();
 
-        return Inertia::render('subsoil-users/gallery', [
-            'subsoilUser' => $subsoilUser->load('region'),
+        return Inertia::render('industrial-zones/gallery', [
+            'industrialZone' => $industrialZone->load('region'),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);
     }
 
-    public function store(Request $request, SubsoilUser $subsoilUser)
+    public function store(Request $request, IndustrialZone $industrialZone)
     {
         $this->ensureCanManagePhotos($request);
 
@@ -68,10 +68,10 @@ class SubsoilPhotoController extends Controller
         $photoType = $validated['photo_type'] ?? 'gallery';
 
         foreach ($validated['photos'] as $photo) {
-            $path = $photo->store('subsoil-photos/'.$subsoilUser->id, 'public');
+            $path = $photo->store('industrial-zone-photos/'.$industrialZone->id, 'public');
 
-            SubsoilPhoto::create([
-                'subsoil_user_id' => $subsoilUser->id,
+            IndustrialZonePhoto::create([
+                'industrial_zone_id' => $industrialZone->id,
                 'file_path' => $path,
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
@@ -82,11 +82,11 @@ class SubsoilPhotoController extends Controller
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
 
-    public function update(Request $request, SubsoilUser $subsoilUser, SubsoilPhoto $photo)
+    public function update(Request $request, IndustrialZone $industrialZone, IndustrialZonePhoto $photo)
     {
         $this->ensureCanManagePhotos($request);
 
-        if ($photo->subsoil_user_id !== $subsoilUser->id) {
+        if ($photo->industrial_zone_id !== $industrialZone->id) {
             abort(404);
         }
 
@@ -100,11 +100,11 @@ class SubsoilPhotoController extends Controller
         return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
 
-    public function destroy(Request $request, SubsoilUser $subsoilUser, $photo)
+    public function destroy(Request $request, IndustrialZone $industrialZone, $photo)
     {
         $this->ensureCanManagePhotos($request);
 
-        $photoModel = SubsoilPhoto::where('subsoil_user_id', $subsoilUser->id)
+        $photoModel = IndustrialZonePhoto::where('industrial_zone_id', $industrialZone->id)
             ->findOrFail($photo);
 
         if (Storage::disk('public')->exists($photoModel->file_path)) {
