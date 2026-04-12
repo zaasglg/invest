@@ -41,4 +41,9 @@ class Sez extends Model
     {
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_sez');
     }
+
+    public function photos()
+    {
+        return $this->hasMany(SezPhoto::class);
+    }
 }

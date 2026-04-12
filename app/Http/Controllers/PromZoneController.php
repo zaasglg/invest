@@ -101,10 +101,18 @@ class PromZoneController extends Controller
     {
         $promZone->load(['region', 'issues', 'investmentProjects' => function ($q) {
             $q->where('is_archived', false)->with('region');
-        }]);
+        }])->loadCount('photos');
+
+        $mainGalleryPhotos = $promZone->photos()
+            ->where('photo_type', 'gallery')
+            ->latest()
+            ->get();
+        $renderPhotos = $promZone->photos()->renderPhotos()->latest()->get();
 
         return Inertia::render('prom-zones/show', [
             'promZone' => $promZone,
+            'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 

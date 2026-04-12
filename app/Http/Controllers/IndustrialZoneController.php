@@ -101,10 +101,18 @@ class IndustrialZoneController extends Controller
     {
         $industrialZone->load(['region', 'issues', 'investmentProjects' => function ($q) {
             $q->where('is_archived', false)->with('region');
-        }]);
+        }])->loadCount('photos');
+
+        $mainGalleryPhotos = $industrialZone->photos()
+            ->where('photo_type', 'gallery')
+            ->latest()
+            ->get();
+        $renderPhotos = $industrialZone->photos()->renderPhotos()->latest()->get();
 
         return Inertia::render('industrial-zones/show', [
             'industrialZone' => $industrialZone,
+            'mainGallery' => $mainGalleryPhotos,
+            'renderPhotos' => $renderPhotos,
         ]);
     }
 

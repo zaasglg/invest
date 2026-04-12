@@ -4,7 +4,9 @@ import {
     Building2,
     Car,
     Droplets,
+    Eye,
     Flame,
+    ImageIcon,
     MapPin,
     Activity,
     Layers,
@@ -14,6 +16,7 @@ import {
     Zap,
 } from 'lucide-react';
 import React from 'react';
+import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -79,14 +82,29 @@ interface PromZone {
     description?: string;
     issues?: Issue[];
     investment_projects?: InvestmentProject[];
+    photos_count?: number;
     created_at: string;
+}
+
+interface Photo {
+    id: number;
+    file_path: string;
+    description?: string | null;
+    gallery_date?: string | null;
+    created_at?: string | null;
 }
 
 interface Props {
     promZone: PromZone;
+    mainGallery?: Photo[];
+    renderPhotos?: Photo[];
 }
 
-export default function Show({ promZone }: Props) {
+export default function Show({
+    promZone,
+    mainGallery = [],
+    renderPhotos = [],
+}: Props) {
     const { url } = usePage();
     const canModify = useCanModify();
 
@@ -144,6 +162,8 @@ export default function Show({ promZone }: Props) {
 
     const projects = promZone.investment_projects ?? [];
     const issues = promZone.issues ?? [];
+    const photosCount =
+        typeof promZone.photos_count === 'number' ? promZone.photos_count : 0;
 
     return (
         <AppLayout
@@ -191,7 +211,14 @@ export default function Show({ promZone }: Props) {
 
                             {/* Info Cards */}
                             <CardContent className="p-6">
-                                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                                    <div className="overflow-hidden rounded-lg md:col-span-2">
+                                        <ProjectGallerySlider
+                                            photos={mainGallery}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-3 md:col-span-3">
                                     <div className="rounded-lg border border-gray-200 p-4">
                                         <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                             <MapPin className="h-3.5 w-3.5" />{' '}
@@ -245,6 +272,7 @@ export default function Show({ promZone }: Props) {
                                                     : 'Көрсетілмеген';
                                             })()}
                                         </p>
+                                    </div>
                                     </div>
                                 </div>
 
@@ -458,6 +486,22 @@ export default function Show({ promZone }: Props) {
 
                     {/* Sidebar */}
                     <div className="space-y-6">
+                        {renderPhotos.length > 0 && (
+                            <Card className="overflow-hidden shadow-none">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Eye className="h-5 w-5 text-gray-500" />
+                                        Болашақтағы сурет
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    <ProjectGallerySlider
+                                        photos={renderPhotos}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Actions */}
                         <Card className="shadow-none">
                             <CardContent className="flex flex-col gap-3 p-4">
@@ -475,6 +519,23 @@ export default function Show({ promZone }: Props) {
                                         </Button>
                                     </Link>
                                 )}
+                                <Link
+                                    href={`/prom-zones/${promZone.id}/gallery`}
+                                    className="w-full"
+                                >
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start"
+                                    >
+                                        <ImageIcon className="mr-2 h-4 w-4" />
+                                        Галерея
+                                        {photosCount > 0 && (
+                                            <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                {photosCount}
+                                            </span>
+                                        )}
+                                    </Button>
+                                </Link>
                                 <Link
                                     href={`/regions/${promZone.region_id}`}
                                     className="w-full"

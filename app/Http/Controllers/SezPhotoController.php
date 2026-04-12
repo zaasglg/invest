@@ -2,17 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\SubsoilPhoto;
-use App\Models\SubsoilUser;
+use App\Models\Sez;
+use App\Models\SezPhoto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
-class SubsoilPhotoController extends Controller
+class SezPhotoController extends Controller
 {
-    public function index(SubsoilUser $subsoilUser)
+    public function index(Sez $sez)
     {
-        $mainGalleryPhotos = $subsoilUser->photos()
+        $mainGalleryPhotos = $sez->photos()
             ->mainGallery()
             ->latest()
             ->get()
@@ -22,7 +22,7 @@ class SubsoilPhotoController extends Controller
                 return $photo;
             });
 
-        $datedGalleryPhotos = $subsoilUser->photos()
+        $datedGalleryPhotos = $sez->photos()
             ->where('photo_type', 'gallery')
             ->whereNotNull('gallery_date')
             ->latest('gallery_date')
@@ -39,20 +39,20 @@ class SubsoilPhotoController extends Controller
             })
             ->toArray();
 
-        $renderPhotos = $subsoilUser->photos()
+        $renderPhotos = $sez->photos()
             ->renderPhotos()
             ->latest()
             ->get();
 
-        return Inertia::render('subsoil-users/gallery', [
-            'subsoilUser' => $subsoilUser->load('region'),
+        return Inertia::render('sezs/gallery', [
+            'sez' => $sez->load('region'),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);
     }
 
-    public function store(Request $request, SubsoilUser $subsoilUser)
+    public function store(Request $request, Sez $sez)
     {
         $this->ensureCanManagePhotos($request);
 
@@ -68,10 +68,10 @@ class SubsoilPhotoController extends Controller
         $photoType = $validated['photo_type'] ?? 'gallery';
 
         foreach ($validated['photos'] as $photo) {
-            $path = $photo->store('subsoil-photos/'.$subsoilUser->id, 'public');
+            $path = $photo->store('sez-photos/'.$sez->id, 'public');
 
-            SubsoilPhoto::create([
-                'subsoil_user_id' => $subsoilUser->id,
+            SezPhoto::create([
+                'sez_id' => $sez->id,
                 'file_path' => $path,
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
@@ -82,11 +82,11 @@ class SubsoilPhotoController extends Controller
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
 
-    public function update(Request $request, SubsoilUser $subsoilUser, SubsoilPhoto $photo)
+    public function update(Request $request, Sez $sez, SezPhoto $photo)
     {
         $this->ensureCanManagePhotos($request);
 
-        if ($photo->subsoil_user_id !== $subsoilUser->id) {
+        if ($photo->sez_id !== $sez->id) {
             abort(404);
         }
 
@@ -100,11 +100,11 @@ class SubsoilPhotoController extends Controller
         return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
 
-    public function destroy(Request $request, SubsoilUser $subsoilUser, $photo)
+    public function destroy(Request $request, Sez $sez, $photo)
     {
         $this->ensureCanManagePhotos($request);
 
-        $photoModel = SubsoilPhoto::where('subsoil_user_id', $subsoilUser->id)
+        $photoModel = SezPhoto::where('sez_id', $sez->id)
             ->findOrFail($photo);
 
         if (Storage::disk('public')->exists($photoModel->file_path)) {

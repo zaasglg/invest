@@ -26,13 +26,13 @@ interface Region {
     name: string;
 }
 
-interface SubsoilUser {
+interface PromZone {
     id: number;
     name: string;
     region?: Region;
 }
 
-interface SubsoilPhoto {
+interface PromZonePhoto {
     id: number;
     file_path: string;
     gallery_date: string | null;
@@ -41,18 +41,18 @@ interface SubsoilPhoto {
 }
 
 interface DatedGallery {
-    [date: string]: SubsoilPhoto[];
+    [date: string]: PromZonePhoto[];
 }
 
 interface Props {
-    subsoilUser: SubsoilUser;
-    mainGallery: SubsoilPhoto[];
+    promZone: PromZone;
+    mainGallery: PromZonePhoto[];
     datedGallery: DatedGallery;
-    renderPhotos?: SubsoilPhoto[];
+    renderPhotos?: PromZonePhoto[];
 }
 
 export default function Gallery({
-    subsoilUser,
+    promZone,
     mainGallery,
     datedGallery,
     renderPhotos = [],
@@ -69,10 +69,10 @@ export default function Gallery({
     const [uploadError, setUploadError] = useState<string>('');
 
     const [lightboxOpen, setLightboxOpen] = useState(false);
-    const [lightboxPhotos, setLightboxPhotos] = useState<SubsoilPhoto[]>([]);
+    const [lightboxPhotos, setLightboxPhotos] = useState<PromZonePhoto[]>([]);
     const [lightboxIndex, setLightboxIndex] = useState(0);
 
-    const openLightbox = (photos: SubsoilPhoto[], index: number) => {
+    const openLightbox = (photos: PromZonePhoto[], index: number) => {
         setLightboxPhotos(photos);
         setLightboxIndex(index);
         setLightboxOpen(true);
@@ -136,7 +136,7 @@ export default function Gallery({
         }
         formData.append('photo_type', photoType);
 
-        router.post(`/subsoil-users/${subsoilUser.id}/gallery`, formData, {
+        router.post(`/prom-zones/${promZone.id}/gallery`, formData, {
             onSuccess: () => {
                 clearPhotos();
                 setIsUploading(false);
@@ -150,7 +150,7 @@ export default function Gallery({
     const handleDelete = (photoId: number) => {
         if (confirm('Бұл фотоны жоюға сенімдісіз бе?')) {
             router.delete(
-                `/subsoil-users/${subsoilUser.id}/gallery/${photoId}`,
+                `/prom-zones/${promZone.id}/gallery/${photoId}`,
             );
         }
     };
@@ -175,24 +175,24 @@ export default function Gallery({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: subsoilUser.region?.name || 'Аймақ',
-                    href: `/regions/${subsoilUser.region?.id}`,
+                    title: promZone.region?.name || 'Аймақ',
+                    href: `/regions/${promZone.region?.id}`,
                 },
                 {
-                    title: subsoilUser.name,
-                    href: `/subsoil-users/${subsoilUser.id}`,
+                    title: promZone.name,
+                    href: `/prom-zones/${promZone.id}`,
                 },
                 { title: 'Галерея', href: '' },
             ]}
         >
-            <Head title={`Галерея - ${subsoilUser.name}`} />
+            <Head title={`Галерея - ${promZone.name}`} />
 
             <div className="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-6 p-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <Link
-                            href={`/subsoil-users/${subsoilUser.id}`}
+                            href={`/prom-zones/${promZone.id}`}
                             className="mb-2 inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
                         >
                             <ArrowLeft className="mr-1 h-4 w-4" /> Артқа
@@ -201,7 +201,7 @@ export default function Gallery({
                             Галерея
                         </h1>
                         <p className="mt-1 text-sm text-gray-500">
-                            {subsoilUser.name}
+                            {promZone.name}
                         </p>
                     </div>
                 </div>
@@ -550,11 +550,11 @@ export default function Gallery({
 }
 
 interface PhotoCardProps {
-    photo: SubsoilPhoto;
+    photo: PromZonePhoto;
     index: number;
-    photos: SubsoilPhoto[];
+    photos: PromZonePhoto[];
     onDelete: (id: number) => void;
-    onOpen: (photos: SubsoilPhoto[], index: number) => void;
+    onOpen: (photos: PromZonePhoto[], index: number) => void;
     canModify: boolean;
 }
 
