@@ -8,5 +8,4 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('projects:suspend-expired')->daily();
 Schedule::command('tasks:notify-overdue')->daily();
