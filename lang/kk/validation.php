@@ -224,6 +224,8 @@ return [
         'company_name' => 'Компания атауы',
         'end_date' => 'Аяқталу күні',
         'start_date' => 'Басталу күні',
+        'corporate_email' => 'Корпоративті электрондық пошта',
+        'corporate_password' => 'Корпоративті құпиясөз',
     ],
 
 ];
