@@ -834,7 +834,8 @@ class InvestmentProjectController extends Controller
         if ($zip->count() === 0) {
             $zip->close();
             @unlink($zipPath);
-            abort(404, 'Жүктеуге файлдар жоқ.');
+
+            return redirect()->back();
         }
 
         $zip->close();
@@ -933,7 +934,7 @@ class InvestmentProjectController extends Controller
         $projects = $query->get();
 
         if ($projects->isEmpty()) {
-            abort(404, 'Жобалар табылмады.');
+            return redirect()->back();
         }
 
         $pptx = new PhpPresentation;
