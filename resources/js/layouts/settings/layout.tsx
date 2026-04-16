@@ -24,7 +24,7 @@ const sidebarNavItems: NavItem[] = [
         icon: KeyRound,
     },
     {
-        title: 'Екі факторлы аутентификация',
+        title: '2FA аутентификация',
         href: show(),
         icon: ShieldCheck,
     },
