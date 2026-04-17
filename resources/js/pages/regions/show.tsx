@@ -857,16 +857,10 @@ export default function Show({
 
     const handleBulkPresentationDownload = (
         projectList: InvestmentProject[],
-        currentPage: number,
     ) => {
-        const paginatedIds = projectList
-            .slice(
-                (currentPage - 1) * ITEMS_PER_PAGE,
-                currentPage * ITEMS_PER_PAGE,
-            )
-            .map((p) => p.id);
+        const allIds = projectList.map((p) => p.id);
 
-        if (paginatedIds.length === 0) return;
+        if (allIds.length === 0) return;
 
         setDownloadingPresentations(true);
 
@@ -892,7 +886,7 @@ export default function Show({
             form.appendChild(csrfInput);
         }
 
-        paginatedIds.forEach((id) => {
+        allIds.forEach((id) => {
             const input = document.createElement('input');
             input.type = 'hidden';
             input.name = 'project_ids[]';
@@ -1302,7 +1296,6 @@ export default function Show({
                                                                 : orderedProjects;
                                                     handleBulkPresentationDownload(
                                                         filteredProjects,
-                                                        allPage,
                                                     );
                                                 }}
                                             >
@@ -1553,7 +1546,6 @@ export default function Show({
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
                                                     sezProjects,
-                                                    sezPage,
                                                 )
                                             }
                                         >
@@ -1743,7 +1735,6 @@ export default function Show({
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
                                                     izProjects,
-                                                    izPage,
                                                 )
                                             }
                                         >
@@ -1933,7 +1924,6 @@ export default function Show({
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
                                                     promProjects,
-                                                    promPage,
                                                 )
                                             }
                                         >
