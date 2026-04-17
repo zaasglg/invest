@@ -6,11 +6,16 @@ use App\Models\IndustrialZone;
 use App\Models\IndustrialZoneIssue;
 use App\Models\InvestmentProject;
 use App\Models\ProjectIssue;
+use App\Models\ProjectType;
+use App\Models\PromZone;
+use App\Models\PromZoneIssue;
 use App\Models\Region;
+use App\Models\Role;
 use App\Models\Sez;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
 use App\Models\SubsoilUser;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 
 class ChatContextService
@@ -27,11 +32,17 @@ class ChatContextService
                 case 'investment_projects':
                     $context['projects'] = $this->getProjectsData($query);
                     break;
+                case 'project_types':
+                    $context['project_types'] = $this->getProjectTypesData();
+                    break;
                 case 'sezs':
                     $context['sezs'] = $this->getSezData($query);
                     break;
                 case 'industrial_zones':
                     $context['industrial_zones'] = $this->getIndustrialZonesData($query);
+                    break;
+                case 'prom_zones':
+                    $context['prom_zones'] = $this->getPromZonesData($query);
                     break;
                 case 'subsoil_users':
                     $context['subsoil_users'] = $this->getSubsoilUsersData($query);
@@ -41,6 +52,15 @@ class ChatContextService
                     break;
                 case 'tasks':
                     $context['tasks'] = $this->getTasksData($query);
+                    break;
+                case 'users':
+                    $context['users'] = $this->getUsersData($query);
+                    break;
+                case 'gallery':
+                    $context['gallery'] = $this->getGalleryData($query);
+                    break;
+                case 'rating':
+                    $context['rating'] = $this->getRatingData();
                     break;
             }
         }
@@ -223,14 +243,112 @@ class ChatContextService
 
     protected function extractRegionName(string $query): ?string
     {
-        $regions = ['Туркестанская', 'Шымкент', 'Кентау', 'Арысь', 'Түркістан'];
+        // Динамикалық аймақ атауларын DB-дан алу
+        $regions = Region::pluck('name')->toArray();
 
-        foreach ($regions as $region) {
-            if (stripos($query, $region) !== false) {
-                return $region;
+        foreach ($regions as $regionName) {
+            if (mb_stripos($query, $regionName) !== false) {
+                return $regionName;
+            }
+        }
+
+        // Орысша атаулар
+        $aliases = ['Туркестанская', 'Шымкент', 'Кентау', 'Арысь', 'Түркістан'];
+
+        foreach ($aliases as $alias) {
+            if (mb_stripos($query, $alias) !== false) {
+                return $alias;
             }
         }
 
         return null;
+    }
+
+    protected function getProjectTypesData(): array
+    {
+        $types = ProjectType::withCount('projects')->get();
+
+        return [
+            'total_count' => $types->count(),
+            'items' => $types->map(fn ($t) => [
+                'id' => $t->id,
+                'name' => $t->name,
+                'projects_count' => $t->projects_count,
+            ])->toArray(),
+        ];
+    }
+
+    protected function getPromZonesData(string $query): array
+    {
+        $zones = PromZone::with(['region', 'issues'])->get();
+        $totalCount = $zones->count();
+
+        $items = $zones->take(10)->map(fn ($zone) => [
+            'id' => $zone->id,
+            'name' => $zone->name,
+            'region' => $zone->region->name ?? null,
+            'area' => $zone->area ?? null,
+            'issues_count' => $zone->issues->count(),
+        ])->toArray();
+
+        return [
+            'total_count' => $totalCount,
+            'items' => $items,
+        ];
+    }
+
+    protected function getUsersData(string $query): array
+    {
+        $roles = Role::withCount('users')->get()->map(fn ($r) => [
+            'name' => $r->name,
+            'display_name' => $r->display_name,
+            'users_count' => $r->users_count,
+        ])->toArray();
+
+        $totalUsers = User::count();
+
+        return [
+            'total_users' => $totalUsers,
+            'roles' => $roles,
+        ];
+    }
+
+    protected function getGalleryData(string $query): array
+    {
+        $totalPhotos = DB::table('project_photos')->count();
+        $recentPhotos = DB::table('project_photos')
+            ->join('investment_projects', 'project_photos.project_id', '=', 'investment_projects.id')
+            ->select(
+                'investment_projects.name as project_name',
+                DB::raw('count(*) as photos_count'),
+                DB::raw('max(project_photos.created_at) as last_upload')
+            )
+            ->groupBy('investment_projects.id', 'investment_projects.name')
+            ->orderByDesc('last_upload')
+            ->limit(10)
+            ->get()
+            ->toArray();
+
+        return [
+            'total_photos' => $totalPhotos,
+            'recent_by_project' => $recentPhotos,
+        ];
+    }
+
+    protected function getRatingData(): array
+    {
+        $users = User::whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
+            ->with(['region', 'roleModel'])
+            ->get()
+            ->map(fn ($u) => [
+                'name' => $u->full_name,
+                'region' => $u->region->name ?? null,
+                'position' => $u->position,
+            ])->toArray();
+
+        return [
+            'total_ispolnitel' => count($users),
+            'items' => $users,
+        ];
     }
 }
