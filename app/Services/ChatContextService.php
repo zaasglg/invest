@@ -211,7 +211,7 @@ class ChatContextService
             ->join('investment_projects', 'project_tasks.project_id', '=', 'investment_projects.id')
             ->select(
                 'project_tasks.id',
-                'project_tasks.name',
+                'project_tasks.title',
                 'project_tasks.status',
                 'project_tasks.due_date',
                 'investment_projects.name as project_name'
