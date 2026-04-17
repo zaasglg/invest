@@ -85,6 +85,10 @@ class ProjectPhotoController extends Controller
 
     public function store(Request $request, InvestmentProject $investmentProject)
     {
+        $user = Auth::user();
+
+        $this->ensureCanWritePhotos($user, $investmentProject);
+
         $validated = $request->validate([
             'photos' => 'required|array|min:1',
             'photos.*' => 'required|image|max:5120', // 5MB per image
@@ -94,8 +98,13 @@ class ProjectPhotoController extends Controller
         ]);
 
         $photoType = $validated['photo_type'] ?? 'gallery';
-        // Auto-set gallery_date to today for gallery photos if not specified
-        $galleryDate = $validated['gallery_date'] ?? ($photoType === 'gallery' ? now()->toDateString() : null);
+        $galleryDate = null;
+
+        if ($photoType === 'gallery') {
+            $galleryDate = $this->isSuperAdmin($user)
+                ? ($validated['gallery_date'] ?? now()->toDateString())
+                : now()->toDateString();
+        }
 
         foreach ($validated['photos'] as $photo) {
             $path = $photo->store('project-photos/'.$investmentProject->id, 'public');
@@ -120,12 +129,32 @@ class ProjectPhotoController extends Controller
             abort(404);
         }
 
+        $user = Auth::user();
+
+        $this->ensureCanWritePhotos($user, $investmentProject);
+
         $validated = $request->validate([
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',
         ]);
 
-        $photo->update($validated);
+        $payload = [];
+
+        if ($request->exists('description')) {
+            $payload['description'] = $validated['description'] ?? null;
+        }
+
+        if ($request->exists('gallery_date')) {
+            if (! $this->isSuperAdmin($user)) {
+                abort(403, 'Тек супер админ фото күнін өзгерте алады.');
+            }
+
+            $payload['gallery_date'] = $validated['gallery_date'] ?? null;
+        }
+
+        if (! empty($payload)) {
+            $photo->update($payload);
+        }
 
         KpiLog::log($investmentProject->id, 'Фото мәліметтері жаңартылды');
 
@@ -135,6 +164,8 @@ class ProjectPhotoController extends Controller
     public function destroy(Request $request, InvestmentProject $investmentProject, $photo)
     {
         $user = Auth::user();
+
+        $this->ensureCanWritePhotos($user, $investmentProject);
 
         // Ispolnitel cannot delete photos
         if ($user->roleModel?->name === 'ispolnitel') {
@@ -170,5 +201,17 @@ class ProjectPhotoController extends Controller
 
         // Both district and oblast ispolnitel have the same write permissions
         return true;
+    }
+
+    private function ensureCanWritePhotos($user, InvestmentProject $project): void
+    {
+        if ($user->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+            abort(403, 'Сіз бұл жобаға фото жүктей алмайсыз.');
+        }
+    }
+
+    private function isSuperAdmin($user): bool
+    {
+        return $user->roleModel?->name === 'superadmin';
     }
 }

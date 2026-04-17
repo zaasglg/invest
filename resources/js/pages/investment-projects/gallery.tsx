@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Upload,
@@ -18,6 +18,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import type { SharedData } from '@/types';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB per photo
 const MAX_TOTAL_SIZE = 45 * 1024 * 1024; // 45MB total
@@ -69,13 +70,14 @@ export default function Gallery({
     ispolnitelCanWrite = false,
 }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
     const canEdit = canModify || ispolnitelCanWrite;
+    const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     // Ispolnitel can add but cannot delete
     const canDelete = canModify;
+    const defaultGalleryDate = new Date().toISOString().split('T')[0];
     const [photos, setPhotos] = useState<FileList | null>(null);
-    const [galleryDate, setGalleryDate] = useState(
-        new Date().toISOString().split('T')[0],
-    );
+    const [galleryDate, setGalleryDate] = useState(defaultGalleryDate);
     const [description, setDescription] = useState('');
     const [photoType, setPhotoType] = useState<'gallery' | 'render'>('gallery');
     const [isUploading, setIsUploading] = useState(false);
@@ -131,7 +133,7 @@ export default function Gallery({
     const clearPhotos = () => {
         setPhotos(null);
         setPreviewUrls([]);
-        setGalleryDate('');
+        setGalleryDate(defaultGalleryDate);
         setDescription('');
         setPhotoType('gallery');
         setUploadError('');
@@ -148,7 +150,7 @@ export default function Gallery({
         Array.from(photos).forEach((photo) => {
             formData.append('photos[]', photo);
         });
-        if (galleryDate) {
+        if (photoType === 'gallery' && isSuperAdmin && galleryDate) {
             formData.append('gallery_date', galleryDate);
         }
         if (description) {
@@ -373,33 +375,41 @@ export default function Gallery({
                                             )}
                                         </div>
 
-                                        <div>
-                                            <Label
-                                                htmlFor="gallery_date"
-                                                className="mb-2 block"
-                                            >
-                                                Галерея күні (қосымша)
-                                            </Label>
-                                            <Input
-                                                id="gallery_date"
-                                                type="date"
-                                                value={galleryDate}
-                                                onChange={(e) =>
-                                                    setGalleryDate(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="w-full"
-                                                disabled={
-                                                    photoType === 'render'
-                                                }
-                                            />
-                                            <p className="mt-1 text-xs text-gray-500">
-                                                {galleryDate
-                                                    ? 'Фотолар осы күнге қосылады'
-                                                    : 'Бүгінгі күн автоматты түрде орнатылады'}
-                                            </p>
-                                        </div>
+                                        {photoType === 'gallery' &&
+                                            (isSuperAdmin ? (
+                                                <div>
+                                                    <Label
+                                                        htmlFor="gallery_date"
+                                                        className="mb-2 block"
+                                                    >
+                                                        Галерея күні
+                                                    </Label>
+                                                    <Input
+                                                        id="gallery_date"
+                                                        type="date"
+                                                        value={galleryDate}
+                                                        onChange={(e) =>
+                                                            setGalleryDate(
+                                                                e.target
+                                                                    .value,
+                                                            )
+                                                        }
+                                                        className="w-full"
+                                                    />
+                                                    <p className="mt-1 text-xs text-gray-500">
+                                                        Фотолар таңдалған күнмен
+                                                        сақталады
+                                                    </p>
+                                                </div>
+                                            ) : (
+                                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
+                                                    <p className="text-xs text-gray-600">
+                                                        Галерея күні автоматты
+                                                        түрде жүктелген күнмен
+                                                        сақталады.
+                                                    </p>
+                                                </div>
+                                            ))}
 
                                         <div>
                                             <Label
