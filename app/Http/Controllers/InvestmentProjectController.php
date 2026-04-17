@@ -388,10 +388,8 @@ class InvestmentProjectController extends Controller
 
         $project = InvestmentProject::create($validated);
 
-        // Sync executors
-        if (! empty($executorIds)) {
-            $project->executors()->sync($executorIds);
-        }
+        // Sync executors (auto-include district ispolnitel users)
+        $this->syncExecutorsWithIspolnitel($project, $executorIds);
 
         // Sync many-to-many связи с секторами
         $project->sezs()->sync($sezIds);
@@ -747,8 +745,8 @@ class InvestmentProjectController extends Controller
 
         $investmentProject->update($validated);
 
-        // Sync executors
-        $investmentProject->executors()->sync($executorIds);
+        // Sync executors (auto-include district ispolnitel users)
+        $this->syncExecutorsWithIspolnitel($investmentProject, $executorIds);
 
         // Sync many-to-many связи с секторами
         $investmentProject->sezs()->sync($sezIds);
@@ -1332,6 +1330,35 @@ class InvestmentProjectController extends Controller
         $user->loadMissing('roleModel');
 
         return $user->roleModel?->name === 'ispolnitel';
+    }
+
+    /**
+     * Аудандағы барлық исполнитель пайдаланушылардың ID-ларын алу.
+     * Бұл пайдаланушылар жобаға автоматты түрде қосылады және алынбайды.
+     */
+    protected function getDistrictIspolnitelIds(?int $regionId): array
+    {
+        if (! $regionId) {
+            return [];
+        }
+
+        return User::where('region_id', $regionId)
+            ->whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
+            ->pluck('id')
+            ->toArray();
+    }
+
+    /**
+     * Исполнитель пайдаланушыларды жобаға қосу (sync кезінде олар алынбайды).
+     */
+    protected function syncExecutorsWithIspolnitel(InvestmentProject $project, array $executorIds): void
+    {
+        $districtIspolnitelIds = $this->getDistrictIspolnitelIds($project->region_id);
+
+        // Merge: always include district ispolnitel users
+        $mergedIds = array_unique(array_merge($executorIds, $districtIspolnitelIds));
+
+        $project->executors()->sync($mergedIds);
     }
 
     protected function isProjectParticipant(InvestmentProject $project, ?int $userId): bool

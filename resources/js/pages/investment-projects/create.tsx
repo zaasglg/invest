@@ -8,7 +8,7 @@ import {
     MapPin,
 } from 'lucide-react';
 import type { FormEventHandler } from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -230,7 +230,35 @@ export default function Create({
         return users.filter((u) => u.baskarma_type === 'oblast');
     }, [users]);
 
+    // District ispolnitel users that must be auto-assigned and cannot be removed
+    const lockedIspolnitelIds = useMemo(() => {
+        if (!data.region_id) return [] as string[];
+        const regionId = parseInt(data.region_id);
+        return users
+            .filter(
+                (u) =>
+                    u.role_model?.name === 'ispolnitel' &&
+                    u.region_id === regionId,
+            )
+            .map((u) => u.id.toString());
+    }, [users, data.region_id]);
+
+    // Auto-add district ispolnitel users when region changes
+    useEffect(() => {
+        if (lockedIspolnitelIds.length === 0) return;
+        const merged = new Set([
+            ...data.executor_ids,
+            ...lockedIspolnitelIds,
+        ]);
+        const next = Array.from(merged);
+        if (next.length !== data.executor_ids.length) {
+            setData('executor_ids', next);
+        }
+    }, [lockedIspolnitelIds]);
+
     const handleExecutorChange = (userId: string, checked: boolean) => {
+        // Prevent unchecking locked ispolnitel users
+        if (!checked && lockedIspolnitelIds.includes(userId)) return;
         const currentIds = data.executor_ids;
         if (checked) {
             setData('executor_ids', [...currentIds, userId]);
@@ -1414,17 +1442,27 @@ export default function Create({
                                                                                 checked as boolean,
                                                                             )
                                                                         }
+                                                                        disabled={lockedIspolnitelIds.includes(
+                                                                            user.id.toString(),
+                                                                        )}
                                                                         className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
                                                                     />
                                                                     <Label
                                                                         htmlFor={`user-${user.id}`}
-                                                                        className="cursor-pointer font-normal"
+                                                                        className={`font-normal ${lockedIspolnitelIds.includes(user.id.toString()) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                                                                     >
                                                                         <span>
                                                                             {
                                                                                 user.full_name
                                                                             }
                                                                         </span>
+                                                                        {lockedIspolnitelIds.includes(
+                                                                            user.id.toString(),
+                                                                        ) && (
+                                                                            <span className="ml-1 text-xs text-amber-600">
+                                                                                (авто)
+                                                                            </span>
+                                                                        )}
                                                                         {user.position && (
                                                                             <span className="text-gray-400">
                                                                                 {' '}

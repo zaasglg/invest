@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('tasks:notify-overdue')->daily();
+Schedule::command('photos:check-weekly')->weeklyOn(1, '09:00');
