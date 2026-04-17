@@ -7,6 +7,8 @@ use App\Models\Role;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -424,6 +426,39 @@ describe('Ispolnitel role', function () {
         $project = createTestProject($district->id, $admin->id);
 
         $this->actingAs($user)->get("/investment-projects/{$project->id}/edit")->assertStatus(403);
+    });
+
+    test('cannot upload project documents to uninvolved project', function () {
+        $this->withoutMiddleware();
+
+        Storage::fake('public');
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'role_id' => createRole('superadmin')->id,
+        ]);
+        $user = User::factory()->create([
+            'role' => 'district_user',
+            'role_id' => createRole('ispolnitel')->id,
+        ]);
+        $oblast = createTestRegion();
+        $district = $oblast->children->first();
+        $project = createTestProject($district->id, $admin->id);
+
+        $response = $this->actingAs($user)->post(
+            "/investment-projects/{$project->id}/documents",
+            [
+                'name' => 'Бөгде құжат',
+                'file' => UploadedFile::fake()->create('document.pdf', 100),
+            ]
+        );
+
+        $response->assertStatus(403);
+
+        $this->assertDatabaseMissing('project_documents', [
+            'project_id' => $project->id,
+            'name' => 'Бөгде құжат',
+        ]);
     });
 
     test('can view sezs', function () {

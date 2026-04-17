@@ -57,6 +57,7 @@ export default function Documents({
 }: Props) {
     const canModify = useCanModify();
     const canEdit = canModify || ispolnitelCanWrite;
+    const canMarkAsCompleted = canModify;
     // Ispolnitel can add but cannot delete
     const canDelete = canModify;
     const [file, setFile] = useState<File | null>(null);
@@ -88,7 +89,7 @@ export default function Documents({
         if (documentType) {
             formData.append('type', documentType);
         }
-        if (isCompleted) {
+        if (canMarkAsCompleted && isCompleted) {
             formData.append('is_completed', '1');
         }
 
@@ -266,25 +267,27 @@ export default function Documents({
                                             />
                                         </div>
 
-                                        <div className="flex items-center gap-2">
-                                            <input
-                                                id="is_completed"
-                                                type="checkbox"
-                                                checked={isCompleted}
-                                                onChange={(e) =>
-                                                    setIsCompleted(
-                                                        e.target.checked,
-                                                    )
-                                                }
-                                                className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
-                                            />
-                                            <Label
-                                                htmlFor="is_completed"
-                                                className="cursor-pointer text-sm font-medium text-gray-700"
-                                            >
-                                                Аяқталған құжат
-                                            </Label>
-                                        </div>
+                                        {canMarkAsCompleted && (
+                                            <div className="flex items-center gap-2">
+                                                <input
+                                                    id="is_completed"
+                                                    type="checkbox"
+                                                    checked={isCompleted}
+                                                    onChange={(e) =>
+                                                        setIsCompleted(
+                                                            e.target.checked,
+                                                        )
+                                                    }
+                                                    className="h-4 w-4 rounded border-gray-300 text-green-600 focus:ring-green-500"
+                                                />
+                                                <Label
+                                                    htmlFor="is_completed"
+                                                    className="cursor-pointer text-sm font-medium text-gray-700"
+                                                >
+                                                    Аяқталған құжат
+                                                </Label>
+                                            </div>
+                                        )}
 
                                         <Button
                                             type="submit"
