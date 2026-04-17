@@ -66,12 +66,22 @@ class ProjectDocumentController extends Controller
 
     public function store(Request $request, InvestmentProject $investmentProject)
     {
+        $user = Auth::user();
+
+        $this->ensureCanUploadDocuments($user, $investmentProject);
+
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'file' => 'required|file|max:10240', // 10MB max
             'type' => 'nullable|string|max:100',
             'is_completed' => 'nullable|boolean',
         ]);
+
+        $isCompleted = $request->boolean('is_completed', false);
+
+        if ($user->roleModel?->name === 'ispolnitel') {
+            $isCompleted = false;
+        }
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
@@ -82,7 +92,7 @@ class ProjectDocumentController extends Controller
                 'name' => $validated['name'],
                 'file_path' => $path,
                 'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
-                'is_completed' => $request->boolean('is_completed', false),
+                'is_completed' => $isCompleted,
             ]);
         }
 
@@ -128,5 +138,12 @@ class ProjectDocumentController extends Controller
 
         // Both district and oblast ispolnitel have the same write permissions
         return true;
+    }
+
+    private function ensureCanUploadDocuments($user, InvestmentProject $project): void
+    {
+        if ($user?->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+            abort(403, 'Сіз бұл жобаға құжат қоса алмайсыз.');
+        }
     }
 }
