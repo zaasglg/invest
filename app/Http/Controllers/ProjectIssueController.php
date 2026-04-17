@@ -31,6 +31,10 @@ class ProjectIssueController extends Controller
 
     public function store(Request $request, InvestmentProject $investmentProject)
     {
+        $user = Auth::user();
+
+        $this->ensureCanCreateIssues($user, $investmentProject);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -48,6 +52,16 @@ class ProjectIssueController extends Controller
 
     public function update(Request $request, InvestmentProject $investmentProject, ProjectIssue $issue)
     {
+        if ($issue->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+
+        if ($user?->roleModel?->name === 'ispolnitel') {
+            abort(403, 'Сізге проблемалық мәселені өзгертуге рұқсат жоқ.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -65,6 +79,10 @@ class ProjectIssueController extends Controller
 
     public function destroy(InvestmentProject $investmentProject, ProjectIssue $issue)
     {
+        if ($issue->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
         $user = Auth::user();
 
         // Ispolnitel cannot delete issues
@@ -91,5 +109,12 @@ class ProjectIssueController extends Controller
 
         // Both district and oblast ispolnitel have the same write permissions
         return true;
+    }
+
+    private function ensureCanCreateIssues($user, InvestmentProject $project): void
+    {
+        if ($user?->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+            abort(403, 'Сіз бұл жобаға проблемалық мәселе қоса алмайсыз.');
+        }
     }
 }

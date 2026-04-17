@@ -73,7 +73,8 @@ export default function Issues({
     ispolnitelCanWrite = false,
 }: Props) {
     const canModify = useCanModify();
-    const canEdit = canModify || ispolnitelCanWrite;
+    const canCreate = canModify || ispolnitelCanWrite;
+    const canUpdate = canModify;
     // Ispolnitel can add but cannot delete
     const canDelete = canModify;
     const [title, setTitle] = useState('');
@@ -122,6 +123,8 @@ export default function Issues({
     };
 
     const startEdit = (issue: Issue) => {
+        if (!canUpdate) return;
+
         setEditingId(issue.id);
         setEditData({
             title: issue.title,
@@ -138,6 +141,8 @@ export default function Issues({
     };
 
     const saveEdit = (issueId: number) => {
+        if (!canUpdate) return;
+
         router.put(
             `/investment-projects/${project.id}/issues/${issueId}`,
             editData,
@@ -183,7 +188,7 @@ export default function Issues({
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Add form */}
-                    {canEdit && (
+                    {canCreate && (
                         <div className="lg:col-span-1">
                             <Card className="shadow-none">
                                 <CardHeader>
@@ -312,7 +317,7 @@ export default function Issues({
 
                     {/* Issues list */}
                     <div
-                        className={canEdit ? 'lg:col-span-2' : 'lg:col-span-3'}
+                        className={canCreate ? 'lg:col-span-2' : 'lg:col-span-3'}
                     >
                         <Card className="shadow-none">
                             <CardHeader>
@@ -515,20 +520,23 @@ export default function Issues({
                                                                     'kk-KZ',
                                                                 )}
                                                             </span>
-                                                            {canEdit && (
+                                                            {(canUpdate ||
+                                                                canDelete) && (
                                                                 <div className="flex gap-1">
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-7 w-7 text-gray-400 hover:text-[#0f1b3d]"
-                                                                        onClick={() =>
-                                                                            startEdit(
-                                                                                issue,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Pencil className="h-3.5 w-3.5" />
-                                                                    </Button>
+                                                                    {canUpdate && (
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-7 w-7 text-gray-400 hover:text-[#0f1b3d]"
+                                                                            onClick={() =>
+                                                                                startEdit(
+                                                                                    issue,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Pencil className="h-3.5 w-3.5" />
+                                                                        </Button>
+                                                                    )}
                                                                     {canDelete && (
                                                                         <Button
                                                                             variant="ghost"
