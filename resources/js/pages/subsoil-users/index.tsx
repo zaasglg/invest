@@ -74,9 +74,9 @@ const getStatusColor = (status: SubsoilUser['license_status']) => {
     return 'bg-amber-100 text-amber-800';
 };
 
-const formatDate = (value: string | null) => {
+const formatYear = (value: string | null) => {
     if (!value) return '—';
-    return new Date(value).toLocaleDateString();
+    return new Date(value).getFullYear().toString();
 };
 
 export default function Index({
@@ -324,8 +324,8 @@ export default function Index({
                                             </Badge>
                                         </TableCell>
                                         <TableCell>
-                                            {formatDate(user.license_start)} —{' '}
-                                            {formatDate(user.license_end)}
+                                            {formatYear(user.license_start)} —{' '}
+                                            {formatYear(user.license_end)}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
