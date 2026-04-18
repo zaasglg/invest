@@ -222,7 +222,7 @@ class SubsoilUserController extends Controller
             abort(500, 'Мұрағатты құру мүмкін болмады.');
         }
 
-        // Add documents
+        // Add documents split by completion status
         foreach ($subsoilUser->documents as $document) {
             $filePath = Storage::disk('public')->path($document->file_path);
             if (file_exists($filePath)) {
@@ -231,27 +231,45 @@ class SubsoilUserController extends Controller
                 if ($extension && ! str_ends_with(mb_strtolower($docName), '.'.mb_strtolower($extension))) {
                     $docName .= '.'.$extension;
                 }
-                $zip->addFile($filePath, 'Құжаттар/'.$docName);
+                $folder = $document->is_completed
+                    ? 'Құжаттар/Аяқталған құжаттар'
+                    : 'Құжаттар/Жүктелген құжаттар';
+                $zip->addFile($filePath, $folder.'/'.$docName);
             }
         }
 
-        // Add photos
-        foreach ($subsoilUser->photos as $index => $photo) {
+        // Add photos split by type (gallery vs render)
+        $galleryIndex = 0;
+        $renderIndex = 0;
+        foreach ($subsoilUser->photos as $photo) {
             $filePath = Storage::disk('public')->path($photo->file_path);
             if (file_exists($filePath)) {
                 $extension = pathinfo($photo->file_path, PATHINFO_EXTENSION) ?: 'jpg';
-                $photoName = ($index + 1).'.'.$extension;
-                if ($photo->description) {
-                    $photoName = ($index + 1).'_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description).'.'.$extension;
+
+                if ($photo->photo_type === 'render') {
+                    $renderIndex++;
+                    $photoName = $renderIndex.'.'.$extension;
+                    if ($photo->description) {
+                        $photoName = $renderIndex.'_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description).'.'.$extension;
+                    }
+                    $zip->addFile($filePath, 'Фото/Болашақтағы сурет/'.$photoName);
+                } else {
+                    $galleryIndex++;
+                    $photoName = $galleryIndex.'.'.$extension;
+                    if ($photo->description) {
+                        $photoName = $galleryIndex.'_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $photo->description).'.'.$extension;
+                    }
+                    $zip->addFile($filePath, 'Фото/Галерея/'.$photoName);
                 }
-                $zip->addFile($filePath, 'Фото/'.$photoName);
             }
         }
 
         if ($zip->count() === 0) {
             $zip->close();
             @unlink($path);
-            abort(404, 'Жүктеуге файлдар жоқ.');
+
+            return redirect()->route('subsoil-users.show', $subsoilUser->id)
+                ->with('error', 'Жүктеуге файлдар жоқ.');
         }
 
         $zip->close();

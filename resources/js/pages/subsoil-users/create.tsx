@@ -532,18 +532,27 @@ export default function Create({
                                                     htmlFor="license_start"
                                                     className="text-xs font-medium tracking-wide text-gray-500 uppercase"
                                                 >
-                                                    Басталу күні
+                                                    Басталу жылы
                                                 </Label>
                                                 <Input
                                                     id="license_start"
-                                                    type="date"
-                                                    value={data.license_start}
+                                                    type="number"
+                                                    min="1990"
+                                                    max="2100"
+                                                    value={
+                                                        data.license_start
+                                                            ? data.license_start.split('-')[0]
+                                                            : ''
+                                                    }
                                                     onChange={(e) =>
                                                         setData(
                                                             'license_start',
-                                                            e.target.value,
+                                                            e.target.value
+                                                                ? `${e.target.value}-01-01`
+                                                                : '',
                                                         )
                                                     }
+                                                    placeholder="Мысалы: 2024"
                                                     className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 />
                                                 {errors.license_start && (
@@ -558,18 +567,27 @@ export default function Create({
                                                     htmlFor="license_end"
                                                     className="text-xs font-medium tracking-wide text-gray-500 uppercase"
                                                 >
-                                                    Аяқталу күні
+                                                    Аяқталу жылы
                                                 </Label>
                                                 <Input
                                                     id="license_end"
-                                                    type="date"
-                                                    value={data.license_end}
+                                                    type="number"
+                                                    min="1990"
+                                                    max="2100"
+                                                    value={
+                                                        data.license_end
+                                                            ? data.license_end.split('-')[0]
+                                                            : ''
+                                                    }
                                                     onChange={(e) =>
                                                         setData(
                                                             'license_end',
-                                                            e.target.value,
+                                                            e.target.value
+                                                                ? `${e.target.value}-12-31`
+                                                                : '',
                                                         )
                                                     }
+                                                    placeholder="Мысалы: 2025"
                                                     className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                                                 />
                                                 {errors.license_end && (
@@ -710,7 +728,7 @@ export default function Create({
                                             <p className="font-medium">
                                                 {data.license_start &&
                                                 data.license_end
-                                                    ? `${data.license_start} — ${data.license_end}`
+                                                    ? `${data.license_start.split('-')[0]} — ${data.license_end.split('-')[0]}`
                                                     : '—'}
                                             </p>
                                         </div>

@@ -556,13 +556,13 @@ export default function Show({
                                                 {subsoilUser.license_start
                                                     ? new Date(
                                                           subsoilUser.license_start,
-                                                      ).toLocaleDateString()
+                                                      ).getFullYear()
                                                     : '...'}
                                                 {' — '}
                                                 {subsoilUser.license_end
                                                     ? new Date(
                                                           subsoilUser.license_end,
-                                                      ).toLocaleDateString()
+                                                      ).getFullYear()
                                                     : '...'}
                                             </p>
                                         </div>
