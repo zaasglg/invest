@@ -87,6 +87,13 @@ class CheckRoleAccess
 
         $routeName = $request->route()?->getName();
 
+        // Only superadmin can access project-types (all actions)
+        if ($routeName && ($routeName === 'project-types' || str_starts_with($routeName, 'project-types.'))) {
+            if ($roleName !== 'superadmin') {
+                abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+            }
+        }
+
         // Only superadmin can access regions routes, EXCEPT regions.show and regions.projects.reorder
         if ($routeName && str_starts_with($routeName, 'regions.')) {
             $allowedRegionsRoutes = ['regions.show', 'regions.projects.reorder'];

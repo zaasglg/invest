@@ -104,7 +104,7 @@ export const headerNavItems: NavItem[] = [
 const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     akim: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
     zamakim: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
-    invest: new Set(['Аймақтар', 'Рөлдер', 'Пайдаланушылар']),
+    invest: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
     ispolnitel: new Set([
         'Аймақтар',
         'Жоба түрлері',
