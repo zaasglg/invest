@@ -113,6 +113,14 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     ]),
 };
 
+// Nav titles that each invest sub-role is NOT allowed to see.
+const HIDDEN_NAV_TITLES_BY_INVEST_SUB_ROLE: Record<string, Set<string>> = {
+    aea: new Set(['ИА', 'Пром зона', 'Жер қойнауын пайдалану']),
+    ia: new Set(['АЭА', 'Пром зона', 'Жер қойнауын пайдалану']),
+    prom_zone: new Set(['АЭА', 'ИА', 'Жер қойнауын пайдалану']),
+    // turkistan_invest sees everything — no entry needed
+};
+
 const normalizeRoleKey = (value: string) =>
     value.toLowerCase().replace(/\s+/g, '');
 
@@ -169,7 +177,20 @@ export const filterNavItemsByRole = (
     if (!roleKey) return filteredItems;
 
     const hidden = HIDDEN_NAV_TITLES_BY_ROLE[roleKey];
-    if (!hidden) return filteredItems;
+    if (hidden) {
+        filteredItems = filteredItems.filter((item) => !hidden.has(item.title));
+    }
 
-    return filteredItems.filter((item) => !hidden.has(item.title));
+    // For invest users, also hide nav items based on sub-role.
+    if (roleKey === 'invest' && user?.invest_sub_role) {
+        const subRoleHidden =
+            HIDDEN_NAV_TITLES_BY_INVEST_SUB_ROLE[user.invest_sub_role];
+        if (subRoleHidden) {
+            filteredItems = filteredItems.filter(
+                (item) => !subRoleHidden.has(item.title),
+            );
+        }
+    }
+
+    return filteredItems;
 };

@@ -166,6 +166,10 @@ class CheckRoleAccess
             // District-scoping: invest and district ispolnitel can only access
             // their own region's SEZ/IZ/Subsoil resources
             $this->enforceDistrictScope($request, $user);
+
+            // Invest sub-role scoping: aea/ia/prom_zone users can only access
+            // their own sector type section (AEA / IA / Prom Zone).
+            $this->enforceInvestSubRoleScope($request, $user, $roleName);
         }
 
         // Block non-superadmin from accessing archived investment projects
@@ -357,6 +361,112 @@ class CheckRoleAccess
 
         if ($project && is_object($project) && $project->is_archived) {
             abort(403, 'Бұл жоба архивтелген. Қол жеткізу мүмкін емес.');
+        }
+    }
+
+    /**
+     * Enforce invest sub-role scoping.
+     * - aea users can only access SEZ sections (not IA / Prom Zone / Subsoil).
+     * - ia users can only access Industrial Zones (not AEA / Prom Zone / Subsoil).
+     * - prom_zone users can only access Prom Zones (not AEA / IA / Subsoil).
+     * - turkistan_invest users are not restricted here.
+     *
+     * Additionally, all invest users can only access investment projects
+     * where they are listed as a curator (admin-managed).
+     */
+    protected function enforceInvestSubRoleScope(Request $request, $user, ?string $roleName): void
+    {
+        if ($roleName !== 'invest') {
+            return;
+        }
+
+        $routeName = $request->route()?->getName();
+        if (! $routeName) {
+            return;
+        }
+
+        $subRole = $user->invest_sub_role;
+
+        if (in_array($subRole, ['aea', 'ia', 'prom_zone'], true)) {
+            $blockedPrefixes = match ($subRole) {
+                'aea' => ['industrial-zones.', 'prom-zones.', 'subsoil-users.'],
+                'ia' => ['sezs.', 'prom-zones.', 'subsoil-users.'],
+                'prom_zone' => ['sezs.', 'industrial-zones.', 'subsoil-users.'],
+                default => [],
+            };
+
+            foreach ($blockedPrefixes as $prefix) {
+                if (str_starts_with($routeName, $prefix)) {
+                    abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+                }
+            }
+        }
+
+        // Curator-based access to individual investment projects.
+        // Applies to all invest users (including turkistan_invest).
+        $this->enforceInvestCuratorAccess($request, $user, $routeName);
+    }
+
+    /**
+     * Allow an invest user to access a specific investment project only if
+     * they are one of its curators. Creation/listing/bulk routes are skipped.
+     */
+    protected function enforceInvestCuratorAccess(Request $request, $user, string $routeName): void
+    {
+        if (! str_starts_with($routeName, 'investment-projects.')) {
+            return;
+        }
+
+        // Routes that don't target a specific project instance.
+        $skipRoutes = [
+            'investment-projects.index',
+            'investment-projects.create',
+            'investment-projects.store',
+            'investment-projects.reorder',
+            'investment-projects.archived',
+            'investment-projects.bulk-presentation',
+        ];
+        if (in_array($routeName, $skipRoutes, true)) {
+            return;
+        }
+
+        // The route parameter may be an Eloquent model (route model binding)
+        // or a raw ID integer (e.g. the show() method uses $id directly).
+        $projectOrId = $request->route('investmentProject')
+            ?? $request->route('investment_project')
+            ?? $request->route('id');
+
+        if (! $projectOrId) {
+            return;
+        }
+
+        if (is_object($projectOrId)) {
+            $project = $projectOrId;
+        } else {
+            $project = \App\Models\InvestmentProject::find((int) $projectOrId);
+            if (! $project) {
+                return;
+            }
+        }
+
+        // If the user has an invest sub-role, allow access to any project
+        // that has at least one curator with the same sub-role (not necessarily
+        // this user specifically). This lets all ia/aea/prom_zone/turkistan_invest
+        // users access projects curated by their peers.
+        $subRole = $user->invest_sub_role;
+        if ($subRole) {
+            $hasSubRoleCurator = $project->curators()
+                ->where('users.invest_sub_role', $subRole)
+                ->exists();
+            if (! $hasSubRoleCurator) {
+                abort(403, 'Сіз бұл жобаның кураторы емессіз.');
+            }
+        } else {
+            // No sub-role assigned — must be a direct curator.
+            $isCurator = $project->curators()->where('users.id', $user->id)->exists();
+            if (! $isCurator) {
+                abort(403, 'Сіз бұл жобаның кураторы емессіз.');
+            }
         }
     }
 }

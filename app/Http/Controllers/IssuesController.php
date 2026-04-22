@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\IndustrialZoneIssue;
-use App\Models\PromZoneIssue;
 use App\Models\ProjectIssue;
+use App\Models\PromZoneIssue;
 use App\Models\Region;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
@@ -15,8 +15,35 @@ class IssuesController extends Controller
 {
     public function index(Request $request)
     {
+        $user = $request->user();
+        $roleName = $user?->load('roleModel')->roleModel?->name;
+        $investSubRole = ($roleName === 'invest'
+            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
+            ? $user->invest_sub_role
+            : null;
+
+        // Determine which sections are accessible for this user.
+        $canSeeSez = ! $investSubRole || in_array($investSubRole, ['aea', 'turkistan_invest'], true);
+        $canSeeIz = ! $investSubRole || in_array($investSubRole, ['ia', 'turkistan_invest'], true);
+        $canSeeProm = ! $investSubRole || in_array($investSubRole, ['prom_zone', 'turkistan_invest'], true);
+        $canSeeSubsoil = ! $investSubRole || $investSubRole === 'turkistan_invest';
+
         $sector = $request->get('sector');
         $regionId = $request->get('region_id');
+
+        // Respect section access — if the requested sector is blocked, reset to null.
+        if ($sector === 'sez' && ! $canSeeSez) {
+            $sector = null;
+        }
+        if ($sector === 'iz' && ! $canSeeIz) {
+            $sector = null;
+        }
+        if ($sector === 'prom' && ! $canSeeProm) {
+            $sector = null;
+        }
+        if ($sector === 'nedro' && ! $canSeeSubsoil) {
+            $sector = null;
+        }
 
         $issues = collect();
 
@@ -26,6 +53,12 @@ class IssuesController extends Controller
             if ($regionId) {
                 $query->whereHas('project', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
+                });
+            }
+            // Scope to only the invest sub-role's projects (via curators pivot).
+            if ($investSubRole) {
+                $query->whereHas('project', function ($q) use ($investSubRole) {
+                    $q->whereHas('curators', fn ($cq) => $cq->where('users.invest_sub_role', $investSubRole));
                 });
             }
             $projectIssues = $query->latest()->get()->map(function ($issue) {
@@ -52,7 +85,7 @@ class IssuesController extends Controller
             }
         }
 
-        if ($sector === 'sez' || ! $sector) {
+        if (($sector === 'sez' || ! $sector) && $canSeeSez) {
             $query = SezIssue::with(['sez.region']);
             if ($regionId) {
                 $query->whereHas('sez', function ($q) use ($regionId) {
@@ -83,7 +116,7 @@ class IssuesController extends Controller
             }
         }
 
-        if ($sector === 'iz' || ! $sector) {
+        if (($sector === 'iz' || ! $sector) && $canSeeIz) {
             $query = IndustrialZoneIssue::with(['industrialZone.region']);
             if ($regionId) {
                 $query->whereHas('industrialZone', function ($q) use ($regionId) {
@@ -114,7 +147,7 @@ class IssuesController extends Controller
             }
         }
 
-        if ($sector === 'prom' || ! $sector) {
+        if (($sector === 'prom' || ! $sector) && $canSeeProm) {
             $query = PromZoneIssue::with(['promZone.region']);
             if ($regionId) {
                 $query->whereHas('promZone', function ($q) use ($regionId) {
@@ -145,7 +178,7 @@ class IssuesController extends Controller
             }
         }
 
-        if ($sector === 'nedro' || ! $sector) {
+        if (($sector === 'nedro' || ! $sector) && $canSeeSubsoil) {
             $query = SubsoilIssue::with(['subsoilUser.region']);
             if ($regionId) {
                 $query->whereHas('subsoilUser', function ($q) use ($regionId) {
@@ -185,14 +218,20 @@ class IssuesController extends Controller
             ->orderBy('name')
             ->get();
 
-        // Get sector labels
-        $sectorLabels = [
-            'invest' => 'Turkistan Invest',
-            'sez' => 'АЭА',
-            'iz' => 'ИА',
-            'prom' => 'Пром зона',
-            'nedro' => 'Жер қойнауын пайдалану',
-        ];
+        // Get sector labels — only for accessible sections.
+        $sectorLabels = ['invest' => 'Turkistan Invest'];
+        if ($canSeeSez) {
+            $sectorLabels['sez'] = 'АЭА';
+        }
+        if ($canSeeIz) {
+            $sectorLabels['iz'] = 'ИА';
+        }
+        if ($canSeeProm) {
+            $sectorLabels['prom'] = 'Пром зона';
+        }
+        if ($canSeeSubsoil) {
+            $sectorLabels['nedro'] = 'Жер қойнауын пайдалану';
+        }
 
         return Inertia::render('issues/index', [
             'issues' => $issues,

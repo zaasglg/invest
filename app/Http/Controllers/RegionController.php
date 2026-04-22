@@ -80,7 +80,7 @@ class RegionController extends Controller
             $validated['subtype'] = null;
         }
 
-        if (!isset($validated['sort_order'])) {
+        if (! isset($validated['sort_order'])) {
             $validated['sort_order'] = \App\Models\Region::max('sort_order') + 1;
         }
 
@@ -131,6 +131,17 @@ class RegionController extends Controller
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
 
+        // Invest sub-role scope: only show projects where at least one curator
+        // has the same invest_sub_role as the current user.
+        if ($user
+            && $user->load('roleModel')->roleModel?->name === 'invest'
+            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)) {
+            $subRole = $user->invest_sub_role;
+            $projectsQuery->whereHas('curators', function ($query) use ($subRole) {
+                $query->where('users.invest_sub_role', $subRole);
+            });
+        }
+
         $projects = $projectsQuery->get();
 
         // Stats for "Все" tab
@@ -142,29 +153,33 @@ class RegionController extends Controller
             $projects->pluck('id')
         )->count();
 
+        // Determine which entity sections the invest sub-role can access.
+        $roleName = $user?->load('roleModel')->roleModel?->name;
+        $subRole = ($roleName === 'invest') ? $user->invest_sub_role : null;
+        $canSeeSez = ! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true);
+        $canSeeIz = ! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true);
+        $canSeeProm = ! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true);
+        $canSeeSubsoil = ! $subRole || $subRole === 'turkistan_invest';
+
         // SEZ issues count
-        $sezIssuesCount = \App\Models\SezIssue::whereIn(
-            'sez_id',
-            $region->sezs->pluck('id')
-        )->count();
+        $sezIssuesCount = $canSeeSez
+            ? \App\Models\SezIssue::whereIn('sez_id', $region->sezs->pluck('id'))->count()
+            : 0;
 
         // IZ issues count
-        $izIssuesCount = \App\Models\IndustrialZoneIssue::whereIn(
-            'industrial_zone_id',
-            $region->industrialZones->pluck('id')
-        )->count();
+        $izIssuesCount = $canSeeIz
+            ? \App\Models\IndustrialZoneIssue::whereIn('industrial_zone_id', $region->industrialZones->pluck('id'))->count()
+            : 0;
 
         // Prom zone issues count
-        $promIssuesCount = \App\Models\PromZoneIssue::whereIn(
-            'prom_zone_id',
-            $region->promZones->pluck('id')
-        )->count();
+        $promIssuesCount = $canSeeProm
+            ? \App\Models\PromZoneIssue::whereIn('prom_zone_id', $region->promZones->pluck('id'))->count()
+            : 0;
 
         // Subsoil issues count
-        $subsoilIssuesCount = \App\Models\SubsoilIssue::whereIn(
-            'subsoil_user_id',
-            $region->subsoilUsers->pluck('id')
-        )->count();
+        $subsoilIssuesCount = $canSeeSubsoil
+            ? \App\Models\SubsoilIssue::whereIn('subsoil_user_id', $region->subsoilUsers->pluck('id'))->count()
+            : 0;
 
         return Inertia::render('regions/show', [
             'region' => $region,
@@ -190,8 +205,8 @@ class RegionController extends Controller
     {
         $user = $request->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
-        
-        if (!in_array($roleName, ['superadmin'])) {
+
+        if (! in_array($roleName, ['superadmin'])) {
             abort(403);
         }
 
@@ -201,7 +216,7 @@ class RegionController extends Controller
             'page' => 'integer',
         ]);
 
-        // Using page to calculate relative sort_order offsets if necessary, 
+        // Using page to calculate relative sort_order offsets if necessary,
         // but simple array order starts from base index:
         $page = $validated['page'] ?? 1;
         $perPage = 15; // default pagination in index
@@ -219,8 +234,8 @@ class RegionController extends Controller
     {
         $user = $request->user();
         $role = $user?->load('roleModel')->roleModel?->name;
-        
-        if (!in_array($role, ['superadmin', 'invest'])) {
+
+        if (! in_array($role, ['superadmin', 'invest'])) {
             abort(403);
         }
 
@@ -272,7 +287,7 @@ class RegionController extends Controller
             $validated['subtype'] = null;
         }
 
-        if (!isset($validated['sort_order'])) {
+        if (! isset($validated['sort_order'])) {
             $validated['sort_order'] = $region->sort_order;
         }
 

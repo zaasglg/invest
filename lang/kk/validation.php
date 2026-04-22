@@ -226,6 +226,7 @@ return [
         'start_date' => 'Басталу күні',
         'corporate_email' => 'Корпоративті электрондық пошта',
         'corporate_password' => 'Корпоративті құпиясөз',
+        'invest_sub_role' => 'Инвест бағыты',
     ],
 
 ];

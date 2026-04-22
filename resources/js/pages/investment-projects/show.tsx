@@ -96,6 +96,7 @@ interface InvestmentProject {
     start_date?: string;
     end_date?: string;
     creator?: User;
+    curators?: User[];
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
     issues?: Array<{
@@ -1343,41 +1344,60 @@ export default function Show({
                             <CardContent className="space-y-4">
                                 <div>
                                     <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                        Жауапты
+                                        {project.curators && project.curators.length > 1
+                                            ? 'Жауаптылар'
+                                            : 'Жауапты'}
                                     </p>
-                                    <div className="flex items-center gap-3">
-                                        {project.creator?.avatar_url ? (
-                                            <img
-                                                src={project.creator.avatar_url}
-                                                alt={
-                                                    project.creator
-                                                        ?.full_name ||
-                                                    project.creator?.name ||
-                                                    ''
-                                                }
-                                                className="h-8 w-8 rounded-full object-cover"
-                                            />
-                                        ) : (
-                                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-[#0f1b3d]">
-                                                {(
-                                                    project.creator
-                                                        ?.full_name ||
-                                                    project.creator?.name
-                                                )
-                                                    ?.slice(0, 2)
-                                                    .toUpperCase() || 'NA'}
+                                    <div className="flex flex-col gap-3">
+                                        {(project.curators && project.curators.length > 0
+                                            ? project.curators
+                                            : project.creator
+                                              ? [project.creator]
+                                              : []
+                                        ).map((curator) => (
+                                            <div
+                                                key={curator.id}
+                                                className="flex items-center gap-3"
+                                            >
+                                                {curator.avatar_url ? (
+                                                    <img
+                                                        src={curator.avatar_url}
+                                                        alt={
+                                                            curator.full_name ||
+                                                            curator.name ||
+                                                            ''
+                                                        }
+                                                        className="h-8 w-8 rounded-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-xs font-bold text-[#0f1b3d]">
+                                                        {(
+                                                            curator.full_name ||
+                                                            curator.name
+                                                        )
+                                                            ?.slice(0, 2)
+                                                            .toUpperCase() || 'NA'}
+                                                    </div>
+                                                )}
+                                                <div>
+                                                    <p className="text-sm font-medium text-[#0f1b3d]">
+                                                        {curator.full_name ||
+                                                            curator.name ||
+                                                            'Көрсетілмеген'}
+                                                    </p>
+                                                    <p className="text-xs text-gray-500">
+                                                        Жоба кураторы
+                                                    </p>
+                                                </div>
                                             </div>
-                                        )}
-                                        <div>
-                                            <p className="text-sm font-medium text-[#0f1b3d]">
-                                                {project.creator?.full_name ||
-                                                    project.creator?.name ||
-                                                    'Көрсетілмеген'}
-                                            </p>
-                                            <p className="text-xs text-gray-500">
-                                                Жоба кураторы
-                                            </p>
-                                        </div>
+                                        ))}
+                                        {(!project.curators ||
+                                            project.curators.length === 0) &&
+                                            !project.creator && (
+                                                <p className="text-sm text-gray-500">
+                                                    Көрсетілмеген
+                                                </p>
+                                            )}
                                     </div>
                                 </div>
 

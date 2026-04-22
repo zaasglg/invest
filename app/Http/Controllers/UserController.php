@@ -51,6 +51,7 @@ class UserController extends Controller
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
+            'invest_sub_role' => 'required|in:turkistan_invest,aea,ia,prom_zone',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -74,6 +75,11 @@ class UserController extends Controller
             if ($region) {
                 $validated['position'] = $region->name;
             }
+        }
+
+        // Clear invest_sub_role if not invest role
+        if (! $role || $role->name !== 'invest') {
+            $validated['invest_sub_role'] = null;
         }
 
         $validated['password'] = Hash::make($validated['password']);
@@ -111,6 +117,7 @@ class UserController extends Controller
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
+            'invest_sub_role' => 'required|in:turkistan_invest,aea,ia,prom_zone',
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -134,6 +141,11 @@ class UserController extends Controller
             if ($region) {
                 $validated['position'] = $region->name;
             }
+        }
+
+        // Clear invest_sub_role if not invest role
+        if (! $role || $role->name !== 'invest') {
+            $validated['invest_sub_role'] = null;
         }
 
         if (! empty($validated['password'])) {
