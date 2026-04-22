@@ -47,6 +47,7 @@ class InvestmentProjectController extends Controller
             'region',
             'projectType',
             'creator',
+            'curators',
             'executors',
             'sezs',
             'industrialZones',
@@ -59,6 +60,17 @@ class InvestmentProjectController extends Controller
         $user = $request->user();
         if ($user && $user->isDistrictScoped() && ! $this->isIspolnitelUser($user)) {
             $projectsQuery->where('region_id', $user->region_id);
+        }
+
+        // Invest sub-role scope: filter by curators' invest_sub_role.
+        // A turkistan_invest/aea/ia/prom_zone user sees only projects where
+        // at least one curator has the same invest_sub_role.
+        if ($user && $user->roleModel?->name === 'invest'
+            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)) {
+            $subRole = $user->invest_sub_role;
+            $projectsQuery->whereHas('curators', function ($query) use ($subRole) {
+                $query->where('users.invest_sub_role', $subRole);
+            });
         }
 
         if (! empty($filters['search'])) {
@@ -269,13 +281,15 @@ class InvestmentProjectController extends Controller
         $industrialZones = $izQuery->get();
         $promZones = $promZoneQuery->get();
 
+        $restrictedSectorType = $user?->restrictedSectorType();
+
         // Get invest-role users for curator selection (superadmin only)
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
         $investUsers = [];
         if ($isSuperAdmin) {
             $investUsers = User::with('roleModel:id,name,display_name')
                 ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
-                ->select('id', 'full_name', 'region_id')
+                ->select('id', 'full_name', 'region_id', 'invest_sub_role')
                 ->orderBy('full_name')
                 ->get();
         }
@@ -291,6 +305,8 @@ class InvestmentProjectController extends Controller
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'investUsers' => $investUsers,
+            'investSubRole' => $user?->invest_sub_role,
+            'restrictedSectorType' => $restrictedSectorType,
         ]);
     }
 
@@ -298,6 +314,7 @@ class InvestmentProjectController extends Controller
     {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
+        $restrictedSectorType = $user?->restrictedSectorType();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -316,17 +333,26 @@ class InvestmentProjectController extends Controller
                 },
             ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => ['nullable', 'array'],
+            'sector' => [
+                $restrictedSectorType ? 'required' : 'nullable',
+                'array',
+                $restrictedSectorType ? 'min:1' : 'nullable',
+            ],
             'sector.*' => [
                 'string',
-                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if (! $isDistrictScoped) {
-                        return;
-                    }
-
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped, $restrictedSectorType) {
                     $parsed = $this->parseSector($value);
                     $type = $parsed['type'];
                     $id = $parsed['id'];
+
+                    if ($restrictedSectorType && $type !== $restrictedSectorType) {
+                        $fail('Сіз тек өз секторыңызды таңдай аласыз.');
+                        return;
+                    }
+
+                    if (! $isDistrictScoped) {
+                        return;
+                    }
 
                     if ($type === 'sez') {
                         if (! Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
@@ -355,16 +381,27 @@ class InvestmentProjectController extends Controller
             'infrastructure.water' => 'nullable|array',
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
-            'created_by' => 'nullable|exists:users,id',
+            'curator_ids' => 'nullable|array',
+            'curator_ids.*' => 'exists:users,id',
+        ], [
+            'sector.required' => 'Сектор таңдау міндетті.',
+            'sector.min' => 'Кемінде бір сектор таңдаңыз.',
         ]);
 
-        // Superadmin can assign curator (created_by), otherwise use authenticated user
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
-        if ($isSuperAdmin && ! empty($validated['created_by'])) {
-            // Keep the selected curator
-        } else {
-            $validated['created_by'] = auth()->id();
+        $curatorIds = $isSuperAdmin ? ($validated['curator_ids'] ?? []) : [];
+        unset($validated['curator_ids']);
+
+        // Non-admin creators are always curators of their own project
+        if (! $isSuperAdmin) {
+            $curatorIds = [auth()->id()];
+        } elseif (empty($curatorIds)) {
+            // Superadmin created a project without picking curators; fall back to self
+            $curatorIds = [auth()->id()];
         }
+
+        // Keep created_by in sync with the first curator for backward compatibility
+        $validated['created_by'] = (int) $curatorIds[0];
 
         // Парсим массив sectors
         $sectors = $validated['sector'] ?? [];
@@ -388,6 +425,9 @@ class InvestmentProjectController extends Controller
 
         $project = InvestmentProject::create($validated);
 
+        // Sync curators (admin-managed, 1+)
+        $project->curators()->sync(array_values(array_unique(array_map('intval', $curatorIds))));
+
         // Sync executors (auto-include district ispolnitel users)
         $this->syncExecutorsWithIspolnitel($project, $executorIds);
 
@@ -407,6 +447,7 @@ class InvestmentProjectController extends Controller
             'region',
             'projectType',
             'creator',
+            'curators',
             'executors',
             'documents',
             'issues',
@@ -541,7 +582,7 @@ class InvestmentProjectController extends Controller
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
-        $investmentProject->load(['sezs', 'industrialZones', 'promZones']);
+        $investmentProject->load(['sezs', 'industrialZones', 'promZones', 'curators']);
 
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
@@ -588,6 +629,7 @@ class InvestmentProjectController extends Controller
             ->toArray();
 
         $projectData['sector'] = $sector;
+        $projectData['curator_ids'] = $investmentProject->curators->pluck('id')->values()->all();
 
         // Get invest-role users for curator selection (superadmin only)
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
@@ -595,10 +637,12 @@ class InvestmentProjectController extends Controller
         if ($isSuperAdmin) {
             $investUsers = User::with('roleModel:id,name,display_name')
                 ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
-                ->select('id', 'full_name', 'region_id')
+                ->select('id', 'full_name', 'region_id', 'invest_sub_role')
                 ->orderBy('full_name')
                 ->get();
         }
+
+        $restrictedSectorType = $user?->restrictedSectorType();
 
         return Inertia::render('investment-projects/edit', [
             'project' => $projectData,
@@ -612,6 +656,8 @@ class InvestmentProjectController extends Controller
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'investUsers' => $investUsers,
+            'investSubRole' => $user?->invest_sub_role,
+            'restrictedSectorType' => $restrictedSectorType,
         ]);
     }
 
@@ -653,6 +699,7 @@ class InvestmentProjectController extends Controller
 
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
+        $restrictedSectorType = $user?->restrictedSectorType();
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
@@ -671,17 +718,26 @@ class InvestmentProjectController extends Controller
                 },
             ],
             'project_type_id' => 'required|exists:project_types,id',
-            'sector' => ['nullable', 'array'],
+            'sector' => [
+                $restrictedSectorType ? 'required' : 'nullable',
+                'array',
+                $restrictedSectorType ? 'min:1' : 'nullable',
+            ],
             'sector.*' => [
                 'string',
-                function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
-                    if (! $isDistrictScoped) {
-                        return;
-                    }
-
+                function ($attribute, $value, $fail) use ($user, $isDistrictScoped, $restrictedSectorType) {
                     $parsed = $this->parseSector($value);
                     $type = $parsed['type'];
                     $id = $parsed['id'];
+
+                    if ($restrictedSectorType && $type !== $restrictedSectorType) {
+                        $fail('Сіз тек өз секторыңызды таңдай аласыз.');
+                        return;
+                    }
+
+                    if (! $isDistrictScoped) {
+                        return;
+                    }
 
                     if ($type === 'sez') {
                         if (! Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
@@ -710,15 +766,24 @@ class InvestmentProjectController extends Controller
             'infrastructure.water' => 'nullable|array',
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
-            'created_by' => 'nullable|exists:users,id',
+            'curator_ids' => 'nullable|array',
+            'curator_ids.*' => 'exists:users,id',
             'return_to' => 'nullable|string',
+        ], [
+            'sector.required' => 'Сектор таңдау міндетті.',
+            'sector.min' => 'Кемінде бір сектор таңдаңыз.',
         ]);
 
-        // Superadmin can change curator (created_by)
+        // Superadmin can change curators; others cannot
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
-        if (! $isSuperAdmin) {
-            unset($validated['created_by']);
+        $curatorIds = null;
+        if ($isSuperAdmin && array_key_exists('curator_ids', $validated)) {
+            $curatorIds = array_values(array_unique(array_map('intval', $validated['curator_ids'] ?? [])));
+            if (! empty($curatorIds)) {
+                $validated['created_by'] = $curatorIds[0];
+            }
         }
+        unset($validated['curator_ids']);
 
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
@@ -744,6 +809,11 @@ class InvestmentProjectController extends Controller
         unset($validated['executor_ids'], $validated['sector']);
 
         $investmentProject->update($validated);
+
+        // Sync curators (superadmin only)
+        if ($isSuperAdmin && $curatorIds !== null) {
+            $investmentProject->curators()->sync($curatorIds);
+        }
 
         // Sync executors (auto-include district ispolnitel users)
         $this->syncExecutorsWithIspolnitel($investmentProject, $executorIds);

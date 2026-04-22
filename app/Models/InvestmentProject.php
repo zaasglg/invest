@@ -86,6 +86,16 @@ class InvestmentProject extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    /**
+     * Curators assigned to this project (admin-managed).
+     * A project can have multiple curators.
+     */
+    public function curators()
+    {
+        return $this->belongsToMany(User::class, 'investment_project_curator')
+            ->withTimestamps();
+    }
+
     // Исполнитель (Executor)
     public function executor()
     {

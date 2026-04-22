@@ -26,6 +26,7 @@ class User extends Authenticatable
         'role',
         'region_id',
         'role_id',
+        'invest_sub_role',
         'baskarma_type',
         'position',
         'telegram_chat_id',
@@ -78,6 +79,39 @@ class User extends Authenticatable
     public function involvedProjects()
     {
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_user');
+    }
+
+    // Проекты, в которых пользователь является куратором
+    public function curatedProjects()
+    {
+        return $this->belongsToMany(InvestmentProject::class, 'investment_project_curator')
+            ->withTimestamps();
+    }
+
+    /**
+     * Get the restricted sector type for an invest sub-role.
+     * Returns null if the user has no invest sub-role or is turkistan_invest.
+     */
+    public function restrictedSectorType(): ?string
+    {
+        return match ($this->invest_sub_role) {
+            'aea' => 'sez',
+            'ia' => 'industrial_zone',
+            'prom_zone' => 'prom_zone',
+            default => null,
+        };
+    }
+
+    /**
+     * Whether the user is an invest user restricted to a single sector type.
+     */
+    public function isSectorRestrictedInvest(): bool
+    {
+        if ($this->roleModel?->name !== 'invest') {
+            return false;
+        }
+
+        return in_array($this->invest_sub_role, ['aea', 'ia', 'prom_zone'], true);
     }
 
     /**

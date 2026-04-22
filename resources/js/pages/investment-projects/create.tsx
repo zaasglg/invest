@@ -73,6 +73,7 @@ interface InvestUser {
     id: number;
     full_name: string;
     region_id: number | null;
+    invest_sub_role?: string | null;
 }
 
 interface Props {
@@ -86,6 +87,8 @@ interface Props {
     userRegionId?: number | null;
     isSuperAdmin?: boolean;
     investUsers?: InvestUser[];
+    investSubRole?: string | null;
+    restrictedSectorType?: 'sez' | 'industrial_zone' | 'prom_zone' | null;
 }
 
 export default function Create({
@@ -99,6 +102,7 @@ export default function Create({
     userRegionId,
     isSuperAdmin,
     investUsers = [],
+    restrictedSectorType = null,
 }: Props) {
     // Find user's district and its parent oblast for pre-selection
     const userDistrict = useMemo(() => {
@@ -134,7 +138,7 @@ export default function Create({
             electricity: { needed: false, capacity: '' },
             land: { needed: false, capacity: '' },
         } as Record<string, { needed: boolean; capacity: string }>,
-        created_by: '' as string,
+        curator_ids: [] as string[],
     });
 
     const [selectedOblastId, setSelectedOblastId] =
@@ -155,20 +159,25 @@ export default function Create({
 
     const availableSez = useMemo(() => {
         if (!data.region_id) return [];
+        if (restrictedSectorType && restrictedSectorType !== 'sez') return [];
         return sezList.filter((s) => s.region_id === parseInt(data.region_id));
-    }, [sezList, data.region_id]);
+    }, [sezList, data.region_id, restrictedSectorType]);
 
     const availableIndustrialZones = useMemo(() => {
         if (!data.region_id) return [];
+        if (restrictedSectorType && restrictedSectorType !== 'industrial_zone')
+            return [];
         return industrialZones.filter(
             (iz) => iz.region_id === parseInt(data.region_id),
         );
-    }, [industrialZones, data.region_id]);
+    }, [industrialZones, data.region_id, restrictedSectorType]);
 
     const availablePromZones = useMemo(() => {
         if (!data.region_id) return [];
+        if (restrictedSectorType && restrictedSectorType !== 'prom_zone')
+            return [];
         return promZones.filter((prom) => prom.region_id === parseInt(data.region_id));
-    }, [promZones, data.region_id]);
+    }, [promZones, data.region_id, restrictedSectorType]);
 
     const selectedRegion = useMemo(() => {
         if (!data.region_id) return null;
@@ -501,35 +510,59 @@ export default function Create({
 
                                 {isSuperAdmin && investUsers.length > 0 && (
                                     <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="created_by"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Куратор
+                                        <Label className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                            Кураторлар{' '}
+                                            <span className="text-xs font-normal text-gray-400 normal-case">
+                                                (бір немесе бірнеше)
+                                            </span>
                                         </Label>
-                                        <Select
-                                            value={data.created_by}
-                                            onValueChange={(value) =>
-                                                setData('created_by', value)
-                                            }
-                                        >
-                                            <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                                <SelectValue placeholder="Кураторды таңдаңыз" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {investUsers.map((user) => (
-                                                    <SelectItem
-                                                        key={user.id}
-                                                        value={user.id.toString()}
+                                        <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-4">
+                                            {investUsers.map((u) => {
+                                                const value = u.id.toString();
+                                                const checked = data.curator_ids.includes(value);
+                                                return (
+                                                    <div
+                                                        key={u.id}
+                                                        className="flex items-center space-x-2"
                                                     >
-                                                        {user.full_name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {errors.created_by && (
+                                                        <Checkbox
+                                                            id={`curator-${u.id}`}
+                                                            checked={checked}
+                                                            onCheckedChange={(isChecked) => {
+                                                                if (isChecked) {
+                                                                    setData('curator_ids', [
+                                                                        ...data.curator_ids,
+                                                                        value,
+                                                                    ]);
+                                                                } else {
+                                                                    setData(
+                                                                        'curator_ids',
+                                                                        data.curator_ids.filter(
+                                                                            (id) => id !== value,
+                                                                        ),
+                                                                    );
+                                                                }
+                                                            }}
+                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                        />
+                                                        <Label
+                                                            htmlFor={`curator-${u.id}`}
+                                                            className="cursor-pointer font-normal"
+                                                        >
+                                                            {u.full_name}
+                                                            {u.invest_sub_role && (
+                                                                <span className="ml-1 text-xs text-gray-400">
+                                                                    ({u.invest_sub_role})
+                                                                </span>
+                                                            )}
+                                                        </Label>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                        {errors.curator_ids && (
                                             <span className="text-sm text-red-500">
-                                                {errors.created_by}
+                                                {errors.curator_ids}
                                             </span>
                                         )}
                                     </div>
@@ -697,7 +730,11 @@ export default function Create({
                                         >
                                             Сектор{' '}
                                             <span className="text-xs font-normal text-gray-400 normal-case">
-                                                (міндетті емес)
+                                                {restrictedSectorType ? (
+                                                    <span className="text-red-500">(міндетті)</span>
+                                                ) : (
+                                                    '(міндетті емес)'
+                                                )}
                                             </span>
                                         </Label>
                                         <div className="max-h-40 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-4">

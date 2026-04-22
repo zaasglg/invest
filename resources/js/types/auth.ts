@@ -13,6 +13,7 @@ export type User = {
         name?: string | null;
         display_name?: string | null;
     } | null;
+    invest_sub_role?: string | null;
     two_factor_enabled?: boolean;
     created_at: string;
     updated_at: string;

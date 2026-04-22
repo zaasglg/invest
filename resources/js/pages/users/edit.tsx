@@ -33,6 +33,7 @@ interface User {
     email: string;
     phone: string | null;
     role_id: number | null;
+    invest_sub_role: string | null;
     region_id: number | null;
     baskarma_type: string | null;
     position: string | null;
@@ -53,6 +54,7 @@ export default function Edit({ user, regions, roles }: Props) {
         password: '',
         password_confirmation: '',
         role_id: user.role_id?.toString() || 'none',
+        invest_sub_role: user.invest_sub_role || '',
         region_id: user.region_id?.toString() || '',
         baskarma_type: user.baskarma_type || '',
         position: user.position || '',
@@ -246,6 +248,7 @@ export default function Edit({ user, regions, roles }: Props) {
                                 setData((prev) => ({
                                     ...prev,
                                     role_id: value,
+                                    invest_sub_role: '',
                                     baskarma_type: '',
                                     position: '',
                                     region_id: '',
@@ -274,6 +277,40 @@ export default function Edit({ user, regions, roles }: Props) {
                             </span>
                         )}
                     </div>
+
+                    {/* Invest суб-рөлі */}
+                    {isInvest && (
+                        <div className="flex flex-col gap-2">
+                            <Label className="font-normal text-gray-500">
+                                Инвест бағыты
+                            </Label>
+                            <Select
+                                value={data.invest_sub_role}
+                                onValueChange={(value) =>
+                                    setData('invest_sub_role', value)
+                                }
+                            >
+                                <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
+                                    <SelectValue placeholder="Бағытты таңдаңыз" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="turkistan_invest">
+                                        Түркістан инвест
+                                    </SelectItem>
+                                    <SelectItem value="aea">АЭА</SelectItem>
+                                    <SelectItem value="ia">ИА</SelectItem>
+                                    <SelectItem value="prom_zone">
+                                        Пром зона
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                            {errors.invest_sub_role && (
+                                <span className="text-sm text-red-500">
+                                    {errors.invest_sub_role}
+                                </span>
+                            )}
+                        </div>
+                    )}
 
                     {/* Басқару түрін таңдау */}
                     {isIspolnitel && (
