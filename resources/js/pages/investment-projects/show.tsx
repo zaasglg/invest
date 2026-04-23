@@ -314,6 +314,7 @@ export default function Show({
         (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
+    const isAkim = auth.user?.role_model?.name === 'akim';
     const isRestrictedView = isIspolnitel && !isInvolved;
     // Both district and oblast ispolnitel have same write permissions if involved
     const ispolnitelCanWrite = isIspolnitel && isInvolved;
@@ -1480,7 +1481,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(canModify || ispolnitelCanWrite) && (
+                                {(canModify || ispolnitelCanWrite || isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/documents`}
                                         className="w-full"
@@ -1504,7 +1505,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(canModify || ispolnitelCanWrite) && (
+                                {(canModify || ispolnitelCanWrite || isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/gallery`}
                                         className="w-full"
@@ -1557,7 +1558,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {!isRestrictedView && !isIspolnitel && (
+                                {(!isRestrictedView && !isIspolnitel) || isAkim ? (
                                     <a
                                         href={`/investment-projects/${project.id}/passport`}
                                         className="w-full"
@@ -1570,22 +1571,8 @@ export default function Show({
                                             Жоба паспортын жүктеу
                                         </Button>
                                     </a>
-                                )}
-                                {isIspolnitel && isInvolved && (
-                                    <a
-                                        href={`/investment-projects/${project.id}/passport`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]"
-                                            disabled={!canDownload}
-                                        >
-                                            <Download className="mr-2 h-4 w-4" />
-                                            Жоба паспортын жүктеу
-                                        </Button>
-                                    </a>
-                                )}
-                                {!isRestrictedView && (
+                                ) : null}
+                                {(!isRestrictedView || isAkim) && (
                                     <a
                                         href={`/investment-projects/${project.id}/presentation`}
                                         className="w-full"

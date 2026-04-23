@@ -79,6 +79,17 @@ class BaskarmaRatingController extends Controller
         if ($roleName === 'ispolnitel') {
             // Ispolnitel can only view their own show page
             $allowedIds = [$currentUser->id];
+        } elseif ($roleName === 'akim' && $currentUser->region_id) {
+            // District akim can only view ispolnitel users of their own district
+            $currentUser->loadMissing('region');
+            $isDistrictAkim = $currentUser->region && $currentUser->region->type !== 'oblast';
+            if ($isDistrictAkim) {
+                $allowedIds = $ispolnitelUsers
+                    ->where('region_id', $currentUser->region_id)
+                    ->pluck('id')
+                    ->values()
+                    ->all();
+            }
         }
 
         return Inertia::render('baskarma-rating/index', [
@@ -97,6 +108,15 @@ class BaskarmaRatingController extends Controller
         // Ispolnitel can only see their own page
         if ($roleName === 'ispolnitel' && $currentUser->id !== $user->id) {
             abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
+        }
+
+        // District akim can only see ispolnitel users of their own district
+        if ($roleName === 'akim' && $currentUser->region_id) {
+            $currentUser->loadMissing('region');
+            $isDistrictAkim = $currentUser->region && $currentUser->region->type !== 'oblast';
+            if ($isDistrictAkim && $user->region_id !== $currentUser->region_id) {
+                abort(403, 'Сіздің бұл бетке қол жеткізуіңіз жоқ.');
+            }
         }
 
         $user->load('region', 'roleModel');

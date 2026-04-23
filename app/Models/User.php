@@ -132,8 +132,34 @@ class User extends Authenticatable
             return true;
         }
 
+        // Akim assigned to a specific district/city is scoped to that region
+        if ($roleName === 'akim') {
+            $this->loadMissing('region');
+
+            return $this->region && $this->region->type !== 'oblast';
+        }
+
         // Ispolnitel (both district and oblast) are NOT district scoped - they can see everything
         return false;
+    }
+
+    /**
+     * Determine if the user is an akim scoped to an entire oblast
+     * (sees all projects of that oblast and its districts).
+     */
+    public function isOblastScopedAkim(): bool
+    {
+        if ($this->roleModel?->name !== 'akim') {
+            return false;
+        }
+
+        if (! $this->region_id) {
+            return false;
+        }
+
+        $this->loadMissing('region');
+
+        return $this->region && $this->region->type === 'oblast';
     }
 
     /**
