@@ -8,7 +8,7 @@ import {
     MapPin,
 } from 'lucide-react';
 import type { FormEventHandler } from 'react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -252,15 +252,21 @@ export default function Create({
             .map((u) => u.id.toString());
     }, [users, data.region_id]);
 
-    // Auto-add district ispolnitel users when region changes
+    // Auto-add district ispolnitel users when region changes, remove old district's ispolnitel users
+    const prevLockedIspolnitelIds = useRef<string[]>([]);
     useEffect(() => {
-        if (lockedIspolnitelIds.length === 0) return;
-        const merged = new Set([
-            ...data.executor_ids,
-            ...lockedIspolnitelIds,
-        ]);
-        const next = Array.from(merged);
-        if (next.length !== data.executor_ids.length) {
+        const prev = prevLockedIspolnitelIds.current;
+        prevLockedIspolnitelIds.current = lockedIspolnitelIds;
+        const withoutPrev = data.executor_ids.filter(
+            (id) => !prev.includes(id),
+        );
+        const next = Array.from(
+            new Set([...withoutPrev, ...lockedIspolnitelIds]),
+        );
+        const changed =
+            next.length !== data.executor_ids.length ||
+            next.some((id) => !data.executor_ids.includes(id));
+        if (changed) {
             setData('executor_ids', next);
         }
     }, [lockedIspolnitelIds]);
