@@ -41,6 +41,9 @@ class UserController extends Controller
         if ($request->role_id === 'none') {
             $request->merge(['role_id' => null]);
         }
+
+        $investRoleId = Role::where('name', 'invest')->value('id');
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email',
@@ -51,7 +54,11 @@ class UserController extends Controller
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
-            'invest_sub_role' => 'required|in:turkistan_invest,aea,ia,prom_zone',
+            'invest_sub_role' => [
+                $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
+                'nullable',
+                'in:turkistan_invest,aea,ia,prom_zone',
+            ],
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -107,6 +114,9 @@ class UserController extends Controller
         if ($request->role_id === 'none') {
             $request->merge(['role_id' => null]);
         }
+
+        $investRoleId = Role::where('name', 'invest')->value('id');
+
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
             'email' => 'required|email|unique:users,email,'.$user->id,
@@ -117,7 +127,11 @@ class UserController extends Controller
             'baskarma_type' => 'nullable|in:oblast,district',
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
-            'invest_sub_role' => 'required|in:turkistan_invest,aea,ia,prom_zone',
+            'invest_sub_role' => [
+                $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
+                'nullable',
+                'in:turkistan_invest,aea,ia,prom_zone',
+            ],
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {

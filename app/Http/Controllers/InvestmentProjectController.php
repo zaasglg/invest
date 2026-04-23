@@ -60,6 +60,15 @@ class InvestmentProjectController extends Controller
         $user = $request->user();
         if ($user && $user->isDistrictScoped() && ! $this->isIspolnitelUser($user)) {
             $projectsQuery->where('region_id', $user->region_id);
+        } elseif ($user && $user->isOblastScopedAkim()) {
+            // Akim assigned to an oblast sees all projects of that oblast and its child districts
+            $oblastId = $user->region_id;
+            $projectsQuery->where(function ($q) use ($oblastId) {
+                $q->where('region_id', $oblastId)
+                    ->orWhereHas('region', function ($qq) use ($oblastId) {
+                        $qq->where('parent_id', $oblastId);
+                    });
+            });
         }
 
         // Invest sub-role scope: filter by curators' invest_sub_role.
@@ -1404,6 +1413,19 @@ class InvestmentProjectController extends Controller
         // Use the helper method
         if ($user->isDistrictScoped() && $project->region_id !== $user->region_id) {
             abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
+        }
+
+        // Akim scoped to an oblast: only projects in that oblast or its child districts
+        if ($user->isOblastScopedAkim()) {
+            $project->loadMissing('region');
+            $projectRegion = $project->region;
+            $oblastId = $user->region_id;
+            $isInOblast = $projectRegion && (
+                $projectRegion->id === $oblastId || $projectRegion->parent_id === $oblastId
+            );
+            if (! $isInOblast) {
+                abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
+            }
         }
     }
 

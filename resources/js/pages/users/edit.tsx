@@ -90,7 +90,9 @@ export default function Edit({ user, regions, roles }: Props) {
 
     const isIspolnitel = selectedRole?.name === 'ispolnitel';
     const isInvest = selectedRole?.name === 'invest';
-    const showRegionSelects = isIspolnitel && data.baskarma_type === 'district';
+    const isAkim = selectedRole?.name === 'akim';
+    const showRegionSelects =
+        (isIspolnitel && data.baskarma_type === 'district') || isAkim;
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -390,7 +392,12 @@ export default function Edit({ user, regions, roles }: Props) {
                                     value={selectedOblastId}
                                     onValueChange={(value) => {
                                         setSelectedOblastId(value);
-                                        setData('region_id', '');
+                                        // For akim, oblast alone is a valid scope;
+                                        // set region_id to oblast id until a district is picked.
+                                        setData(
+                                            'region_id',
+                                            isAkim ? value : '',
+                                        );
                                     }}
                                 >
                                     <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
@@ -415,9 +422,19 @@ export default function Edit({ user, regions, roles }: Props) {
                                     className="font-normal text-gray-500"
                                 >
                                     Аудан / Қала
+                                    {isAkim && (
+                                        <span className="ml-2 text-xs text-gray-400">
+                                            (міндетті емес)
+                                        </span>
+                                    )}
                                 </Label>
                                 <Select
-                                    value={data.region_id}
+                                    value={
+                                        isAkim &&
+                                        data.region_id === selectedOblastId
+                                            ? ''
+                                            : data.region_id
+                                    }
                                     onValueChange={(value) =>
                                         setData('region_id', value)
                                     }
