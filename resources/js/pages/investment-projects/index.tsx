@@ -525,9 +525,7 @@ export default function Index({
                             }}
                         >
                             <Calendar className="h-4 w-4" />
-                            {stats.ending_this_year !== undefined
-                                ? `${stats.ending_this_year} жоба`
-                                : 'Биыл аяқталатын'}
+                            Биыл аяқталатын
                         </Button>
                         {(isSuperAdmin || isInvest) && (
                             <Link href="/investment-projects-archived">
