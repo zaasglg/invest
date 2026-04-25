@@ -23,17 +23,18 @@ class ChatController extends Controller
 
         try {
             $message = $request->input('message');
+            $user = $request->user();
 
-            // Сұрауды талдау
-            $entities = $this->geminiService->analyzeQuery($message);
+            // Сұрауды талдау (рөл бойынша сүзу)
+            $entities = $this->geminiService->analyzeQuery($message, $user);
 
             // Деректерді жинау
             $contextData = $this->contextService->buildContext($message, $entities);
 
-            // Gemini-ден жауап алу
+            // Gemini-ден жауап алу (рөлге қарай бейімделген промпт)
             $response = $this->geminiService->chat($message, [
                 'query_results' => $contextData,
-            ]);
+            ], $user);
 
             return response()->json([
                 'message' => $response,
