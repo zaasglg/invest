@@ -62,6 +62,16 @@ class RoleAndUserSeeder extends Seeder
                     'role' => 'district_user',
                 ],
             ],
+            [
+                'name' => 'moderator',
+                'display_name' => 'Модератор',
+                'description' => 'Тапсырмаларды қабылдайды немесе қабылдамайды',
+                'user' => [
+                    'full_name' => 'Модератор',
+                    'email' => 'moderator@invest.kz',
+                    'role' => 'invest',
+                ],
+            ],
         ];
 
         foreach ($roles as $roleData) {

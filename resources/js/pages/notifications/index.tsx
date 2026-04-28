@@ -125,6 +125,21 @@ export default function NotificationsIndex({ notifications }: Props) {
             icon: XCircle,
             color: 'bg-red-100 text-red-700',
         },
+        task_pending_approval: {
+            label: 'Растауды күтуде',
+            icon: Clock,
+            color: 'bg-amber-100 text-amber-700',
+        },
+        task_approved: {
+            label: 'Тапсырма қабылданды',
+            icon: CheckCircle2,
+            color: 'bg-green-100 text-green-700',
+        },
+        task_rejected: {
+            label: 'Тапсырма қабылданбады',
+            icon: XCircle,
+            color: 'bg-red-100 text-red-700',
+        },
     };
 
     const handleMarkAsRead = (id: number) => {
@@ -264,7 +279,13 @@ export default function NotificationsIndex({ notifications }: Props) {
                                             handleViewCompletion(notification);
                                         } else if (
                                             notification.type ===
-                                            'task_assigned'
+                                                'task_assigned' ||
+                                            notification.type ===
+                                                'task_pending_approval' ||
+                                            notification.type ===
+                                                'task_approved' ||
+                                            notification.type ===
+                                                'task_rejected'
                                         ) {
                                             if (!notification.is_read) {
                                                 handleMarkAsRead(

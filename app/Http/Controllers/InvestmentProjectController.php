@@ -5,8 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\IndustrialZone;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
-use App\Models\PromZone;
 use App\Models\ProjectType;
+use App\Models\PromZone;
 use App\Models\Region;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
@@ -194,11 +194,12 @@ class InvestmentProjectController extends Controller
         ];
 
         $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
+
         // dd(Region::where('type','district')->orderBy('name')->get());
         return Inertia::render('investment-projects/index', [
             'projects' => $projects,
             'stats' => $stats,
-            'regions' => Region::where('type','district')->orderBy('sort_order')->get(),
+            'regions' => Region::where('type', 'district')->orderBy('sort_order')->get(),
             'projectTypes' => ProjectType::select('id', 'name')->orderBy('name')->get(),
             'users' => User::select('id', 'full_name', 'region_id', 'baskarma_type', 'position')->orderBy('full_name')->get(),
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
@@ -235,8 +236,8 @@ class InvestmentProjectController extends Controller
     {
         $user = $request->user();
         $role = $user?->load('roleModel')->roleModel?->name;
-        
-        if (!in_array($role, ['superadmin', 'invest'])) {
+
+        if (! in_array($role, ['superadmin', 'invest'])) {
             abort(403);
         }
 
@@ -356,6 +357,7 @@ class InvestmentProjectController extends Controller
 
                     if ($restrictedSectorType && $type !== $restrictedSectorType) {
                         $fail('Сіз тек өз секторыңызды таңдай аласыз.');
+
                         return;
                     }
 
@@ -445,13 +447,16 @@ class InvestmentProjectController extends Controller
         $project->industrialZones()->sync($izIds);
         $project->promZones()->sync($promZoneIds);
 
-        KpiLog::log($project->id, 'Жаңа жоба құрылды: "' . $project->name . '"');
+        KpiLog::log($project->id, 'Жаңа жоба құрылды: "'.$project->name.'"');
 
         return redirect()->route('investment-projects.index')->with('success', 'Жоба құрылды.');
     }
 
     public function show($id)
     {
+        $currentUser = request()->user();
+        $currentRole = $currentUser?->roleModel?->name;
+
         $project = InvestmentProject::with([
             'region',
             'projectType',
@@ -460,7 +465,14 @@ class InvestmentProjectController extends Controller
             'executors',
             'documents',
             'issues',
+            'tasks' => function ($query) use ($currentRole) {
+                // Executors only see tasks the moderator has approved.
+                if ($currentRole === 'ispolnitel') {
+                    $query->where('approval_status', 'approved');
+                }
+            },
             'tasks.assignee.roleModel',
+            'tasks.approver',
             'tasks.completions.submitter',
             'tasks.completions.reviewer',
             'tasks.completions.files',
@@ -573,6 +585,7 @@ class InvestmentProjectController extends Controller
         if ($roleName === 'ispolnitel' && is_object($project) && $user->region_id) {
             $isOwnDistrict = (int) $project->region_id === (int) $user->region_id;
         }
+
         return Inertia::render('investment-projects/show', [
             'project' => $project,
             'mainGallery' => $mainGalleryPhotos,
@@ -741,6 +754,7 @@ class InvestmentProjectController extends Controller
 
                     if ($restrictedSectorType && $type !== $restrictedSectorType) {
                         $fail('Сіз тек өз секторыңызды таңдай аласыз.');
+
                         return;
                     }
 
@@ -834,7 +848,7 @@ class InvestmentProjectController extends Controller
 
         KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
 
-        if (!empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
+        if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
         }
 
@@ -982,7 +996,7 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
-        KpiLog::log($investmentProject->id, 'Жоба жойылды: "' . $investmentProject->name . '"');
+        KpiLog::log($investmentProject->id, 'Жоба жойылды: "'.$investmentProject->name.'"');
 
         $investmentProject->delete();
 
@@ -1181,7 +1195,7 @@ class InvestmentProjectController extends Controller
             ['Құны', $formatCurrency($project->total_investment)],
             ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
             ['Жоба қуаттылығы', $project->capacity ? $project->capacity : '—'],
-            ['Жұмыс орындары', $project->jobs_count ? $project->jobs_count . ' адам' : '—'],
+            ['Жұмыс орындары', $project->jobs_count ? $project->jobs_count.' адам' : '—'],
         ];
 
         $locationParts = [];
@@ -1201,7 +1215,7 @@ class InvestmentProjectController extends Controller
         if ($sectorNames->isNotEmpty()) {
             $locationParts[] = implode(', ', $sectorNames->toArray());
         }
-        $locationStr = !empty($locationParts) ? implode(', ', $locationParts) : 'Көрсетілмеген';
+        $locationStr = ! empty($locationParts) ? implode(', ', $locationParts) : 'Көрсетілмеген';
 
         $infoItems[] = ['Орналасуы', $locationStr];
         $infoItems[] = ['Іске асыру мерзімі', ($project->start_date?->format('Y') ?? '—').'-'.($project->end_date?->format('Y') ?? '—').' жж.'];
@@ -1245,7 +1259,7 @@ class InvestmentProjectController extends Controller
                 ->setVertical(Alignment::VERTICAL_TOP);
             $statusShape->setAutoFit(RichText::AUTOFIT_NORMAL);
             $addText($statusShape, $statusText, 10, $darkGray, false);
-            
+
             // Approximate yLeft bump
             $lines = max(1, (int) ceil(mb_strlen($statusText) / 80));
             $yLeft += ($lines * 16) + 30; // Buffer
@@ -1288,7 +1302,7 @@ class InvestmentProjectController extends Controller
             $addText($headerCell, $item['label'], 10, $darkGray, false);
 
             // Add top border manually by creating a thin shape or just no border to match picture
-            
+
             $valueCell = $slide->createRichTextShape();
             $valueCell->setHeight(24)->setWidth($colW)->setOffsetX($colX)->setOffsetY($yLeft + 24);
             // $valueCell->getFill()->setFillType(Fill::FILL_SOLID)->setStartColor(new Color('FFFAFAFA'));
@@ -1558,7 +1572,7 @@ class InvestmentProjectController extends Controller
     private function isValidReturnUrl(string $url): bool
     {
         // Only allow relative URLs starting with /
-        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+        if (str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
             return true;
         }
 

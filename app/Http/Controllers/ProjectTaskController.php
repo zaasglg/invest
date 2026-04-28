@@ -14,6 +14,14 @@ class ProjectTaskController extends Controller
 {
     public function store(Request $request, InvestmentProject $investmentProject)
     {
+        $user = Auth::user();
+        $creatorRole = $user?->roleModel?->name;
+
+        // Moderator may only approve/reject tasks; not create them.
+        if ($creatorRole === 'moderator') {
+            abort(403, 'Сізде тапсырма енгізу құқығы жоқ.');
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -29,13 +37,24 @@ class ProjectTaskController extends Controller
         $validated['status'] = 'new';
         $validated['created_by'] = Auth::id();
 
+        // Tasks created by superadmin are auto-approved; everyone else
+        // must wait for a moderator's review before the task is visible
+        // to the assigned executor.
+        if ($creatorRole === 'superadmin') {
+            $validated['approval_status'] = 'approved';
+            $validated['approved_by'] = Auth::id();
+            $validated['approved_at'] = now();
+        } else {
+            $validated['approval_status'] = 'pending';
+        }
+
         $task = ProjectTask::create($validated);
 
         // Auto-attach the assigned user as a project executor
         $investmentProject->executors()->syncWithoutDetaching([$validated['assigned_to']]);
 
-        // Send notification to assigned user (ispolnitel)
-        if ($validated['assigned_to'] != Auth::id()) {
+        // Notify assigned user only when the task is already visible to them.
+        if ($task->approval_status === 'approved' && $validated['assigned_to'] != Auth::id()) {
             TaskNotification::create([
                 'user_id' => $validated['assigned_to'],
                 'task_id' => $task->id,
@@ -44,15 +63,122 @@ class ProjectTaskController extends Controller
             ]);
         }
 
-        KpiLog::log($investmentProject->id, 'Кезең қосылды: "' . $task->title . '"');
+        // Notify moderators about a new task awaiting approval.
+        if ($task->approval_status === 'pending') {
+            $moderatorIds = User::whereHas('roleModel', fn ($q) => $q->where('name', 'moderator'))
+                ->pluck('id');
+            foreach ($moderatorIds as $moderatorId) {
+                if ((int) $moderatorId === (int) Auth::id()) {
+                    continue;
+                }
+                TaskNotification::create([
+                    'user_id' => $moderatorId,
+                    'task_id' => $task->id,
+                    'type' => 'task_pending_approval',
+                    'message' => "Жаңа тапсырма растауды күтуде: \"{$task->title}\" (Жоба: {$investmentProject->name})",
+                ]);
+            }
+        }
+
+        KpiLog::log($investmentProject->id, 'Кезең қосылды: "'.$task->title.'"');
 
         return redirect()->back()->with('success', 'Кезең қосылды.');
+    }
+
+    public function approve(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
+    {
+        return $this->reviewApproval($request, $investmentProject, $task, 'approved');
+    }
+
+    public function reject(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
+    {
+        return $this->reviewApproval($request, $investmentProject, $task, 'rejected');
+    }
+
+    protected function reviewApproval(Request $request, InvestmentProject $investmentProject, ProjectTask $task, string $decision)
+    {
+        if ($task->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        $user = Auth::user();
+        $roleName = $user?->roleModel?->name;
+        if (! in_array($roleName, ['moderator', 'superadmin'], true)) {
+            abort(403, 'Сізде тапсырманы растау құқығы жоқ.');
+        }
+
+        $request->validate([
+            'approval_comment' => 'nullable|string|max:2000',
+        ]);
+
+        $task->update([
+            'approval_status' => $decision,
+            'approval_comment' => $request->input('approval_comment'),
+            'approved_by' => Auth::id(),
+            'approved_at' => now(),
+        ]);
+
+        // Notification policy:
+        //  - On approval: the executor (assignee) receives a regular
+        //    "task_assigned" notification — moderation must be transparent
+        //    to them; they should see it as a freshly assigned task, just
+        //    like before the moderator role existed. The creator (invest)
+        //    receives a "task_approved" notification.
+        //  - On rejection: only the creator (invest) is notified. The
+        //    executor was never aware of the task and must not be bothered.
+        $reviewerName = $user?->full_name ?? 'Модератор';
+        $statusKk = $decision === 'approved' ? 'қабылданды' : 'қабылданбады';
+
+        if ($decision === 'approved') {
+            // Executor — looks like a regular new task assignment.
+            if ($task->assigned_to && (int) $task->assigned_to !== (int) Auth::id()) {
+                TaskNotification::create([
+                    'user_id' => $task->assigned_to,
+                    'task_id' => $task->id,
+                    'type' => 'task_assigned',
+                    'message' => "Сізге жаңа тапсырма берілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
+                ]);
+            }
+
+            // Creator — confirmation that moderator approved their task.
+            if ($task->created_by
+                && (int) $task->created_by !== (int) Auth::id()
+                && (int) $task->created_by !== (int) $task->assigned_to) {
+                TaskNotification::create([
+                    'user_id' => $task->created_by,
+                    'task_id' => $task->id,
+                    'type' => 'task_approved',
+                    'message' => "{$reviewerName} тапсырманы қабылдады: \"{$task->title}\"",
+                ]);
+            }
+        } else {
+            // Rejection — notify only the creator.
+            if ($task->created_by && (int) $task->created_by !== (int) Auth::id()) {
+                TaskNotification::create([
+                    'user_id' => $task->created_by,
+                    'task_id' => $task->id,
+                    'type' => 'task_rejected',
+                    'message' => "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\"",
+                ]);
+            }
+        }
+
+        KpiLog::log(
+            $investmentProject->id,
+            'Тапсырма '.$statusKk.': "'.$task->title.'"'
+        );
+
+        return redirect()->back()->with('success', 'Тапсырма '.$statusKk.'.');
     }
 
     public function update(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
     {
         if ($task->project_id !== $investmentProject->id) {
             abort(404);
+        }
+
+        if (Auth::user()?->roleModel?->name === 'moderator') {
+            abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
         }
 
         $validated = $request->validate([
@@ -78,7 +204,7 @@ class ProjectTaskController extends Controller
                     ->where('id', '!=', $task->id)
                     ->exists();
 
-                if (!$hasOtherTasks) {
+                if (! $hasOtherTasks) {
                     $investmentProject->executors()->detach($oldAssignedTo);
                 }
             }
@@ -88,7 +214,7 @@ class ProjectTaskController extends Controller
             }
         }
 
-        KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "' . $task->title . '"');
+        KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "'.$task->title.'"');
 
         return redirect()->back()->with('success', 'Кезең жаңартылды.');
     }
@@ -99,7 +225,11 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        KpiLog::log($investmentProject->id, 'Кезең жойылды: "' . $task->title . '"');
+        if (Auth::user()?->roleModel?->name === 'moderator') {
+            abort(403, 'Сізде тапсырманы жою құқығыңыз жоқ.');
+        }
+
+        KpiLog::log($investmentProject->id, 'Кезең жойылды: "'.$task->title.'"');
 
         $assignedTo = $task->assigned_to;
 
@@ -110,7 +240,7 @@ class ProjectTaskController extends Controller
                 ->where('assigned_to', $assignedTo)
                 ->exists();
 
-            if (!$hasOtherTasks) {
+            if (! $hasOtherTasks) {
                 $investmentProject->executors()->detach($assignedTo);
             }
         }
