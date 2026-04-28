@@ -18,7 +18,7 @@ class UserController extends Controller
             ->latest()
             ->paginate(15)
             ->withQueryString();
-        // dd($users);
+        // dd($users->toArray());
 
         return Inertia::render('users/index', [
             'users' => $users,

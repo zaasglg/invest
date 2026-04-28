@@ -98,7 +98,10 @@ export const headerNavItems: NavItem[] = [
     },
     ...zoneNavItems,
     ...projectNavItems.filter((item) => item.title !== 'Инвест. жобалар'),
-    ...adminNavItems,
+    ...adminNavItems.filter(
+        (item) =>
+            item.title !== 'Пайдаланушылар' && item.title !== 'Рөлдер',
+    ),
 ];
 
 const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
