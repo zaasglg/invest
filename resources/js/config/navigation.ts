@@ -111,6 +111,12 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Рөлдер',
         'Пайдаланушылар',
     ]),
+    moderator: new Set([
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рөлдер',
+        'Пайдаланушылар',
+    ]),
 };
 
 // Nav titles that each invest sub-role is NOT allowed to see.
@@ -139,7 +145,13 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
         normalizeRoleKey(candidate),
     );
 
-    // Check exact role names first
+    // Check exact role names first.
+    // NOTE: moderator must be checked BEFORE invest, because moderator users
+    // may carry user.role='invest' as a fallback due to the DB enum constraint.
+    if (normalizedCandidates.some((value) => value === 'moderator')) {
+        return 'moderator';
+    }
+
     if (normalizedCandidates.some((value) => value === 'invest')) {
         return 'invest';
     }
