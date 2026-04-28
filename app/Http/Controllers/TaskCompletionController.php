@@ -30,6 +30,12 @@ class TaskCompletionController extends Controller
             abort(403, 'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.');
         }
 
+        // Tasks awaiting moderator approval (or rejected) are not yet
+        // visible to the executor and must not accept completions.
+        if (($task->approval_status ?? 'approved') !== 'approved') {
+            abort(403, 'Бұл тапсырма әлі расталмаған.');
+        }
+
         $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',
