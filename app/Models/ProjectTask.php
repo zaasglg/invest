@@ -15,6 +15,10 @@ class ProjectTask extends Model
         'start_date',
         'due_date',
         'status',
+        'approval_status',
+        'approval_comment',
+        'approved_by',
+        'approved_at',
     ];
 
     protected function casts(): array
@@ -22,7 +26,13 @@ class ProjectTask extends Model
         return [
             'start_date' => 'date',
             'due_date' => 'date',
+            'approved_at' => 'datetime',
         ];
+    }
+
+    public function approver()
+    {
+        return $this->belongsTo(User::class, 'approved_by');
     }
 
     public function project()

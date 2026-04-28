@@ -133,6 +133,24 @@ class CheckRoleAccess
                 }
             }
 
+            // Moderator: project-level read access (similar to invest_turkistan),
+            // but cannot create / edit / delete tasks. They only approve or
+            // reject tasks via the dedicated review routes.
+            if ($roleName === 'moderator') {
+                if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
+                    abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+                }
+
+                $blockedTaskRoutes = [
+                    'investment-projects.tasks.store',
+                    'investment-projects.tasks.update',
+                    'investment-projects.tasks.destroy',
+                ];
+                if (in_array($routeName, $blockedTaskRoutes, true)) {
+                    abort(403, 'Сізде тапсырма енгізу/өзгерту құқығы жоқ.');
+                }
+            }
+
             // Ispolnitel: blocked from project-types and regions management.
             // Can write to documents, gallery, issues, and current status on own-district projects.
             if ($roleName === 'ispolnitel') {
@@ -208,7 +226,7 @@ class CheckRoleAccess
     }
 
     /**
-     * Invest / ispolnitel — can write to projects but blocked from admin sections.
+     * Invest / ispolnitel / moderator — can write to projects but blocked from admin sections.
      */
     protected function isLimitedRole(?string $roleName): bool
     {
@@ -216,7 +234,7 @@ class CheckRoleAccess
             return false;
         }
 
-        return in_array($roleName, ['invest', 'ispolnitel'], true);
+        return in_array($roleName, ['invest', 'ispolnitel', 'moderator'], true);
     }
 
     protected function isMatchingRoute(Request $request, array $blockedList): bool

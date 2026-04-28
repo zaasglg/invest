@@ -154,6 +154,10 @@ interface ProjectTaskItem {
     start_date?: string;
     due_date?: string;
     status: 'new' | 'in_progress' | 'done' | 'rejected';
+    approval_status?: 'pending' | 'approved' | 'rejected';
+    approval_comment?: string | null;
+    approver?: { id: number; full_name?: string } | null;
+    approved_at?: string | null;
     completions?: TaskCompletionItem[];
     created_at: string;
 }
@@ -315,6 +319,9 @@ export default function Show({
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isAkim = auth.user?.role_model?.name === 'akim';
+    const isModerator = auth.user?.role_model?.name === 'moderator';
+    const canApproveTasks = isModerator || isSuperAdmin;
+    const canManageTasks = isSuperAdmin || isInvest;
     const isRestrictedView = isIspolnitel && !isInvolved;
     // Both district and oblast ispolnitel have same write permissions if involved
     const ispolnitelCanWrite = isIspolnitel && isInvolved;
@@ -420,8 +427,23 @@ export default function Show({
     };
 
     const filteredTasks = tasks.filter((task) => {
+        // Defensive frontend filter — backend already strips non-approved
+        // tasks for ispolnitels, but keep this so a refresh isn't required.
+        if (
+            isIspolnitel &&
+            task.approval_status &&
+            task.approval_status !== 'approved'
+        ) {
+            return false;
+        }
         if (taskFilter === 'all') return true;
         if (taskFilter === 'overdue') return isTaskOverdue(task);
+        if (taskFilter === 'pending_approval') {
+            return task.approval_status === 'pending';
+        }
+        if (taskFilter === 'approval_rejected') {
+            return task.approval_status === 'rejected';
+        }
         // When user selects "Исполняется", show all amber (pending) tasks.
         if (taskFilter === 'in_progress') {
             return getTaskDotColor(task) === 'bg-amber-500';
@@ -675,6 +697,46 @@ export default function Show({
                     setIsReviewing(false);
                 },
                 onError: () => setIsReviewing(false),
+            },
+        );
+    };
+
+    // Moderator approval state
+    const [approvalModalTask, setApprovalModalTask] =
+        useState<ProjectTaskItem | null>(null);
+    const [approvalDecision, setApprovalDecision] = useState<
+        'approved' | 'rejected'
+    >('approved');
+    const [approvalComment, setApprovalComment] = useState('');
+    const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
+
+    const handleOpenApproval = (
+        task: ProjectTaskItem,
+        decision: 'approved' | 'rejected',
+    ) => {
+        setApprovalModalTask(task);
+        setApprovalDecision(decision);
+        setApprovalComment('');
+    };
+
+    const handleSubmitApproval = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!approvalModalTask) return;
+        setIsSubmittingApproval(true);
+        const url =
+            approvalDecision === 'approved'
+                ? `/investment-projects/${project.id}/tasks/${approvalModalTask.id}/approve`
+                : `/investment-projects/${project.id}/tasks/${approvalModalTask.id}/reject`;
+        router.post(
+            url,
+            { approval_comment: approvalComment || null },
+            {
+                onSuccess: () => {
+                    setApprovalModalTask(null);
+                    setApprovalComment('');
+                    setIsSubmittingApproval(false);
+                },
+                onError: () => setIsSubmittingApproval(false),
             },
         );
     };
@@ -1062,25 +1124,48 @@ export default function Show({
                                                     <SelectItem value="overdue">
                                                         Мерзімі өткен
                                                     </SelectItem>
+                                                    {!isIspolnitel && (
+                                                        <>
+                                                            <SelectItem value="pending_approval">
+                                                                Растауды күтуде
+                                                            </SelectItem>
+                                                            <SelectItem value="approval_rejected">
+                                                                Растау
+                                                                қабылданбады
+                                                            </SelectItem>
+                                                        </>
+                                                    )}
                                                 </SelectContent>
                                             </Select>
-                                            {canModify && !isIspolnitel && (
-                                                <Button
-                                                    size="icon"
-                                                    className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
-                                                    onClick={() => {
-                                                        setEditingTaskId(null);
-                                                        setTaskTitle('');
-                                                        setTaskDescription('');
-                                                        setTaskStartDate('');
-                                                        setTaskDueDate('');
-                                                        setTaskAssignedTo(null);
-                                                        setShowTaskModal(true);
-                                                    }}
-                                                >
-                                                    <Plus className="h-5 w-5" />
-                                                </Button>
-                                            )}
+                                            {canModify &&
+                                                !isIspolnitel &&
+                                                !isModerator && (
+                                                    <Button
+                                                        size="icon"
+                                                        className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
+                                                        onClick={() => {
+                                                            setEditingTaskId(
+                                                                null,
+                                                            );
+                                                            setTaskTitle('');
+                                                            setTaskDescription(
+                                                                '',
+                                                            );
+                                                            setTaskStartDate(
+                                                                '',
+                                                            );
+                                                            setTaskDueDate('');
+                                                            setTaskAssignedTo(
+                                                                null,
+                                                            );
+                                                            setShowTaskModal(
+                                                                true,
+                                                            );
+                                                        }}
+                                                    >
+                                                        <Plus className="h-5 w-5" />
+                                                    </Button>
+                                                )}
                                         </div>
                                     </div>
                                 </div>
@@ -1196,6 +1281,39 @@ export default function Show({
                                                                     өткен
                                                                 </Badge>
                                                             )}
+                                                            {/* Approval status badge (visible to non-ispolnitel) */}
+                                                            {!isIspolnitel &&
+                                                                task.approval_status &&
+                                                                task.approval_status !==
+                                                                    'approved' && (
+                                                                    <div>
+                                                                        <Badge
+                                                                            className={`mt-1 mr-1 border-0 text-xs ${
+                                                                                task.approval_status ===
+                                                                                'pending'
+                                                                                    ? 'bg-amber-100 text-amber-700'
+                                                                                    : 'bg-red-100 text-red-700'
+                                                                            }`}
+                                                                        >
+                                                                            {task.approval_status ===
+                                                                            'pending'
+                                                                                ? 'Растауды күтуде'
+                                                                                : 'Растау қабылданбады'}
+                                                                        </Badge>
+                                                                        {task.approval_status ===
+                                                                            'rejected' &&
+                                                                            task.approval_comment && (
+                                                                                <p className="mt-1 text-xs text-red-600">
+                                                                                    <span className="font-semibold">
+                                                                                        Себебі:
+                                                                                    </span>{' '}
+                                                                                    {
+                                                                                        task.approval_comment
+                                                                                    }
+                                                                                </p>
+                                                                            )}
+                                                                    </div>
+                                                                )}
                                                             {/* Status badge for completion */}
                                                             {latestCompletion && (
                                                                 <div>
@@ -1234,7 +1352,39 @@ export default function Show({
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            {/* Ispolnitel: submit completion (when task is new or rejected) */}
+                                                            {/* Moderator/Superadmin: approve or reject pending tasks */}
+                                                            {canApproveTasks &&
+                                                                task.approval_status ===
+                                                                    'pending' && (
+                                                                    <>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 border-emerald-300 text-xs text-emerald-700 hover:bg-emerald-50"
+                                                                            onClick={() =>
+                                                                                handleOpenApproval(
+                                                                                    task,
+                                                                                    'approved',
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Қабылдау
+                                                                        </Button>
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="h-8 border-red-300 text-xs text-red-700 hover:bg-red-50"
+                                                                            onClick={() =>
+                                                                                handleOpenApproval(
+                                                                                    task,
+                                                                                    'rejected',
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            Қабылдамау
+                                                                        </Button>
+                                                                    </>
+                                                                )}
                                                             {/* Ispolnitel: submit completion (when task is new or rejected) */}
                                                             {isIspolnitel &&
                                                                 isAssignedToMe &&
@@ -1259,6 +1409,7 @@ export default function Show({
                                                             {/* Invest: review pending completion */}
                                                             {canModify &&
                                                                 !isIspolnitel &&
+                                                                !isModerator &&
                                                                 pendingCompletion && (
                                                                     <Button
                                                                         variant="outline"
@@ -1275,35 +1426,34 @@ export default function Show({
                                                                         Тексеру
                                                                     </Button>
                                                                 )}
-                                                            {canModify &&
-                                                                !isIspolnitel && (
-                                                                    <>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
-                                                                            onClick={() =>
-                                                                                handleEditTask(
-                                                                                    task,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <Edit className="h-4 w-4" />
-                                                                        </Button>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                                            onClick={() =>
-                                                                                handleTaskDelete(
-                                                                                    task.id,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <Trash2 className="h-4 w-4" />
-                                                                        </Button>
-                                                                    </>
-                                                                )}
+                                                            {canManageTasks && (
+                                                                <>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
+                                                                        onClick={() =>
+                                                                            handleEditTask(
+                                                                                task,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Edit className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                                        onClick={() =>
+                                                                            handleTaskDelete(
+                                                                                task.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 );
@@ -1345,12 +1495,14 @@ export default function Show({
                             <CardContent className="space-y-4">
                                 <div>
                                     <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                        {project.curators && project.curators.length > 1
+                                        {project.curators &&
+                                        project.curators.length > 1
                                             ? 'Жауаптылар'
                                             : 'Жауапты'}
                                     </p>
                                     <div className="flex flex-col gap-3">
-                                        {(project.curators && project.curators.length > 0
+                                        {(project.curators &&
+                                        project.curators.length > 0
                                             ? project.curators
                                             : project.creator
                                               ? [project.creator]
@@ -1377,7 +1529,8 @@ export default function Show({
                                                             curator.name
                                                         )
                                                             ?.slice(0, 2)
-                                                            .toUpperCase() || 'NA'}
+                                                            .toUpperCase() ||
+                                                            'NA'}
                                                     </div>
                                                 )}
                                                 <div>
@@ -1481,7 +1634,9 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(canModify || ispolnitelCanWrite || isAkim) && (
+                                {(canModify ||
+                                    ispolnitelCanWrite ||
+                                    isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/documents`}
                                         className="w-full"
@@ -1505,7 +1660,9 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(canModify || ispolnitelCanWrite || isAkim) && (
+                                {(canModify ||
+                                    ispolnitelCanWrite ||
+                                    isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/gallery`}
                                         className="w-full"
@@ -1558,7 +1715,8 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(!isRestrictedView && !isIspolnitel) || isAkim ? (
+                                {(!isRestrictedView && !isIspolnitel) ||
+                                isAkim ? (
                                     <a
                                         href={`/investment-projects/${project.id}/passport`}
                                         className="w-full"
@@ -2108,6 +2266,92 @@ export default function Show({
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Task Approval Modal (moderator/superadmin) */}
+                {approvalModalTask && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                        <div className="mx-4 w-full max-w-md rounded-xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
+                                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                    {approvalDecision === 'approved'
+                                        ? 'Тапсырманы қабылдау'
+                                        : 'Тапсырманы қабылдамау'}
+                                </h3>
+                                <button
+                                    type="button"
+                                    onClick={() => setApprovalModalTask(null)}
+                                    className="text-white/80 transition-colors hover:text-white"
+                                >
+                                    <X className="h-5 w-5" />
+                                </button>
+                            </div>
+                            <form
+                                onSubmit={handleSubmitApproval}
+                                className="space-y-5 p-6"
+                            >
+                                <div className="rounded-lg border border-gray-200 p-3">
+                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                        Тапсырма
+                                    </p>
+                                    <p className="mt-1 font-medium text-[#0f1b3d]">
+                                        {approvalModalTask.title}
+                                    </p>
+                                </div>
+                                <div>
+                                    <Label className="text-sm font-semibold text-[#0f1b3d]">
+                                        Пікір
+                                        {approvalDecision === 'rejected' && (
+                                            <span className="text-red-500">
+                                                {' '}
+                                                *
+                                            </span>
+                                        )}
+                                    </Label>
+                                    <textarea
+                                        value={approvalComment}
+                                        onChange={(e) =>
+                                            setApprovalComment(e.target.value)
+                                        }
+                                        placeholder={
+                                            approvalDecision === 'rejected'
+                                                ? 'Қабылдамау себебі...'
+                                                : 'Пікір (міндетті емес)...'
+                                        }
+                                        className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
+                                        rows={4}
+                                        required={
+                                            approvalDecision === 'rejected'
+                                        }
+                                    />
+                                </div>
+                                <div className="flex justify-end gap-3 pt-2">
+                                    <Button
+                                        type="submit"
+                                        className={
+                                            approvalDecision === 'approved'
+                                                ? 'bg-emerald-500 hover:bg-emerald-600'
+                                                : 'bg-red-500 hover:bg-red-600'
+                                        }
+                                        disabled={isSubmittingApproval}
+                                    >
+                                        {approvalDecision === 'approved'
+                                            ? 'Қабылдау'
+                                            : 'Қабылдамау'}
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={() =>
+                                            setApprovalModalTask(null)
+                                        }
+                                    >
+                                        Болдырмау
+                                    </Button>
+                                </div>
+                            </form>
                         </div>
                     </div>
                 )}
