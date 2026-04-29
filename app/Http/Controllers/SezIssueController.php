@@ -11,7 +11,7 @@ class SezIssueController extends Controller
 {
     public function index(Sez $sez)
     {
-        $issues = $sez->issues()->latest()->get();
+        $issues = $sez->issues()->with('creator:id,full_name')->latest()->get();
 
         return Inertia::render('sezs/issues', [
             'sez' => $sez->load('region'),
@@ -29,7 +29,10 @@ class SezIssueController extends Controller
             'status' => 'required|in:open,in_progress,resolved',
         ]);
 
-        $sez->issues()->create($validated);
+        $sez->issues()->create([
+            ...$validated,
+            'created_by' => $request->user()?->id,
+        ]);
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
@@ -43,6 +46,10 @@ class SezIssueController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'status' => 'required|in:open,in_progress,resolved',
         ]);
+
+        if ($issue->created_by === null) {
+            $validated['created_by'] = $request->user()?->id;
+        }
 
         $issue->update($validated);
 

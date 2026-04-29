@@ -33,6 +33,7 @@ interface Issue {
     entity_name: string;
     region_name: string | null;
     created_at: string;
+    creator_full_name: string | null;
 }
 
 interface Filters {
@@ -293,6 +294,12 @@ export default function IssuesIndex({
                                                             Категория:
                                                         </strong>{' '}
                                                         {issue.category}
+                                                    </span>
+                                                )}
+                                                {issue.creator_full_name && (
+                                                    <span>
+                                                        <strong>Қосқан:</strong>{' '}
+                                                        {issue.creator_full_name}
                                                     </span>
                                                 )}
                                             </div>

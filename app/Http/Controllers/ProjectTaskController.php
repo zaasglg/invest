@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
 use App\Models\ProjectTask;
+use App\Models\ProjectTaskEvent;
 use App\Models\TaskNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -49,6 +50,22 @@ class ProjectTaskController extends Controller
         }
 
         $task = ProjectTask::create($validated);
+
+        ProjectTaskEvent::create([
+            'task_id' => $task->id,
+            'user_id' => Auth::id(),
+            'type' => 'created',
+        ]);
+
+        // If superadmin auto-approved, also log the approval event so the
+        // timeline reflects the approved state.
+        if ($task->approval_status === 'approved') {
+            ProjectTaskEvent::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'type' => 'approved',
+            ]);
+        }
 
         // Auto-attach the assigned user as a project executor
         $investmentProject->executors()->syncWithoutDetaching([$validated['assigned_to']]);
@@ -118,6 +135,13 @@ class ProjectTaskController extends Controller
             'approved_at' => now(),
         ]);
 
+        ProjectTaskEvent::create([
+            'task_id' => $task->id,
+            'user_id' => Auth::id(),
+            'type' => $decision, // 'approved' | 'rejected'
+            'comment' => $request->input('approval_comment'),
+        ]);
+
         // Notification policy:
         //  - On approval: the executor (assignee) receives a regular
         //    "task_assigned" notification — moderation must be transparent
@@ -177,7 +201,8 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        if (Auth::user()?->roleModel?->name === 'moderator') {
+        $editorRole = Auth::user()?->roleModel?->name;
+        if ($editorRole === 'moderator') {
             abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
         }
 
@@ -191,8 +216,36 @@ class ProjectTaskController extends Controller
         ]);
 
         $oldAssignedTo = $task->assigned_to;
+        $wasRejected = $task->approval_status === 'rejected';
+
+        // Determine if this update is a content edit (not just a status toggle).
+        // Status-only updates (e.g. mark as done) must not re-trigger moderation.
+        $contentEdit = collect($validated)
+            ->except('status')
+            ->isNotEmpty();
+
+        // If a previously rejected task is edited by invest (not superadmin),
+        // resubmit it for moderator approval — clear the rejection and put it
+        // back into pending state. Superadmin edits remain auto-approved.
+        if ($wasRejected && $contentEdit && $editorRole !== 'superadmin') {
+            $validated['approval_status'] = 'pending';
+            $validated['approval_comment'] = null;
+            $validated['approved_by'] = null;
+            $validated['approved_at'] = null;
+        }
 
         $task->update($validated);
+
+        // Log a content-edit event so it appears on the task timeline.
+        // Especially useful when a rejected task is edited and resubmitted —
+        // the timeline must show the moment of editing.
+        if ($contentEdit) {
+            ProjectTaskEvent::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'type' => 'edited',
+            ]);
+        }
 
         $newAssignedTo = $task->assigned_to;
 
@@ -214,9 +267,62 @@ class ProjectTaskController extends Controller
             }
         }
 
+        // If we re-queued the task for moderation, notify moderators again.
+        if ($wasRejected && $task->approval_status === 'pending') {
+            $moderatorIds = User::whereHas('roleModel', fn ($q) => $q->where('name', 'moderator'))
+                ->pluck('id');
+            foreach ($moderatorIds as $moderatorId) {
+                if ((int) $moderatorId === (int) Auth::id()) {
+                    continue;
+                }
+                TaskNotification::create([
+                    'user_id' => $moderatorId,
+                    'task_id' => $task->id,
+                    'type' => 'task_pending_approval',
+                    'message' => "Тапсырма қайта жіберілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
+                ]);
+            }
+
+            KpiLog::log(
+                $investmentProject->id,
+                'Тапсырма қайта расталуға жіберілді: "'.$task->title.'"'
+            );
+
+            return redirect()->back()->with('success', 'Тапсырма қайта расталуға жіберілді.');
+        }
+
         KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "'.$task->title.'"');
 
         return redirect()->back()->with('success', 'Кезең жаңартылды.');
+    }
+
+    public function markViewed(InvestmentProject $investmentProject, ProjectTask $task)
+    {
+        if ($task->project_id !== $investmentProject->id) {
+            abort(404);
+        }
+
+        // Only the assigned executor can mark a task as viewed, and only
+        // once the moderator has approved it (otherwise it shouldn't be
+        // visible to them at all).
+        if ((int) $task->assigned_to !== (int) Auth::id()) {
+            abort(403);
+        }
+
+        if (($task->approval_status ?? 'approved') !== 'approved') {
+            abort(403);
+        }
+
+        if ($task->viewed_at === null) {
+            $task->update(['viewed_at' => now()]);
+            ProjectTaskEvent::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'type' => 'viewed',
+            ]);
+        }
+
+        return redirect()->back();
     }
 
     public function destroy(InvestmentProject $investmentProject, ProjectTask $task)

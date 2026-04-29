@@ -11,7 +11,7 @@ class IndustrialZoneIssueController extends Controller
 {
     public function index(IndustrialZone $industrialZone)
     {
-        $issues = $industrialZone->issues()->latest()->get();
+        $issues = $industrialZone->issues()->with('creator:id,full_name')->latest()->get();
 
         return Inertia::render('industrial-zones/issues', [
             'industrialZone' => $industrialZone->load('region'),
@@ -29,7 +29,10 @@ class IndustrialZoneIssueController extends Controller
             'status' => 'required|in:open,in_progress,resolved',
         ]);
 
-        $industrialZone->issues()->create($validated);
+        $industrialZone->issues()->create([
+            ...$validated,
+            'created_by' => $request->user()?->id,
+        ]);
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
@@ -43,6 +46,10 @@ class IndustrialZoneIssueController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'status' => 'required|in:open,in_progress,resolved',
         ]);
+
+        if ($issue->created_by === null) {
+            $validated['created_by'] = $request->user()?->id;
+        }
 
         $issue->update($validated);
 

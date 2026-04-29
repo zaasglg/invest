@@ -46,6 +46,7 @@ interface Issue {
     description?: string;
     severity?: string;
     status?: string;
+    creator?: { id: number; full_name: string } | null;
 }
 
 interface AssignableUser {
@@ -667,6 +668,12 @@ export default function Show({
                                                             )}
                                                         </div>
                                                     </div>
+                                                    {issue.creator && (
+                                                        <p className="mt-1 text-[11px] text-gray-400">
+                                                            Қосқан:{' '}
+                                                            {issue.creator.full_name}
+                                                        </p>
+                                                    )}
                                                 </div>
                                             );
                                         })}

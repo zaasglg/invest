@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, Menu } from 'lucide-react';
+import { Bell, Menu, Shield, Users } from 'lucide-react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -168,6 +168,45 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     {/* Right side: notifications + avatar */}
                     <div className="ml-auto flex items-center gap-1">
+                        {(auth.user?.role_model?.name === 'superadmin' ||
+                            auth.user?.role === 'superadmin') && (
+                            <>
+                                <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link
+                                                href="/roles"
+                                                className={cn(
+                                                    'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                    isCurrentUrl('/roles') &&
+                                                        'bg-white/10 text-white',
+                                                )}
+                                            >
+                                                <Shield className="h-4 w-4" />
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Рөлдер</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <TooltipProvider delayDuration={0}>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Link
+                                                href="/users"
+                                                className={cn(
+                                                    'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                    isCurrentUrl('/users') &&
+                                                        'bg-white/10 text-white',
+                                                )}
+                                            >
+                                                <Users className="h-4 w-4" />
+                                            </Link>
+                                        </TooltipTrigger>
+                                        <TooltipContent>Пайдаланушылар</TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            </>
+                        )}
                         <TooltipProvider delayDuration={0}>
                             <Tooltip>
                                 <TooltipTrigger asChild>

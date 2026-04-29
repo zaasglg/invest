@@ -13,10 +13,16 @@ class PromZoneIssue extends Model
         'category',
         'severity',
         'status',
+        'created_by',
     ];
 
     public function promZone()
     {
         return $this->belongsTo(PromZone::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

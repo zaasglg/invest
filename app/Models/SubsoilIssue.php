@@ -11,10 +11,16 @@ class SubsoilIssue extends Model
         'description',
         'severity',
         'status',
+        'created_by',
     ];
 
     public function subsoilUser()
     {
         return $this->belongsTo(SubsoilUser::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

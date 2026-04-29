@@ -77,8 +77,22 @@ class TaskCompletionController extends Controller
             }
         }
 
-        // Update task status to in_progress
-        $task->update(['status' => 'in_progress']);
+        // Update task status to in_progress and ensure viewed_at is set
+        // (submitting completion implies the executor has seen the task).
+        $taskUpdate = ['status' => 'in_progress'];
+        $shouldLogView = $task->viewed_at === null;
+        if ($shouldLogView) {
+            $taskUpdate['viewed_at'] = now();
+        }
+        $task->update($taskUpdate);
+
+        if ($shouldLogView) {
+            \App\Models\ProjectTaskEvent::create([
+                'task_id' => $task->id,
+                'user_id' => Auth::id(),
+                'type' => 'viewed',
+            ]);
+        }
 
         // Notify only the user who assigned the task (creator) and superadmins.
         $notifyUserIds = collect();

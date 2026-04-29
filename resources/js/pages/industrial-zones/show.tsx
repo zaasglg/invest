@@ -44,6 +44,7 @@ interface Issue {
     category?: string;
     severity?: string;
     status?: string;
+    creator?: { id: number; full_name: string } | null;
 }
 
 interface InvestmentProject {
@@ -625,6 +626,12 @@ export default function Show({
                                                 {issue.description && (
                                                     <p className="text-xs text-gray-500">
                                                         {issue.description}
+                                                    </p>
+                                                )}
+                                                {issue.creator && (
+                                                    <p className="mt-1 text-[11px] text-gray-400">
+                                                        Қосқан:{' '}
+                                                        {issue.creator.full_name}
                                                     </p>
                                                 )}
                                             </div>

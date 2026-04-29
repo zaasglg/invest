@@ -11,7 +11,7 @@ class PromZoneIssueController extends Controller
 {
     public function index(PromZone $promZone)
     {
-        $issues = $promZone->issues()->latest()->get();
+        $issues = $promZone->issues()->with('creator:id,full_name')->latest()->get();
 
         return Inertia::render('prom-zones/issues', [
             'promZone' => $promZone->load('region'),
@@ -29,7 +29,10 @@ class PromZoneIssueController extends Controller
             'status' => 'required|in:open,in_progress,resolved',
         ]);
 
-        $promZone->issues()->create($validated);
+        $promZone->issues()->create([
+            ...$validated,
+            'created_by' => $request->user()?->id,
+        ]);
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
@@ -43,6 +46,10 @@ class PromZoneIssueController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'status' => 'required|in:open,in_progress,resolved',
         ]);
+
+        if ($issue->created_by === null) {
+            $validated['created_by'] = $request->user()?->id;
+        }
 
         $issue->update($validated);
 

@@ -12,16 +12,19 @@ use Inertia\Inertia;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::with(['region', 'roleModel'])
-            ->latest()
-            ->paginate(15)
-            ->withQueryString();
-        // dd($users);
+        $query = User::with(['region', 'roleModel'])->latest();
 
+        if ($request->filled('baskarma_type')) {
+            $query->where('baskarma_type', $request->baskarma_type);
+        }
+
+        $users = $query->paginate(15)->withQueryString();
+        // dd($users->toArray());
         return Inertia::render('users/index', [
             'users' => $users,
+            'filters' => $request->only('baskarma_type'),
         ]);
     }
 

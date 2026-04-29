@@ -1,4 +1,4 @@
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { UserIcon } from 'lucide-react';
 import Pagination from '@/components/pagination';
@@ -12,6 +12,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { cn } from '@/lib/utils';
 import * as usersRoutes from '@/routes/users';
 
 import type { PaginatedData } from '@/types';
@@ -32,15 +33,33 @@ interface User {
     email: string;
     phone: string | null;
     avatar: string | null;
+    baskarma_type: 'oblast' | 'district' | null;
+    position: string | null;
     region: Region | null;
     role_model: Role | null;
 }
 
 interface Props {
     users: PaginatedData<User>;
+    filters: { baskarma_type?: string };
 }
 
-export default function Index({ users }: Props) {
+const FILTER_TABS = [
+    { label: 'Барлығы', value: '' },
+    { label: 'Облыстық басқарма', value: 'oblast' },
+    { label: 'Аудандық', value: 'district' },
+] as const;
+
+export default function Index({ users, filters }: Props) {
+    const activeFilter = filters.baskarma_type ?? '';
+
+    const applyFilter = (value: string) => {
+        router.get(
+            usersRoutes.index.url(),
+            value ? { baskarma_type: value } : {},
+            { preserveState: true, replace: true },
+        );
+    };
     const formatShortName = (fullName: string) => {
         const parts = fullName.trim().split(/\s+/);
         if (parts.length <= 1) return fullName;
@@ -75,6 +94,24 @@ export default function Index({ users }: Props) {
                     </Link>
                 </div>
 
+                {/* Filter tabs */}
+                <div className="flex gap-2">
+                    {FILTER_TABS.map((tab) => (
+                        <button
+                            key={tab.value}
+                            onClick={() => applyFilter(tab.value)}
+                            className={cn(
+                                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                                activeFilter === tab.value
+                                    ? 'bg-[#0f1b3d] text-white'
+                                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
+                            )}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+
                 <div className="overflow-hidden rounded-xl">
                     <Table>
                         <TableHeader>
@@ -84,7 +121,7 @@ export default function Index({ users }: Props) {
                                 <TableHead>АТЖ</TableHead>
                                 <TableHead>Нөмір</TableHead>
                                 <TableHead>Email</TableHead>
-                                <TableHead>Аймақ</TableHead>
+                                <TableHead>Лауазым / Аудан</TableHead>
                                 <TableHead className="text-right">
                                     Әрекеттер
                                 </TableHead>
@@ -94,7 +131,7 @@ export default function Index({ users }: Props) {
                             {users.data.length === 0 ? (
                                 <TableRow>
                                     <TableCell
-                                        colSpan={6}
+                                        colSpan={7}
                                         className="py-12 text-center text-gray-400"
                                     >
                                         Мәлімет жоқ
@@ -128,8 +165,12 @@ export default function Index({ users }: Props) {
                                         <TableCell className="text-gray-500">
                                             {user.email}
                                         </TableCell>
-                                        <TableCell>
-                                            {user.region?.name || '—'}
+                                        <TableCell className="text-gray-500">
+                                            {user.baskarma_type === 'district'
+                                                ? user.region?.name ||
+                                                  user.position ||
+                                                  '—'
+                                                : user.position || '—'}
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">
