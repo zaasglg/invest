@@ -13,10 +13,16 @@ class IndustrialZoneIssue extends Model
         'category',
         'severity',
         'status',
+        'created_by',
     ];
 
     public function industrialZone()
     {
         return $this->belongsTo(IndustrialZone::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

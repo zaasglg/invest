@@ -20,7 +20,7 @@ class ProjectIssueController extends Controller
             abort(403, 'Сіз бұл жобаға қатыспайсыз.');
         }
 
-        $issues = $investmentProject->issues()->latest()->get();
+        $issues = $investmentProject->issues()->with('creator:id,full_name')->latest()->get();
 
         return Inertia::render('investment-projects/issues', [
             'project' => $investmentProject->load(['region', 'projectType']),
@@ -43,7 +43,10 @@ class ProjectIssueController extends Controller
             'status' => 'required|in:open,in_progress,resolved',
         ]);
 
-        $investmentProject->issues()->create($validated);
+        $investmentProject->issues()->create([
+            ...$validated,
+            'created_by' => $user?->id,
+        ]);
 
         KpiLog::log($investmentProject->id, 'Проблемалық мәселе қосылды: "' . $validated['title'] . '"');
 
@@ -69,6 +72,10 @@ class ProjectIssueController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'status' => 'required|in:open,in_progress,resolved',
         ]);
+
+        if ($issue->created_by === null) {
+            $validated['created_by'] = $user?->id;
+        }
 
         $issue->update($validated);
 

@@ -99,7 +99,7 @@ class PromZoneController extends Controller
 
     public function show(PromZone $promZone)
     {
-        $promZone->load(['region', 'issues', 'investmentProjects' => function ($q) {
+        $promZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) {
             $q->where('is_archived', false)->with('region');
         }])->loadCount('photos');
 

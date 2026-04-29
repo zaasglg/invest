@@ -49,7 +49,7 @@ class IssuesController extends Controller
 
         // Get issues based on sector filter
         if ($sector === 'invest' || ! $sector) {
-            $query = ProjectIssue::with(['project.region']);
+            $query = ProjectIssue::with(['project.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('project', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -75,6 +75,7 @@ class IssuesController extends Controller
                     'entity_name' => $issue->project?->name ?? 'Белгісіз жоба',
                     'region_name' => $issue->project?->region?->name ?? null,
                     'created_at' => $issue->created_at,
+                    'creator_full_name' => $issue->creator?->full_name,
                 ];
             });
 
@@ -86,7 +87,7 @@ class IssuesController extends Controller
         }
 
         if (($sector === 'sez' || ! $sector) && $canSeeSez) {
-            $query = SezIssue::with(['sez.region']);
+            $query = SezIssue::with(['sez.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('sez', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -106,6 +107,7 @@ class IssuesController extends Controller
                     'entity_name' => $issue->sez?->name ?? 'Белгісіз АЭА',
                     'region_name' => $issue->sez?->region?->name ?? null,
                     'created_at' => $issue->created_at,
+                    'creator_full_name' => $issue->creator?->full_name,
                 ];
             });
 
@@ -117,7 +119,7 @@ class IssuesController extends Controller
         }
 
         if (($sector === 'iz' || ! $sector) && $canSeeIz) {
-            $query = IndustrialZoneIssue::with(['industrialZone.region']);
+            $query = IndustrialZoneIssue::with(['industrialZone.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('industrialZone', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -137,6 +139,7 @@ class IssuesController extends Controller
                     'entity_name' => $issue->industrialZone?->name ?? 'Белгісіз ИА',
                     'region_name' => $issue->industrialZone?->region?->name ?? null,
                     'created_at' => $issue->created_at,
+                    'creator_full_name' => $issue->creator?->full_name,
                 ];
             });
 
@@ -148,7 +151,7 @@ class IssuesController extends Controller
         }
 
         if (($sector === 'prom' || ! $sector) && $canSeeProm) {
-            $query = PromZoneIssue::with(['promZone.region']);
+            $query = PromZoneIssue::with(['promZone.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('promZone', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -168,6 +171,7 @@ class IssuesController extends Controller
                     'entity_name' => $issue->promZone?->name ?? 'Белгісіз пром зона',
                     'region_name' => $issue->promZone?->region?->name ?? null,
                     'created_at' => $issue->created_at,
+                    'creator_full_name' => $issue->creator?->full_name,
                 ];
             });
 
@@ -179,7 +183,7 @@ class IssuesController extends Controller
         }
 
         if (($sector === 'nedro' || ! $sector) && $canSeeSubsoil) {
-            $query = SubsoilIssue::with(['subsoilUser.region']);
+            $query = SubsoilIssue::with(['subsoilUser.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('subsoilUser', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -199,6 +203,7 @@ class IssuesController extends Controller
                     'entity_name' => $issue->subsoilUser?->company_name ?? 'Белгісіз компания',
                     'region_name' => $issue->subsoilUser?->region?->name ?? null,
                     'created_at' => $issue->created_at,
+                    'creator_full_name' => $issue->creator?->full_name,
                 ];
             });
 

@@ -115,7 +115,7 @@ class SubsoilUserController extends Controller
 
     public function show(SubsoilUser $subsoilUser)
     {
-        $subsoilUser->load(['region', 'issues', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
+        $subsoilUser->load(['region', 'issues', 'issues.creator:id,full_name', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $subsoilUser->photos()

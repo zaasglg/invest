@@ -41,6 +41,7 @@ interface Issue {
     severity: string;
     status: string;
     created_at: string;
+    creator?: { id: number; full_name: string } | null;
 }
 
 interface Props {
@@ -484,13 +485,25 @@ export default function Issues({ sez, issues }: Props) {
                                                             </p>
                                                         )}
                                                         <div className="mt-2 flex items-center justify-between">
-                                                            <span className="text-xs text-gray-400">
-                                                                {new Date(
-                                                                    issue.created_at,
-                                                                ).toLocaleDateString(
-                                                                    'kk-KZ',
+                                                            <div className="flex flex-col text-xs text-gray-400">
+                                                                <span>
+                                                                    {new Date(
+                                                                        issue.created_at,
+                                                                    ).toLocaleDateString(
+                                                                        'kk-KZ',
+                                                                    )}
+                                                                </span>
+                                                                {issue.creator && (
+                                                                    <span>
+                                                                        Қосқан:{' '}
+                                                                        {
+                                                                            issue
+                                                                                .creator
+                                                                                .full_name
+                                                                        }
+                                                                    </span>
                                                                 )}
-                                                            </span>
+                                                            </div>
                                                             {canModify && (
                                                                 <div className="flex gap-1">
                                                                     <Button

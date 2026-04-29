@@ -13,10 +13,16 @@ class ProjectIssue extends Model
         'category',
         'severity',
         'status',
+        'created_by',
     ];
 
     public function project()
     {
         return $this->belongsTo(InvestmentProject::class, 'project_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 }

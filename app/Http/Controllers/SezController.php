@@ -99,7 +99,7 @@ class SezController extends Controller
 
     public function show(Sez $sez)
     {
-        $sez->load(['region', 'issues'])
+        $sez->load(['region', 'issues', 'issues.creator:id,full_name'])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $sez->photos()

@@ -99,7 +99,7 @@ class IndustrialZoneController extends Controller
 
     public function show(IndustrialZone $industrialZone)
     {
-        $industrialZone->load(['region', 'issues', 'investmentProjects' => function ($q) {
+        $industrialZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) {
             $q->where('is_archived', false)->with('region');
         }])->loadCount('photos');
 

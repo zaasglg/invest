@@ -105,6 +105,7 @@ interface InvestmentProject {
         description?: string;
         status?: string;
         severity?: string;
+        creator?: { id: number; full_name: string } | null;
     }>;
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
@@ -1044,6 +1045,16 @@ export default function Show({
                                                                         <p className="mt-1 line-clamp-2 text-sm text-gray-600">
                                                                             {
                                                                                 issue.description
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                    {issue.creator && (
+                                                                        <p className="mt-1 text-xs text-gray-500">
+                                                                            Қосқан:{' '}
+                                                                            {
+                                                                                issue
+                                                                                    .creator
+                                                                                    .full_name
                                                                             }
                                                                         </p>
                                                                     )}

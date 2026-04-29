@@ -465,6 +465,7 @@ class InvestmentProjectController extends Controller
             'executors',
             'documents',
             'issues',
+            'issues.creator:id,full_name',
             'tasks' => function ($query) use ($currentRole) {
                 // Executors only see tasks the moderator has approved.
                 if ($currentRole === 'ispolnitel') {
