@@ -94,6 +94,14 @@ class TaskCompletionController extends Controller
             ]);
         }
 
+        // Log completion submission event (executor submitted work).
+        \App\Models\ProjectTaskEvent::create([
+            'task_id' => $task->id,
+            'user_id' => Auth::id(),
+            'type' => 'completion_submitted',
+            'comment' => $request->input('comment'),
+        ]);
+
         // Notify only the user who assigned the task (creator) and superadmins.
         $notifyUserIds = collect();
 
@@ -159,6 +167,15 @@ class TaskCompletionController extends Controller
             'reviewer_comment' => $request->input('reviewer_comment'),
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
+        ]);
+
+        \App\Models\ProjectTaskEvent::create([
+            'task_id' => $task->id,
+            'user_id' => Auth::id(),
+            'type' => $request->input('status') === 'approved'
+                ? 'completion_approved'
+                : 'completion_rejected',
+            'comment' => $request->input('reviewer_comment'),
         ]);
 
         $reviewerName = Auth::user()->full_name ?? 'Орындаушы';

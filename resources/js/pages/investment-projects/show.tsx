@@ -163,7 +163,15 @@ interface ProjectTaskItem {
     viewed_at?: string | null;
     events?: Array<{
         id: number;
-        type: 'created' | 'approved' | 'rejected' | 'viewed' | 'edited';
+        type:
+            | 'created'
+            | 'approved'
+            | 'rejected'
+            | 'viewed'
+            | 'edited'
+            | 'completion_submitted'
+            | 'completion_approved'
+            | 'completion_rejected';
         comment?: string | null;
         created_at: string;
         user?: { id: number; full_name?: string } | null;
@@ -2572,6 +2580,12 @@ export default function Show({
                                                             'Модератор қабылдамады',
                                                         edited: 'Тапсырма өзгертілді',
                                                         viewed: 'Исполнитель көрді',
+                                                        completion_submitted:
+                                                            'Исполнитель орындап жіберді',
+                                                        completion_approved:
+                                                            'Invest орындалуды қабылдады',
+                                                        completion_rejected:
+                                                            'Invest орындалуды қабылдамады',
                                                     };
                                                     const dotMap: Record<
                                                         string,
@@ -2583,6 +2597,12 @@ export default function Show({
                                                         rejected: 'bg-red-500',
                                                         edited: 'bg-amber-500',
                                                         viewed: 'bg-cyan-500',
+                                                        completion_submitted:
+                                                            'bg-indigo-500',
+                                                        completion_approved:
+                                                            'bg-green-600',
+                                                        completion_rejected:
+                                                            'bg-rose-600',
                                                     };
                                                     return (
                                                         <ol className="relative space-y-3 border-l border-gray-200 pl-4">
