@@ -177,7 +177,8 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        if (Auth::user()?->roleModel?->name === 'moderator') {
+        $editorRole = Auth::user()?->roleModel?->name;
+        if ($editorRole === 'moderator') {
             abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
         }
 
@@ -191,6 +192,23 @@ class ProjectTaskController extends Controller
         ]);
 
         $oldAssignedTo = $task->assigned_to;
+        $wasRejected = $task->approval_status === 'rejected';
+
+        // Determine if this update is a content edit (not just a status toggle).
+        // Status-only updates (e.g. mark as done) must not re-trigger moderation.
+        $contentEdit = collect($validated)
+            ->except('status')
+            ->isNotEmpty();
+
+        // If a previously rejected task is edited by invest (not superadmin),
+        // resubmit it for moderator approval — clear the rejection and put it
+        // back into pending state. Superadmin edits remain auto-approved.
+        if ($wasRejected && $contentEdit && $editorRole !== 'superadmin') {
+            $validated['approval_status'] = 'pending';
+            $validated['approval_comment'] = null;
+            $validated['approved_by'] = null;
+            $validated['approved_at'] = null;
+        }
 
         $task->update($validated);
 
@@ -212,6 +230,30 @@ class ProjectTaskController extends Controller
             if ($newAssignedTo) {
                 $investmentProject->executors()->syncWithoutDetaching([$newAssignedTo]);
             }
+        }
+
+        // If we re-queued the task for moderation, notify moderators again.
+        if ($wasRejected && $task->approval_status === 'pending') {
+            $moderatorIds = User::whereHas('roleModel', fn ($q) => $q->where('name', 'moderator'))
+                ->pluck('id');
+            foreach ($moderatorIds as $moderatorId) {
+                if ((int) $moderatorId === (int) Auth::id()) {
+                    continue;
+                }
+                TaskNotification::create([
+                    'user_id' => $moderatorId,
+                    'task_id' => $task->id,
+                    'type' => 'task_pending_approval',
+                    'message' => "Тапсырма қайта жіберілді: \"{$task->title}\" (Жоба: {$investmentProject->name})",
+                ]);
+            }
+
+            KpiLog::log(
+                $investmentProject->id,
+                'Тапсырма қайта расталуға жіберілді: "'.$task->title.'"'
+            );
+
+            return redirect()->back()->with('success', 'Тапсырма қайта расталуға жіберілді.');
         }
 
         KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "'.$task->title.'"');
