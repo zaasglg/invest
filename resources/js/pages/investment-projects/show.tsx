@@ -152,6 +152,7 @@ interface ProjectTaskItem {
         position?: string | null;
         role_model?: { id: number; display_name?: string };
     };
+    creator?: { id: number; full_name?: string; name?: string } | null;
     start_date?: string;
     due_date?: string;
     status: 'new' | 'in_progress' | 'done' | 'rejected';
@@ -159,6 +160,14 @@ interface ProjectTaskItem {
     approval_comment?: string | null;
     approver?: { id: number; full_name?: string } | null;
     approved_at?: string | null;
+    viewed_at?: string | null;
+    events?: Array<{
+        id: number;
+        type: 'created' | 'approved' | 'rejected' | 'viewed' | 'edited';
+        comment?: string | null;
+        created_at: string;
+        user?: { id: number; full_name?: string } | null;
+    }>;
     completions?: TaskCompletionItem[];
     created_at: string;
 }
@@ -583,6 +592,23 @@ export default function Show({
         setCompletionPhotos([]);
         setCompletionFileError(null);
         setShowCompletionModal(true);
+
+        // Mark the task viewed on the server if this is the assigned
+        // ispolnitel opening it for the first time.
+        const task = (project.tasks || []).find((t) => t.id === taskId);
+        if (
+            task &&
+            isIspolnitel &&
+            task.assigned_to === currentUserId &&
+            !task.viewed_at &&
+            (task.approval_status ?? 'approved') === 'approved'
+        ) {
+            router.post(
+                `/investment-projects/${project.id}/tasks/${task.id}/view`,
+                {},
+                { preserveScroll: true, preserveState: true },
+            );
+        }
     };
 
     const handleCompletionDocChange = (
@@ -700,6 +726,28 @@ export default function Show({
                 onError: () => setIsReviewing(false),
             },
         );
+    };
+
+    // Task info modal state (eye button)
+    const [infoTask, setInfoTask] = useState<ProjectTaskItem | null>(null);
+
+    const handleOpenTaskInfo = (task: ProjectTaskItem) => {
+        setInfoTask(task);
+        // If the current user is the assigned ispolnitel and hasn't viewed
+        // the task yet, mark it viewed on the server. We do this silently
+        // (preserveScroll) so the modal stays open.
+        if (
+            isIspolnitel &&
+            task.assigned_to === currentUserId &&
+            !task.viewed_at &&
+            (task.approval_status ?? 'approved') === 'approved'
+        ) {
+            router.post(
+                `/investment-projects/${project.id}/tasks/${task.id}/view`,
+                {},
+                { preserveScroll: true, preserveState: true },
+            );
+        }
     };
 
     // Moderator approval state
@@ -1363,6 +1411,20 @@ export default function Show({
                                                             )}
                                                         </div>
                                                         <div className="flex items-center gap-2">
+                                                            {/* Info: open read-only task details modal */}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-gray-400 hover:bg-cyan-50 hover:text-cyan-600"
+                                                                onClick={() =>
+                                                                    handleOpenTaskInfo(
+                                                                        task,
+                                                                    )
+                                                                }
+                                                                title="Толық ақпарат"
+                                                            >
+                                                                <Eye className="h-4 w-4" />
+                                                            </Button>
                                                             {/* Moderator/Superadmin: approve or reject pending tasks */}
                                                             {canApproveTasks &&
                                                                 task.approval_status ===
@@ -2366,6 +2428,229 @@ export default function Show({
                         </div>
                     </div>
                 )}
+
+                {/* Task Info Modal (read-only, opened by Eye button) */}
+                {infoTask &&
+                    (() => {
+                        const t = infoTask;
+                        const fmtDate = (v?: string | null) => {
+                            if (!v) return null;
+                            const d = new Date(v);
+                            if (isNaN(d.getTime())) return null;
+                            return d.toLocaleDateString('kk-KZ', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                            });
+                        };
+                        const fmtDateTime = (v?: string | null) => {
+                            if (!v) return null;
+                            const d = new Date(v);
+                            if (isNaN(d.getTime())) return null;
+                            return d.toLocaleString('kk-KZ', {
+                                day: 'numeric',
+                                month: 'long',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                            });
+                        };
+                        const creatorName =
+                            t.creator?.full_name ||
+                            t.creator?.name ||
+                            '—';
+                        const assigneeName =
+                            t.assignee?.full_name ||
+                            t.assignee?.name ||
+                            '—';
+                        const periodStart = fmtDate(t.start_date);
+                        const periodEnd = fmtDate(t.due_date);
+                        const period =
+                            periodStart && periodEnd
+                                ? `${periodStart} — ${periodEnd}`
+                                : periodEnd ||
+                                  periodStart ||
+                                  'Көрсетілмеген';
+                        return (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+                                <div className="mx-4 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
+                                    <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
+                                        <h3 className="flex items-center gap-2 text-lg font-bold text-white">
+                                            <Eye className="h-5 w-5" />
+                                            Тапсырма туралы
+                                        </h3>
+                                        <button
+                                            type="button"
+                                            onClick={() => setInfoTask(null)}
+                                            className="text-white/80 transition-colors hover:text-white"
+                                        >
+                                            <X className="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                    <div className="max-h-[70vh] space-y-4 overflow-y-auto p-6">
+                                        <div className="rounded-lg border border-gray-200 p-3">
+                                            <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Тапсырманы берген
+                                            </p>
+                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                                {creatorName}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-3">
+                                            <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Тақырып
+                                            </p>
+                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                                {t.title}
+                                            </p>
+                                            {t.description && (
+                                                <p className="mt-2 text-sm whitespace-pre-wrap text-gray-700">
+                                                    {t.description}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-3">
+                                            <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Тапсырма мерзімі
+                                            </p>
+                                            <p className="mt-1 text-sm text-gray-700">
+                                                {period}
+                                            </p>
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200 p-3">
+                                            <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Жауапты (исполнитель)
+                                            </p>
+                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                                {assigneeName}
+                                            </p>
+                                            {t.assignee?.position && (
+                                                <p className="text-xs text-gray-500">
+                                                    {t.assignee.position}
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        <div className="rounded-lg border border-gray-200">
+                                            <p className="border-b border-gray-200 px-3 py-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Оқиғалар тарихы
+                                            </p>
+                                            <div className="max-h-64 overflow-y-auto p-3">
+                                                {(() => {
+                                                    const events = (
+                                                        t.events || []
+                                                    )
+                                                        .slice()
+                                                        .sort(
+                                                            (a, b) =>
+                                                                new Date(
+                                                                    a.created_at,
+                                                                ).getTime() -
+                                                                new Date(
+                                                                    b.created_at,
+                                                                ).getTime(),
+                                                        );
+                                                    if (events.length === 0) {
+                                                        return (
+                                                            <p className="text-sm text-gray-500">
+                                                                Оқиғалар жоқ
+                                                            </p>
+                                                        );
+                                                    }
+                                                    const labelMap: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        created:
+                                                            'Тапсырма берілді',
+                                                        approved:
+                                                            'Модератор қабылдады',
+                                                        rejected:
+                                                            'Модератор қабылдамады',
+                                                        edited: 'Тапсырма өзгертілді',
+                                                        viewed: 'Исполнитель көрді',
+                                                    };
+                                                    const dotMap: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        created: 'bg-blue-500',
+                                                        approved:
+                                                            'bg-emerald-500',
+                                                        rejected: 'bg-red-500',
+                                                        edited: 'bg-amber-500',
+                                                        viewed: 'bg-cyan-500',
+                                                    };
+                                                    return (
+                                                        <ol className="relative space-y-3 border-l border-gray-200 pl-4">
+                                                            {events.map(
+                                                                (ev) => (
+                                                                    <li
+                                                                        key={
+                                                                            ev.id
+                                                                        }
+                                                                        className="relative"
+                                                                    >
+                                                                        <span
+                                                                            className={`absolute -left-[21px] top-1.5 h-3 w-3 rounded-full ring-2 ring-white ${dotMap[ev.type] || 'bg-gray-400'}`}
+                                                                        />
+                                                                        <p className="text-sm font-medium text-[#0f1b3d]">
+                                                                            {labelMap[
+                                                                                ev
+                                                                                    .type
+                                                                            ] ||
+                                                                                ev.type}
+                                                                        </p>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            {fmtDateTime(
+                                                                                ev.created_at,
+                                                                            ) ||
+                                                                                '—'}
+                                                                            {ev
+                                                                                .user
+                                                                                ?.full_name && (
+                                                                                <>
+                                                                                    {' · '}
+                                                                                    {
+                                                                                        ev
+                                                                                            .user
+                                                                                            .full_name
+                                                                                    }
+                                                                                </>
+                                                                            )}
+                                                                        </p>
+                                                                        {ev.comment && (
+                                                                            <p className="mt-1 text-xs whitespace-pre-wrap text-gray-600">
+                                                                                {
+                                                                                    ev.comment
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </li>
+                                                                ),
+                                                            )}
+                                                        </ol>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex justify-end gap-3 border-t border-gray-200 px-6 py-4">
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={() => setInfoTask(null)}
+                                        >
+                                            Жабу
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })()}
             </div>
         </AppLayout>
     );

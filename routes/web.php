@@ -103,6 +103,7 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
     Route::delete('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'destroy'])->name('investment-projects.tasks.destroy');
     Route::post('tasks/{task}/approve', [\App\Http\Controllers\ProjectTaskController::class, 'approve'])->name('investment-projects.tasks.approve');
     Route::post('tasks/{task}/reject', [\App\Http\Controllers\ProjectTaskController::class, 'reject'])->name('investment-projects.tasks.reject');
+    Route::post('tasks/{task}/view', [\App\Http\Controllers\ProjectTaskController::class, 'markViewed'])->name('investment-projects.tasks.view');
 
     Route::post('tasks/{task}/completions', [\App\Http\Controllers\TaskCompletionController::class, 'store'])->name('investment-projects.tasks.completions.store');
     Route::put('tasks/{task}/completions/{completion}/review', [\App\Http\Controllers\TaskCompletionController::class, 'review'])->name('investment-projects.tasks.completions.review');

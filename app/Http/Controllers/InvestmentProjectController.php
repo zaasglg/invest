@@ -474,6 +474,8 @@ class InvestmentProjectController extends Controller
             },
             'tasks.assignee.roleModel',
             'tasks.approver',
+            'tasks.creator',
+            'tasks.events.user:id,full_name',
             'tasks.completions.submitter',
             'tasks.completions.reviewer',
             'tasks.completions.files',

@@ -19,6 +19,7 @@ class ProjectTask extends Model
         'approval_comment',
         'approved_by',
         'approved_at',
+        'viewed_at',
     ];
 
     protected function casts(): array
@@ -27,6 +28,7 @@ class ProjectTask extends Model
             'start_date' => 'date',
             'due_date' => 'date',
             'approved_at' => 'datetime',
+            'viewed_at' => 'datetime',
         ];
     }
 
@@ -63,5 +65,10 @@ class ProjectTask extends Model
     public function notifications()
     {
         return $this->hasMany(TaskNotification::class, 'task_id');
+    }
+
+    public function events()
+    {
+        return $this->hasMany(ProjectTaskEvent::class, 'task_id');
     }
 }
