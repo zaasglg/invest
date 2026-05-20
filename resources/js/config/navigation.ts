@@ -99,8 +99,7 @@ export const headerNavItems: NavItem[] = [
     ...zoneNavItems,
     ...projectNavItems.filter((item) => item.title !== 'Инвест. жобалар'),
     ...adminNavItems.filter(
-        (item) =>
-            item.title !== 'Пайдаланушылар' && item.title !== 'Рөлдер',
+        (item) => item.title !== 'Пайдаланушылар' && item.title !== 'Рөлдер',
     ),
 ];
 

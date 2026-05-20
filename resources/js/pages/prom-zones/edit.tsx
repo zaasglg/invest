@@ -46,11 +46,7 @@ interface Props {
     isDistrictScoped?: boolean;
 }
 
-export default function Edit({
-    promZone,
-    regions,
-    isDistrictScoped,
-}: Props) {
+export default function Edit({ promZone, regions, isDistrictScoped }: Props) {
     const { url } = usePage();
     const queryParams = new URLSearchParams(url.split('?')[1]);
     const returnUrl = queryParams.get('return_to');
@@ -66,9 +62,7 @@ export default function Edit({
             getEmptyInfrastructure()) as InfrastructureData,
     });
 
-    const initialRegion = regions.find(
-        (r) => r.id === promZone.region_id,
-    );
+    const initialRegion = regions.find((r) => r.id === promZone.region_id);
     const initialOblastId = initialRegion
         ? initialRegion.type === 'oblast'
             ? initialRegion.id.toString()
@@ -212,8 +206,8 @@ export default function Edit({
                                     Негізгі ақпарат
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    Пром зона туралы негізгі
-                                    мәліметтерді толтырыңыз.
+                                    Пром зона туралы негізгі мәліметтерді
+                                    толтырыңыз.
                                 </p>
                             </div>
 
@@ -642,5 +636,3 @@ export default function Edit({
         </AppLayout>
     );
 }
-
-

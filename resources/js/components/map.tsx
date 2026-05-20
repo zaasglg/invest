@@ -81,6 +81,7 @@ interface SectorData {
     prom: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
+    all_projects?: SectorRow;
 }
 
 interface SectorSummary {
@@ -1875,14 +1876,16 @@ export default function Map({
                                                 ИА: {name}
                                             </span>
                                         ))}
-                                        {activePlot.promNames?.map((name, i) => (
-                                            <span
-                                                key={`prom-${i}`}
-                                                className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-medium text-teal-800"
-                                            >
-                                                Пром зона: {name}
-                                            </span>
-                                        ))}
+                                        {activePlot.promNames?.map(
+                                            (name, i) => (
+                                                <span
+                                                    key={`prom-${i}`}
+                                                    className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-medium text-teal-800"
+                                                >
+                                                    Пром зона: {name}
+                                                </span>
+                                            ),
+                                        )}
                                         {activePlot.subsoilNames?.map(
                                             (name, i) => (
                                                 <span
@@ -1937,6 +1940,15 @@ export default function Map({
 
                     const rows: { key: string; label: string; d: SectorRow }[] =
                         [
+                            ...(data.all_projects
+                                ? [
+                                      {
+                                          key: 'all_projects',
+                                          label: 'Барлық жобалар',
+                                          d: data.all_projects,
+                                      },
+                                  ]
+                                : []),
                             {
                                 key: 'invest',
                                 label: 'Turkistan Invest',

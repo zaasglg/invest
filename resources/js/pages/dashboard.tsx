@@ -28,6 +28,7 @@ interface SectorData {
     prom: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
+    all_projects?: SectorRow;
 }
 
 interface SectorSummary {

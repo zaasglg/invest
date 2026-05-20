@@ -103,9 +103,7 @@ export default function Issues({ promZone, issues }: Props) {
 
     const handleDelete = (issueId: number) => {
         if (confirm('Бұл мәселені жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/prom-zones/${promZone.id}/issues/${issueId}`,
-            );
+            router.delete(`/prom-zones/${promZone.id}/issues/${issueId}`);
         }
     };
 
@@ -126,16 +124,12 @@ export default function Issues({ promZone, issues }: Props) {
     };
 
     const saveEdit = (issueId: number) => {
-        router.put(
-            `/prom-zones/${promZone.id}/issues/${issueId}`,
-            editData,
-            {
-                onSuccess: () => {
-                    setEditingId(null);
-                    setEditData({});
-                },
+        router.put(`/prom-zones/${promZone.id}/issues/${issueId}`, editData, {
+            onSuccess: () => {
+                setEditingId(null);
+                setEditData({});
             },
-        );
+        });
     };
 
     return (
@@ -558,5 +552,3 @@ export default function Issues({ promZone, issues }: Props) {
         </AppLayout>
     );
 }
-
-

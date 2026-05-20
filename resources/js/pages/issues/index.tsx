@@ -299,7 +299,9 @@ export default function IssuesIndex({
                                                 {issue.creator_full_name && (
                                                     <span>
                                                         <strong>Қосқан:</strong>{' '}
-                                                        {issue.creator_full_name}
+                                                        {
+                                                            issue.creator_full_name
+                                                        }
                                                     </span>
                                                 )}
                                             </div>

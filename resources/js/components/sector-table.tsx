@@ -11,8 +11,10 @@ interface SectorRow {
 interface SectorData {
     sez: SectorRow;
     iz: SectorRow;
+    prom?: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
+    all_projects?: SectorRow;
 }
 
 interface SectorSummary {
@@ -37,9 +39,28 @@ export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
             : sectorSummary.total;
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
+        ...(data.all_projects
+            ? [
+                  {
+                      key: 'all_projects',
+                      label: 'Барлық жобалар',
+                      d: data.all_projects,
+                  },
+              ]
+            : []),
         { key: 'invest', label: 'Turkistan Invest', d: data.invest },
         { key: 'sez', label: 'АЭА', d: data.sez },
         { key: 'iz', label: 'ИА', d: data.iz },
+        {
+            key: 'prom',
+            label: 'Пром зона',
+            d: data.prom ?? {
+                investment: 0,
+                projectCount: 0,
+                problemCount: 0,
+                jobCount: 0,
+            },
+        },
         { key: 'nedro', label: 'Жер қойнауын пайдалану', d: data.nedro },
     ];
 

@@ -523,7 +523,9 @@ export default function Gallery({
                                                                 onOpen={
                                                                     openLightbox
                                                                 }
-                                                                canModify={canManagePhotos}
+                                                                canModify={
+                                                                    canManagePhotos
+                                                                }
                                                             />
                                                         ),
                                                     )}

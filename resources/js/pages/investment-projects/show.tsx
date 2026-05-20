@@ -2464,21 +2464,15 @@ export default function Show({
                             });
                         };
                         const creatorName =
-                            t.creator?.full_name ||
-                            t.creator?.name ||
-                            '—';
+                            t.creator?.full_name || t.creator?.name || '—';
                         const assigneeName =
-                            t.assignee?.full_name ||
-                            t.assignee?.name ||
-                            '—';
+                            t.assignee?.full_name || t.assignee?.name || '—';
                         const periodStart = fmtDate(t.start_date);
                         const periodEnd = fmtDate(t.due_date);
                         const period =
                             periodStart && periodEnd
                                 ? `${periodStart} — ${periodEnd}`
-                                : periodEnd ||
-                                  periodStart ||
-                                  'Көрсетілмеген';
+                                : periodEnd || periodStart || 'Көрсетілмеген';
                         return (
                             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
                                 <div className="mx-4 w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl">
@@ -2615,7 +2609,7 @@ export default function Show({
                                                                         className="relative"
                                                                     >
                                                                         <span
-                                                                            className={`absolute -left-[21px] top-1.5 h-3 w-3 rounded-full ring-2 ring-white ${dotMap[ev.type] || 'bg-gray-400'}`}
+                                                                            className={`absolute top-1.5 -left-[21px] h-3 w-3 rounded-full ring-2 ring-white ${dotMap[ev.type] || 'bg-gray-400'}`}
                                                                         />
                                                                         <p className="text-sm font-medium text-[#0f1b3d]">
                                                                             {labelMap[
@@ -2633,7 +2627,9 @@ export default function Show({
                                                                                 .user
                                                                                 ?.full_name && (
                                                                                 <>
-                                                                                    {' · '}
+                                                                                    {
+                                                                                        ' · '
+                                                                                    }
                                                                                     {
                                                                                         ev
                                                                                             .user
