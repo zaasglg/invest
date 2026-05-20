@@ -1,5 +1,5 @@
 import 'leaflet/dist/leaflet.css';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import L from 'leaflet';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -23,6 +23,7 @@ import {
 } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { formatMoneyCompact } from '@/lib/utils';
+import type { SharedData } from '@/types';
 
 const DefaultIcon = L.icon({
     iconUrl: icon,
@@ -81,6 +82,7 @@ interface SectorData {
     prom: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
+    all_projects?: SectorRow;
 }
 
 interface SectorSummary {
@@ -612,6 +614,8 @@ export default function Map({
     onEntitySelect,
     onProjectSelect,
 }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const activeUser = auth?.user;
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
@@ -1875,14 +1879,16 @@ export default function Map({
                                                 ИА: {name}
                                             </span>
                                         ))}
-                                        {activePlot.promNames?.map((name, i) => (
-                                            <span
-                                                key={`prom-${i}`}
-                                                className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-medium text-teal-800"
-                                            >
-                                                Пром зона: {name}
-                                            </span>
-                                        ))}
+                                        {activePlot.promNames?.map(
+                                            (name, i) => (
+                                                <span
+                                                    key={`prom-${i}`}
+                                                    className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-[10px] font-medium text-teal-800"
+                                                >
+                                                    Пром зона: {name}
+                                                </span>
+                                            ),
+                                        )}
                                         {activePlot.subsoilNames?.map(
                                             (name, i) => (
                                                 <span
@@ -1937,11 +1943,26 @@ export default function Map({
 
                     const rows: { key: string; label: string; d: SectorRow }[] =
                         [
-                            {
-                                key: 'invest',
-                                label: 'Turkistan Invest',
-                                d: data.invest,
-                            },
+                            ...(data.all_projects &&
+                            activeUser?.invest_sub_role !== 'turkistan_invest'
+                                ? [
+                                      {
+                                          key: 'all_projects',
+                                          label: 'Барлық жобалар',
+                                          d: data.all_projects,
+                                      },
+                                  ]
+                                : []),
+                            ...(!activeUser?.invest_sub_role ||
+                            activeUser.invest_sub_role === 'turkistan_invest'
+                                ? [
+                                      {
+                                          key: 'invest',
+                                          label: 'Turkistan Invest',
+                                          d: data.invest,
+                                      },
+                                  ]
+                                : []),
                             { key: 'sez', label: 'АЭА', d: data.sez },
                             { key: 'iz', label: 'ИА', d: data.iz },
                             {

@@ -149,9 +149,7 @@ export default function Gallery({
 
     const handleDelete = (photoId: number) => {
         if (confirm('Бұл фотоны жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/prom-zones/${promZone.id}/gallery/${photoId}`,
-            );
+            router.delete(`/prom-zones/${promZone.id}/gallery/${photoId}`);
         }
     };
 
@@ -523,7 +521,9 @@ export default function Gallery({
                                                                 onOpen={
                                                                     openLightbox
                                                                 }
-                                                                canModify={canManagePhotos}
+                                                                canModify={
+                                                                    canManagePhotos
+                                                                }
                                                             />
                                                         ),
                                                     )}

@@ -139,7 +139,7 @@ class TaskCompletionController extends Controller
             ]);
         }
 
-        KpiLog::log($investmentProject->id, 'Тапсырма орындалды: "' . $task->title . '"');
+        KpiLog::log($investmentProject->id, 'Тапсырма орындалды: "'.$task->title.'"');
 
         return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
     }
@@ -207,7 +207,7 @@ class TaskCompletionController extends Controller
         }
 
         $statusLabel = $request->input('status') === 'approved' ? 'қабылданды' : 'қабылданбады';
-        KpiLog::log($investmentProject->id, 'Тапсырма ' . $statusLabel . ': "' . $task->title . '"');
+        KpiLog::log($investmentProject->id, 'Тапсырма '.$statusLabel.': "'.$task->title.'"');
 
         return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
     }

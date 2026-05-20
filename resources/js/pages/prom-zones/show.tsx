@@ -204,8 +204,8 @@ export default function Show({
                                     <Badge
                                         className={`${statusMap[promZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
                                     >
-                                        {statusMap[promZone.status]
-                                            ?.label || promZone.status}
+                                        {statusMap[promZone.status]?.label ||
+                                            promZone.status}
                                     </Badge>
                                 </div>
                             </div>
@@ -220,60 +220,59 @@ export default function Show({
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3 md:col-span-3">
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" />{' '}
-                                            Аудан
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {promZone.region?.name ||
-                                                'Көрсетілмеген'}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Activity className="h-3.5 w-3.5" />{' '}
-                                            Күйі
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {statusMap[promZone.status]
-                                                ?.label ||
-                                                promZone.status}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" />{' '}
-                                            Аумағы
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {promZone.total_area
-                                                ? `${promZone.total_area} га`
-                                                : 'Көрсетілмеген'}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Building2 className="h-3.5 w-3.5" />{' '}
-                                            Инвестиция көлемі
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {(() => {
-                                                const sum = projects.reduce(
-                                                    (acc, p) =>
-                                                        acc +
-                                                        Number(
-                                                            p.total_investment ||
-                                                                0,
-                                                        ),
-                                                    0,
-                                                );
-                                                return sum > 0
-                                                    ? formatCurrency(sum)
-                                                    : 'Көрсетілмеген';
-                                            })()}
-                                        </p>
-                                    </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <MapPin className="h-3.5 w-3.5" />{' '}
+                                                Аудан
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {promZone.region?.name ||
+                                                    'Көрсетілмеген'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Activity className="h-3.5 w-3.5" />{' '}
+                                                Күйі
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {statusMap[promZone.status]
+                                                    ?.label || promZone.status}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <MapPin className="h-3.5 w-3.5" />{' '}
+                                                Аумағы
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {promZone.total_area
+                                                    ? `${promZone.total_area} га`
+                                                    : 'Көрсетілмеген'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Building2 className="h-3.5 w-3.5" />{' '}
+                                                Инвестиция көлемі
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {(() => {
+                                                    const sum = projects.reduce(
+                                                        (acc, p) =>
+                                                            acc +
+                                                            Number(
+                                                                p.total_investment ||
+                                                                    0,
+                                                            ),
+                                                        0,
+                                                    );
+                                                    return sum > 0
+                                                        ? formatCurrency(sum)
+                                                        : 'Көрсетілмеген';
+                                                })()}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -285,48 +284,48 @@ export default function Show({
                                                 key: 'electricity',
                                                 name: 'Электрмен жабдықтау',
                                                 icon: Zap,
-                                                val: promZone
-                                                    .infrastructure.electricity,
+                                                val: promZone.infrastructure
+                                                    .electricity,
                                                 unit: 'МВт',
                                             },
                                             {
                                                 key: 'gas',
                                                 name: 'Газ',
                                                 icon: Flame,
-                                                val: promZone
-                                                    .infrastructure.gas,
+                                                val: promZone.infrastructure
+                                                    .gas,
                                                 unit: 'м³/сағ',
                                             },
                                             {
                                                 key: 'water',
                                                 name: 'Сумен жабдықтау',
                                                 icon: Droplets,
-                                                val: promZone
-                                                    .infrastructure.water,
+                                                val: promZone.infrastructure
+                                                    .water,
                                                 unit: 'м³/тәу',
                                             },
                                             {
                                                 key: 'roads',
                                                 name: 'Жолдар',
                                                 icon: Car,
-                                                val: promZone
-                                                    .infrastructure.roads,
+                                                val: promZone.infrastructure
+                                                    .roads,
                                                 unit: 'км',
                                             },
                                             {
                                                 key: 'railway',
                                                 name: 'Теміржол тұйығы',
                                                 icon: TrainFront,
-                                                val: promZone
-                                                    .infrastructure.railway,
+                                                val: promZone.infrastructure
+                                                    .railway,
                                                 unit: 'км',
                                             },
                                             {
                                                 key: 'internet',
                                                 name: 'Интернет',
                                                 icon: Wifi,
-                                                val: promZone
-                                                    .infrastructure.internet,
+                                                val: promZone.infrastructure
+                                                    .internet,
                                                 unit: '',
                                             },
                                         ].filter(
@@ -402,8 +401,7 @@ export default function Show({
                                     {promZone.name}
                                 </h2> */}
                                 <p className="leading-relaxed whitespace-pre-wrap text-gray-700">
-                                    {promZone.description ||
-                                        'Сипаттама жоқ.'}
+                                    {promZone.description || 'Сипаттама жоқ.'}
                                 </p>
                             </div>
                         </Card>
@@ -629,7 +627,10 @@ export default function Show({
                                                 {issue.creator && (
                                                     <p className="mt-1 text-[11px] text-gray-400">
                                                         Қосқан:{' '}
-                                                        {issue.creator.full_name}
+                                                        {
+                                                            issue.creator
+                                                                .full_name
+                                                        }
                                                     </p>
                                                 )}
                                             </div>
@@ -648,5 +649,3 @@ export default function Show({
         </AppLayout>
     );
 }
-
-

@@ -94,7 +94,8 @@ export function ChatWidget() {
             const errorMessage: Message = {
                 id: Date.now() + 1,
                 role: 'assistant',
-                content: 'Кешіріңіз, қате орын алды. Кейінірек қайталап көріңіз.',
+                content:
+                    'Кешіріңіз, қате орын алды. Кейінірек қайталап көріңіз.',
             };
             setMessages((prev) => [...prev, errorMessage]);
         } finally {
@@ -143,7 +144,10 @@ export function ChatWidget() {
                     </CardHeader>
 
                     <CardContent className="flex-1 overflow-hidden p-0">
-                        <ScrollArea ref={scrollAreaRef} className="h-full px-4 py-4">
+                        <ScrollArea
+                            ref={scrollAreaRef}
+                            className="h-full px-4 py-4"
+                        >
                             {messages.length === 0 ? (
                                 <div className="flex h-full flex-col items-center justify-center gap-4 text-center text-muted-foreground">
                                     <BotMessageSquare className="h-12 w-12 opacity-20" />
@@ -152,7 +156,8 @@ export function ChatWidget() {
                                             Сәлем! Мен сіздің AI көмекшіңізмін
                                         </p>
                                         <p className="mt-1 text-sm">
-                                            Жобалар, аймақтар, мәселелер туралы сұраңыз
+                                            Жобалар, аймақтар, мәселелер туралы
+                                            сұраңыз
                                         </p>
                                     </div>
                                 </div>

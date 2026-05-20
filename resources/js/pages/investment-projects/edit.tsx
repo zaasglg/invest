@@ -214,7 +214,9 @@ export default function Edit({
         if (!data.region_id) return [];
         if (restrictedSectorType && restrictedSectorType !== 'prom_zone')
             return [];
-        return promZones.filter((prom) => prom.region_id === parseInt(data.region_id));
+        return promZones.filter(
+            (prom) => prom.region_id === parseInt(data.region_id),
+        );
     }, [promZones, data.region_id, restrictedSectorType]);
 
     const selectedRegion = useMemo(() => {
@@ -571,7 +573,10 @@ export default function Edit({
                                         <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-4">
                                             {investUsers.map((u) => {
                                                 const value = u.id.toString();
-                                                const checked = data.curator_ids.includes(value);
+                                                const checked =
+                                                    data.curator_ids.includes(
+                                                        value,
+                                                    );
                                                 return (
                                                     <div
                                                         key={u.id}
@@ -580,17 +585,26 @@ export default function Edit({
                                                         <Checkbox
                                                             id={`curator-${u.id}`}
                                                             checked={checked}
-                                                            onCheckedChange={(isChecked) => {
+                                                            onCheckedChange={(
+                                                                isChecked,
+                                                            ) => {
                                                                 if (isChecked) {
-                                                                    setData('curator_ids', [
-                                                                        ...data.curator_ids,
-                                                                        value,
-                                                                    ]);
+                                                                    setData(
+                                                                        'curator_ids',
+                                                                        [
+                                                                            ...data.curator_ids,
+                                                                            value,
+                                                                        ],
+                                                                    );
                                                                 } else {
                                                                     setData(
                                                                         'curator_ids',
                                                                         data.curator_ids.filter(
-                                                                            (id) => id !== value,
+                                                                            (
+                                                                                id,
+                                                                            ) =>
+                                                                                id !==
+                                                                                value,
                                                                         ),
                                                                     );
                                                                 }
@@ -604,7 +618,11 @@ export default function Edit({
                                                             {u.full_name}
                                                             {u.invest_sub_role && (
                                                                 <span className="ml-1 text-xs text-gray-400">
-                                                                    ({u.invest_sub_role})
+                                                                    (
+                                                                    {
+                                                                        u.invest_sub_role
+                                                                    }
+                                                                    )
                                                                 </span>
                                                             )}
                                                         </Label>
@@ -780,7 +798,9 @@ export default function Edit({
                                             Сектор{' '}
                                             <span className="text-xs font-normal text-gray-400 normal-case">
                                                 {restrictedSectorType ? (
-                                                    <span className="text-red-500">(міндетті)</span>
+                                                    <span className="text-red-500">
+                                                        (міндетті)
+                                                    </span>
                                                 ) : (
                                                     '(міндетті емес)'
                                                 )}
@@ -934,7 +954,8 @@ export default function Edit({
                                                                 0 && (
                                                                 <div className="space-y-2">
                                                                     <p className="text-xs font-medium text-gray-500 uppercase">
-                                                                        Пром зоналар
+                                                                        Пром
+                                                                        зоналар
                                                                     </p>
                                                                     {availablePromZones.map(
                                                                         (

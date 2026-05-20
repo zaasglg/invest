@@ -541,7 +541,9 @@ export default function Create({
                                                     max="2100"
                                                     value={
                                                         data.license_start
-                                                            ? data.license_start.split('-')[0]
+                                                            ? data.license_start.split(
+                                                                  '-',
+                                                              )[0]
                                                             : ''
                                                     }
                                                     onChange={(e) =>
@@ -576,7 +578,9 @@ export default function Create({
                                                     max="2100"
                                                     value={
                                                         data.license_end
-                                                            ? data.license_end.split('-')[0]
+                                                            ? data.license_end.split(
+                                                                  '-',
+                                                              )[0]
                                                             : ''
                                                     }
                                                     onChange={(e) =>

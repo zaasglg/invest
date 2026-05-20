@@ -96,7 +96,7 @@ class ProjectDocumentController extends Controller
             ]);
         }
 
-        KpiLog::log($investmentProject->id, 'Құжат жүктелді: "' . $validated['name'] . '"');
+        KpiLog::log($investmentProject->id, 'Құжат жүктелді: "'.$validated['name'].'"');
 
         return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
@@ -121,7 +121,7 @@ class ProjectDocumentController extends Controller
 
         $document->delete();
 
-        KpiLog::log($investmentProject->id, 'Құжат жойылды: "' . $document->name . '"');
+        KpiLog::log($investmentProject->id, 'Құжат жойылды: "'.$document->name.'"');
 
         return redirect()->back()->with('success', 'Құжат жойылды.');
     }

@@ -48,7 +48,7 @@ class ProjectIssueController extends Controller
             'created_by' => $user?->id,
         ]);
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе қосылды: "' . $validated['title'] . '"');
+        KpiLog::log($investmentProject->id, 'Проблемалық мәселе қосылды: "'.$validated['title'].'"');
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
@@ -79,7 +79,7 @@ class ProjectIssueController extends Controller
 
         $issue->update($validated);
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жаңартылды: "' . $issue->title . '"');
+        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жаңартылды: "'.$issue->title.'"');
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
@@ -97,7 +97,7 @@ class ProjectIssueController extends Controller
             abort(403, 'Сізге проблемалық мәселені жоюға рұқсат жоқ.');
         }
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жойылды: "' . $issue->title . '"');
+        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жойылды: "'.$issue->title.'"');
 
         $issue->delete();
 

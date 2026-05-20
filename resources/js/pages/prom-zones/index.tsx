@@ -350,5 +350,3 @@ export default function Index({ promZones, regions, filters }: Props) {
         </AppLayout>
     );
 }
-
-

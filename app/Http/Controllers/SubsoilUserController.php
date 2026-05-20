@@ -203,7 +203,7 @@ class SubsoilUserController extends Controller
 
         $subsoilUser->update($validated);
 
-        if (!empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
+        if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
         }
 
@@ -291,7 +291,7 @@ class SubsoilUserController extends Controller
      */
     private function isValidReturnUrl(string $url): bool
     {
-        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+        if (str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
             return true;
         }
 

@@ -318,7 +318,9 @@ export default function Issues({
 
                     {/* Issues list */}
                     <div
-                        className={canCreate ? 'lg:col-span-2' : 'lg:col-span-3'}
+                        className={
+                            canCreate ? 'lg:col-span-2' : 'lg:col-span-3'
+                        }
                     >
                         <Card className="shadow-none">
                             <CardHeader>

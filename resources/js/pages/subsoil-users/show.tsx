@@ -671,7 +671,10 @@ export default function Show({
                                                     {issue.creator && (
                                                         <p className="mt-1 text-[11px] text-gray-400">
                                                             Қосқан:{' '}
-                                                            {issue.creator.full_name}
+                                                            {
+                                                                issue.creator
+                                                                    .full_name
+                                                            }
                                                         </p>
                                                     )}
                                                 </div>

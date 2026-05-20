@@ -197,8 +197,8 @@ export default function Create({
                                     Негізгі ақпарат
                                 </h2>
                                 <p className="text-sm text-gray-500">
-                                    Пром зона туралы негізгі
-                                    мәліметтерді толтырыңыз.
+                                    Пром зона туралы негізгі мәліметтерді
+                                    толтырыңыз.
                                 </p>
                             </div>
 
@@ -618,5 +618,3 @@ export default function Create({
         </AppLayout>
     );
 }
-
-

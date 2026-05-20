@@ -224,59 +224,59 @@ export default function Show({
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-3 md:col-span-3">
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" />{' '}
-                                            Аудан
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {sez.region?.name ||
-                                                'Көрсетілмеген'}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Activity className="h-3.5 w-3.5" />{' '}
-                                            Күйі
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {statusMap[sez.status]?.label ||
-                                                sez.status}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <MapPin className="h-3.5 w-3.5" />{' '}
-                                            Аумағы
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {sez.total_area
-                                                ? `${sez.total_area} га`
-                                                : 'Көрсетілмеген'}
-                                        </p>
-                                    </div>
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                            <Building2 className="h-3.5 w-3.5" />{' '}
-                                            Инвестиция көлемі
-                                        </p>
-                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                            {(() => {
-                                                const sum = projects.reduce(
-                                                    (acc, p) =>
-                                                        acc +
-                                                        Number(
-                                                            p.total_investment ||
-                                                                0,
-                                                        ),
-                                                    0,
-                                                );
-                                                return sum > 0
-                                                    ? formatCurrency(sum)
-                                                    : 'Көрсетілмеген';
-                                            })()}
-                                        </p>
-                                    </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <MapPin className="h-3.5 w-3.5" />{' '}
+                                                Аудан
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {sez.region?.name ||
+                                                    'Көрсетілмеген'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Activity className="h-3.5 w-3.5" />{' '}
+                                                Күйі
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {statusMap[sez.status]?.label ||
+                                                    sez.status}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <MapPin className="h-3.5 w-3.5" />{' '}
+                                                Аумағы
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {sez.total_area
+                                                    ? `${sez.total_area} га`
+                                                    : 'Көрсетілмеген'}
+                                            </p>
+                                        </div>
+                                        <div className="rounded-lg border border-gray-200 p-4">
+                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                <Building2 className="h-3.5 w-3.5" />{' '}
+                                                Инвестиция көлемі
+                                            </p>
+                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                                {(() => {
+                                                    const sum = projects.reduce(
+                                                        (acc, p) =>
+                                                            acc +
+                                                            Number(
+                                                                p.total_investment ||
+                                                                    0,
+                                                            ),
+                                                        0,
+                                                    );
+                                                    return sum > 0
+                                                        ? formatCurrency(sum)
+                                                        : 'Көрсетілмеген';
+                                                })()}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -628,7 +628,10 @@ export default function Show({
                                                 {issue.creator && (
                                                     <p className="mt-1 text-[11px] text-gray-400">
                                                         Қосқан:{' '}
-                                                        {issue.creator.full_name}
+                                                        {
+                                                            issue.creator
+                                                                .full_name
+                                                        }
                                                     </p>
                                                 )}
                                             </div>

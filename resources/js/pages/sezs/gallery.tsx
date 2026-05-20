@@ -149,9 +149,7 @@ export default function Gallery({
 
     const handleDelete = (photoId: number) => {
         if (confirm('Бұл фотоны жоюға сенімдісіз бе?')) {
-            router.delete(
-                `/sezs/${sez.id}/gallery/${photoId}`,
-            );
+            router.delete(`/sezs/${sez.id}/gallery/${photoId}`);
         }
     };
 
@@ -200,9 +198,7 @@ export default function Gallery({
                         <h1 className="text-2xl font-bold tracking-tight text-[#0f1b3d]">
                             Галерея
                         </h1>
-                        <p className="mt-1 text-sm text-gray-500">
-                            {sez.name}
-                        </p>
+                        <p className="mt-1 text-sm text-gray-500">{sez.name}</p>
                     </div>
                 </div>
 
@@ -523,7 +519,9 @@ export default function Gallery({
                                                                 onOpen={
                                                                     openLightbox
                                                                 }
-                                                                canModify={canManagePhotos}
+                                                                canModify={
+                                                                    canManagePhotos
+                                                                }
                                                             />
                                                         ),
                                                     )}

@@ -174,7 +174,7 @@ class SezController extends Controller
 
         $sez->update($validated);
 
-        if (!empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
+        if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'АЭА жаңартылды.');
         }
 
@@ -193,7 +193,7 @@ class SezController extends Controller
      */
     private function isValidReturnUrl(string $url): bool
     {
-        if (str_starts_with($url, '/') && !str_starts_with($url, '//')) {
+        if (str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
             return true;
         }
 

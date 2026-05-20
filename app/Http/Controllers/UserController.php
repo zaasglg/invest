@@ -21,6 +21,7 @@ class UserController extends Controller
         }
 
         $users = $query->paginate(15)->withQueryString();
+
         // dd($users->toArray());
         return Inertia::render('users/index', [
             'users' => $users,

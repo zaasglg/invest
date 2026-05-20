@@ -1,5 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 import { formatMoneyCompact } from '@/lib/utils';
+import type { SharedData } from '@/types';
 
 interface SectorRow {
     investment: number;
@@ -11,8 +13,10 @@ interface SectorRow {
 interface SectorData {
     sez: SectorRow;
     iz: SectorRow;
+    prom?: SectorRow;
     nedro: SectorRow;
     invest: SectorRow;
+    all_projects?: SectorRow;
 }
 
 interface SectorSummary {
@@ -31,15 +35,39 @@ const formatInvestment = (value: number) => {
 };
 
 export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const investSubRole = auth.user.invest_sub_role;
+
     const data =
         activeRegionId && sectorSummary.byRegion[activeRegionId]
             ? sectorSummary.byRegion[activeRegionId]
             : sectorSummary.total;
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
-        { key: 'invest', label: 'Turkistan Invest', d: data.invest },
+        ...(data.all_projects && investSubRole !== 'turkistan_invest'
+            ? [
+                  {
+                      key: 'all_projects',
+                      label: 'Барлық жобалар',
+                      d: data.all_projects,
+                  },
+              ]
+            : []),
+        ...(!investSubRole || investSubRole === 'turkistan_invest'
+            ? [{ key: 'invest', label: 'Turkistan Invest', d: data.invest }]
+            : []),
         { key: 'sez', label: 'АЭА', d: data.sez },
         { key: 'iz', label: 'ИА', d: data.iz },
+        {
+            key: 'prom',
+            label: 'Пром зона',
+            d: data.prom ?? {
+                investment: 0,
+                projectCount: 0,
+                problemCount: 0,
+                jobCount: 0,
+            },
+        },
         { key: 'nedro', label: 'Жер қойнауын пайдалану', d: data.nedro },
     ];
 

@@ -48,7 +48,7 @@ class IssuesController extends Controller
         $issues = collect();
 
         // Get issues based on sector filter
-        if ($sector === 'invest' || ! $sector) {
+        if ($sector === 'all_projects' || $sector === 'invest' || ! $sector) {
             $query = ProjectIssue::with(['project.region', 'creator:id,full_name']);
             if ($regionId) {
                 $query->whereHas('project', function ($q) use ($regionId) {
@@ -56,16 +56,20 @@ class IssuesController extends Controller
                 });
             }
             // Scope to only the invest sub-role's projects (via curators pivot).
-            if ($investSubRole) {
+            if ($sector === 'invest') {
+                $query->whereHas('project', function ($q) {
+                    $q->whereHas('curators', fn ($cq) => $cq->where('users.invest_sub_role', 'turkistan_invest'));
+                });
+            } elseif ($investSubRole) {
                 $query->whereHas('project', function ($q) use ($investSubRole) {
                     $q->whereHas('curators', fn ($cq) => $cq->where('users.invest_sub_role', $investSubRole));
                 });
             }
-            $projectIssues = $query->latest()->get()->map(function ($issue) {
+            $projectIssues = $query->latest()->get()->map(function ($issue) use ($sector) {
                 return [
                     'id' => $issue->id,
-                    'type' => 'invest',
-                    'type_label' => 'Turkistan Invest',
+                    'type' => $sector === 'invest' ? 'invest' : 'all_projects',
+                    'type_label' => $sector === 'invest' ? 'Turkistan Invest' : 'Барлық жобалар',
                     'title' => $issue->title,
                     'description' => $issue->description,
                     'category' => $issue->category,
@@ -224,7 +228,10 @@ class IssuesController extends Controller
             ->get();
 
         // Get sector labels — only for accessible sections.
-        $sectorLabels = ['invest' => 'Turkistan Invest'];
+        $sectorLabels = [
+            'all_projects' => 'Барлық жобалар',
+            'invest' => 'Turkistan Invest',
+        ];
         if ($canSeeSez) {
             $sectorLabels['sez'] = 'АЭА';
         }

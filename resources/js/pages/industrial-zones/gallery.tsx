@@ -69,7 +69,9 @@ export default function Gallery({
     const [uploadError, setUploadError] = useState<string>('');
 
     const [lightboxOpen, setLightboxOpen] = useState(false);
-    const [lightboxPhotos, setLightboxPhotos] = useState<IndustrialZonePhoto[]>([]);
+    const [lightboxPhotos, setLightboxPhotos] = useState<IndustrialZonePhoto[]>(
+        [],
+    );
     const [lightboxIndex, setLightboxIndex] = useState(0);
 
     const openLightbox = (photos: IndustrialZonePhoto[], index: number) => {
@@ -136,15 +138,19 @@ export default function Gallery({
         }
         formData.append('photo_type', photoType);
 
-        router.post(`/industrial-zones/${industrialZone.id}/gallery`, formData, {
-            onSuccess: () => {
-                clearPhotos();
-                setIsUploading(false);
+        router.post(
+            `/industrial-zones/${industrialZone.id}/gallery`,
+            formData,
+            {
+                onSuccess: () => {
+                    clearPhotos();
+                    setIsUploading(false);
+                },
+                onError: () => {
+                    setIsUploading(false);
+                },
             },
-            onError: () => {
-                setIsUploading(false);
-            },
-        });
+        );
     };
 
     const handleDelete = (photoId: number) => {
@@ -523,7 +529,9 @@ export default function Gallery({
                                                                 onOpen={
                                                                     openLightbox
                                                                 }
-                                                                canModify={canManagePhotos}
+                                                                canModify={
+                                                                    canManagePhotos
+                                                                }
                                                             />
                                                         ),
                                                     )}

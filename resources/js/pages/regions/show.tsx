@@ -1209,13 +1209,13 @@ export default function Show({
                                                 ? `АЭА жобалары`
                                                 : mapSelectedEntityType === 'iz'
                                                   ? `ИА жобалары`
-                                                                                                    : mapSelectedEntityType ===
-                                                                                                            'prom'
-                                                                                                        ? `Пром зона жобалары`
                                                   : mapSelectedEntityType ===
-                                                      'subsoil'
-                                                    ? `Жер қойнауын пайдаланушы жобалары`
-                                                    : 'Инвестициялық жобалар'}
+                                                      'prom'
+                                                    ? `Пром зона жобалары`
+                                                    : mapSelectedEntityType ===
+                                                        'subsoil'
+                                                      ? `Жер қойнауын пайдаланушы жобалары`
+                                                      : 'Инвестициялық жобалар'}
                                         </h2>
                                         <div className="flex items-center gap-2">
                                             {mapSelectedEntityType && (
@@ -1280,20 +1280,20 @@ export default function Show({
                                                                                   mapSelectedEntityId,
                                                                           ),
                                                                   )
-                                                              : mapSelectedEntityType ===
-                                                                      'subsoil' &&
-                                                                  mapSelectedEntityId
-                                                                ? orderedProjects.filter(
-                                                                      (p) =>
-                                                                          p.subsoil_users?.some(
-                                                                              (
-                                                                                  s,
-                                                                              ) =>
-                                                                                  s.id ===
-                                                                                  mapSelectedEntityId,
-                                                                          ),
-                                                                  )
-                                                                : orderedProjects;
+                                                                : mapSelectedEntityType ===
+                                                                        'subsoil' &&
+                                                                    mapSelectedEntityId
+                                                                  ? orderedProjects.filter(
+                                                                        (p) =>
+                                                                            p.subsoil_users?.some(
+                                                                                (
+                                                                                    s,
+                                                                                ) =>
+                                                                                    s.id ===
+                                                                                    mapSelectedEntityId,
+                                                                            ),
+                                                                    )
+                                                                  : orderedProjects;
                                                     handleBulkPresentationDownload(
                                                         filteredProjects,
                                                     );
@@ -1344,18 +1344,18 @@ export default function Show({
                                                                           mapSelectedEntityId,
                                                                   ),
                                                           )
-                                                      : mapSelectedEntityType ===
-                                                              'subsoil' &&
-                                                          mapSelectedEntityId
-                                                        ? orderedProjects.filter(
-                                                              (p) =>
-                                                                  p.subsoil_users?.some(
-                                                                      (s) =>
-                                                                          s.id ===
-                                                                          mapSelectedEntityId,
-                                                                  ),
-                                                          )
-                                                        : orderedProjects;
+                                                        : mapSelectedEntityType ===
+                                                                'subsoil' &&
+                                                            mapSelectedEntityId
+                                                          ? orderedProjects.filter(
+                                                                (p) =>
+                                                                    p.subsoil_users?.some(
+                                                                        (s) =>
+                                                                            s.id ===
+                                                                            mapSelectedEntityId,
+                                                                    ),
+                                                            )
+                                                          : orderedProjects;
                                             const paginatedAll =
                                                 filteredProjects.slice(
                                                     (allPage - 1) *
@@ -2737,7 +2737,10 @@ export default function Show({
                             </TabsContent>
 
                             {/* Prom Stats */}
-                            <TabsContent value="prom" className="mt-0 space-y-6">
+                            <TabsContent
+                                value="prom"
+                                className="mt-0 space-y-6"
+                            >
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="border-b border-gray-100 pb-4">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
@@ -2756,7 +2759,9 @@ export default function Show({
                                                   )
                                                 : null;
                                             const displayArea = selectedProm
-                                                ? Number(selectedProm.total_area)
+                                                ? Number(
+                                                      selectedProm.total_area,
+                                                  )
                                                 : totalPromArea;
                                             const displayInvestment =
                                                 promProjects.reduce(

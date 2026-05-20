@@ -390,8 +390,7 @@ export default function Gallery({
                                                         value={galleryDate}
                                                         onChange={(e) =>
                                                             setGalleryDate(
-                                                                e.target
-                                                                    .value,
+                                                                e.target.value,
                                                             )
                                                         }
                                                         className="w-full"

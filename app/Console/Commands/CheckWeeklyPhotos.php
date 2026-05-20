@@ -4,10 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\InvestmentProject;
 use App\Models\ProjectPhoto;
-use App\Models\User;
 use App\Services\TelegramService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class CheckWeeklyPhotos extends Command
 {
@@ -59,10 +57,10 @@ class CheckWeeklyPhotos extends Command
             $regionName = $project->region?->name ?? 'Белгісіз аудан';
 
             $message = "📸 <b>Апталық фото есебі жоқ!</b>\n\n"
-                . "Жоба: <b>{$project->name}</b>\n"
-                . "Аудан: {$regionName}\n"
-                . "Исполнитель: {$ispolnitelNames}\n\n"
-                . "Соңғы 7 күнде галереяға сурет салынбады.";
+                ."Жоба: <b>{$project->name}</b>\n"
+                ."Аудан: {$regionName}\n"
+                ."Исполнитель: {$ispolnitelNames}\n\n"
+                .'Соңғы 7 күнде галереяға сурет салынбады.';
 
             $formattedMessage = $telegram->formatNotification(
                 'photo_missing',

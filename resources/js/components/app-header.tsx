@@ -137,30 +137,33 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <NavigationMenu className="flex h-full w-max max-w-none items-stretch justify-start">
                                 <NavigationMenuList className="flex h-full flex-nowrap items-stretch justify-start gap-0.5">
-                                {filteredHeaderNavItems.map((item, index) => (
-                                    <NavigationMenuItem
-                                        key={index}
-                                        className="relative flex h-full items-center"
-                                    >
-                                        <Link
-                                            href={item.href}
-                                            className={cn(
-                                                navigationMenuTriggerStyle(),
-                                                'h-9 cursor-pointer whitespace-nowrap rounded-lg bg-transparent px-2 text-xs font-medium text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
-                                                isCurrentUrl(item.href) &&
-                                                    'text-white',
-                                            )}
-                                        >
-                                            {item.icon && (
-                                                <item.icon className="mr-1.5 h-3.5 w-3.5" />
-                                            )}
-                                            {item.title}
-                                        </Link>
-                                        {isCurrentUrl(item.href) && (
-                                            <div className="absolute right-2 bottom-0 left-2 h-0.5 translate-y-px rounded-full bg-[#c8a44e]" />
-                                        )}
-                                    </NavigationMenuItem>
-                                ))}
+                                    {filteredHeaderNavItems.map(
+                                        (item, index) => (
+                                            <NavigationMenuItem
+                                                key={index}
+                                                className="relative flex h-full items-center"
+                                            >
+                                                <Link
+                                                    href={item.href}
+                                                    className={cn(
+                                                        navigationMenuTriggerStyle(),
+                                                        'h-9 cursor-pointer rounded-lg bg-transparent px-2 text-xs font-medium whitespace-nowrap text-white/70 transition-colors hover:bg-white/10 hover:text-white data-[active]:bg-transparent',
+                                                        isCurrentUrl(
+                                                            item.href,
+                                                        ) && 'text-white',
+                                                    )}
+                                                >
+                                                    {item.icon && (
+                                                        <item.icon className="mr-1.5 h-3.5 w-3.5" />
+                                                    )}
+                                                    {item.title}
+                                                </Link>
+                                                {isCurrentUrl(item.href) && (
+                                                    <div className="absolute right-2 bottom-0 left-2 h-0.5 translate-y-px rounded-full bg-[#c8a44e]" />
+                                                )}
+                                            </NavigationMenuItem>
+                                        ),
+                                    )}
                                 </NavigationMenuList>
                             </NavigationMenu>
                         </div>
@@ -202,7 +205,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                 <Users className="h-4 w-4" />
                                             </Link>
                                         </TooltipTrigger>
-                                        <TooltipContent>Пайдаланушылар</TooltipContent>
+                                        <TooltipContent>
+                                            Пайдаланушылар
+                                        </TooltipContent>
                                     </Tooltip>
                                 </TooltipProvider>
                             </>

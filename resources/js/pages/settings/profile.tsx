@@ -92,7 +92,9 @@ export default function Profile({
     const handleDeleteAvatar = () => {
         if (!auth.user.avatar) return;
 
-        const confirmed = confirm('Профиль суретін өшіргіңіз келетініне сенімдісіз бе?');
+        const confirmed = confirm(
+            'Профиль суретін өшіргіңіз келетініне сенімдісіз бе?',
+        );
         if (!confirmed) return;
 
         router.delete('/settings/profile/avatar', {

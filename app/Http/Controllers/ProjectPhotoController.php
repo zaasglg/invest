@@ -118,7 +118,7 @@ class ProjectPhotoController extends Controller
             ]);
         }
 
-        KpiLog::log($investmentProject->id, 'Фотосуреттер жүктелді (' . count($validated['photos']) . ' фото)');
+        KpiLog::log($investmentProject->id, 'Фотосуреттер жүктелді ('.count($validated['photos']).' фото)');
 
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
