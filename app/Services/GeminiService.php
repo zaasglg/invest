@@ -15,17 +15,17 @@ class GeminiService
     // Модельдер тізімі - бірі жұмыс істемесе келесісіне өтеді
     protected array $models = [
         'gemini-3.1-flash-lite-preview',
-            'gemini-3.1-flash-lite',
-            'gemini-3-flash-preview',
-            'gemini-2.5-flash-lite',
-            'gemini-2.5-flash',
-            'gemini-2.5-pro',
-            'gemini-3-flash-preview',
-            'gemini-2.0-flash',
-            'gemini-2.0-flash-lite',
-            'gemini-1.5-flash',
-            'gemini-1.5-flash-8b',
-            'gemini-1.5-pro',
+        'gemini-3.1-flash-lite',
+        'gemini-3-flash-preview',
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-2.5-pro',
+        'gemini-3-flash-preview',
+        'gemini-2.0-flash',
+        'gemini-2.0-flash-lite',
+        'gemini-1.5-flash',
+        'gemini-1.5-flash-8b',
+        'gemini-1.5-pro',
     ];
 
     protected int $maxRetries = 2;
@@ -50,6 +50,7 @@ class GeminiService
             // 429 (лимит) немесе 503 (қолжетімсіз) болса - келесі моделге өту
             if (in_array($result['status'], [429, 503, 500])) {
                 Log::warning("Model {$model} failed with {$result['status']}, trying next model");
+
                 continue;
             }
 
@@ -104,6 +105,7 @@ class GeminiService
                 // Басқа қате болса - қайталау
                 if ($attempt < $this->maxRetries) {
                     sleep($attempt);
+
                     continue;
                 }
 
@@ -121,6 +123,7 @@ class GeminiService
 
                 if ($attempt < $this->maxRetries) {
                     sleep($attempt);
+
                     continue;
                 }
 

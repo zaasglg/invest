@@ -3,17 +3,14 @@
 namespace App\Services;
 
 use App\Models\IndustrialZone;
-use App\Models\IndustrialZoneIssue;
 use App\Models\InvestmentProject;
 use App\Models\ProjectIssue;
 use App\Models\ProjectType;
 use App\Models\PromZone;
-use App\Models\PromZoneIssue;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\Sez;
 use App\Models\SezIssue;
-use App\Models\SubsoilIssue;
 use App\Models\SubsoilUser;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;

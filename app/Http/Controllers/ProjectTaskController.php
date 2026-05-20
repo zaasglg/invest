@@ -38,10 +38,11 @@ class ProjectTaskController extends Controller
         $validated['status'] = 'new';
         $validated['created_by'] = Auth::id();
 
-        // Tasks created by superadmin are auto-approved; everyone else
-        // must wait for a moderator's review before the task is visible
-        // to the assigned executor.
-        if ($creatorRole === 'superadmin') {
+        $isTurkistanInvest = ($creatorRole === 'invest' && $user?->invest_sub_role === 'turkistan_invest');
+
+        // Tasks created by superadmin or users from other directions are auto-approved;
+        // only turkistan_invest must wait for a moderator's review.
+        if ($creatorRole === 'superadmin' || ! $isTurkistanInvest) {
             $validated['approval_status'] = 'approved';
             $validated['approved_by'] = Auth::id();
             $validated['approved_at'] = now();
@@ -224,14 +225,24 @@ class ProjectTaskController extends Controller
             ->except('status')
             ->isNotEmpty();
 
+        $user = Auth::user();
+        $isTurkistanInvest = ($editorRole === 'invest' && $user?->invest_sub_role === 'turkistan_invest');
+
         // If a previously rejected task is edited by invest (not superadmin),
-        // resubmit it for moderator approval — clear the rejection and put it
-        // back into pending state. Superadmin edits remain auto-approved.
+        // resubmit it for moderator approval if they are turkistan_invest.
+        // Otherwise, auto-approve it.
         if ($wasRejected && $contentEdit && $editorRole !== 'superadmin') {
-            $validated['approval_status'] = 'pending';
-            $validated['approval_comment'] = null;
-            $validated['approved_by'] = null;
-            $validated['approved_at'] = null;
+            if ($isTurkistanInvest) {
+                $validated['approval_status'] = 'pending';
+                $validated['approval_comment'] = null;
+                $validated['approved_by'] = null;
+                $validated['approved_at'] = null;
+            } else {
+                $validated['approval_status'] = 'approved';
+                $validated['approval_comment'] = null;
+                $validated['approved_by'] = Auth::id();
+                $validated['approved_at'] = now();
+            }
         }
 
         $task->update($validated);
