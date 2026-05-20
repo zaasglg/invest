@@ -1,5 +1,7 @@
 import { CheckCircle2 } from 'lucide-react';
+import { usePage } from '@inertiajs/react';
 import { formatMoneyCompact } from '@/lib/utils';
+import type { SharedData } from '@/types';
 
 interface SectorRow {
     investment: number;
@@ -33,13 +35,16 @@ const formatInvestment = (value: number) => {
 };
 
 export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const investSubRole = auth.user.invest_sub_role;
+
     const data =
         activeRegionId && sectorSummary.byRegion[activeRegionId]
             ? sectorSummary.byRegion[activeRegionId]
             : sectorSummary.total;
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
-        ...(data.all_projects
+        ...(data.all_projects && investSubRole !== 'turkistan_invest'
             ? [
                   {
                       key: 'all_projects',
@@ -48,7 +53,9 @@ export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
                   },
               ]
             : []),
-        { key: 'invest', label: 'Turkistan Invest', d: data.invest },
+        ...(!investSubRole || investSubRole === 'turkistan_invest'
+            ? [{ key: 'invest', label: 'Turkistan Invest', d: data.invest }]
+            : []),
         { key: 'sez', label: 'АЭА', d: data.sez },
         { key: 'iz', label: 'ИА', d: data.iz },
         {

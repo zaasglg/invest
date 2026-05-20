@@ -1,5 +1,5 @@
 import 'leaflet/dist/leaflet.css';
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import L from 'leaflet';
 
 import icon from 'leaflet/dist/images/marker-icon.png';
@@ -23,6 +23,7 @@ import {
 } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
 import { formatMoneyCompact } from '@/lib/utils';
+import type { SharedData } from '@/types';
 
 const DefaultIcon = L.icon({
     iconUrl: icon,
@@ -613,6 +614,8 @@ export default function Map({
     onEntitySelect,
     onProjectSelect,
 }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const activeUser = auth?.user;
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
@@ -1940,7 +1943,8 @@ export default function Map({
 
                     const rows: { key: string; label: string; d: SectorRow }[] =
                         [
-                            ...(data.all_projects
+                            ...(data.all_projects &&
+                            activeUser?.invest_sub_role !== 'turkistan_invest'
                                 ? [
                                       {
                                           key: 'all_projects',
@@ -1949,11 +1953,16 @@ export default function Map({
                                       },
                                   ]
                                 : []),
-                            {
-                                key: 'invest',
-                                label: 'Turkistan Invest',
-                                d: data.invest,
-                            },
+                            ...(!activeUser?.invest_sub_role ||
+                            activeUser.invest_sub_role === 'turkistan_invest'
+                                ? [
+                                      {
+                                          key: 'invest',
+                                          label: 'Turkistan Invest',
+                                          d: data.invest,
+                                      },
+                                  ]
+                                : []),
                             { key: 'sez', label: 'АЭА', d: data.sez },
                             { key: 'iz', label: 'ИА', d: data.iz },
                             {
