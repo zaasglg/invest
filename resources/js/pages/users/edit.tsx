@@ -1,6 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -70,6 +71,8 @@ export default function Edit({ user, regions, roles }: Props) {
 
     const [selectedOblastId, setSelectedOblastId] =
         useState<string>(initialOblastId);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showPasswordConf, setShowPasswordConf] = useState(false);
 
     const oblasts = useMemo(
         () => regions.filter((r) => r.type === 'oblast'),
@@ -192,16 +195,30 @@ export default function Edit({ user, regions, roles }: Props) {
                                     (өзгертпесеңіз, бос қалдырыңыз)
                                 </span>
                             </Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                value={data.password}
-                                onChange={(e) =>
-                                    setData('password', e.target.value)
-                                }
-                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password"
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={data.password}
+                                    onChange={(e) =>
+                                        setData('password', e.target.value)
+                                    }
+                                    className="h-10 border-gray-200 bg-transparent pr-10 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setShowPassword((v) => !v)}
+                                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPassword ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                             {errors.password && (
                                 <span className="text-sm text-red-500">
                                     {errors.password}
@@ -216,19 +233,33 @@ export default function Edit({ user, regions, roles }: Props) {
                             >
                                 Құпия сөзді растау
                             </Label>
-                            <Input
-                                id="password_confirmation"
-                                type="password"
-                                value={data.password_confirmation}
-                                onChange={(e) =>
-                                    setData(
-                                        'password_confirmation',
-                                        e.target.value,
-                                    )
-                                }
-                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                placeholder="••••••••"
-                            />
+                            <div className="relative">
+                                <Input
+                                    id="password_confirmation"
+                                    type={showPasswordConf ? 'text' : 'password'}
+                                    value={data.password_confirmation}
+                                    onChange={(e) =>
+                                        setData(
+                                            'password_confirmation',
+                                            e.target.value,
+                                        )
+                                    }
+                                    className="h-10 border-gray-200 bg-transparent pr-10 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                    placeholder="••••••••"
+                                />
+                                <button
+                                    type="button"
+                                    tabIndex={-1}
+                                    onClick={() => setShowPasswordConf((v) => !v)}
+                                    className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
+                                >
+                                    {showPasswordConf ? (
+                                        <EyeOff className="h-4 w-4" />
+                                    ) : (
+                                        <Eye className="h-4 w-4" />
+                                    )}
+                                </button>
+                            </div>
                             {errors.password_confirmation && (
                                 <span className="text-sm text-red-500">
                                     {errors.password_confirmation}
