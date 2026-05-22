@@ -272,11 +272,20 @@ export default function Edit({
     }, [data.sector, sezList, industrialZones, promZones]);
 
     const districtUsers = useMemo(() => {
-        return users.filter((u) => u.region_id && u.baskarma_type !== 'oblast');
+        return users.filter(
+            (u) =>
+                u.region_id &&
+                u.baskarma_type !== 'oblast' &&
+                u.role_model?.name === 'ispolnitel',
+        );
     }, [users]);
 
     const oblastUsers = useMemo(() => {
-        return users.filter((u) => u.baskarma_type === 'oblast');
+        return users.filter(
+            (u) =>
+                u.baskarma_type === 'oblast' &&
+                u.role_model?.name === 'ispolnitel',
+        );
     }, [users]);
 
     // District ispolnitel users that must be auto-assigned and cannot be removed
