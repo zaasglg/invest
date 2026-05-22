@@ -1,4 +1,6 @@
 import { Form, Head } from '@inertiajs/react';
+import { Eye, EyeOff } from 'lucide-react';
+import { useState } from 'react';
 
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
@@ -17,6 +19,8 @@ type Props = {
 };
 
 export default function Login({ status, canResetPassword }: Props) {
+    const [showPassword, setShowPassword] = useState(false);
+
     return (
         <AuthLayout
             title="Аккаунтыңызға кіріңіз"
@@ -71,16 +75,30 @@ export default function Login({ status, canResetPassword }: Props) {
                                         </TextLink>
                                     )}
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    name="password"
-                                    required
-                                    tabIndex={2}
-                                    autoComplete="current-password"
-                                    placeholder="Құпия сөз"
-                                    className="border-white/10 bg-white/5 text-white placeholder:text-white/30 focus-visible:border-[#c8a44e]/50 focus-visible:ring-[#c8a44e]/20"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? 'text' : 'password'}
+                                        name="password"
+                                        required
+                                        tabIndex={2}
+                                        autoComplete="current-password"
+                                        placeholder="Құпия сөз"
+                                        className="border-white/10 bg-white/5 pr-10 text-white placeholder:text-white/30 focus-visible:border-[#c8a44e]/50 focus-visible:ring-[#c8a44e]/20"
+                                    />
+                                    <button
+                                        type="button"
+                                        tabIndex={-1}
+                                        onClick={() => setShowPassword((v) => !v)}
+                                        className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70"
+                                    >
+                                        {showPassword ? (
+                                            <EyeOff className="h-4 w-4" />
+                                        ) : (
+                                            <Eye className="h-4 w-4" />
+                                        )}
+                                    </button>
+                                </div>
                                 <InputError message={errors.password} />
                             </div>
 
