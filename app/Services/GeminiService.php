@@ -12,12 +12,10 @@ class GeminiService
 
     protected string $baseUrl = 'https://generativelanguage.googleapis.com/v1beta/models/';
 
+    // Только рабочие модели — минимум для быстрого fallback
     protected array $models = [
         'gemini-2.5-flash-lite',
         'gemini-3.1-flash-lite',
-        'gemini-3.1-flash-lite-preview',
-        'gemini-2.0-flash-lite',
-        'gemini-2.0-flash',
     ];
 
     public function __construct()
@@ -55,8 +53,8 @@ class GeminiService
 
         try {
             $response = Http::withoutVerifying()
-                ->timeout(30)
-                ->connectTimeout(8)
+                ->timeout(12)
+                ->connectTimeout(5)
                 ->post($url, [
                     'contents' => [
                         [
@@ -180,6 +178,19 @@ PROMPT;
         $lines = [];
 
         switch ($key) {
+            case 'overview':
+                $label = $lang === 'ru' ? 'ОБЩАЯ СТАТИСТИКА СИСТЕМЫ' : 'ЖҮЙЕНІҢ ЖАЛПЫ СТАТИСТИКАСЫ';
+                $lines[] = $label.':';
+                $inv = number_format((float) ($data['total_investment'] ?? 0), 0, ',', ' ').' ₸';
+                $lines[] = ($lang === 'ru' ? 'Инвестиционных проектов: ' : 'Инвестициялық жобалар: ').($data['total_projects'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Общий объём инвестиций: ' : 'Жалпы инвестиция көлемі: ').$inv;
+                $lines[] = ($lang === 'ru' ? 'СЭЗ: ' : 'АЭА: ').($data['total_sezs'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Индустриальных зон: ' : 'Индустриалды аймақтар: ').($data['total_industrial_zones'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Промышленных зон: ' : 'Пром аймақтар: ').($data['total_prom_zones'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Недропользователей: ' : 'Жер қойнауын пайдаланушылар: ').($data['total_subsoil_users'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Активных проблем: ' : 'Белсенді мәселелер: ').($data['active_issues'] ?? 0);
+                break;
+
             case 'projects':
                 $total = $data['total_count'] ?? 0;
                 $investSum = $data['total_investment_sum'] ?? 0;

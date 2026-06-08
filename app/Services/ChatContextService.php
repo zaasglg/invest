@@ -19,7 +19,10 @@ class ChatContextService
 {
     public function buildContext(string $query, array $entities): array
     {
-        $context = [];
+        // Минимальная статистика присутствует всегда
+        $context = [
+            'overview' => $this->getOverviewStats(),
+        ];
 
         foreach ($entities as $entity) {
             switch ($entity) {
@@ -63,6 +66,19 @@ class ChatContextService
         }
 
         return $context;
+    }
+
+    protected function getOverviewStats(): array
+    {
+        return [
+            'total_projects' => InvestmentProject::count(),
+            'total_investment' => (float) InvestmentProject::sum('total_investment'),
+            'total_sezs' => Sez::count(),
+            'total_industrial_zones' => IndustrialZone::count(),
+            'total_prom_zones' => PromZone::count(),
+            'total_subsoil_users' => SubsoilUser::count(),
+            'active_issues' => \App\Models\ProjectIssue::where('status', '!=', 'resolved')->count(),
+        ];
     }
 
     protected function getRegionsData(string $query): array
@@ -245,21 +261,32 @@ class ChatContextService
 
     protected function extractRegionName(string $query): ?string
     {
-        // Динамикалық аймақ атауларын DB-дан алу
         $regions = Region::pluck('name')->toArray();
 
+        // Суффиксы, которые не являются уникальными идентификаторами
+        $genericSuffixes = ['ауданы', 'аудан', 'қаласы', 'қала', 'облысы', 'облыс'];
+
+        // Шаг 1: Точное совпадение — название региона целиком в запросе
         foreach ($regions as $regionName) {
             if (mb_stripos($query, $regionName) !== false) {
                 return $regionName;
             }
         }
 
-        // Орысша атаулар
-        $aliases = ['Туркестанская', 'Шымкент', 'Кентау', 'Арысь', 'Түркістан'];
+        // Шаг 2: Совпадение по уникальному ключевому слову (исключая суффиксы)
+        $lowerQuery = mb_strtolower($query);
 
-        foreach ($aliases as $alias) {
-            if (mb_stripos($query, $alias) !== false) {
-                return $alias;
+        foreach ($regions as $regionName) {
+            $words = explode(' ', mb_strtolower($regionName));
+            foreach ($words as $word) {
+                if (mb_strlen($word) < 4 || in_array($word, $genericSuffixes)) {
+                    continue;
+                }
+                // Ищем слово как отдельный токен (с учётом казахских падежных окончаний)
+                $root = mb_substr($word, 0, mb_strlen($word) - 1); // обрезаем 1 символ для падежей
+                if (mb_strlen($root) >= 4 && mb_stripos($lowerQuery, $root) !== false) {
+                    return $regionName;
+                }
             }
         }
 
