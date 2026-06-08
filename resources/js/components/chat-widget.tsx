@@ -10,7 +10,35 @@ import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { BotMessageSquare, Loader2, Send, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+
+function renderMarkdown(text: string) {
+    return text.split('\n').map((line, lineIdx) => {
+        const parts: React.ReactNode[] = [];
+        const boldRegex = /\*\*(.+?)\*\*/g;
+        let lastIndex = 0;
+        let match: RegExpExecArray | null;
+
+        while ((match = boldRegex.exec(line)) !== null) {
+            if (match.index > lastIndex) {
+                parts.push(line.slice(lastIndex, match.index));
+            }
+            parts.push(<strong key={match.index}>{match[1]}</strong>);
+            lastIndex = match.index + match[0].length;
+        }
+
+        if (lastIndex < line.length) {
+            parts.push(line.slice(lastIndex));
+        }
+
+        return (
+            <Fragment key={lineIdx}>
+                {parts.length > 0 ? parts : line}
+                {lineIdx < text.split('\n').length - 1 && <br />}
+            </Fragment>
+        );
+    });
+}
 
 interface Message {
     id: number;
@@ -181,8 +209,10 @@ export function ChatWidget() {
                                                         : 'bg-muted',
                                                 )}
                                             >
-                                                <p className="text-sm whitespace-pre-wrap">
-                                                    {message.content}
+                                                <p className="text-sm leading-relaxed">
+                                                    {message.role === 'assistant'
+                                                        ? renderMarkdown(message.content)
+                                                        : message.content}
                                                 </p>
                                             </div>
                                         </div>

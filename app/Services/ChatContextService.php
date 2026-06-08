@@ -110,26 +110,31 @@ class ChatContextService
             $projectsQuery->whereHas('region', fn ($q) => $q->where('name', 'ILIKE', "%{$regionName}%"));
         }
 
-        // Жалпы санды алу
-        $totalCount = (clone $projectsQuery)->count();
+        $allProjects = (clone $projectsQuery)->get();
+        $totalCount = $allProjects->count();
 
-        $projects = $projectsQuery
-            ->limit(20)
-            ->get()
+        // Агрегированная статистика по всем проектам
+        $totalInvestment = $allProjects->sum('total_investment');
+        $byStatus = $allProjects->groupBy(fn ($p) => $p->current_status ?? $p->status ?? 'unknown')
+            ->map->count()
+            ->toArray();
+
+        $items = $allProjects->take(20)
             ->map(fn ($project) => [
-                'id' => $project->id,
                 'name' => $project->name,
                 'region' => $project->region->name ?? null,
                 'status' => $project->current_status ?? $project->status,
                 'total_investment' => $project->total_investment,
                 'issues_count' => $project->issues->count(),
             ])
+            ->values()
             ->toArray();
 
         return [
             'total_count' => $totalCount,
-            'shown_count' => count($projects),
-            'items' => $projects,
+            'total_investment_sum' => $totalInvestment,
+            'by_status' => $byStatus,
+            'items' => $items,
         ];
     }
 
