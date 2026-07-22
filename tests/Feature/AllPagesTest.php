@@ -7,6 +7,7 @@ use App\Models\Role;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use Inertia\Testing\AssertableInertia as Assert;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -324,6 +325,60 @@ test('users index page loads for admin', function () {
     $response = $this->actingAs($user)->get('/users');
 
     $response->assertStatus(200);
+});
+
+test('users index separates departments into additional instances', function () {
+    $admin = createAdminUser();
+    $department = User::factory()->create([
+        'full_name' => 'Департамент пайдаланушысы',
+        'baskarma_type' => 'oblast',
+        'position' => 'Түркістан облысының экология департаменті',
+    ]);
+    User::factory()->create([
+        'full_name' => 'Басқарма пайдаланушысы',
+        'baskarma_type' => 'oblast',
+        'position' => 'Түркістан облысының кәсіпкерлік басқармасы',
+    ]);
+
+    $this->actingAs($admin)
+        ->get('/users?baskarma_type=additional')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('users/index')
+            ->has('users.data', 1)
+            ->where('users.data.0.id', $department->id));
+
+    $this->actingAs($admin)
+        ->get('/users?baskarma_type=oblast')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('users/index')
+            ->where('users.data', fn (array $users) => collect($users)
+                ->doesntContain('id', $department->id)));
+});
+
+test('users index searches by full name and position', function () {
+    $admin = createAdminUser();
+    $target = User::factory()->create([
+        'full_name' => 'Қалмұрзаев Болат',
+        'baskarma_type' => 'oblast',
+        'position' => 'Экология департаменті',
+    ]);
+    User::factory()->create([
+        'full_name' => 'Басқа пайдаланушы',
+        'baskarma_type' => 'district',
+        'position' => 'Аудан әкімдігі',
+    ]);
+
+    $this->actingAs($admin)
+        ->get('/users?search=Қалмұрзаев')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('users.data', 1)
+            ->where('users.data.0.id', $target->id));
+
+    $this->actingAs($admin)
+        ->get('/users?baskarma_type=additional&search=Экология')
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('users.data', 1)
+            ->where('users.data.0.id', $target->id));
 });
 
 test('users create page loads for admin', function () {

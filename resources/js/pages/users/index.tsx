@@ -1,8 +1,10 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
-import { UserIcon } from 'lucide-react';
+import { Pencil, Plus, Search, Trash2, UserIcon, X } from 'lucide-react';
+import { useState } from 'react';
+import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
     Table,
     TableBody,
@@ -40,24 +42,46 @@ interface User {
 
 interface Props {
     users: PaginatedData<User>;
-    filters: { baskarma_type?: string };
+    filters: { baskarma_type?: string; search?: string };
 }
 
 const FILTER_TABS = [
     { label: 'Барлығы', value: '' },
     { label: 'Облыстық басқарма', value: 'oblast' },
     { label: 'Аудандық', value: 'district' },
+    { label: 'Қосымша инстанциялар', value: 'additional' },
 ] as const;
 
 export default function Index({ users, filters }: Props) {
     const activeFilter = filters.baskarma_type ?? '';
+    const [search, setSearch] = useState(filters.search ?? '');
+
+    const visitUsers = (baskarmaType: string, searchValue: string) => {
+        const query: Record<string, string> = {};
+        const normalizedSearch = searchValue.trim();
+
+        if (baskarmaType) query.baskarma_type = baskarmaType;
+        if (normalizedSearch) query.search = normalizedSearch;
+
+        router.get(usersRoutes.index.url(), query, {
+            preserveState: true,
+            preserveScroll: true,
+            replace: true,
+        });
+    };
 
     const applyFilter = (value: string) => {
-        router.get(
-            usersRoutes.index.url(),
-            value ? { baskarma_type: value } : {},
-            { preserveState: true, replace: true },
-        );
+        visitUsers(value, search);
+    };
+
+    const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        visitUsers(activeFilter, search);
+    };
+
+    const clearSearch = () => {
+        setSearch('');
+        visitUsers(activeFilter, '');
     };
     const formatShortName = (fullName: string) => {
         const parts = fullName.trim().split(/\s+/);
@@ -94,21 +118,58 @@ export default function Index({ users, filters }: Props) {
                 </div>
 
                 {/* Filter tabs */}
-                <div className="flex gap-2">
-                    {FILTER_TABS.map((tab) => (
-                        <button
-                            key={tab.value}
-                            onClick={() => applyFilter(tab.value)}
-                            className={cn(
-                                'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
-                                activeFilter === tab.value
-                                    ? 'bg-[#0f1b3d] text-white'
-                                    : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+                    <div className="flex flex-wrap gap-2">
+                        {FILTER_TABS.map((tab) => (
+                            <button
+                                key={tab.value}
+                                type="button"
+                                onClick={() => applyFilter(tab.value)}
+                                className={cn(
+                                    'rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                                    activeFilter === tab.value
+                                        ? 'bg-[#0f1b3d] text-white'
+                                        : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-gray-50',
+                                )}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
+                    </div>
+
+                    <form
+                        onSubmit={submitSearch}
+                        className="flex w-full gap-2 lg:w-[440px]"
+                    >
+                        <div className="relative min-w-0 flex-1">
+                            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                            <Input
+                                value={search}
+                                onChange={(event) =>
+                                    setSearch(event.target.value)
+                                }
+                                placeholder="АТЖ немесе лауазым бойынша іздеу"
+                                aria-label="АТЖ немесе лауазым бойынша іздеу"
+                                className="h-10 bg-white pr-9 pl-9"
+                            />
+                            {search && (
+                                <button
+                                    type="button"
+                                    onClick={clearSearch}
+                                    aria-label="Іздеуді тазалау"
+                                    className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                                >
+                                    <X className="h-4 w-4" />
+                                </button>
                             )}
+                        </div>
+                        <Button
+                            type="submit"
+                            className="h-10 bg-[#0f1b3d] px-5 text-white hover:bg-[#17284f]"
                         >
-                            {tab.label}
-                        </button>
-                    ))}
+                            Іздеу
+                        </Button>
+                    </form>
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
