@@ -1,3 +1,5 @@
+import { BotMessageSquare, Loader2, Send, X } from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -9,8 +11,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { BotMessageSquare, Loader2, Send, X } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
 
 function renderMarkdown(text: string) {
     return text.split('\n').map((line, lineIdx) => {
@@ -210,8 +210,11 @@ export function ChatWidget() {
                                                 )}
                                             >
                                                 <p className="text-sm leading-relaxed">
-                                                    {message.role === 'assistant'
-                                                        ? renderMarkdown(message.content)
+                                                    {message.role ===
+                                                    'assistant'
+                                                        ? renderMarkdown(
+                                                              message.content,
+                                                          )
                                                         : message.content}
                                                 </p>
                                             </div>

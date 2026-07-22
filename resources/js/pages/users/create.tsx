@@ -1,7 +1,7 @@
 import { Head, useForm, Link } from '@inertiajs/react';
+import { Eye, EyeOff } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -211,7 +211,9 @@ export default function Create({ regions, roles }: Props) {
                             <div className="relative">
                                 <Input
                                     id="password_confirmation"
-                                    type={showPasswordConf ? 'text' : 'password'}
+                                    type={
+                                        showPasswordConf ? 'text' : 'password'
+                                    }
                                     value={data.password_confirmation}
                                     onChange={(e) =>
                                         setData(
@@ -225,7 +227,9 @@ export default function Create({ regions, roles }: Props) {
                                 <button
                                     type="button"
                                     tabIndex={-1}
-                                    onClick={() => setShowPasswordConf((v) => !v)}
+                                    onClick={() =>
+                                        setShowPasswordConf((v) => !v)
+                                    }
                                     className="absolute inset-y-0 right-3 flex items-center text-gray-400 hover:text-gray-600"
                                 >
                                     {showPasswordConf ? (

@@ -1,5 +1,5 @@
-import { CheckCircle2 } from 'lucide-react';
 import { usePage } from '@inertiajs/react';
+import { CheckCircle2 } from 'lucide-react';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 

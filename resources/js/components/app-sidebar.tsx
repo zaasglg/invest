@@ -19,9 +19,9 @@ import {
     projectNavItems,
     zoneNavItems,
 } from '@/config/navigation';
-import { dashboard } from '@/routes';
 import type { NavItem, SharedData } from '@/types';
 import AppLogo from './app-logo';
+import { dashboard } from '@/routes';
 
 const footerNavItems: NavItem[] = [];
 

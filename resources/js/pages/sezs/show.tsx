@@ -30,8 +30,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
-import { formatMoneyCompact } from '@/lib/utils';
 import AppLayout from '@/layouts/app-layout';
+import { formatMoneyCompact } from '@/lib/utils';
 import type { PaginatedData } from '@/types';
 
 interface Region {

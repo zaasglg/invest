@@ -78,7 +78,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                 <div className="relative">
                                     <Input
                                         id="password"
-                                        type={showPassword ? 'text' : 'password'}
+                                        type={
+                                            showPassword ? 'text' : 'password'
+                                        }
                                         name="password"
                                         required
                                         tabIndex={2}
@@ -89,7 +91,9 @@ export default function Login({ status, canResetPassword }: Props) {
                                     <button
                                         type="button"
                                         tabIndex={-1}
-                                        onClick={() => setShowPassword((v) => !v)}
+                                        onClick={() =>
+                                            setShowPassword((v) => !v)
+                                        }
                                         className="absolute inset-y-0 right-3 flex items-center text-white/40 hover:text-white/70"
                                     >
                                         {showPassword ? (

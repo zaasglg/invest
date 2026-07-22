@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { UserIcon } from 'lucide-react';
 import Pagination from '@/components/pagination';
@@ -13,9 +13,8 @@ import {
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import * as usersRoutes from '@/routes/users';
-
 import type { PaginatedData } from '@/types';
+import * as usersRoutes from '@/routes/users';
 
 interface Region {
     id: number;

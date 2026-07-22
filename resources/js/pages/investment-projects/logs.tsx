@@ -1,9 +1,9 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft, ScrollText, User, Clock } from 'lucide-react';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-import Pagination from '@/components/pagination';
 import type { PaginatedData } from '@/types';
 
 interface ProjectType {

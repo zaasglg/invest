@@ -24,9 +24,8 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
-import * as subsoilUsersRoutes from '@/routes/subsoil-users';
-
 import type { PaginatedData } from '@/types';
+import * as subsoilUsersRoutes from '@/routes/subsoil-users';
 
 interface Region {
     id: number;

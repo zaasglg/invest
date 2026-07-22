@@ -351,14 +351,6 @@ export default function Edit({
         put(investmentProjects.update.url(project.id));
     };
 
-    const handleCancel = () => {
-        if (returnUrl) {
-            window.location.href = returnUrl;
-        } else {
-            window.location.href = investmentProjects.index.url();
-        }
-    };
-
     const [validationErrors, setValidationErrors] = useState<
         Record<string, string>
     >({});
