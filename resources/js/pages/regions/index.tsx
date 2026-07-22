@@ -1,6 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Trash2, Edit, GripVertical, MoveRight } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import type { DragEndEvent } from '@dnd-kit/core';
 import {
     DndContext,
     closestCenter,
@@ -8,7 +6,6 @@ import {
     PointerSensor,
     useSensor,
     useSensors,
-    DragEndEvent,
 } from '@dnd-kit/core';
 import {
     arrayMove,
@@ -18,6 +15,11 @@ import {
     useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
+import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Trash2, Edit, GripVertical, MoveRight } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import Pagination from '@/components/pagination';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogContent,
@@ -27,8 +29,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import Pagination from '@/components/pagination';
-import { Button } from '@/components/ui/button';
 import {
     Table,
     TableBody,
@@ -38,9 +38,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import * as regions from '@/routes/regions';
-
 import type { PaginatedData, SharedData } from '@/types';
+import * as regions from '@/routes/regions';
 
 interface Region {
     id: number;

@@ -491,7 +491,6 @@ export default function Gallery({
                                                     photos={mainGallery}
                                                     onDelete={handleDelete}
                                                     onOpen={openLightbox}
-                                                    canModify={canEdit}
                                                     canDelete={canDelete}
                                                     canDownload={canDownload}
                                                     projectId={project.id}
@@ -525,7 +524,6 @@ export default function Gallery({
                                                 photos={renderPhotos}
                                                 onDelete={handleDelete}
                                                 onOpen={openLightbox}
-                                                canModify={canEdit}
                                                 canDelete={canDelete}
                                                 canDownload={canDownload}
                                                 projectId={project.id}
@@ -572,9 +570,6 @@ export default function Gallery({
                                                                 }
                                                                 onOpen={
                                                                     openLightbox
-                                                                }
-                                                                canModify={
-                                                                    canEdit
                                                                 }
                                                                 canDelete={
                                                                     canDelete
@@ -632,7 +627,6 @@ interface PhotoCardProps {
     photos: ProjectPhoto[];
     onDelete: (id: number) => void;
     onOpen: (photos: ProjectPhoto[], index: number) => void;
-    canModify: boolean;
     canDelete: boolean;
     canDownload: boolean;
     projectId: number;
@@ -644,7 +638,6 @@ function PhotoCard({
     photos,
     onDelete,
     onOpen,
-    canModify,
     canDelete,
     canDownload,
     projectId,

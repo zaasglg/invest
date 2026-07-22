@@ -15,9 +15,9 @@ import {
 } from '@/components/ui/sidebar';
 import { UserInfo } from '@/components/user-info';
 import { useIsMobile } from '@/hooks/use-mobile';
+import type { SharedData } from '@/types';
 import { logout } from '@/routes';
 import { edit as editProfile } from '@/routes/profile';
-import type { SharedData } from '@/types';
 
 export function NavUser() {
     const { auth } = usePage<SharedData>().props;

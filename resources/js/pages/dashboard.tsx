@@ -3,8 +3,8 @@ import { useState } from 'react';
 import Map from '@/components/map';
 import { RegionSidebar } from '@/components/region-sidebar';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
+import { dashboard } from '@/routes';
 
 interface Region {
     id: number;

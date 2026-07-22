@@ -11,9 +11,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import * as rolesRoutes from '@/routes/roles';
-
 import type { PaginatedData } from '@/types';
+import * as rolesRoutes from '@/routes/roles';
 
 interface Role {
     id: number;

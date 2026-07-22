@@ -1,3 +1,20 @@
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+    DndContext,
+    closestCenter,
+    KeyboardSensor,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    arrayMove,
+    SortableContext,
+    sortableKeyboardCoordinates,
+    verticalListSortingStrategy,
+    useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Archive,
@@ -11,28 +28,9 @@ import {
     Calendar,
 } from 'lucide-react';
 import { useMemo, useState, useEffect, type FormEvent } from 'react';
-import {
-    DndContext,
-    closestCenter,
-    KeyboardSensor,
-    PointerSensor,
-    useSensor,
-    useSensors,
-    DragEndEvent,
-} from '@dnd-kit/core';
-import {
-    arrayMove,
-    SortableContext,
-    sortableKeyboardCoordinates,
-    verticalListSortingStrategy,
-    useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import {
     Dialog,
     DialogContent,
@@ -40,6 +38,8 @@ import {
     DialogTitle,
     DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
     Select,
     SelectContent,
@@ -58,9 +58,8 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
-import * as investmentProjectsRoutes from '@/routes/investment-projects';
-
 import type { PaginatedData, SharedData } from '@/types';
+import * as investmentProjectsRoutes from '@/routes/investment-projects';
 
 interface Region {
     id: number;
@@ -516,7 +515,7 @@ export default function Index({
                                 setFiltersOpen(true);
                                 router.get(
                                     '/investment-projects',
-                                    newData as any,
+                                    { ...newData },
                                     {
                                         preserveState: true,
                                         preserveScroll: true,

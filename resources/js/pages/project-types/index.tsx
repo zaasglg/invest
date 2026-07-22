@@ -11,9 +11,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import * as projectTypes from '@/routes/project-types';
-
 import type { PaginatedData } from '@/types';
+import * as projectTypes from '@/routes/project-types';
 
 interface ProjectType {
     id: number;

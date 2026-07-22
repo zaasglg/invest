@@ -1,5 +1,5 @@
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Eye, Pencil, Plus, Trash2, Edit } from 'lucide-react';
+import { ChevronDown, Edit, Eye, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -25,9 +25,8 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
-import * as promZonesRoutes from '@/routes/prom-zones';
-
 import type { PaginatedData } from '@/types';
+import * as promZonesRoutes from '@/routes/prom-zones';
 
 interface Region {
     id: number;

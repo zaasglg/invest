@@ -2,7 +2,6 @@ import { Transition } from '@headlessui/react';
 import { Form, Head, Link, router, usePage } from '@inertiajs/react';
 import { Camera, Trash2 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarCropper from '@/components/avatar-cropper';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
@@ -14,9 +13,10 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import type { BreadcrumbItem, SharedData } from '@/types';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
-import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {

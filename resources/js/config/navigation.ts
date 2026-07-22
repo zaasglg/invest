@@ -10,17 +10,17 @@ import {
     Tags,
     Users,
 } from 'lucide-react';
+import type { NavItem, User } from '@/types';
 import { dashboard } from '@/routes';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentProjects from '@/routes/investment-projects';
-import * as promZones from '@/routes/prom-zones';
 import * as projectTypes from '@/routes/project-types';
+import * as promZones from '@/routes/prom-zones';
 import * as regions from '@/routes/regions';
 import * as roles from '@/routes/roles';
 import * as sezs from '@/routes/sezs';
 import * as subsoilUsers from '@/routes/subsoil-users';
 import * as usersRoutes from '@/routes/users';
-import type { NavItem, User } from '@/types';
 
 export const mainNavItems: NavItem[] = [
     {

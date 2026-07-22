@@ -11,9 +11,8 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
-import { dashboard } from '@/routes';
-
 import type { BreadcrumbItem } from '@/types';
+import { dashboard } from '@/routes';
 
 interface Region {
     id: number;

@@ -10,8 +10,8 @@ import {
     StickyNavbar,
     WhyTurkistanSection,
 } from '@/components/landing';
-import { dashboard } from '@/routes';
 import type { SharedData } from '@/types';
+import { dashboard } from '@/routes';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;

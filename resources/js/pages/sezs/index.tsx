@@ -25,9 +25,8 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
-import * as sezs from '@/routes/sezs';
-
 import type { PaginatedData } from '@/types';
+import * as sezs from '@/routes/sezs';
 
 interface Region {
     id: number;

@@ -327,7 +327,6 @@ export default function Show({
     users = [],
     canDownload,
     isInvolved = true,
-    isOwnDistrict = false,
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
