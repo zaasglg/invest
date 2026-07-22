@@ -1,3 +1,13 @@
+import {
+    ArrowUpRight,
+    BotMessageSquare,
+    Loader2,
+    MapPinned,
+    Send,
+    X,
+} from 'lucide-react';
+import { Fragment, useEffect, useRef, useState } from 'react';
+
 import { Button } from '@/components/ui/button';
 import {
     Card,
@@ -9,8 +19,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { BotMessageSquare, Loader2, Send, X } from 'lucide-react';
-import { Fragment, useEffect, useRef, useState } from 'react';
+
+const INVESTOR_MAP_URL =
+    'https://alpha-turkistan-investor-2026-0722.chatgpt-edu-7368.chatgpt.site/';
 
 function renderMarkdown(text: string) {
     return text.split('\n').map((line, lineIdx) => {
@@ -144,16 +155,28 @@ export function ChatWidget() {
             {!isOpen && (
                 <Button
                     onClick={() => setIsOpen(true)}
-                    size="icon"
-                    className="fixed right-6 bottom-6 z-50 h-14 w-14 rounded-full shadow-lg"
+                    type="button"
+                    aria-label="AI-көмекшіні ашу"
+                    className="group fixed right-4 bottom-4 z-[1000] h-14 rounded-full border border-[#c8a44e]/50 bg-[#0f1b3d] px-4 text-white shadow-[0_14px_35px_rgba(15,27,61,0.32)] transition-all hover:-translate-y-0.5 hover:border-[#c8a44e] hover:bg-[#17284f] sm:right-6 sm:bottom-6"
                 >
-                    <BotMessageSquare className="h-6 w-6" />
+                    <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#c8a44e]/15 text-[#e3c97a]">
+                        <BotMessageSquare className="h-5 w-5" />
+                        <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full border-2 border-[#0f1b3d] bg-emerald-400" />
+                    </span>
+                    <span className="ml-2.5 hidden text-left sm:block">
+                        <span className="block text-sm leading-none font-semibold">
+                            AI-көмекші
+                        </span>
+                        <span className="mt-1 block text-[10px] font-normal text-white/60">
+                            Орын таңдау
+                        </span>
+                    </span>
                 </Button>
             )}
 
             {/* Чат терезесі */}
             {isOpen && (
-                <Card className="fixed right-6 bottom-6 z-50 flex h-[600px] w-[400px] flex-col shadow-2xl">
+                <Card className="fixed right-3 bottom-3 z-[1000] flex h-[min(600px,calc(100dvh-1.5rem))] w-[calc(100vw-1.5rem)] flex-col overflow-hidden shadow-2xl sm:right-6 sm:bottom-6 sm:w-[400px]">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b pb-4">
                         <div className="flex items-center gap-2">
                             <BotMessageSquare className="h-5 w-5" />
@@ -170,6 +193,30 @@ export function ChatWidget() {
                             <X className="h-4 w-4" />
                         </Button>
                     </CardHeader>
+
+                    <div className="border-b bg-white p-3">
+                        <a
+                            href={INVESTOR_MAP_URL}
+                            target="_blank"
+                            rel="noreferrer"
+                            aria-label="Инвесторға арналған AI орын таңдау картасын ашу"
+                            className="group flex items-center gap-3 rounded-xl border border-[#c8a44e]/35 bg-[#f8f6ef] p-3 text-[#0f1b3d] transition-all hover:border-[#c8a44e]/70 hover:bg-[#f2ecd9]"
+                        >
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#c8a44e] text-[#0f1b3d] shadow-sm">
+                                <MapPinned className="h-5 w-5" />
+                            </span>
+                            <span className="min-w-0 flex-1 text-left">
+                                <span className="block text-sm font-semibold">
+                                    AI арқылы орын таңдау
+                                </span>
+                                <span className="mt-0.5 block text-[11px] leading-4 text-muted-foreground">
+                                    Жер, электр желісі, су және ең қолайлы
+                                    аймақтар
+                                </span>
+                            </span>
+                            <ArrowUpRight className="h-4 w-4 shrink-0 text-[#9a7624] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                        </a>
+                    </div>
 
                     <CardContent className="flex-1 overflow-hidden p-0">
                         <ScrollArea
@@ -210,8 +257,11 @@ export function ChatWidget() {
                                                 )}
                                             >
                                                 <p className="text-sm leading-relaxed">
-                                                    {message.role === 'assistant'
-                                                        ? renderMarkdown(message.content)
+                                                    {message.role ===
+                                                    'assistant'
+                                                        ? renderMarkdown(
+                                                              message.content,
+                                                          )
                                                         : message.content}
                                                 </p>
                                             </div>
