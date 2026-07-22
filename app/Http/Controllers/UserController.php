@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -15,9 +16,36 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $query = User::with(['region', 'roleModel'])->latest();
+        $baskarmaType = $request->string('baskarma_type')->toString();
+        $search = trim($request->string('search')->toString());
 
-        if ($request->filled('baskarma_type')) {
-            $query->where('baskarma_type', $request->baskarma_type);
+        if ($baskarmaType === 'additional') {
+            $query
+                ->where('baskarma_type', 'oblast')
+                ->whereLike('position', '%департаменті', caseSensitive: false);
+        } elseif ($baskarmaType === 'oblast') {
+            $query
+                ->where('baskarma_type', 'oblast')
+                ->where(function (Builder $query) {
+                    $query
+                        ->whereNull('position')
+                        ->orWhereNotLike('position', '%департаменті', caseSensitive: false);
+                });
+        } elseif ($baskarmaType === 'district') {
+            $query->where('baskarma_type', 'district');
+        }
+
+        if ($search !== '') {
+            $searchPattern = '%'.$search.'%';
+
+            $query->where(function (Builder $query) use ($searchPattern) {
+                $query
+                    ->whereLike('full_name', $searchPattern, caseSensitive: false)
+                    ->orWhereLike('position', $searchPattern, caseSensitive: false)
+                    ->orWhereHas('region', function (Builder $regionQuery) use ($searchPattern) {
+                        $regionQuery->whereLike('name', $searchPattern, caseSensitive: false);
+                    });
+            });
         }
 
         $users = $query->paginate(15)->withQueryString();
@@ -25,7 +53,10 @@ class UserController extends Controller
         // dd($users->toArray());
         return Inertia::render('users/index', [
             'users' => $users,
-            'filters' => $request->only('baskarma_type'),
+            'filters' => [
+                'baskarma_type' => $baskarmaType,
+                'search' => $search,
+            ],
         ]);
     }
 
