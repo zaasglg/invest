@@ -13,24 +13,29 @@ use App\Models\Sez;
 use App\Models\SezIssue;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class ChatContextService
 {
-    public function buildContext(string $query, array $entities): array
+    public function buildContext(
+        string $query,
+        array $entities,
+        ?User $user = null,
+    ): array
     {
-        // Минимальная статистика присутствует всегда
         $context = [
-            'overview' => $this->getOverviewStats(),
+            'overview' => $this->getOverviewStats($user),
         ];
 
         foreach ($entities as $entity) {
             switch ($entity) {
                 case 'regions':
-                    $context['regions'] = $this->getRegionsData($query);
+                    $context['regions'] = $this->getRegionsData($query, $user);
                     break;
                 case 'investment_projects':
-                    $context['projects'] = $this->getProjectsData($query);
+                    $context['projects'] = $this->getProjectsData($query, $user);
                     break;
                 case 'project_types':
                     $context['project_types'] = $this->getProjectTypesData();
@@ -48,10 +53,10 @@ class ChatContextService
                     $context['subsoil_users'] = $this->getSubsoilUsersData($query);
                     break;
                 case 'issues':
-                    $context['issues'] = $this->getIssuesData($query);
+                    $context['issues'] = $this->getIssuesData($query, $user);
                     break;
                 case 'tasks':
-                    $context['tasks'] = $this->getTasksData($query);
+                    $context['tasks'] = $this->getTasksData($query, $user);
                     break;
                 case 'users':
                     $context['users'] = $this->getUsersData($query);
@@ -68,32 +73,64 @@ class ChatContextService
         return $context;
     }
 
-    protected function getOverviewStats(): array
+    protected function getOverviewStats(?User $user): array
     {
+        $projects = InvestmentProject::query()->active();
+        $this->scopeProjectsForUser($projects, $user);
+
+        $projectIssues = ProjectIssue::query()
+            ->where('status', '!=', 'resolved')
+            ->whereHas('project', function (Builder $query) use ($user) {
+                $query->active();
+                $this->scopeProjectsForUser($query, $user);
+            });
+
         return [
-            'total_projects' => InvestmentProject::count(),
-            'total_investment' => (float) InvestmentProject::sum('total_investment'),
+            'total_projects' => (clone $projects)->count(),
+            'total_investment' => (float) (clone $projects)->sum('total_investment'),
             'total_sezs' => Sez::count(),
             'total_industrial_zones' => IndustrialZone::count(),
             'total_prom_zones' => PromZone::count(),
             'total_subsoil_users' => SubsoilUser::count(),
-            'active_issues' => \App\Models\ProjectIssue::where('status', '!=', 'resolved')->count(),
+            'active_issues' => $projectIssues->count(),
         ];
     }
 
-    protected function getRegionsData(string $query): array
+    protected function getRegionsData(string $query, ?User $user): array
     {
-        $regions = Region::with(['investmentProjects', 'sezs', 'industrialZones'])
-            ->get();
+        $regionsQuery = Region::query()->withCount(['sezs', 'industrialZones']);
+
+        if ($user?->isDistrictScoped()) {
+            $regionsQuery->whereKey($user->region_id);
+        } elseif ($user?->isOblastScopedAkim()) {
+            $regionsQuery->where(function (Builder $query) use ($user) {
+                $query->whereKey($user->region_id)
+                    ->orWhere('parent_id', $user->region_id);
+            });
+        }
+
+        $regions = $regionsQuery->get();
+
+        $projects = InvestmentProject::query()->active();
+        $this->scopeProjectsForUser($projects, $user);
+        $projectCounts = $projects
+            ->selectRaw('region_id, count(*) as aggregate')
+            ->groupBy('region_id')
+            ->pluck('aggregate', 'region_id');
 
         $totalProjects = 0;
         $totalSezs = 0;
         $totalIZ = 0;
 
-        $items = $regions->map(function ($region) use (&$totalProjects, &$totalSezs, &$totalIZ) {
-            $projectsCount = $region->investmentProjects->count();
-            $sezsCount = $region->sezs->count();
-            $izCount = $region->industrialZones->count();
+        $items = $regions->map(function ($region) use (
+            $projectCounts,
+            &$totalProjects,
+            &$totalSezs,
+            &$totalIZ,
+        ) {
+            $projectsCount = (int) ($projectCounts[$region->id] ?? 0);
+            $sezsCount = (int) $region->sezs_count;
+            $izCount = (int) $region->industrial_zones_count;
 
             $totalProjects += $projectsCount;
             $totalSezs += $sezsCount;
@@ -118,18 +155,71 @@ class ChatContextService
         ];
     }
 
-    protected function getProjectsData(string $query): array
+    protected function getProjectsData(string $query, ?User $user): array
     {
-        $projectsQuery = InvestmentProject::with(['region', 'issues']);
+        $projectsQuery = InvestmentProject::query()
+            ->active()
+            ->with([
+                'region',
+                'projectType',
+                'issues',
+                'sezs:id,name',
+                'industrialZones:id,name',
+                'promZones:id,name',
+                'subsoilUsers:id,name',
+            ]);
+
+        $this->scopeProjectsForUser($projectsQuery, $user);
+        $totalAvailable = (clone $projectsQuery)->count();
 
         if ($regionName = $this->extractRegionName($query)) {
             $projectsQuery->whereHas('region', fn ($q) => $q->where('name', 'ILIKE', "%{$regionName}%"));
         }
 
-        $allProjects = (clone $projectsQuery)->get();
+        if ($status = $this->extractProjectStatus($query)) {
+            $projectsQuery->where('status', $status);
+        }
+
+        $catalog = (clone $projectsQuery)
+            ->limit(100)
+            ->get()
+            ->map(fn ($project) => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'company' => $project->company_name,
+                'region' => $project->region->name ?? null,
+                'project_type' => $project->projectType->name ?? null,
+                'status' => $project->current_status ?? $project->status,
+            ])
+            ->values()
+            ->all();
+
+        $searchTerms = $this->extractProjectSearchTerms($query, $regionName);
+        if (! empty($searchTerms)) {
+            $projectsQuery->where(function (Builder $searchQuery) use ($searchTerms) {
+                foreach ($searchTerms as $term) {
+                    $needle = match (true) {
+                        mb_strlen($term) > 7 => mb_substr($term, 0, 6),
+                        mb_strlen($term) > 5 => mb_substr($term, 0, -1),
+                        default => $term,
+                    };
+
+                    $searchQuery->orWhere('name', 'ILIKE', "%{$needle}%")
+                        ->orWhere('company_name', 'ILIKE', "%{$needle}%")
+                        ->orWhere('description', 'ILIKE', "%{$needle}%")
+                        ->orWhere('capacity', 'ILIKE', "%{$needle}%")
+                        ->orWhereHas(
+                            'projectType',
+                            fn (Builder $typeQuery) => $typeQuery
+                                ->where('name', 'ILIKE', "%{$needle}%"),
+                        );
+                }
+            });
+        }
+
+        $allProjects = (clone $projectsQuery)->orderBy('sort_order')->get();
         $totalCount = $allProjects->count();
 
-        // Агрегированная статистика по всем проектам
         $totalInvestment = $allProjects->sum('total_investment');
         $byStatus = $allProjects->groupBy(fn ($p) => $p->current_status ?? $p->status ?? 'unknown')
             ->map->count()
@@ -137,20 +227,52 @@ class ChatContextService
 
         $items = $allProjects->take(20)
             ->map(fn ($project) => [
+                'id' => $project->id,
                 'name' => $project->name,
+                'company' => $project->company_name,
+                'description' => Str::limit((string) $project->description, 600),
                 'region' => $project->region->name ?? null,
+                'project_type' => $project->projectType->name ?? null,
+                'sector' => $project->sector ?? null,
                 'status' => $project->current_status ?? $project->status,
+                'base_status' => $project->status,
                 'total_investment' => $project->total_investment,
-                'issues_count' => $project->issues->count(),
+                'jobs_count' => $project->jobs_count,
+                'capacity' => $project->capacity,
+                'start_date' => $project->start_date?->format('Y-m-d'),
+                'end_date' => $project->end_date?->format('Y-m-d'),
+                'infrastructure' => $project->infrastructure,
+                'sezs' => $project->sezs->pluck('name')->values()->all(),
+                'industrial_zones' => $project->industrialZones
+                    ->pluck('name')->values()->all(),
+                'prom_zones' => $project->promZones->pluck('name')->values()->all(),
+                'subsoil_users' => $project->subsoilUsers
+                    ->pluck('name')->values()->all(),
+                'open_issues' => $project->issues
+                    ->where('status', '!=', 'resolved')
+                    ->take(5)
+                    ->map(fn ($issue) => [
+                        'title' => $issue->title,
+                        'description' => Str::limit((string) $issue->description, 300),
+                        'severity' => $issue->severity ?? $issue->priority,
+                        'status' => $issue->status,
+                    ])
+                    ->values()
+                    ->all(),
+                'page_url' => '/investment-projects/'.$project->id,
             ])
             ->values()
             ->toArray();
 
         return [
+            'total_available_for_user' => $totalAvailable,
             'total_count' => $totalCount,
             'total_investment_sum' => $totalInvestment,
             'by_status' => $byStatus,
+            'search_terms' => $searchTerms,
+            'region_filter' => $regionName,
             'items' => $items,
+            'catalog' => $catalog,
         ];
     }
 
@@ -213,10 +335,14 @@ class ChatContextService
         ];
     }
 
-    protected function getIssuesData(string $query): array
+    protected function getIssuesData(string $query, ?User $user): array
     {
         $projectIssues = ProjectIssue::with(['project.region'])
             ->where('status', '!=', 'resolved')
+            ->whereHas('project', function (Builder $builder) use ($user) {
+                $builder->active();
+                $this->scopeProjectsForUser($builder, $user);
+            })
             ->limit(15)
             ->get()
             ->map(fn ($issue) => [
@@ -243,9 +369,9 @@ class ChatContextService
         return array_merge($projectIssues->toArray(), $sezIssues->toArray());
     }
 
-    protected function getTasksData(string $query): array
+    protected function getTasksData(string $query, ?User $user): array
     {
-        return DB::table('project_tasks')
+        $tasks = DB::table('project_tasks')
             ->join('investment_projects', 'project_tasks.project_id', '=', 'investment_projects.id')
             ->select(
                 'project_tasks.id',
@@ -253,10 +379,95 @@ class ChatContextService
                 'project_tasks.status',
                 'project_tasks.due_date',
                 'investment_projects.name as project_name'
-            )
+            );
+
+        if ($user?->roleModel?->name === 'ispolnitel') {
+            $tasks->where('project_tasks.assigned_to', $user->id);
+        } elseif ($user?->isDistrictScoped()) {
+            $tasks->where('investment_projects.region_id', $user->region_id);
+        } elseif ($user?->isOblastScopedAkim()) {
+            $regionIds = Region::query()
+                ->whereKey($user->region_id)
+                ->orWhere('parent_id', $user->region_id)
+                ->pluck('id');
+            $tasks->whereIn('investment_projects.region_id', $regionIds);
+        }
+
+        return $tasks
             ->limit(20)
             ->get()
             ->toArray();
+    }
+
+    protected function scopeProjectsForUser(
+        Builder $query,
+        ?User $user,
+    ): void {
+        if ($user?->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        } elseif ($user?->isOblastScopedAkim()) {
+            $query->where(function (Builder $builder) use ($user) {
+                $builder->where('region_id', $user->region_id)
+                    ->orWhereHas('region', fn (Builder $regionQuery) => $regionQuery
+                        ->where('parent_id', $user->region_id));
+            });
+        }
+
+        if ($user?->roleModel?->name === 'invest'
+            && in_array(
+                $user->invest_sub_role,
+                ['turkistan_invest', 'aea', 'ia', 'prom_zone'],
+                true,
+            )) {
+            $query->whereHas('curators', fn (Builder $curatorQuery) => $curatorQuery
+                ->where('users.invest_sub_role', $user->invest_sub_role));
+        }
+    }
+
+    protected function extractProjectStatus(string $query): ?string
+    {
+        return match (true) {
+            (bool) preg_match('/(іске қос|запущен|действующ)/ui', $query) => 'launched',
+            (bool) preg_match('/(іске ас|реализац|строит|орындал)/ui', $query) => 'implementation',
+            (bool) preg_match('/(тоқтат|приостанов|заморож)/ui', $query) => 'suspended',
+            (bool) preg_match('/(жоспар|планир|планда)/ui', $query) => 'plan',
+            default => null,
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function extractProjectSearchTerms(
+        string $query,
+        ?string $regionName,
+    ): array {
+        $stopWords = [
+            'есть', 'такие', 'какие', 'какой', 'какая', 'покажи', 'найди',
+            'можно', 'ли', 'проекты', 'проект', 'жоба', 'жобалар', 'қандай',
+            'көрсет', 'бар', 'ма', 'туралы', 'район', 'область', 'аудан',
+            'облыс', 'инвестиция', 'инвестиционный', 'инвестициялық',
+            'статус', 'мәртебе', 'система', 'сайт', 'бойынша', 'сколько',
+            'қанша', 'всего', 'жалпы', 'которые', 'который', 'олардың',
+            'запущен', 'действующий', 'реализация', 'планируется',
+            'расскажи', 'подробно', 'этом', 'этот', 'этого', 'информация',
+            'толық', 'осы', 'сол', 'айтшы', 'мәлімет', 'ақпарат',
+        ];
+
+        $regionWords = $regionName
+            ? preg_split('/[^\pL\pN]+/u', mb_strtolower($regionName))
+            : [];
+
+        $terms = preg_split('/[^\pL\pN]+/u', mb_strtolower($query)) ?: [];
+
+        return collect($terms)
+            ->filter(fn (string $term) => mb_strlen($term) >= 4)
+            ->reject(fn (string $term) => in_array($term, $stopWords, true))
+            ->reject(fn (string $term) => in_array($term, $regionWords, true))
+            ->unique()
+            ->take(4)
+            ->values()
+            ->all();
     }
 
     protected function extractRegionName(string $query): ?string

@@ -102,6 +102,11 @@ export function ChatWidget() {
         setMessages((prev) => [...prev, tempUserMsg]);
 
         try {
+            const history = messages.slice(-8).map((message) => ({
+                role: message.role,
+                content: message.content,
+            }));
+
             const response = await fetch('/chat/send', {
                 method: 'POST',
                 headers: {
@@ -111,7 +116,7 @@ export function ChatWidget() {
                             .querySelector('meta[name="csrf-token"]')
                             ?.getAttribute('content') || '',
                 },
-                body: JSON.stringify({ message: userMessage }),
+                body: JSON.stringify({ message: userMessage, history }),
             });
 
             if (!response.ok) {
@@ -230,8 +235,13 @@ export function ChatWidget() {
                                             Сәлем! Мен сіздің AI көмекшіңізмін
                                         </p>
                                         <p className="mt-1 text-sm">
-                                            Жобалар, аймақтар, мәселелер туралы
-                                            сұраңыз
+                                            Жобалар, инвестициялар, аймақтар мен
+                                            мәселелер туралы толық сұраңыз
+                                        </p>
+                                        <p className="mt-2 max-w-72 text-xs leading-5">
+                                            Мысалы: «Керамика зауыты жобасы бар
+                                            ма?» немесе «Қай жобаларда ашық
+                                            мәселе бар?»
                                         </p>
                                     </div>
                                 </div>

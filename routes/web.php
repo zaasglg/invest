@@ -196,7 +196,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->prefix('chat')->name('chat.')->group(function () {
-    Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
+    Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])
+        ->middleware('throttle:30,1')
+        ->name('send');
 });
 
 require __DIR__.'/settings.php';
