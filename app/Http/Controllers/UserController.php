@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,20 +18,8 @@ class UserController extends Controller
         $baskarmaType = $request->string('baskarma_type')->toString();
         $search = trim($request->string('search')->toString());
 
-        if ($baskarmaType === 'additional') {
-            $query
-                ->where('baskarma_type', 'oblast')
-                ->whereLike('position', '%департаменті', caseSensitive: false);
-        } elseif ($baskarmaType === 'oblast') {
-            $query
-                ->where('baskarma_type', 'oblast')
-                ->where(function (Builder $query) {
-                    $query
-                        ->whereNull('position')
-                        ->orWhereNotLike('position', '%департаменті', caseSensitive: false);
-                });
-        } elseif ($baskarmaType === 'district') {
-            $query->where('baskarma_type', 'district');
+        if (in_array($baskarmaType, User::BASKARMA_TYPES, true)) {
+            $query->where('baskarma_type', $baskarmaType);
         }
 
         if ($search !== '') {
@@ -78,6 +65,7 @@ class UserController extends Controller
         }
 
         $investRoleId = Role::where('name', 'invest')->value('id');
+        $ispolnitelRoleId = Role::where('name', 'ispolnitel')->value('id');
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -86,7 +74,11 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'role_id' => 'required|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
-            'baskarma_type' => 'nullable|in:oblast,district',
+            'baskarma_type' => [
+                $ispolnitelRoleId ? 'required_if:role_id,'.$ispolnitelRoleId : 'nullable',
+                'nullable',
+                'in:'.implode(',', User::BASKARMA_TYPES),
+            ],
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
             'invest_sub_role' => [
@@ -151,6 +143,7 @@ class UserController extends Controller
         }
 
         $investRoleId = Role::where('name', 'invest')->value('id');
+        $ispolnitelRoleId = Role::where('name', 'ispolnitel')->value('id');
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -159,7 +152,11 @@ class UserController extends Controller
             'password' => 'nullable|string|min:8|confirmed',
             'role_id' => 'required|exists:roles,id',
             'region_id' => 'nullable|exists:regions,id',
-            'baskarma_type' => 'nullable|in:oblast,district',
+            'baskarma_type' => [
+                $ispolnitelRoleId ? 'required_if:role_id,'.$ispolnitelRoleId : 'nullable',
+                'nullable',
+                'in:'.implode(',', User::BASKARMA_TYPES),
+            ],
             'position' => 'nullable|string|max:255',
             'telegram_chat_id' => 'nullable|string|max:50',
             'invest_sub_role' => [

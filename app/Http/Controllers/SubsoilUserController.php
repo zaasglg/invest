@@ -136,7 +136,7 @@ class SubsoilUserController extends Controller
         if ($user && $user->isDistrictScoped()) {
             $assignableUsersQuery->where(function ($query) use ($user) {
                 $query->where('region_id', $user->region_id)
-                    ->orWhere('baskarma_type', 'oblast');
+                    ->orWhereIn('baskarma_type', ['oblast', 'additional']);
             });
         }
 

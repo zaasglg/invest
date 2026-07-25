@@ -14,9 +14,10 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { cn } from '@/lib/utils';
-import type { PaginatedData } from '@/types';
 import * as usersRoutes from '@/routes/users';
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -34,7 +35,7 @@ interface User {
     email: string;
     phone: string | null;
     avatar: string | null;
-    baskarma_type: 'oblast' | 'district' | null;
+    baskarma_type: 'oblast' | 'district' | 'additional' | null;
     position: string | null;
     region: Region | null;
     role_model: Role | null;
@@ -226,11 +227,23 @@ export default function Index({ users, filters }: Props) {
                                             {user.email}
                                         </TableCell>
                                         <TableCell className="text-gray-500">
-                                            {user.baskarma_type === 'district'
-                                                ? user.region?.name ||
-                                                  user.position ||
-                                                  '—'
-                                                : user.position || '—'}
+                                            <div className="flex flex-col gap-0.5">
+                                                {user.baskarma_type && (
+                                                    <span className="text-xs font-medium text-[#0f1b3d]">
+                                                        {getIspolnitelTypeLabel(
+                                                            user.baskarma_type,
+                                                        )}
+                                                    </span>
+                                                )}
+                                                <span>
+                                                    {user.baskarma_type ===
+                                                    'district'
+                                                        ? user.region?.name ||
+                                                          user.position ||
+                                                          '—'
+                                                        : user.position || '—'}
+                                                </span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-1">

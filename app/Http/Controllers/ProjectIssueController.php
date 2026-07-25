@@ -114,7 +114,7 @@ class ProjectIssueController extends Controller
             return false;
         }
 
-        // Both district and oblast ispolnitel have the same write permissions
+        // All ispolnitel types have the same write permissions
         return true;
     }
 

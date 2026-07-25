@@ -1468,6 +1468,7 @@ class InvestmentProjectController extends Controller
         }
 
         return User::where('region_id', $regionId)
+            ->where('baskarma_type', 'district')
             ->whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
             ->pluck('id')
             ->toArray();

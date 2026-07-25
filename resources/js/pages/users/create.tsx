@@ -352,6 +352,9 @@ export default function Create({ regions, roles }: Props) {
                                     <SelectItem value="district">
                                         Аудандық әкімдіктер
                                     </SelectItem>
+                                    <SelectItem value="additional">
+                                        Қосымша инстанциялар
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.baskarma_type && (
@@ -362,31 +365,37 @@ export default function Create({ regions, roles }: Props) {
                         </div>
                     )}
 
-                    {/* Position field for oblast ispolnitel only */}
-                    {isIspolnitel && data.baskarma_type === 'oblast' && (
-                        <div className="flex flex-col gap-2">
-                            <Label
-                                htmlFor="position"
-                                className="font-normal text-gray-500"
-                            >
-                                Лауазымы
-                            </Label>
-                            <Input
-                                id="position"
-                                value={data.position}
-                                onChange={(e) =>
-                                    setData('position', e.target.value)
-                                }
-                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                placeholder="Мысалы: Басқарма басшысы"
-                            />
-                            {errors.position && (
-                                <span className="text-sm text-red-500">
-                                    {errors.position}
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {/* Position field for oblast and additional ispolnitel */}
+                    {isIspolnitel &&
+                        (data.baskarma_type === 'oblast' ||
+                            data.baskarma_type === 'additional') && (
+                            <div className="flex flex-col gap-2">
+                                <Label
+                                    htmlFor="position"
+                                    className="font-normal text-gray-500"
+                                >
+                                    Лауазымы
+                                </Label>
+                                <Input
+                                    id="position"
+                                    value={data.position}
+                                    onChange={(e) =>
+                                        setData('position', e.target.value)
+                                    }
+                                    className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                    placeholder={
+                                        data.baskarma_type === 'additional'
+                                            ? 'Мысалы: Экология департаментінің басшысы'
+                                            : 'Мысалы: Басқарма басшысы'
+                                    }
+                                />
+                                {errors.position && (
+                                    <span className="text-sm text-red-500">
+                                        {errors.position}
+                                    </span>
+                                )}
+                            </div>
+                        )}
 
                     {showRegionSelects && (
                         <div className="grid grid-cols-2 gap-4">

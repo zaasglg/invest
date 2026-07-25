@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -340,7 +341,7 @@ export default function Show({
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;
     const isRestrictedView = isIspolnitel && !isInvolved;
-    // Both district and oblast ispolnitel have same write permissions if involved
+    // All ispolnitel types have the same write permissions if involved
     const ispolnitelCanWrite = isIspolnitel && isInvolved;
     const photosCount =
         typeof project.photos_count === 'number'
@@ -1314,17 +1315,20 @@ export default function Show({
                                                             </p>
                                                             {task.assignee && (
                                                                 <p className="mt-1 text-sm text-gray-500">
-                                                                    {task
-                                                                        .assignee
-                                                                        .baskarma_type ===
-                                                                    'oblast'
-                                                                        ? 'Облыстық:'
-                                                                        : task
-                                                                                .assignee
-                                                                                .baskarma_type ===
-                                                                            'district'
-                                                                          ? 'Аудандық:'
-                                                                          : ''}{' '}
+                                                                    {getIspolnitelTypeLabel(
+                                                                        task
+                                                                            .assignee
+                                                                            .baskarma_type,
+                                                                        true,
+                                                                    )}
+                                                                    {getIspolnitelTypeLabel(
+                                                                        task
+                                                                            .assignee
+                                                                            .baskarma_type,
+                                                                        true,
+                                                                    )
+                                                                        ? ': '
+                                                                        : ''}
                                                                     {task
                                                                         .assignee
                                                                         .full_name ||
@@ -1972,11 +1976,17 @@ export default function Show({
                                                         <span className="mr-2 text-gray-400">
                                                             {idx + 1}
                                                         </span>
-                                                        {u.baskarma_type ===
-                                                        'oblast'
-                                                            ? 'Облыстық'
-                                                            : 'Аудандық'}
-                                                        : {u.full_name || '—'}
+                                                        {getIspolnitelTypeLabel(
+                                                            u.baskarma_type,
+                                                            true,
+                                                        )}
+                                                        {getIspolnitelTypeLabel(
+                                                            u.baskarma_type,
+                                                            true,
+                                                        )
+                                                            ? ': '
+                                                            : ''}
+                                                        {u.full_name || '—'}
                                                         {u.position &&
                                                             ` — ${u.position}`}
                                                     </span>

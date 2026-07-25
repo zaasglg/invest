@@ -275,7 +275,7 @@ export default function Edit({
         return users.filter(
             (u) =>
                 u.region_id &&
-                u.baskarma_type !== 'oblast' &&
+                u.baskarma_type === 'district' &&
                 u.role_model?.name === 'ispolnitel',
         );
     }, [users]);
@@ -288,6 +288,14 @@ export default function Edit({
         );
     }, [users]);
 
+    const additionalUsers = useMemo(() => {
+        return users.filter(
+            (u) =>
+                u.baskarma_type === 'additional' &&
+                u.role_model?.name === 'ispolnitel',
+        );
+    }, [users]);
+
     // District ispolnitel users that must be auto-assigned and cannot be removed
     const lockedIspolnitelIds = useMemo(() => {
         if (!data.region_id) return [] as string[];
@@ -296,6 +304,7 @@ export default function Edit({
             .filter(
                 (u) =>
                     u.role_model?.name === 'ispolnitel' &&
+                    u.baskarma_type === 'district' &&
                     u.region_id === regionId,
             )
             .map((u) => u.id.toString());
@@ -1659,6 +1668,68 @@ export default function Edit({
                                                     </p>
                                                     <div className="space-y-2">
                                                         {oblastUsers.map(
+                                                            (user) => (
+                                                                <div
+                                                                    key={
+                                                                        user.id
+                                                                    }
+                                                                    className="flex items-center space-x-2"
+                                                                >
+                                                                    <Checkbox
+                                                                        id={`user-${user.id}`}
+                                                                        checked={data.executor_ids.includes(
+                                                                            user.id.toString(),
+                                                                        )}
+                                                                        onCheckedChange={(
+                                                                            checked,
+                                                                        ) =>
+                                                                            handleExecutorChange(
+                                                                                user.id.toString(),
+                                                                                checked as boolean,
+                                                                            )
+                                                                        }
+                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                    />
+                                                                    <Label
+                                                                        htmlFor={`user-${user.id}`}
+                                                                        className="cursor-pointer font-normal"
+                                                                    >
+                                                                        <span>
+                                                                            {
+                                                                                user.full_name
+                                                                            }
+                                                                        </span>
+                                                                        {user.position && (
+                                                                            <span className="text-gray-400">
+                                                                                {' '}
+                                                                                —{' '}
+                                                                                {
+                                                                                    user.position
+                                                                                }
+                                                                            </span>
+                                                                        )}
+                                                                    </Label>
+                                                                </div>
+                                                            ),
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {additionalUsers.length > 0 && (
+                                                <div
+                                                    className={
+                                                        districtUsers.length >
+                                                            0 ||
+                                                        oblastUsers.length > 0
+                                                            ? 'border-t border-gray-200 pt-3'
+                                                            : ''
+                                                    }
+                                                >
+                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                        Қосымша инстанциялар
+                                                    </p>
+                                                    <div className="space-y-2">
+                                                        {additionalUsers.map(
                                                             (user) => (
                                                                 <div
                                                                     key={

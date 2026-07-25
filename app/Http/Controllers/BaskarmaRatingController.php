@@ -63,7 +63,7 @@ class BaskarmaRatingController extends Controller
             ];
         });
 
-        // Split into district and oblast, sorted by KPD descending
+        // Split into all three ispolnitel types, sorted by KPD descending
         $districtRatings = $ratings
             ->filter(fn ($r) => $r['baskarma_type'] === 'district')
             ->sortByDesc('kpd')
@@ -71,6 +71,11 @@ class BaskarmaRatingController extends Controller
 
         $oblastRatings = $ratings
             ->filter(fn ($r) => $r['baskarma_type'] === 'oblast')
+            ->sortByDesc('kpd')
+            ->values();
+
+        $additionalRatings = $ratings
+            ->filter(fn ($r) => $r['baskarma_type'] === 'additional')
             ->sortByDesc('kpd')
             ->values();
 
@@ -95,6 +100,7 @@ class BaskarmaRatingController extends Controller
         return Inertia::render('baskarma-rating/index', [
             'districtRatings' => $districtRatings,
             'oblastRatings' => $oblastRatings,
+            'additionalRatings' => $additionalRatings,
             'allowedIds' => $allowedIds,
         ]);
     }

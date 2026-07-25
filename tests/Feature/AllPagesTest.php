@@ -246,6 +246,41 @@ test('investment projects show page loads for admin', function () {
     $response->assertStatus(200);
 });
 
+test('roadmap assignee list includes additional instances', function () {
+    $admin = createAdminUser();
+    $oblast = createRegionWithChildren();
+    $district = $oblast->children->first();
+    $ispolnitelRole = Role::firstOrCreate(
+        ['name' => 'ispolnitel'],
+        ['display_name' => 'Исполнитель', 'description' => 'Тест']
+    );
+    $additional = User::factory()->create([
+        'role_id' => $ispolnitelRole->id,
+        'baskarma_type' => 'additional',
+        'position' => 'Экология департаментінің басшысы',
+    ]);
+    $project = InvestmentProject::create([
+        'name' => 'Тест жоба',
+        'region_id' => $district->id,
+        'total_investment' => 1000000,
+        'status' => 'plan',
+        'current_status' => 'Жоспарлау',
+        'company_name' => 'Тест компания',
+        'description' => 'Тест сипаттама',
+        'start_date' => '2026-01-01',
+        'end_date' => '2027-01-01',
+        'created_by' => $admin->id,
+    ]);
+
+    $this->actingAs($admin)
+        ->get("/investment-projects/{$project->id}")
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/show')
+            ->where('users', fn ($users) => collect($users)
+                ->contains(fn (array $user) => $user['id'] === $additional->id
+                    && $user['baskarma_type'] === 'additional')));
+});
+
 test('investment projects edit page loads for admin', function () {
     $user = createAdminUser();
     $oblast = createRegionWithChildren();
@@ -327,11 +362,11 @@ test('users index page loads for admin', function () {
     $response->assertStatus(200);
 });
 
-test('users index separates departments into additional instances', function () {
+test('users index filters additional instances by their explicit type', function () {
     $admin = createAdminUser();
     $department = User::factory()->create([
         'full_name' => 'Департамент пайдаланушысы',
-        'baskarma_type' => 'oblast',
+        'baskarma_type' => 'additional',
         'position' => 'Түркістан облысының экология департаменті',
     ]);
     User::factory()->create([
@@ -351,7 +386,7 @@ test('users index separates departments into additional instances', function () 
         ->get('/users?baskarma_type=oblast')
         ->assertInertia(fn (Assert $page) => $page
             ->component('users/index')
-            ->where('users.data', fn (array $users) => collect($users)
+            ->where('users.data', fn ($users) => collect($users)
                 ->doesntContain('id', $department->id)));
 });
 
@@ -359,7 +394,7 @@ test('users index searches by full name and position', function () {
     $admin = createAdminUser();
     $target = User::factory()->create([
         'full_name' => 'Қалмұрзаев Болат',
-        'baskarma_type' => 'oblast',
+        'baskarma_type' => 'additional',
         'position' => 'Экология департаменті',
     ]);
     User::factory()->create([
@@ -379,6 +414,32 @@ test('users index searches by full name and position', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->has('users.data', 1)
             ->where('users.data.0.id', $target->id));
+});
+
+test('admin can create an additional instance ispolnitel', function () {
+    $admin = createAdminUser();
+    $ispolnitelRole = Role::firstOrCreate(
+        ['name' => 'ispolnitel'],
+        ['display_name' => 'Исполнитель', 'description' => 'Тест']
+    );
+
+    $this->actingAs($admin)
+        ->post('/users', [
+            'full_name' => 'Қосымша орындаушы',
+            'email' => 'additional@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+            'role_id' => $ispolnitelRole->id,
+            'baskarma_type' => 'additional',
+            'position' => 'Экология департаментінің басшысы',
+        ])
+        ->assertRedirect('/users');
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'additional@example.com',
+        'role_id' => $ispolnitelRole->id,
+        'baskarma_type' => 'additional',
+    ]);
 });
 
 test('users create page loads for admin', function () {
@@ -454,6 +515,26 @@ test('baskarma rating index page loads for admin', function () {
     $response = $this->actingAs($user)->get('/baskarma-rating');
 
     $response->assertStatus(200);
+});
+
+test('baskarma rating has a separate additional instances group', function () {
+    $admin = createAdminUser();
+    $ispolnitelRole = Role::firstOrCreate(
+        ['name' => 'ispolnitel'],
+        ['display_name' => 'Исполнитель', 'description' => 'Тест']
+    );
+    $additional = User::factory()->create([
+        'role_id' => $ispolnitelRole->id,
+        'baskarma_type' => 'additional',
+        'position' => 'Экология департаментінің басшысы',
+    ]);
+
+    $this->actingAs($admin)
+        ->get('/baskarma-rating')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('baskarma-rating/index')
+            ->has('additionalRatings', 1)
+            ->where('additionalRatings.0.id', $additional->id));
 });
 
 test('baskarma rating show page loads for admin', function () {

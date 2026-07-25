@@ -13,6 +13,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
+    public const BASKARMA_TYPES = ['oblast', 'district', 'additional'];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -117,7 +119,7 @@ class User extends Authenticatable
     /**
      * Determine if the user is scoped to their district.
      * This applies to 'invest' role only.
-     * Ispolnitel (both district and oblast) can see everything.
+     * All ispolnitel types can see everything.
      */
     public function isDistrictScoped(): bool
     {
@@ -139,7 +141,7 @@ class User extends Authenticatable
             return $this->region && $this->region->type !== 'oblast';
         }
 
-        // Ispolnitel (both district and oblast) are NOT district scoped - they can see everything
+        // Ispolnitel accounts are NOT district scoped - they can see everything
         return false;
     }
 
@@ -164,7 +166,7 @@ class User extends Authenticatable
 
     /**
      * Determine if the user is Regional Management (any ispolnitel).
-     * Both district and oblast ispolnitel can see everything.
+     * All ispolnitel types can see everything.
      */
     public function isRegionalManagement(): bool
     {

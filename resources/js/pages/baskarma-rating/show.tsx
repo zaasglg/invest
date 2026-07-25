@@ -20,6 +20,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 
 interface TaskItem {
     id: number;
@@ -198,9 +199,9 @@ export default function BaskarmaRatingShow({
                             <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-gray-500">
                                 {user.position && <span>{user.position}</span>}
                                 <Badge className="border-0 bg-blue-100 text-blue-700">
-                                    {user.baskarma_type === 'oblast'
-                                        ? 'Исполнительдер'
-                                        : 'Аудандық әкімдіктер'}
+                                    {getIspolnitelTypeLabel(
+                                        user.baskarma_type,
+                                    ) || 'Орындаушы'}
                                 </Badge>
                                 {user.region && (
                                     <span className="flex items-center gap-1">
