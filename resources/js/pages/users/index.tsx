@@ -48,7 +48,7 @@ interface Props {
 
 const FILTER_TABS = [
     { label: 'Барлығы', value: '' },
-    { label: 'Облыстық басқарма', value: 'oblast' },
+    { label: 'Басқармалар', value: 'oblast' },
     { label: 'Аудандық', value: 'district' },
     { label: 'Қосымша инстанциялар', value: 'additional' },
 ] as const;

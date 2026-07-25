@@ -7,7 +7,7 @@ export const ISPOLNITEL_TYPE_LABELS: Record<IspolnitelType, string> = {
 };
 
 export const ISPOLNITEL_TYPE_SHORT_LABELS: Record<IspolnitelType, string> = {
-    oblast: 'Облыстық',
+    oblast: 'Басқарма',
     district: 'Аудандық',
     additional: 'Қосымша инстанциялар',
 };

@@ -1570,7 +1570,7 @@ export default function Create({
                                                     }
                                                 >
                                                     <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                        Облыс исполнителі
+                                                        Басқармалар
                                                     </p>
                                                     <div className="space-y-2">
                                                         {oblastUsers.map(
