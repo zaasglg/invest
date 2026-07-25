@@ -498,7 +498,7 @@ class InvestmentProjectController extends Controller
             if ($project->is_archived) {
                 $user = request()->user();
                 $archiveRole = $user?->load('roleModel')->roleModel?->name;
-                if (! in_array($archiveRole, ['superadmin', 'invest'])) {
+                if (! in_array($archiveRole, ['superadmin', 'invest', 'prokuror'], true)) {
                     abort(403, 'Бұл жоба архивтелген. Қол жеткізу мүмкін емес.');
                 }
             }
@@ -703,7 +703,7 @@ class InvestmentProjectController extends Controller
     {
         $user = request()->user();
 
-        if ($user?->roleModel?->name !== 'superadmin') {
+        if (! in_array($user?->roleModel?->name, ['superadmin', 'prokuror'], true)) {
             abort(403);
         }
 
@@ -1538,7 +1538,7 @@ class InvestmentProjectController extends Controller
     {
         $user = $request->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
-        if (! in_array($roleName, ['superadmin', 'invest'])) {
+        if (! in_array($roleName, ['superadmin', 'invest', 'prokuror'], true)) {
             abort(403);
         }
 

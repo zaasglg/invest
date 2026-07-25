@@ -730,7 +730,7 @@ class LocalChatService
         ];
 
         $keys = match ($roleName) {
-            'superadmin' => array_keys($all),
+            'superadmin', 'prokuror' => array_keys($all),
             'invest' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'tasks', 'rating', 'notifications', 'settings'],
             'akim', 'zamakim' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'notifications', 'settings'],
             'ispolnitel' => ['dashboard', 'projects', 'tasks', 'issues', 'notifications', 'settings'],
@@ -755,6 +755,7 @@ class LocalChatService
         if ($lang === 'ru') {
             return match ($roleName) {
                 'superadmin' => '🔐 Ваша роль: **Супер Админ** — полный доступ ко всем разделам системы.',
+                'prokuror' => '🔐 Ваша роль: **Прокурор** — просмотр всех разделов и создание задач в дорожной карте проектов.',
                 'invest' => '🔐 Ваша роль: **Invest Штаб** — управление проектами и прикреплённым сектором.',
                 'akim' => '🔐 Ваша роль: **Аким** — просмотр проектов своего района/области.',
                 'zamakim' => '🔐 Ваша роль: **Зам Аким** — только просмотр (read-only).',
@@ -765,6 +766,7 @@ class LocalChatService
 
         return match ($roleName) {
             'superadmin' => '🔐 Сіздің рөліңіз: **Супер Админ** — жүйенің барлық бөліміне толық қолжетімділік.',
+            'prokuror' => '🔐 Сіздің рөліңіз: **Прокурор** — барлық бөлімді қарайды және жобалардың жол картасына тапсырма қоса алады.',
             'invest' => '🔐 Сіздің рөліңіз: **Invest Штаб** — жобалар мен бекітілген секторды басқару.',
             'akim' => '🔐 Сіздің рөліңіз: **Аким** — өз ауданыңыз/облысыңыз бойынша жобаларды қарау.',
             'zamakim' => '🔐 Сіздің рөліңіз: **Зам Аким** — тек қарау (read-only).',
@@ -846,7 +848,7 @@ class LocalChatService
         $subRole = $user?->invest_sub_role;
 
         return match ($roleName) {
-            'superadmin' => [
+            'superadmin', 'prokuror' => [
                 'regions', 'investment_projects', 'project_types',
                 'sezs', 'industrial_zones', 'prom_zones', 'subsoil_users',
                 'issues', 'tasks', 'users', 'gallery', 'rating', 'help',

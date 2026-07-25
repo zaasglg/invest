@@ -87,23 +87,32 @@ class CheckRoleAccess
 
         $routeName = $request->route()?->getName();
 
-        // Only superadmin can access project-types (all actions)
+        // Superadmin manages project types; prokuror may view them.
         if ($routeName && ($routeName === 'project-types' || str_starts_with($routeName, 'project-types.'))) {
-            if ($roleName !== 'superadmin') {
+            if (! in_array($roleName, ['superadmin', 'prokuror'], true)) {
                 abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
         }
 
-        // Only superadmin can access regions routes, EXCEPT regions.show and regions.projects.reorder
+        // Superadmin manages regions; prokuror may view them.
         if ($routeName && str_starts_with($routeName, 'regions.')) {
             $allowedRegionsRoutes = ['regions.show', 'regions.projects.reorder'];
-            if (! in_array($routeName, $allowedRegionsRoutes, true) && $roleName !== 'superadmin') {
+            if (! in_array($routeName, $allowedRegionsRoutes, true)
+                && ! in_array($roleName, ['superadmin', 'prokuror'], true)) {
                 abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
         }
 
-        if ($routeName === 'regions' && $roleName !== 'superadmin') {
+        if ($routeName === 'regions' && ! in_array($roleName, ['superadmin', 'prokuror'], true)) {
             abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+        }
+
+        // Prokuror can view every section and every project. The only
+        // business-data write they may perform is creating a roadmap task.
+        if ($roleName === 'prokuror'
+            && $this->isWriteAction($request)
+            && $routeName !== 'investment-projects.tasks.store') {
+            abort(403, 'Прокурорға бұл деректі өзгертуге рұқсат жоқ.');
         }
 
         // Read-only roles (akim/zamakim): blocked sections + no writes
@@ -197,7 +206,7 @@ class CheckRoleAccess
             $this->enforceInvestSubRoleScope($request, $user, $roleName);
         }
 
-        // Block non-superadmin from accessing archived investment projects
+        // Block roles that do not have archive viewing rights.
         $this->blockArchivedProjectAccess($request, $user, $roleName);
 
         return $next($request);
@@ -364,11 +373,11 @@ class CheckRoleAccess
     }
 
     /**
-     * Block non-superadmin users from accessing archived investment projects.
+     * Block roles without archive viewing rights from archived projects.
      */
     protected function blockArchivedProjectAccess(Request $request, $user, ?string $roleName): void
     {
-        if (in_array($roleName, ['superadmin', 'invest'])) {
+        if (in_array($roleName, ['superadmin', 'invest', 'prokuror'], true)) {
             return;
         }
 

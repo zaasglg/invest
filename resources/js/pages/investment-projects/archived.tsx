@@ -13,6 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
 
@@ -52,6 +53,7 @@ interface Props {
 }
 
 export default function Archived({ projects, filters }: Props) {
+    const canModify = useCanModify();
     const { data, setData, get } = useForm({
         search: filters.search ?? '',
     });
@@ -219,19 +221,21 @@ export default function Archived({ projects, filters }: Props) {
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    className="h-8 w-8 p-0 text-green-600 hover:text-green-800"
-                                                    onClick={() =>
-                                                        handleUnarchive(
-                                                            project.id,
-                                                        )
-                                                    }
-                                                    title="Архивтен қайтару"
-                                                >
-                                                    <RotateCcw className="h-4 w-4" />
-                                                </Button>
+                                                {canModify && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="h-8 w-8 p-0 text-green-600 hover:text-green-800"
+                                                        onClick={() =>
+                                                            handleUnarchive(
+                                                                project.id,
+                                                            )
+                                                        }
+                                                        title="Архивтен қайтару"
+                                                    >
+                                                        <RotateCcw className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </TableCell>
                                     </TableRow>

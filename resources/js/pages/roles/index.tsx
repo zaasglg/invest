@@ -10,9 +10,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
-import type { PaginatedData } from '@/types';
 import * as rolesRoutes from '@/routes/roles';
+import type { PaginatedData } from '@/types';
 
 interface Role {
     id: number;
@@ -27,6 +28,8 @@ interface Props {
 }
 
 export default function Index({ roles }: Props) {
+    const canModify = useCanModify();
+
     const handleDelete = (id: number, usersCount: number) => {
         if (usersCount > 0) {
             alert('Рөл пайдаланушыларға тағайындалғандықтан, жою мүмкін емес.');
@@ -47,12 +50,14 @@ export default function Index({ roles }: Props) {
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Пайдаланушы рөлдері
                     </h1>
-                    <Link href={rolesRoutes.create.url()}>
-                        <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Рөл құру
-                        </Button>
-                    </Link>
+                    {canModify && (
+                        <Link href={rolesRoutes.create.url()}>
+                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Рөл құру
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
@@ -98,39 +103,41 @@ export default function Index({ roles }: Props) {
                                             {role.users_count}
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Link
-                                                    href={rolesRoutes.edit.url(
-                                                        role.id,
-                                                    )}
-                                                >
+                                            {canModify && (
+                                                <div className="flex justify-end gap-2">
+                                                    <Link
+                                                        href={rolesRoutes.edit.url(
+                                                            role.id,
+                                                        )}
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                        onClick={() =>
+                                                            handleDelete(
+                                                                role.id,
+                                                                role.users_count,
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            role.users_count > 0
+                                                        }
                                                     >
-                                                        <Pencil className="h-4 w-4" />
+                                                        <Trash2
+                                                            className={`h-4 w-4 ${role.users_count > 0 ? 'text-neutral-300' : ''}`}
+                                                        />
                                                     </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                    onClick={() =>
-                                                        handleDelete(
-                                                            role.id,
-                                                            role.users_count,
-                                                        )
-                                                    }
-                                                    disabled={
-                                                        role.users_count > 0
-                                                    }
-                                                >
-                                                    <Trash2
-                                                        className={`h-4 w-4 ${role.users_count > 0 ? 'text-neutral-300' : ''}`}
-                                                    />
-                                                </Button>
-                                            </div>
+                                                </div>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))

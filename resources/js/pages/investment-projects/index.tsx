@@ -227,6 +227,7 @@ export default function Index({
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
+    const isProkuror = auth.user?.role_model?.name === 'prokuror';
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -529,7 +530,7 @@ export default function Index({
                             <Calendar className="h-4 w-4" />
                             Биыл аяқталатын
                         </Button>
-                        {(isSuperAdmin || isInvest) && (
+                        {(isSuperAdmin || isInvest || isProkuror) && (
                             <Link href="/investment-projects-archived">
                                 <Button
                                     variant="outline"

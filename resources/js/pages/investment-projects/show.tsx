@@ -338,8 +338,10 @@ export default function Show({
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isAkim = auth.user?.role_model?.name === 'akim';
     const isModerator = auth.user?.role_model?.name === 'moderator';
+    const isProkuror = auth.user?.role_model?.name === 'prokuror';
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;
+    const canCreateTasks = canManageTasks || isProkuror;
     const isRestrictedView = isIspolnitel && !isInvolved;
     // All ispolnitel types have the same write permissions if involved
     const ispolnitelCanWrite = isIspolnitel && isInvolved;
@@ -1204,35 +1206,23 @@ export default function Show({
                                                     )}
                                                 </SelectContent>
                                             </Select>
-                                            {canModify &&
-                                                !isIspolnitel &&
-                                                !isModerator && (
-                                                    <Button
-                                                        size="icon"
-                                                        className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
-                                                        onClick={() => {
-                                                            setEditingTaskId(
-                                                                null,
-                                                            );
-                                                            setTaskTitle('');
-                                                            setTaskDescription(
-                                                                '',
-                                                            );
-                                                            setTaskStartDate(
-                                                                '',
-                                                            );
-                                                            setTaskDueDate('');
-                                                            setTaskAssignedTo(
-                                                                null,
-                                                            );
-                                                            setShowTaskModal(
-                                                                true,
-                                                            );
-                                                        }}
-                                                    >
-                                                        <Plus className="h-5 w-5" />
-                                                    </Button>
-                                                )}
+                                            {canCreateTasks && (
+                                                <Button
+                                                    size="icon"
+                                                    className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
+                                                    onClick={() => {
+                                                        setEditingTaskId(null);
+                                                        setTaskTitle('');
+                                                        setTaskDescription('');
+                                                        setTaskStartDate('');
+                                                        setTaskDueDate('');
+                                                        setTaskAssignedTo(null);
+                                                        setShowTaskModal(true);
+                                                    }}
+                                                >
+                                                    <Plus className="h-5 w-5" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1785,7 +1775,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {isSuperAdmin && (
+                                {(isSuperAdmin || isProkuror) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/logs`}
                                         className="w-full"

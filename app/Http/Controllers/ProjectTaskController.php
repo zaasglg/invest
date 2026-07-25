@@ -18,7 +18,6 @@ class ProjectTaskController extends Controller
         $user = Auth::user();
         $creatorRole = $user?->roleModel?->name;
 
-        // Moderator may only approve/reject tasks; not create them.
         if ($creatorRole === 'moderator') {
             abort(403, 'Сізде тапсырма енгізу құқығы жоқ.');
         }
@@ -203,7 +202,7 @@ class ProjectTaskController extends Controller
         }
 
         $editorRole = Auth::user()?->roleModel?->name;
-        if ($editorRole === 'moderator') {
+        if (in_array($editorRole, ['moderator', 'prokuror'], true)) {
             abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
         }
 
@@ -342,7 +341,7 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        if (Auth::user()?->roleModel?->name === 'moderator') {
+        if (in_array(Auth::user()?->roleModel?->name, ['moderator', 'prokuror'], true)) {
             abort(403, 'Сізде тапсырманы жою құқығыңыз жоқ.');
         }
 

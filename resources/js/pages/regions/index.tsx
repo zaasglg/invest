@@ -38,8 +38,8 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
-import type { PaginatedData, SharedData } from '@/types';
 import * as regions from '@/routes/regions';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -215,13 +215,15 @@ export default function Index({ regions: regionsData }: Props) {
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Аймақтар
                     </h1>
-                    <Button
-                        asChild
-                        size="sm"
-                        className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
-                    >
-                        <Link href={regions.create.url()}>Жаңа қосу</Link>
-                    </Button>
+                    {isSuperAdmin && (
+                        <Button
+                            asChild
+                            size="sm"
+                            className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                        >
+                            <Link href={regions.create.url()}>Жаңа қосу</Link>
+                        </Button>
+                    )}
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
@@ -318,41 +320,49 @@ export default function Index({ regions: regionsData }: Props) {
                                                 })()}
                                             </TableCell>
                                             <TableCell className="flex justify-end space-x-2 text-right">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    title="Басқа бетке ауыстыру"
-                                                    className="h-8 w-8 transition-colors hover:bg-blue-50 hover:text-blue-700"
-                                                    onClick={() =>
-                                                        openMoveModal(region)
-                                                    }
-                                                >
-                                                    <MoveRight className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    asChild
-                                                    className="h-8 w-8 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                >
-                                                    <Link
-                                                        href={regions.edit.url(
-                                                            region.id,
-                                                        )}
-                                                    >
-                                                        <Edit className="h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
-                                                    onClick={() =>
-                                                        handleDelete(region.id)
-                                                    }
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                {isSuperAdmin && (
+                                                    <>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            title="Басқа бетке ауыстыру"
+                                                            className="h-8 w-8 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                                                            onClick={() =>
+                                                                openMoveModal(
+                                                                    region,
+                                                                )
+                                                            }
+                                                        >
+                                                            <MoveRight className="h-4 w-4" />
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                            className="h-8 w-8 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        >
+                                                            <Link
+                                                                href={regions.edit.url(
+                                                                    region.id,
+                                                                )}
+                                                            >
+                                                                <Edit className="h-4 w-4" />
+                                                            </Link>
+                                                        </Button>
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
+                                                            onClick={() =>
+                                                                handleDelete(
+                                                                    region.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <Trash2 className="h-4 w-4" />
+                                                        </Button>
+                                                    </>
+                                                )}
                                             </TableCell>
                                         </SortableRegionRow>
                                     ))}
