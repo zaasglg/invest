@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -49,6 +50,32 @@ class InvestmentProject extends Model
     public function scopeArchived($query)
     {
         return $query->where('is_archived', true);
+    }
+
+    public function scopeWhereChatParticipant(
+        Builder $query,
+        User $user
+    ): Builder {
+        return $query->where(function (Builder $participantQuery) use ($user) {
+            $participantQuery
+                ->whereHas(
+                    'curators',
+                    fn (Builder $query) => $query->whereKey($user->id)
+                )
+                ->orWhereHas(
+                    'investors',
+                    fn (Builder $query) => $query->whereKey($user->id)
+                )
+                ->orWhereHas(
+                    'executors',
+                    fn (Builder $query) => $query->whereKey($user->id)
+                )
+                ->orWhere(function (Builder $creatorQuery) use ($user) {
+                    $creatorQuery
+                        ->where('created_by', $user->id)
+                        ->whereDoesntHave('curators');
+                });
+        });
     }
 
     public function region()
@@ -140,6 +167,42 @@ class InvestmentProject extends Model
     public function photos()
     {
         return $this->hasMany(ProjectPhoto::class, 'project_id');
+    }
+
+    public function chatMessages()
+    {
+        return $this->hasMany(
+            ProjectChatMessage::class,
+            'investment_project_id'
+        );
+    }
+
+    public function latestChatMessage()
+    {
+        return $this->hasOne(
+            ProjectChatMessage::class,
+            'investment_project_id'
+        )->latestOfMany();
+    }
+
+    public function chatReadStates()
+    {
+        return $this->hasMany(
+            ProjectChatRead::class,
+            'investment_project_id'
+        );
+    }
+
+    public function isChatParticipant(User $user): bool
+    {
+        if ($this->curators()->whereKey($user->id)->exists()
+            || $this->investors()->whereKey($user->id)->exists()
+            || $this->executors()->whereKey($user->id)->exists()) {
+            return true;
+        }
+
+        return (int) $this->created_by === (int) $user->id
+            && ! $this->curators()->exists();
     }
 
     /**

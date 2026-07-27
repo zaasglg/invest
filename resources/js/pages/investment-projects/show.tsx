@@ -24,6 +24,7 @@ import {
     Archive,
     ScrollText,
     Edit,
+    MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -197,6 +198,7 @@ interface Props {
     renderPhotos?: Photo[];
     users?: UserOption[];
     canDownload: boolean;
+    canAccessChat?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
 }
@@ -328,6 +330,7 @@ export default function Show({
     renderPhotos = [],
     users = [],
     canDownload,
+    canAccessChat = false,
     isInvolved = true,
 }: Props) {
     const canModify = useCanModify();
@@ -1754,6 +1757,20 @@ export default function Show({
                                             </div>
                                         </div>
                                     )}
+
+                                {canAccessChat && (
+                                    <div className="border-t border-gray-100 pt-4">
+                                        <Link
+                                            href={`/chats/${project.id}`}
+                                            className="block w-full"
+                                        >
+                                            <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5e]">
+                                                <MessageCircle className="mr-2 h-4 w-4" />
+                                                Чатқа өту
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 

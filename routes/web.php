@@ -193,6 +193,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+
+    Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
+    Route::post('chats/{investmentProject}/messages', [\App\Http\Controllers\ProjectChatController::class, 'store'])->name('chats.messages.store');
+    Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
 });
 
 Route::middleware(['auth', 'verified', 'role.access'])->prefix('chat')->name('chat.')->group(function () {

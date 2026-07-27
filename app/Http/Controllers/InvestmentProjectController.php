@@ -622,6 +622,9 @@ class InvestmentProjectController extends Controller
             'renderPhotos' => $renderPhotos,
             'users' => $assignableUsersQuery->get(),
             'canDownload' => $canDownload,
+            'canAccessChat' => $user && is_object($project)
+                ? $project->isChatParticipant($user)
+                : false,
             'isInvolved' => $isInvolved,
             'isOwnDistrict' => $isOwnDistrict,
         ]);
