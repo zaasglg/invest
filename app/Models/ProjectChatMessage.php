@@ -24,4 +24,12 @@ class ProjectChatMessage extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    public function attachments()
+    {
+        return $this->hasMany(
+            ProjectChatAttachment::class,
+            'project_chat_message_id'
+        );
+    }
 }

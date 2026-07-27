@@ -3,8 +3,11 @@ import {
     ArrowLeft,
     CheckCheck,
     ChevronRight,
+    Download,
+    FileText,
     Info,
     MessageCircle,
+    Paperclip,
     Search,
     Send,
     Users,
@@ -38,6 +41,8 @@ interface ChatSummary {
         created_at: string;
         is_own: boolean;
         user_name: string | null;
+        has_attachments: boolean;
+        attachment_name: string | null;
     } | null;
 }
 
@@ -59,6 +64,17 @@ interface ChatMessage {
         full_name: string;
         avatar_url: string | null;
     };
+    attachments: ChatAttachment[];
+}
+
+interface ChatAttachment {
+    id: number;
+    original_name: string;
+    mime_type: string | null;
+    size: number;
+    is_image: boolean;
+    download_url: string;
+    preview_url: string | null;
 }
 
 interface SelectedChat {
@@ -112,15 +128,28 @@ const formatMessageDate = (dateValue: string): string => {
     }).format(date);
 };
 
+const formatFileSize = (size: number): string => {
+    if (size < 1024) return `${size} B`;
+    if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+
+    return `${(size / 1024 / 1024).toFixed(1)} MB`;
+};
+
 export default function ChatsIndex({ chats, selectedChat }: Props) {
     const { auth } = usePage<SharedData>().props;
     const [search, setSearch] = useState('');
     const [showInfo, setShowInfo] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const formRef = useRef<HTMLFormElement>(null);
-    const { data, setData, post, processing, reset, errors } = useForm({
-        message: '',
-    });
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const { data, setData, post, processing, reset, errors, clearErrors } =
+        useForm<{
+            message: string;
+            files: File[];
+        }>({
+            message: '',
+            files: [],
+        });
 
     const filteredChats = useMemo(() => {
         const normalizedSearch = search.trim().toLocaleLowerCase('kk-KZ');
@@ -155,13 +184,43 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
     const submitMessage = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
 
-        if (!selectedChat || !data.message.trim() || processing) return;
+        if (
+            !selectedChat ||
+            (!data.message.trim() && data.files.length === 0) ||
+            processing
+        ) {
+            return;
+        }
 
         post(`/chats/${selectedChat.id}/messages`, {
+            forceFormData: true,
             preserveScroll: true,
-            onSuccess: () => reset('message'),
+            onSuccess: () => {
+                reset('message', 'files');
+                if (fileInputRef.current) {
+                    fileInputRef.current.value = '';
+                }
+            },
         });
     };
+
+    const selectFiles = (files: FileList | null) => {
+        if (!files) return;
+
+        clearErrors();
+        setData('files', [...data.files, ...Array.from(files)].slice(0, 8));
+    };
+
+    const removeFile = (index: number) => {
+        setData(
+            'files',
+            data.files.filter((_, fileIndex) => fileIndex !== index),
+        );
+    };
+
+    const fileError = Object.entries(errors).find(([key]) =>
+        key.startsWith('files'),
+    )?.[1];
 
     const handleMessageKeyDown = (
         event: KeyboardEvent<HTMLTextAreaElement>,
@@ -276,8 +335,11 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                             </>
                                                         )}
                                                     {chat.last_message
-                                                        ?.message ??
-                                                        chat.region_name}
+                                                        ?.message ||
+                                                        (chat.last_message
+                                                            ?.has_attachments
+                                                            ? `📎 ${chat.last_message.attachment_name ?? 'Тіркеме'}`
+                                                            : chat.region_name)}
                                                 </p>
                                                 {chat.unread_count > 0 && (
                                                     <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[#c8a44e] px-1.5 text-[10px] font-bold text-white">
@@ -313,7 +375,7 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
 
                     <section
                         className={cn(
-                            'min-h-0 min-w-0 flex-1 flex-col bg-[#efeae2] md:flex',
+                            'min-h-0 min-w-0 flex-1 flex-col bg-[#f4f6fa] md:flex',
                             selectedChat ? 'flex' : 'hidden',
                         )}
                     >
@@ -362,10 +424,10 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                     </Button>
                                 </header>
 
-                                <div className="min-h-0 flex-1 overflow-y-auto bg-[#efeae2] bg-[radial-gradient(circle_at_center,rgba(15,27,61,0.045)_1px,transparent_1px)] bg-[length:22px_22px] px-3 py-5 md:px-8">
+                                <div className="min-h-0 flex-1 overflow-y-auto bg-[#f4f6fa] bg-[radial-gradient(circle_at_center,rgba(15,27,61,0.055)_1px,transparent_1px)] bg-[length:24px_24px] px-3 py-5 md:px-8">
                                     {selectedChat.messages.length === 0 ? (
                                         <div className="flex h-full items-center justify-center">
-                                            <div className="max-w-sm rounded-xl bg-[#fff8dc] px-5 py-3 text-center text-xs leading-5 text-gray-600 shadow-sm">
+                                            <div className="max-w-sm rounded-xl border border-[#c8a44e]/20 bg-white px-5 py-3 text-center text-xs leading-5 text-gray-600 shadow-sm">
                                                 Бұл жоба чатында әзірге
                                                 хабарлама жоқ. Бірінші
                                                 хабарламаны жіберсеңіз, чат
@@ -398,7 +460,7 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                         >
                                                             {showDate && (
                                                                 <div className="my-3 flex justify-center">
-                                                                    <span className="rounded-lg bg-white/90 px-3 py-1 text-[11px] font-medium text-gray-500 shadow-sm">
+                                                                    <span className="rounded-lg border border-[#0f1b3d]/5 bg-white px-3 py-1 text-[11px] font-medium text-[#0f1b3d]/60 shadow-sm">
                                                                         {
                                                                             messageDate
                                                                         }
@@ -417,8 +479,8 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                                     className={cn(
                                                                         'max-w-[85%] rounded-lg px-3 pt-2 pb-1 text-sm shadow-sm md:max-w-[68%]',
                                                                         message.is_own
-                                                                            ? 'rounded-tr-sm bg-[#d9fdd3]'
-                                                                            : 'rounded-tl-sm bg-white',
+                                                                            ? 'rounded-tr-sm bg-[#0f1b3d] text-white'
+                                                                            : 'rounded-tl-sm border border-[#0f1b3d]/5 bg-white',
                                                                     )}
                                                                 >
                                                                     {!message.is_own && (
@@ -430,17 +492,142 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                                             }
                                                                         </p>
                                                                     )}
-                                                                    <p className="leading-5 whitespace-pre-wrap text-gray-800">
-                                                                        {
-                                                                            message.message
-                                                                        }
-                                                                    </p>
-                                                                    <div className="mt-0.5 flex items-center justify-end gap-1 pl-8 text-[10px] text-gray-400">
+                                                                    {message
+                                                                        .attachments
+                                                                        .length >
+                                                                        0 && (
+                                                                        <div className="mb-2 grid gap-2">
+                                                                            {message.attachments.map(
+                                                                                (
+                                                                                    attachment,
+                                                                                ) =>
+                                                                                    attachment.is_image &&
+                                                                                    attachment.preview_url ? (
+                                                                                        <div
+                                                                                            key={
+                                                                                                attachment.id
+                                                                                            }
+                                                                                            className="group relative overflow-hidden rounded-lg"
+                                                                                        >
+                                                                                            <a
+                                                                                                href={
+                                                                                                    attachment.preview_url
+                                                                                                }
+                                                                                                target="_blank"
+                                                                                                rel="noreferrer"
+                                                                                                className="block"
+                                                                                            >
+                                                                                                <img
+                                                                                                    src={
+                                                                                                        attachment.preview_url
+                                                                                                    }
+                                                                                                    alt={
+                                                                                                        attachment.original_name
+                                                                                                    }
+                                                                                                    className="max-h-72 w-full min-w-48 rounded-lg object-cover"
+                                                                                                />
+                                                                                            </a>
+                                                                                            <a
+                                                                                                href={
+                                                                                                    attachment.download_url
+                                                                                                }
+                                                                                                className="absolute right-2 bottom-2 flex h-8 w-8 items-center justify-center rounded-full bg-[#0f1b3d]/85 text-white opacity-100 shadow-md transition-opacity md:opacity-0 md:group-hover:opacity-100"
+                                                                                                title="Суретті жүктеу"
+                                                                                            >
+                                                                                                <Download className="h-4 w-4" />
+                                                                                            </a>
+                                                                                            <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/60 to-transparent px-2 pt-5 pb-1.5 text-[10px] text-white">
+                                                                                                <p className="truncate">
+                                                                                                    {
+                                                                                                        attachment.original_name
+                                                                                                    }
+                                                                                                </p>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <a
+                                                                                            key={
+                                                                                                attachment.id
+                                                                                            }
+                                                                                            href={
+                                                                                                attachment.download_url
+                                                                                            }
+                                                                                            className={cn(
+                                                                                                'flex min-w-56 items-center gap-3 rounded-lg border p-3 transition-colors',
+                                                                                                message.is_own
+                                                                                                    ? 'border-white/15 bg-white/10 hover:bg-white/15'
+                                                                                                    : 'border-[#0f1b3d]/10 bg-[#f8fafc] hover:bg-[#f1f5f9]',
+                                                                                            )}
+                                                                                        >
+                                                                                            <div
+                                                                                                className={cn(
+                                                                                                    'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+                                                                                                    message.is_own
+                                                                                                        ? 'bg-white/10 text-[#e3c97a]'
+                                                                                                        : 'bg-[#0f1b3d]/8 text-[#0f1b3d]',
+                                                                                                )}
+                                                                                            >
+                                                                                                <FileText className="h-5 w-5" />
+                                                                                            </div>
+                                                                                            <div className="min-w-0 flex-1">
+                                                                                                <p className="truncate text-xs font-medium">
+                                                                                                    {
+                                                                                                        attachment.original_name
+                                                                                                    }
+                                                                                                </p>
+                                                                                                <p
+                                                                                                    className={cn(
+                                                                                                        'mt-0.5 text-[10px]',
+                                                                                                        message.is_own
+                                                                                                            ? 'text-white/50'
+                                                                                                            : 'text-gray-400',
+                                                                                                    )}
+                                                                                                >
+                                                                                                    {formatFileSize(
+                                                                                                        attachment.size,
+                                                                                                    )}
+                                                                                                </p>
+                                                                                            </div>
+                                                                                            <Download
+                                                                                                className={cn(
+                                                                                                    'h-4 w-4 shrink-0',
+                                                                                                    message.is_own
+                                                                                                        ? 'text-[#e3c97a]'
+                                                                                                        : 'text-[#9a7d35]',
+                                                                                                )}
+                                                                                            />
+                                                                                        </a>
+                                                                                    ),
+                                                                            )}
+                                                                        </div>
+                                                                    )}
+                                                                    {message.message && (
+                                                                        <p
+                                                                            className={cn(
+                                                                                'leading-5 whitespace-pre-wrap',
+                                                                                message.is_own
+                                                                                    ? 'text-white'
+                                                                                    : 'text-gray-800',
+                                                                            )}
+                                                                        >
+                                                                            {
+                                                                                message.message
+                                                                            }
+                                                                        </p>
+                                                                    )}
+                                                                    <div
+                                                                        className={cn(
+                                                                            'mt-0.5 flex items-center justify-end gap-1 pl-8 text-[10px]',
+                                                                            message.is_own
+                                                                                ? 'text-white/45'
+                                                                                : 'text-gray-400',
+                                                                        )}
+                                                                    >
                                                                         {formatTime(
                                                                             message.created_at,
                                                                         )}
                                                                         {message.is_own && (
-                                                                            <CheckCheck className="h-3.5 w-3.5 text-blue-500" />
+                                                                            <CheckCheck className="h-3.5 w-3.5 text-[#e3c97a]" />
                                                                         )}
                                                                     </div>
                                                                 </div>
@@ -457,9 +644,68 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                 <form
                                     ref={formRef}
                                     onSubmit={submitMessage}
-                                    className="shrink-0 border-t border-gray-200 bg-[#f0f2f5] px-3 py-3 md:px-5"
+                                    className="shrink-0 border-t border-[#0f1b3d]/10 bg-white px-3 py-3 md:px-5"
                                 >
+                                    {data.files.length > 0 && (
+                                        <div className="mb-2 flex gap-2 overflow-x-auto pb-1">
+                                            {data.files.map((file, index) => (
+                                                <div
+                                                    key={`${file.name}-${file.lastModified}-${index}`}
+                                                    className="flex max-w-56 shrink-0 items-center gap-2 rounded-lg border border-[#c8a44e]/30 bg-[#faf7f0] py-2 pr-1.5 pl-2.5"
+                                                >
+                                                    <FileText className="h-4 w-4 shrink-0 text-[#9a7d35]" />
+                                                    <div className="min-w-0">
+                                                        <p className="truncate text-xs font-medium text-[#0f1b3d]">
+                                                            {file.name}
+                                                        </p>
+                                                        <p className="text-[10px] text-gray-400">
+                                                            {formatFileSize(
+                                                                file.size,
+                                                            )}
+                                                        </p>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            removeFile(index)
+                                                        }
+                                                        className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                                        aria-label={`${file.name} файлын алып тастау`}
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                     <div className="flex items-end gap-2">
+                                        <input
+                                            ref={fileInputRef}
+                                            type="file"
+                                            multiple
+                                            accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+                                            onChange={(event) => {
+                                                selectFiles(event.target.files);
+                                                event.target.value = '';
+                                            }}
+                                            className="hidden"
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            disabled={
+                                                processing ||
+                                                data.files.length >= 8
+                                            }
+                                            onClick={() =>
+                                                fileInputRef.current?.click()
+                                            }
+                                            className="h-11 w-11 shrink-0 rounded-full text-[#0f1b3d]/65 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                            title="Сурет немесе құжат тіркеу"
+                                        >
+                                            <Paperclip className="h-5 w-5" />
+                                        </Button>
                                         <textarea
                                             value={data.message}
                                             onChange={(event) =>
@@ -479,9 +725,10 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                             size="icon"
                                             disabled={
                                                 processing ||
-                                                !data.message.trim()
+                                                (!data.message.trim() &&
+                                                    data.files.length === 0)
                                             }
-                                            className="h-11 w-11 shrink-0 rounded-full bg-[#0f1b3d] hover:bg-[#1a2d5e]"
+                                            className="h-11 w-11 shrink-0 rounded-full bg-[#c8a44e] text-white hover:bg-[#b8943e]"
                                         >
                                             <Send className="h-4 w-4" />
                                         </Button>
@@ -491,8 +738,14 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                             {errors.message}
                                         </p>
                                     )}
+                                    {fileError && (
+                                        <p className="mt-1.5 px-2 text-xs text-red-600">
+                                            {fileError}
+                                        </p>
+                                    )}
                                     <p className="mt-1 hidden px-2 text-[10px] text-gray-400 md:block">
                                         Enter — жіберу, Shift + Enter — жаңа жол
+                                        · 8 файлға дейін, әрқайсысы 20 MB
                                     </p>
                                 </form>
                             </>

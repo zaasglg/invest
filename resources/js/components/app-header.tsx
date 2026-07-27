@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, Menu, MessageCircle, Shield, Users } from 'lucide-react';
+import { Bell, Menu, MessageCircle, Shield, Tags, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -51,6 +51,12 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const filteredHeaderNavItems = filterNavItemsByRole(
         headerNavItems,
         auth.user,
+    );
+    const projectTypesNavItem = filteredHeaderNavItems.find(
+        (item) => item.title === 'Жоба түрлері',
+    );
+    const desktopHeaderNavItems = filteredHeaderNavItems.filter(
+        (item) => item.title !== 'Жоба түрлері',
     );
 
     useEffect(() => {
@@ -170,7 +176,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                             <NavigationMenu className="flex h-full w-max max-w-none items-stretch justify-start">
                                 <NavigationMenuList className="flex h-full flex-nowrap items-stretch justify-start gap-0.5">
-                                    {filteredHeaderNavItems.map(
+                                    {desktopHeaderNavItems.map(
                                         (item, index) => (
                                             <NavigationMenuItem
                                                 key={index}
@@ -204,6 +210,28 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     {/* Right side: notifications + avatar */}
                     <div className="ml-auto flex items-center gap-1">
+                        {projectTypesNavItem && (
+                            <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Link
+                                            href={projectTypesNavItem.href}
+                                            className={cn(
+                                                'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                isCurrentUrl(
+                                                    projectTypesNavItem.href,
+                                                ) && 'bg-white/10 text-white',
+                                            )}
+                                        >
+                                            <Tags className="h-4 w-4" />
+                                        </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Жоба түрлері
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         {(auth.user?.role_model?.name === 'superadmin' ||
                             auth.user?.role === 'superadmin') && (
                             <>

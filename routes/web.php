@@ -195,6 +195,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 
     Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
+    Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');
+    Route::get('chats/attachments/{attachment}', [\App\Http\Controllers\ProjectChatController::class, 'downloadAttachment'])->name('chats.attachments.download');
     Route::post('chats/{investmentProject}/messages', [\App\Http\Controllers\ProjectChatController::class, 'store'])->name('chats.messages.store');
     Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
 });
