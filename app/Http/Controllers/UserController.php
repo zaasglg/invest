@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InvestmentProject;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class UserController extends Controller
@@ -56,6 +58,7 @@ class UserController extends Controller
         return Inertia::render('users/create', [
             'regions' => $regions,
             'roles' => $roles,
+            'projects' => $this->projectOptions(),
         ]);
     }
 
@@ -67,6 +70,7 @@ class UserController extends Controller
 
         $investRoleId = Role::where('name', 'invest')->value('id');
         $ispolnitelRoleId = Role::where('name', 'ispolnitel')->value('id');
+        $investorRoleId = Role::where('name', 'investor')->value('id');
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -87,6 +91,18 @@ class UserController extends Controller
                 'nullable',
                 'in:turkistan_invest,aea,ia,prom_zone',
             ],
+            'project_ids' => [
+                Rule::requiredIf(
+                    $investorRoleId
+                    && (int) $request->input('role_id') === (int) $investorRoleId
+                ),
+                'array',
+            ],
+            'project_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:investment_projects,id',
+            ],
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -117,10 +133,16 @@ class UserController extends Controller
             $validated['invest_sub_role'] = null;
         }
 
+        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
+        unset($validated['project_ids']);
+
         $validated['password'] = Hash::make($validated['password']);
         $validated['email'] = Str::lower($validated['email']);
 
-        User::create($validated);
+        $user = User::create($validated);
+        if ($role?->name === 'investor') {
+            $user->investorProjects()->sync($projectIds);
+        }
 
         return redirect()->route('users.index')->with('success', 'Пайдаланушы құрылды.');
     }
@@ -131,9 +153,10 @@ class UserController extends Controller
         $roles = Role::all();
 
         return Inertia::render('users/edit', [
-            'user' => $user->load(['region', 'roleModel']),
+            'user' => $user->load(['region', 'roleModel', 'investorProjects:id']),
             'regions' => $regions,
             'roles' => $roles,
+            'projects' => $this->projectOptions(),
         ]);
     }
 
@@ -145,6 +168,7 @@ class UserController extends Controller
 
         $investRoleId = Role::where('name', 'invest')->value('id');
         $ispolnitelRoleId = Role::where('name', 'ispolnitel')->value('id');
+        $investorRoleId = Role::where('name', 'investor')->value('id');
 
         $validated = $request->validate([
             'full_name' => 'required|string|max:255',
@@ -165,6 +189,18 @@ class UserController extends Controller
                 'nullable',
                 'in:turkistan_invest,aea,ia,prom_zone',
             ],
+            'project_ids' => [
+                Rule::requiredIf(
+                    $investorRoleId
+                    && (int) $request->input('role_id') === (int) $investorRoleId
+                ),
+                'array',
+            ],
+            'project_ids.*' => [
+                'integer',
+                'distinct',
+                'exists:investment_projects,id',
+            ],
         ]);
 
         if (isset($validated['role_id']) && $validated['role_id'] === 'none') {
@@ -195,6 +231,9 @@ class UserController extends Controller
             $validated['invest_sub_role'] = null;
         }
 
+        $projectIds = array_values(array_unique($validated['project_ids'] ?? []));
+        unset($validated['project_ids']);
+
         if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
@@ -204,6 +243,9 @@ class UserController extends Controller
         $validated['email'] = Str::lower($validated['email']);
 
         $user->update($validated);
+        $user->investorProjects()->sync(
+            $role?->name === 'investor' ? $projectIds : []
+        );
 
         return redirect()->route('users.index')->with('success', 'Пайдаланушы жаңартылды.');
     }
@@ -218,5 +260,14 @@ class UserController extends Controller
         $user->delete();
 
         return redirect()->back()->with('success', 'Пайдаланушы жойылды.');
+    }
+
+    private function projectOptions()
+    {
+        return InvestmentProject::active()
+            ->select('id', 'name', 'region_id')
+            ->with('region:id,name')
+            ->orderBy('name')
+            ->get();
     }
 }

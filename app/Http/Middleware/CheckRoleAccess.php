@@ -73,6 +73,32 @@ class CheckRoleAccess
     ];
 
     /**
+     * Project routes available to an investor on explicitly assigned projects.
+     */
+    protected array $investorProjectRoutes = [
+        'investment-projects.index',
+        'investment-projects.show',
+        'investment-projects.passport',
+        'investment-projects.presentation',
+        'investment-projects.documents.index',
+        'investment-projects.documents.store',
+        'investment-projects.documents.download',
+        'investment-projects.documents.destroy',
+        'investment-projects.gallery.index',
+        'investment-projects.gallery.store',
+        'investment-projects.gallery.download',
+        'investment-projects.gallery.update',
+        'investment-projects.gallery.destroy',
+        'investment-projects.issues.index',
+        'investment-projects.issues.store',
+        'investment-projects.issues.update',
+        'investment-projects.issues.destroy',
+        'investment-projects.update-status',
+        'investment-projects.tasks.view',
+        'investment-projects.tasks.completions.store',
+    ];
+
+    /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
@@ -86,6 +112,17 @@ class CheckRoleAccess
         $roleName = $this->getRoleName($user);
 
         $routeName = $request->route()?->getName();
+
+        if ($roleName === 'investor') {
+            if (! $routeName
+                || ! in_array($routeName, $this->investorProjectRoutes, true)) {
+                abort(403, 'Инвесторға бұл бөлімге қол жеткізуге рұқсат жоқ.');
+            }
+
+            $this->enforceInvestorProjectScope($request, $user, $routeName);
+
+            return $next($request);
+        }
 
         // Superadmin manages project types; prokuror may view them.
         if ($routeName && ($routeName === 'project-types' || str_starts_with($routeName, 'project-types.'))) {
@@ -289,6 +326,30 @@ class CheckRoleAccess
 
         // Also block non-GET/HEAD methods as a safety net
         return ! $request->isMethodSafe();
+    }
+
+    /**
+     * Investors may only open projects explicitly assigned to their account.
+     */
+    protected function enforceInvestorProjectScope(
+        Request $request,
+        $user,
+        string $routeName
+    ): void {
+        if ($routeName === 'investment-projects.index') {
+            return;
+        }
+
+        $project = $request->route('investmentProject')
+            ?? $request->route('investment_project');
+        $projectId = is_object($project) ? $project->id : (int) $project;
+
+        if (! $projectId
+            || ! $user->investorProjects()
+                ->where('investment_projects.id', $projectId)
+                ->exists()) {
+            abort(403, 'Бұл жоба инвестор аккаунтына бекітілмеген.');
+        }
     }
 
     /**

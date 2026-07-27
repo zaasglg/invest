@@ -10,13 +10,14 @@ type Props = {
 };
 
 export function AppShell({ children, variant = 'header' }: Props) {
-    const isOpen = usePage<SharedData>().props.sidebarOpen;
+    const { auth, sidebarOpen: isOpen } = usePage<SharedData>().props;
+    const showChat = auth.user?.role_model?.name !== 'investor';
 
     if (variant === 'header') {
         return (
             <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
                 {children}
-                <ChatWidget />
+                {showChat && <ChatWidget />}
             </div>
         );
     }
@@ -24,7 +25,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
     return (
         <SidebarProvider defaultOpen={isOpen}>
             {children}
-            <ChatWidget />
+            {showChat && <ChatWidget />}
         </SidebarProvider>
     );
 }

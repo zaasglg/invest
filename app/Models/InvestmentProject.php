@@ -96,6 +96,15 @@ class InvestmentProject extends Model
             ->withTimestamps();
     }
 
+    /**
+     * Investor accounts explicitly assigned to this project.
+     */
+    public function investors()
+    {
+        return $this->belongsToMany(User::class, 'investment_project_investor')
+            ->withTimestamps();
+    }
+
     // Исполнитель (Executor)
     public function executor()
     {

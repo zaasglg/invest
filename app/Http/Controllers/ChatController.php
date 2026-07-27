@@ -19,6 +19,12 @@ class ChatController extends Controller
 
     public function send(Request $request): JsonResponse
     {
+        abort_if(
+            $request->user()?->roleModel?->name === 'investor',
+            403,
+            'Инвесторға AI-көмекші қолжетімсіз.'
+        );
+
         $request->validate([
             'message' => 'required|string|max:1000',
         ]);

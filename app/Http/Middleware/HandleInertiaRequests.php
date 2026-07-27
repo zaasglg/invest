@@ -69,6 +69,7 @@ class HandleInertiaRequests extends Middleware
             if (str_contains($normalized, 'zamakim')
                 || str_contains($normalized, 'akim')
                 || str_contains($normalized, 'ispolnitel')
+                || str_contains($normalized, 'investor')
                 || str_contains($normalized, 'prokuror')) {
                 return true;
             }

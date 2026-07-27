@@ -91,6 +91,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Projects explicitly assigned to an investor account.
+     */
+    public function investorProjects()
+    {
+        return $this->belongsToMany(InvestmentProject::class, 'investment_project_investor')
+            ->withTimestamps();
+    }
+
+    /**
      * Get the restricted sector type for an invest sub-role.
      * Returns null if the user has no invest sub-role or is turkistan_invest.
      */
@@ -179,6 +188,12 @@ class User extends Authenticatable
      */
     public function isInvolvedInProject(InvestmentProject $project): bool
     {
+        if ($this->roleModel?->name === 'investor') {
+            return $project->investors()
+                ->where('users.id', $this->id)
+                ->exists();
+        }
+
         // User is creator of the project
         if ((int) $project->created_by === (int) $this->id) {
             return true;
@@ -205,8 +220,8 @@ class User extends Authenticatable
     {
         $roleName = $this->roleModel?->name;
 
-        // Ispolnitel can only download from involved projects
-        if ($roleName === 'ispolnitel') {
+        // Ispolnitel and investor can only download from involved projects
+        if (in_array($roleName, ['ispolnitel', 'investor'], true)) {
             return $this->isInvolvedInProject($project);
         }
 

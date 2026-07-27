@@ -177,15 +177,15 @@ Route::resource('users', \App\Http\Controllers\UserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
 Route::get('issues', [\App\Http\Controllers\IssuesController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('issues.index');
 
 Route::get('baskarma-rating', [\App\Http\Controllers\BaskarmaRatingController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('baskarma-rating');
 
 Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingController::class, 'show'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('baskarma-rating.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -195,7 +195,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
 });
 
-Route::middleware(['auth', 'verified'])->prefix('chat')->name('chat.')->group(function () {
+Route::middleware(['auth', 'verified', 'role.access'])->prefix('chat')->name('chat.')->group(function () {
     Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
 });
 

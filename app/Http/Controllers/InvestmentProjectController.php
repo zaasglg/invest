@@ -48,6 +48,7 @@ class InvestmentProjectController extends Controller
             'projectType',
             'creator',
             'curators',
+            'investors',
             'executors',
             'sezs',
             'industrialZones',
@@ -58,6 +59,12 @@ class InvestmentProjectController extends Controller
         // Region-scope: invest sees only their district's projects
         // Ispolnitel sees ALL projects (no district or participation filter)
         $user = $request->user();
+        if ($user?->roleModel?->name === 'investor') {
+            $projectsQuery->whereHas('investors', function ($query) use ($user) {
+                $query->where('users.id', $user->id);
+            });
+        }
+
         if ($user && $user->isDistrictScoped() && ! $this->isIspolnitelUser($user)) {
             $projectsQuery->where('region_id', $user->region_id);
         } elseif ($user && $user->isOblastScopedAkim()) {
@@ -190,7 +197,9 @@ class InvestmentProjectController extends Controller
                 'suspended' => $statusCounts['suspended'] ?? 0,
                 'plan' => $statusCounts['plan'] ?? 0,
             ],
-            'ending_this_year' => InvestmentProject::whereYear('end_date', $currentYear)->count(),
+            'ending_this_year' => (clone $statsQuery)
+                ->whereYear('end_date', $currentYear)
+                ->count(),
         ];
 
         $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
@@ -462,13 +471,14 @@ class InvestmentProjectController extends Controller
             'projectType',
             'creator',
             'curators',
+            'investors',
             'executors',
             'documents',
             'issues',
             'issues.creator:id,full_name',
             'tasks' => function ($query) use ($currentRole) {
                 // Executors only see tasks the moderator has approved.
-                if ($currentRole === 'ispolnitel') {
+                if (in_array($currentRole, ['ispolnitel', 'investor'], true)) {
                     $query->where('approval_status', 'approved');
                 }
             },
@@ -486,6 +496,12 @@ class InvestmentProjectController extends Controller
         ])
             ->withCount('photos')
             ->find($id);
+
+        if ($currentRole === 'investor'
+            && (! $project
+                || ! $project->investors->contains('id', $currentUser?->id))) {
+            abort(403, 'Бұл жоба инвестор аккаунтына бекітілмеген.');
+        }
 
         // Region-scope check: district-scoped users can only view their district's projects
         // Ispolnitel can view any project (restricted sections handled in frontend)
@@ -554,21 +570,31 @@ class InvestmentProjectController extends Controller
         $user = request()->user();
         $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
             ->with('roleModel:id,name,display_name')
+            ->where(function ($query) use ($id) {
+                $query
+                    ->whereHas('roleModel', function ($roleQuery) {
+                        $roleQuery->where('name', 'ispolnitel');
+                    })
+                    ->orWhere(function ($investorQuery) use ($id) {
+                        $investorQuery
+                            ->whereHas('roleModel', function ($roleQuery) {
+                                $roleQuery->where('name', 'investor');
+                            })
+                            ->whereHas('investorProjects', function ($projectQuery) use ($id) {
+                                $projectQuery->where('investment_projects.id', (int) $id);
+                            });
+                    });
+            })
             ->orderBy('full_name');
 
-        // Invest can assign tasks to all ispolnitel accounts.
-        if ($user?->roleModel?->name === 'invest') {
-            $assignableUsersQuery->whereHas('roleModel', function ($roleQuery) {
-                $roleQuery->where('name', 'ispolnitel');
-            });
-        } elseif ($user && $user->isDistrictScoped()) {
+        if ($user && $user->isDistrictScoped()) {
             $assignableUsersQuery->where(function ($query) use ($user) {
                 // Users in same region
                 $query->where('region_id', $user->region_id)
-                    // Or all ispolnitel users
+                    // Or executor-style accounts allowed for this project
                     ->orWhere(function ($q) {
                         $q->whereHas('roleModel', function ($roleQuery) {
-                            $roleQuery->where('name', 'ispolnitel');
+                            $roleQuery->whereIn('name', ['ispolnitel', 'investor']);
                         });
                     });
             });
@@ -576,10 +602,11 @@ class InvestmentProjectController extends Controller
 
         $canDownload = $user && is_object($project) ? $user->canDownloadFromProject($project) : true;
 
-        // Check if ispolnitel is involved in the project
+        // Check if an executor-style account is involved in the project.
         $roleName = $user?->roleModel?->name;
         $isInvolved = true;
-        if ($roleName === 'ispolnitel' && is_object($project)) {
+        if (in_array($roleName, ['ispolnitel', 'investor'], true)
+            && is_object($project)) {
             $isInvolved = $user->isInvolvedInProject($project);
         }
 

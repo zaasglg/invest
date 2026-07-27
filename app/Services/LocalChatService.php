@@ -734,6 +734,7 @@ class LocalChatService
             'invest' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'tasks', 'rating', 'notifications', 'settings'],
             'akim', 'zamakim' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'notifications', 'settings'],
             'ispolnitel' => ['dashboard', 'projects', 'tasks', 'issues', 'notifications', 'settings'],
+            'investor' => ['dashboard', 'projects', 'tasks', 'notifications', 'settings'],
             default => ['dashboard', 'notifications', 'settings'],
         };
 
@@ -760,6 +761,7 @@ class LocalChatService
                 'akim' => '🔐 Ваша роль: **Аким** — просмотр проектов своего района/области.',
                 'zamakim' => '🔐 Ваша роль: **Зам Аким** — только просмотр (read-only).',
                 'ispolnitel' => '🔐 Ваша роль: **Исполнитель** — выполнение задач, загрузка фото/документов.',
+                'investor' => '🔐 Ваша роль: **Инвестор** — просмотр назначенных проектов и выполнение назначенных задач.',
                 default => '🔐 У вас ограниченный доступ.',
             };
         }
@@ -771,6 +773,7 @@ class LocalChatService
             'akim' => '🔐 Сіздің рөліңіз: **Аким** — өз ауданыңыз/облысыңыз бойынша жобаларды қарау.',
             'zamakim' => '🔐 Сіздің рөліңіз: **Зам Аким** — тек қарау (read-only).',
             'ispolnitel' => '🔐 Сіздің рөліңіз: **Орындаушы** — тапсырмаларды орындау, сурет/құжат жүктеу.',
+            'investor' => '🔐 Сіздің рөліңіз: **Инвестор** — бекітілген жобаларды көру және берілген тапсырмаларды орындау.',
             default => '🔐 Сізде шектеулі қолжетімділік бар.',
         };
     }
@@ -869,6 +872,7 @@ class LocalChatService
                 'issues', 'gallery', 'help',
             ],
             'ispolnitel' => ['investment_projects', 'tasks', 'issues', 'gallery', 'help'],
+            'investor' => ['investment_projects', 'tasks', 'gallery', 'help'],
             default => ['help'],
         };
     }
