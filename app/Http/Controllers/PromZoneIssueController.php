@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StandardZoneIssueRequest;
 use App\Models\PromZone;
 use App\Models\PromZoneIssue;
-use Illuminate\Http\Request;
+use App\Services\StandardIssueWorkflowService;
 use Inertia\Inertia;
 
 class PromZoneIssueController extends Controller
 {
+    public function __construct(
+        private readonly StandardIssueWorkflowService $workflow
+    ) {}
+
     public function index(PromZone $promZone)
     {
         $issues = $promZone->issues()->with('creator:id,full_name')->latest()->get();
@@ -19,41 +24,31 @@ class PromZoneIssueController extends Controller
         ]);
     }
 
-    public function store(Request $request, PromZone $promZone)
-    {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category' => 'nullable|string|max:100',
-            'severity' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:open,in_progress,resolved',
-        ]);
-
-        $promZone->issues()->create([
-            ...$validated,
-            'created_by' => $request->user()?->id,
-        ]);
+    public function store(
+        StandardZoneIssueRequest $request,
+        PromZone $promZone
+    ) {
+        $this->workflow->create(
+            $promZone,
+            $request->validated(),
+            $request->user()?->id
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
 
-    public function update(Request $request, PromZone $promZone, PromZoneIssue $issue)
-    {
+    public function update(
+        StandardZoneIssueRequest $request,
+        PromZone $promZone,
+        PromZoneIssue $issue
+    ) {
         abort_if($issue->prom_zone_id !== $promZone->id, 404);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category' => 'nullable|string|max:100',
-            'severity' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:open,in_progress,resolved',
-        ]);
-
-        if ($issue->created_by === null) {
-            $validated['created_by'] = $request->user()?->id;
-        }
-
-        $issue->update($validated);
+        $this->workflow->update(
+            $issue,
+            $request->validated(),
+            $request->user()?->id
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
@@ -62,7 +57,7 @@ class PromZoneIssueController extends Controller
     {
         abort_if($issue->prom_zone_id !== $promZone->id, 404);
 
-        $issue->delete();
+        $this->workflow->destroy($issue);
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }

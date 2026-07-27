@@ -206,13 +206,13 @@ function PhotoLightbox({
         setPosition({ x: 0, y: 0 });
     }, [currentIndex]);
 
-    const goToPrevious = () => {
+    const goToPrevious = useCallback(() => {
         setCurrentIndex((prev) => (prev > 0 ? prev - 1 : photos.length - 1));
-    };
+    }, [photos.length]);
 
-    const goToNext = () => {
+    const goToNext = useCallback(() => {
         setCurrentIndex((prev) => (prev < photos.length - 1 ? prev + 1 : 0));
-    };
+    }, [photos.length]);
 
     const handleZoomIn = () => {
         if (zoom < 5) setZoom((prev) => prev + 0.5);
@@ -260,7 +260,7 @@ function PhotoLightbox({
 
         window.addEventListener('keydown', handleKeyDown);
         return () => window.removeEventListener('keydown', handleKeyDown);
-    }, [goToPrevious, goToNext]);
+    }, [goToPrevious, goToNext, onClose]);
 
     if (!isOpen) return null;
 

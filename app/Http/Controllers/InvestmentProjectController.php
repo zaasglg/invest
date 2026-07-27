@@ -13,6 +13,7 @@ use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\PrivateFileService;
+use App\Services\SortOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -29,7 +30,8 @@ class InvestmentProjectController extends Controller
 {
     public function __construct(
         private readonly PrivateFileService $files,
-        private readonly InvestmentProjectAccessService $projectAccess
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly SortOrderService $sortOrder
     ) {}
 
     public function index(Request $request)
@@ -220,16 +222,19 @@ class InvestmentProjectController extends Controller
             $this->projectAccess->scopeVisible($projectsQuery, $user);
         }
 
-        $projects = $projectsQuery
+        $projectIds = $projectsQuery
             ->orderBy('sort_order')
             ->orderByDesc('created_at')
-            ->get();
-        $projects->splice($targetIndex, 0, [$investmentProject]);
-
-        $index = 1;
-        foreach ($projects as $p) {
-            $p->update(['sort_order' => $index++]);
-        }
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+        array_splice(
+            $projectIds,
+            $targetIndex,
+            0,
+            [(int) $investmentProject->id]
+        );
+        $this->sortOrder->update(InvestmentProject::class, $projectIds, 1);
 
         return redirect()->back()->with('success', 'Жобаның орны ауыстырылды.');
     }
@@ -250,21 +255,22 @@ class InvestmentProjectController extends Controller
         ]);
 
         $projectIds = $validated['project_ids'];
-        $allowedProjects = $this->projectAccess->scopeVisible(
+        $allowedProjectCount = $this->projectAccess->scopeVisible(
             InvestmentProject::query()->whereIn('id', $projectIds),
             $user
-        )->get();
+        )->count();
 
-        abort_unless($allowedProjects->count() === count($projectIds), 403);
+        abort_unless($allowedProjectCount === count($projectIds), 403);
 
         $page = $validated['page'] ?? 1;
         $perPage = 15;
         $offset = ($page - 1) * $perPage;
 
-        foreach ($projectIds as $index => $id) {
-            $allowedProjects->firstWhere('id', $id)
-                ?->update(['sort_order' => $offset + $index]);
-        }
+        $this->sortOrder->update(
+            InvestmentProject::class,
+            array_map('intval', $projectIds),
+            $offset
+        );
 
         return response()->noContent();
     }

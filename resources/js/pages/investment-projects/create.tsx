@@ -289,7 +289,7 @@ export default function Create({
         if (changed) {
             setData('executor_ids', next);
         }
-    }, [lockedIspolnitelIds]);
+    }, [data.executor_ids, lockedIspolnitelIds, setData]);
 
     const handleExecutorChange = (userId: string, checked: boolean) => {
         // Prevent unchecking locked ispolnitel users

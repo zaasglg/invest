@@ -2,13 +2,18 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StandardZoneIssueRequest;
 use App\Models\Sez;
 use App\Models\SezIssue;
-use Illuminate\Http\Request;
+use App\Services\StandardIssueWorkflowService;
 use Inertia\Inertia;
 
 class SezIssueController extends Controller
 {
+    public function __construct(
+        private readonly StandardIssueWorkflowService $workflow
+    ) {}
+
     public function index(Sez $sez)
     {
         $issues = $sez->issues()->with('creator:id,full_name')->latest()->get();
@@ -19,41 +24,29 @@ class SezIssueController extends Controller
         ]);
     }
 
-    public function store(Request $request, Sez $sez)
+    public function store(StandardZoneIssueRequest $request, Sez $sez)
     {
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category' => 'nullable|string|max:100',
-            'severity' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:open,in_progress,resolved',
-        ]);
-
-        $sez->issues()->create([
-            ...$validated,
-            'created_by' => $request->user()?->id,
-        ]);
+        $this->workflow->create(
+            $sez,
+            $request->validated(),
+            $request->user()?->id
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
 
-    public function update(Request $request, Sez $sez, SezIssue $issue)
-    {
+    public function update(
+        StandardZoneIssueRequest $request,
+        Sez $sez,
+        SezIssue $issue
+    ) {
         abort_if($issue->sez_id !== $sez->id, 404);
 
-        $validated = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'required|string',
-            'category' => 'nullable|string|max:100',
-            'severity' => 'required|in:low,medium,high,critical',
-            'status' => 'required|in:open,in_progress,resolved',
-        ]);
-
-        if ($issue->created_by === null) {
-            $validated['created_by'] = $request->user()?->id;
-        }
-
-        $issue->update($validated);
+        $this->workflow->update(
+            $issue,
+            $request->validated(),
+            $request->user()?->id
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
@@ -62,7 +55,7 @@ class SezIssueController extends Controller
     {
         abort_if($issue->sez_id !== $sez->id, 404);
 
-        $issue->delete();
+        $this->workflow->destroy($issue);
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }
