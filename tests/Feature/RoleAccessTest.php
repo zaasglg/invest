@@ -28,9 +28,16 @@ function createRole(string $name, string $displayName = ''): Role
 function createUserWithRole(string $roleName, ?int $regionId = null, array $extra = []): User
 {
     $role = createRole($roleName);
+    $legacyRole = match ($roleName) {
+        'superadmin' => 'admin',
+        'invest' => 'invest',
+        'akim' => 'akim',
+        'zamakim' => 'deputy_akim',
+        default => 'district_user',
+    };
 
     return User::factory()->create(array_merge([
-        'role' => $roleName,
+        'role' => $legacyRole,
         'role_id' => $role->id,
         'region_id' => $regionId,
     ], $extra));
