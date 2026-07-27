@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\CheckRoleAccess;
+use App\Http\Middleware\EnsureSupportedRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -25,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role.access' => CheckRoleAccess::class,
+            'role.valid' => EnsureSupportedRole::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -39,6 +39,8 @@ class PromZoneIssueController extends Controller
 
     public function update(Request $request, PromZone $promZone, PromZoneIssue $issue)
     {
+        abort_if($issue->prom_zone_id !== $promZone->id, 404);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -58,6 +60,8 @@ class PromZoneIssueController extends Controller
 
     public function destroy(PromZone $promZone, PromZoneIssue $issue)
     {
+        abort_if($issue->prom_zone_id !== $promZone->id, 404);
+
         $issue->delete();
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');

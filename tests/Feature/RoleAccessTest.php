@@ -116,6 +116,22 @@ function createTestSubsoilUser(int $regionId): SubsoilUser
     ]);
 }
 
+describe('Role allowlist', function () {
+    test('user with an unknown role is denied protected resources', function () {
+        $user = createUserWithRole('custom-role');
+
+        $this->actingAs($user)->get('/users')->assertForbidden();
+    });
+
+    test('user without a role is denied protected resources', function () {
+        $user = User::factory()->create([
+            'role_id' => null,
+        ]);
+
+        $this->actingAs($user)->get('/users')->assertForbidden();
+    });
+});
+
 // ================ SUPERADMIN ROLE TESTS ================
 
 describe('Superadmin role', function () {

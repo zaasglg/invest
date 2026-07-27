@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, router, usePage } from '@inertiajs/react';
 import {
     Bell,
     CheckCircle2,
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 
+import type { SharedData } from '@/types';
 import type { PaginatedData } from '@/types/pagination';
 
 interface CompletionFile {
@@ -88,6 +89,10 @@ interface Props {
 }
 
 export default function NotificationsIndex({ notifications }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const canReviewCompletions = ['superadmin', 'invest'].includes(
+        auth.user?.role_model?.name ?? '',
+    );
     const [viewCompletion, setViewCompletion] = useState<Completion | null>(
         null,
     );
@@ -100,6 +105,27 @@ export default function NotificationsIndex({ notifications }: Props) {
     } | null>(null);
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
+
+    const getCompletionFileUrl = (
+        fileId: number,
+        action: 'preview' | 'download',
+    ): string => {
+        if (!viewCompletion || !viewTask || !reviewSource) return '#';
+
+        if (
+            reviewSource.type === 'subsoil' &&
+            reviewSource.subsoilUserId &&
+            reviewSource.subsoilTaskId
+        ) {
+            return `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/files/${fileId}/${action}`;
+        }
+
+        if (reviewSource.type === 'investment' && viewTask.project?.id) {
+            return `/investment-projects/${viewTask.project.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/files/${fileId}/${action}`;
+        }
+
+        return '#';
+    };
 
     const typeConfig: Record<
         string,
@@ -463,7 +489,10 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                             'photo' ? (
                                                                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
                                                                     <img
-                                                                        src={`/storage/${file.file_path}`}
+                                                                        src={getCompletionFileUrl(
+                                                                            file.id,
+                                                                            'preview',
+                                                                        )}
                                                                         alt={
                                                                             file.file_name
                                                                         }
@@ -489,7 +518,10 @@ export default function NotificationsIndex({ notifications }: Props) {
                                                                 </p>
                                                             </div>
                                                             <a
-                                                                href={`/storage/${file.file_path}`}
+                                                                href={getCompletionFileUrl(
+                                                                    file.id,
+                                                                    'download',
+                                                                )}
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className="text-blue-600 hover:text-blue-800"
@@ -576,48 +608,49 @@ export default function NotificationsIndex({ notifications }: Props) {
                                     )}
 
                                 {/* Review form (only for pending) */}
-                                {viewCompletion.status === 'pending' && (
-                                    <div className="space-y-4 border-t border-gray-200 pt-4">
-                                        <div>
-                                            <label className="text-sm font-semibold text-[#0f1b3d]">
-                                                Пікір
-                                            </label>
-                                            <textarea
-                                                value={reviewComment}
-                                                onChange={(e) =>
-                                                    setReviewComment(
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                placeholder="Пікір енгізіңіз..."
-                                                className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
-                                                rows={3}
-                                            />
+                                {viewCompletion.status === 'pending' &&
+                                    canReviewCompletions && (
+                                        <div className="space-y-4 border-t border-gray-200 pt-4">
+                                            <div>
+                                                <label className="text-sm font-semibold text-[#0f1b3d]">
+                                                    Пікір
+                                                </label>
+                                                <textarea
+                                                    value={reviewComment}
+                                                    onChange={(e) =>
+                                                        setReviewComment(
+                                                            e.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Пікір енгізіңіз..."
+                                                    className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
+                                                    rows={3}
+                                                />
+                                            </div>
+                                            <div className="flex justify-end gap-3">
+                                                <Button
+                                                    onClick={() =>
+                                                        handleReview('approved')
+                                                    }
+                                                    className="bg-emerald-500 hover:bg-emerald-600"
+                                                    disabled={isReviewing}
+                                                >
+                                                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                                                    Иә
+                                                </Button>
+                                                <Button
+                                                    onClick={() =>
+                                                        handleReview('rejected')
+                                                    }
+                                                    className="bg-red-500 hover:bg-red-600"
+                                                    disabled={isReviewing}
+                                                >
+                                                    <XCircle className="mr-2 h-4 w-4" />
+                                                    Жоқ
+                                                </Button>
+                                            </div>
                                         </div>
-                                        <div className="flex justify-end gap-3">
-                                            <Button
-                                                onClick={() =>
-                                                    handleReview('approved')
-                                                }
-                                                className="bg-emerald-500 hover:bg-emerald-600"
-                                                disabled={isReviewing}
-                                            >
-                                                <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                Иә
-                                            </Button>
-                                            <Button
-                                                onClick={() =>
-                                                    handleReview('rejected')
-                                                }
-                                                className="bg-red-500 hover:bg-red-600"
-                                                disabled={isReviewing}
-                                            >
-                                                <XCircle className="mr-2 h-4 w-4" />
-                                                Жоқ
-                                            </Button>
-                                        </div>
-                                    </div>
-                                )}
+                                    )}
                             </div>
                         </div>
                     </div>

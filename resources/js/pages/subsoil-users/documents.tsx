@@ -364,7 +364,7 @@ export default function Documents({
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <a
-                                                        href={`/storage/${document.file_path}`}
+                                                        href={`/subsoil-users/${subsoilUser.id}/documents/${document.id}/download`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
@@ -441,7 +441,7 @@ export default function Documents({
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <a
-                                                        href={`/storage/${document.file_path}`}
+                                                        href={`/subsoil-users/${subsoilUser.id}/documents/${document.id}/download`}
                                                         target="_blank"
                                                         rel="noopener noreferrer"
                                                         className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"

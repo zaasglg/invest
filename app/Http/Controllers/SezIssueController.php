@@ -39,6 +39,8 @@ class SezIssueController extends Controller
 
     public function update(Request $request, Sez $sez, SezIssue $issue)
     {
+        abort_if($issue->sez_id !== $sez->id, 404);
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -58,6 +60,8 @@ class SezIssueController extends Controller
 
     public function destroy(Sez $sez, SezIssue $issue)
     {
+        abort_if($issue->sez_id !== $sez->id, 404);
+
         $issue->delete();
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');

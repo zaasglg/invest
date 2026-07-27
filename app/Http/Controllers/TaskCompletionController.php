@@ -10,12 +10,17 @@ use App\Models\TaskCompletion;
 use App\Models\TaskCompletionFile;
 use App\Models\TaskNotification;
 use App\Models\User;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class TaskCompletionController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files
+    ) {}
+
     /**
      * User submits a task completion (with files and comment).
      */
@@ -36,10 +41,26 @@ class TaskCompletionController extends Controller
             abort(403, 'Бұл тапсырма әлі расталмаған.');
         }
 
+        abort_unless(
+            in_array($task->status, ['new', 'rejected'], true),
+            409,
+            'Бұл тапсырма бойынша орындалу нәтижесі жіберіліп қойған.'
+        );
+
+        abort_if(
+            $task->completions()->where('status', 'pending')->exists(),
+            409,
+            'Бұл тапсырманың тексеруді күтіп тұрған нәтижесі бар.'
+        );
+
         $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',
-            'documents.*' => 'file|max:20480',
+            'documents.*' => [
+                'file',
+                'max:20480',
+                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+            ],
             'photos' => 'nullable|array|max:10',
             'photos.*' => 'image|max:20480',
         ]);
@@ -54,7 +75,7 @@ class TaskCompletionController extends Controller
         // Save uploaded documents
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {
-                $path = $file->store('task-completions', 'public');
+                $path = $file->store('task-completions', 'local');
                 TaskCompletionFile::create([
                     'completion_id' => $completion->id,
                     'file_path' => $path,
@@ -67,7 +88,7 @@ class TaskCompletionController extends Controller
         // Save uploaded photos
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
-                $path = $file->store('task-completions', 'public');
+                $path = $file->store('task-completions', 'local');
                 TaskCompletionFile::create([
                     'completion_id' => $completion->id,
                     'file_path' => $path,
@@ -144,6 +165,53 @@ class TaskCompletionController extends Controller
         return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
     }
 
+    public function previewFile(
+        InvestmentProject $investmentProject,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToProject(
+            $investmentProject,
+            $task,
+            $completion,
+            $file
+        );
+        abort_unless($file->type === 'photo', 404);
+
+        $user = Auth::user();
+        abort_unless(
+            $user?->canDownloadFromProject($investmentProject),
+            403,
+            'Сізде бұл файлды көруге рұқсат жоқ.'
+        );
+
+        return $this->files->inline($file->file_path, $file->file_name);
+    }
+
+    public function downloadFile(
+        InvestmentProject $investmentProject,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToProject(
+            $investmentProject,
+            $task,
+            $completion,
+            $file
+        );
+
+        $user = Auth::user();
+        abort_unless(
+            $user?->canDownloadFromProject($investmentProject),
+            403,
+            'Сізде бұл файлды жүктеуге рұқсат жоқ.'
+        );
+
+        return $this->files->download($file->file_path, $file->file_name);
+    }
+
     /**
      * Invest reviews a completion: approve or reject.
      */
@@ -157,17 +225,45 @@ class TaskCompletionController extends Controller
             abort(404);
         }
 
+        $user = Auth::user();
+        abort_unless(
+            in_array(
+                $user?->roleModel?->name,
+                ['superadmin', 'invest'],
+                true
+            ),
+            403,
+            'Сізде тапсырма нәтижесін тексеру құқығы жоқ.'
+        );
+        abort_if(
+            $completion->submitted_by === $user?->id,
+            403,
+            'Өзіңіз жіберген нәтижені тексере алмайсыз.'
+        );
+
         $request->validate([
             'status' => 'required|in:approved,rejected',
             'reviewer_comment' => 'nullable|string|max:2000',
         ]);
 
-        $completion->update([
-            'status' => $request->input('status'),
-            'reviewer_comment' => $request->input('reviewer_comment'),
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        $updated = TaskCompletion::query()
+            ->whereKey($completion->id)
+            ->where('task_id', $task->id)
+            ->where('status', 'pending')
+            ->update([
+                'status' => $request->input('status'),
+                'reviewer_comment' => $request->input('reviewer_comment'),
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+
+        abort_unless(
+            $updated === 1,
+            409,
+            'Бұл нәтиже бұған дейін тексерілген.'
+        );
+
+        $completion->refresh();
 
         \App\Models\ProjectTaskEvent::create([
             'task_id' => $task->id,
@@ -221,17 +317,14 @@ class TaskCompletionController extends Controller
         $documentFiles = $completion->files()->where('type', 'document')->get();
 
         foreach ($documentFiles as $file) {
-            if (! Storage::disk('public')->exists($file->file_path)) {
-                continue;
-            }
-
-            // Copy the file to project-documents directory
             $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
-            $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
-                .'_'.time().'.'.$extension;
+            $newFileName = (string) Str::uuid()
+                .($extension !== '' ? '.'.$extension : '');
             $newPath = 'project-documents/'.$project->id.'/'.$newFileName;
 
-            Storage::disk('public')->copy($file->file_path, $newPath);
+            if (! $this->files->copyToPrivate($file->file_path, $newPath)) {
+                continue;
+            }
 
             ProjectDocument::create([
                 'project_id' => $project->id,
@@ -241,5 +334,16 @@ class TaskCompletionController extends Controller
                 'is_completed' => true,
             ]);
         }
+    }
+
+    private function ensureFileBelongsToProject(
+        InvestmentProject $project,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ): void {
+        abort_if($task->project_id !== $project->id, 404);
+        abort_if($completion->task_id !== $task->id, 404);
+        abort_if($file->completion_id !== $completion->id, 404);
     }
 }

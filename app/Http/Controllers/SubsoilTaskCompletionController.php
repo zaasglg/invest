@@ -9,12 +9,17 @@ use App\Models\SubsoilTaskCompletionFile;
 use App\Models\SubsoilUser;
 use App\Models\TaskNotification;
 use App\Models\User;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class SubsoilTaskCompletionController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files
+    ) {}
+
     public function store(Request $request, SubsoilUser $subsoilUser, SubsoilTask $task)
     {
         abort_if($task->subsoil_user_id !== $subsoilUser->id, 404);
@@ -24,10 +29,26 @@ class SubsoilTaskCompletionController extends Controller
             abort(403, 'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.');
         }
 
+        abort_unless(
+            in_array($task->status, ['new', 'rejected'], true),
+            409,
+            'Бұл тапсырма бойынша орындалу нәтижесі жіберіліп қойған.'
+        );
+
+        abort_if(
+            $task->completions()->where('status', 'pending')->exists(),
+            409,
+            'Бұл тапсырманың тексеруді күтіп тұрған нәтижесі бар.'
+        );
+
         $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',
-            'documents.*' => 'file|max:20480',
+            'documents.*' => [
+                'file',
+                'max:20480',
+                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+            ],
             'photos' => 'nullable|array|max:10',
             'photos.*' => 'image|max:20480',
         ]);
@@ -41,7 +62,7 @@ class SubsoilTaskCompletionController extends Controller
 
         if ($request->hasFile('documents')) {
             foreach ($request->file('documents') as $file) {
-                $path = $file->store('subsoil-task-completions', 'public');
+                $path = $file->store('subsoil-task-completions', 'local');
                 SubsoilTaskCompletionFile::create([
                     'completion_id' => $completion->id,
                     'file_path' => $path,
@@ -53,7 +74,7 @@ class SubsoilTaskCompletionController extends Controller
 
         if ($request->hasFile('photos')) {
             foreach ($request->file('photos') as $file) {
-                $path = $file->store('subsoil-task-completions', 'public');
+                $path = $file->store('subsoil-task-completions', 'local');
                 SubsoilTaskCompletionFile::create([
                     'completion_id' => $completion->id,
                     'file_path' => $path,
@@ -101,22 +122,83 @@ class SubsoilTaskCompletionController extends Controller
         return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
     }
 
+    public function previewFile(
+        SubsoilUser $subsoilUser,
+        SubsoilTask $task,
+        SubsoilTaskCompletion $completion,
+        SubsoilTaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToSubsoil(
+            $subsoilUser,
+            $task,
+            $completion,
+            $file
+        );
+        abort_unless($file->type === 'photo', 404);
+
+        return $this->files->inline($file->file_path, $file->file_name);
+    }
+
+    public function downloadFile(
+        SubsoilUser $subsoilUser,
+        SubsoilTask $task,
+        SubsoilTaskCompletion $completion,
+        SubsoilTaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToSubsoil(
+            $subsoilUser,
+            $task,
+            $completion,
+            $file
+        );
+
+        return $this->files->download($file->file_path, $file->file_name);
+    }
+
     public function review(Request $request, SubsoilUser $subsoilUser, SubsoilTask $task, SubsoilTaskCompletion $completion)
     {
         abort_if($task->subsoil_user_id !== $subsoilUser->id, 404);
         abort_if($completion->task_id !== $task->id, 404);
+
+        $user = Auth::user();
+        abort_unless(
+            in_array(
+                $user?->roleModel?->name,
+                ['superadmin', 'invest'],
+                true
+            ),
+            403,
+            'Сізде тапсырма нәтижесін тексеру құқығы жоқ.'
+        );
+        abort_if(
+            $completion->submitted_by === $user?->id,
+            403,
+            'Өзіңіз жіберген нәтижені тексере алмайсыз.'
+        );
 
         $request->validate([
             'status' => 'required|in:approved,rejected',
             'reviewer_comment' => 'nullable|string|max:2000',
         ]);
 
-        $completion->update([
-            'status' => $request->input('status'),
-            'reviewer_comment' => $request->input('reviewer_comment'),
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        $updated = SubsoilTaskCompletion::query()
+            ->whereKey($completion->id)
+            ->where('task_id', $task->id)
+            ->where('status', 'pending')
+            ->update([
+                'status' => $request->input('status'),
+                'reviewer_comment' => $request->input('reviewer_comment'),
+                'reviewed_by' => Auth::id(),
+                'reviewed_at' => now(),
+            ]);
+
+        abort_unless(
+            $updated === 1,
+            409,
+            'Бұл нәтиже бұған дейін тексерілген.'
+        );
+
+        $completion->refresh();
 
         $reviewerName = Auth::user()->full_name ?? 'Орындаушы';
 
@@ -152,16 +234,14 @@ class SubsoilTaskCompletionController extends Controller
         $documentFiles = $completion->files()->where('type', 'document')->get();
 
         foreach ($documentFiles as $file) {
-            if (! Storage::disk('public')->exists($file->file_path)) {
-                continue;
-            }
-
             $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
-            $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
-                .'_'.time().'.'.$extension;
+            $newFileName = (string) Str::uuid()
+                .($extension !== '' ? '.'.$extension : '');
             $newPath = 'subsoil-documents/'.$subsoilUser->id.'/'.$newFileName;
 
-            Storage::disk('public')->copy($file->file_path, $newPath);
+            if (! $this->files->copyToPrivate($file->file_path, $newPath)) {
+                continue;
+            }
 
             SubsoilDocument::create([
                 'subsoil_user_id' => $subsoilUser->id,
@@ -171,5 +251,16 @@ class SubsoilTaskCompletionController extends Controller
                 'is_completed' => true,
             ]);
         }
+    }
+
+    private function ensureFileBelongsToSubsoil(
+        SubsoilUser $subsoilUser,
+        SubsoilTask $task,
+        SubsoilTaskCompletion $completion,
+        SubsoilTaskCompletionFile $file
+    ): void {
+        abort_if($task->subsoil_user_id !== $subsoilUser->id, 404);
+        abort_if($completion->task_id !== $task->id, 404);
+        abort_if($file->completion_id !== $completion->id, 404);
     }
 }

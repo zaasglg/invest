@@ -19,9 +19,7 @@ class ProjectTaskController extends Controller
         $user = Auth::user();
         $creatorRole = $user?->roleModel?->name;
 
-        if (in_array($creatorRole, ['moderator', 'investor'], true)) {
-            abort(403, 'Сізде тапсырма енгізу құқығы жоқ.');
-        }
+        $this->authorizeTaskManagement($investmentProject, true);
 
         $validated = $request->validate([
             'title' => 'required|string|max:255',
@@ -212,9 +210,7 @@ class ProjectTaskController extends Controller
         }
 
         $editorRole = Auth::user()?->roleModel?->name;
-        if (in_array($editorRole, ['moderator', 'prokuror', 'investor'], true)) {
-            abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
-        }
+        $this->authorizeTaskManagement($investmentProject);
 
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
@@ -222,7 +218,7 @@ class ProjectTaskController extends Controller
             'assigned_to' => 'sometimes|required|exists:users,id',
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
-            'status' => 'sometimes|in:new,in_progress,done,rejected',
+            'status' => 'prohibited',
         ]);
 
         $newAssignee = array_key_exists('assigned_to', $validated)
@@ -361,13 +357,7 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        if (in_array(
-            Auth::user()?->roleModel?->name,
-            ['moderator', 'prokuror', 'investor'],
-            true
-        )) {
-            abort(403, 'Сізде тапсырманы жою құқығыңыз жоқ.');
-        }
+        $this->authorizeTaskManagement($investmentProject);
 
         KpiLog::log($investmentProject->id, 'Кезең жойылды: "'.$task->title.'"');
 
@@ -394,6 +384,16 @@ class ProjectTaskController extends Controller
     ): User {
         $assignee = User::with('roleModel')->findOrFail($userId);
 
+        if (! in_array(
+            $assignee->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
+            throw ValidationException::withMessages([
+                'assigned_to' => 'Тапсырманы тек орындаушыға немесе жоба инвесторына беруге болады.',
+            ]);
+        }
+
         if ($assignee->roleModel?->name === 'investor'
             && ! $investmentProject->investors()
                 ->where('users.id', $assignee->id)
@@ -404,5 +404,27 @@ class ProjectTaskController extends Controller
         }
 
         return $assignee;
+    }
+
+    private function authorizeTaskManagement(
+        InvestmentProject $project,
+        bool $allowProkuror = false
+    ): void {
+        $roleName = Auth::user()?->roleModel?->name;
+        $allowedRoles = $allowProkuror
+            ? ['superadmin', 'invest', 'prokuror']
+            : ['superadmin', 'invest'];
+
+        abort_unless(
+            in_array($roleName, $allowedRoles, true),
+            403,
+            'Сізде тапсырмаларды басқару құқығы жоқ.'
+        );
+
+        $user = Auth::user();
+        if ($user?->isDistrictScoped()
+            && $project->region_id !== $user->region_id) {
+            abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
+        }
     }
 }

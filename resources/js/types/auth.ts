@@ -4,7 +4,6 @@ export type User = {
     email: string;
     avatar?: string;
     avatar_url?: string | null;
-    email_verified_at: string | null;
     role?: string | null;
     region_id?: number | null;
     baskarma_type?: 'district' | 'oblast' | 'additional' | null;

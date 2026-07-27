@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
 use App\Models\Region;
+use App\Services\InvestmentProjectAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
@@ -11,6 +12,10 @@ use Inertia\Inertia;
 
 class RegionController extends Controller
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess
+    ) {}
+
     public function index(Request $request)
     {
         $regionsQuery = Region::query()->orderBy('sort_order', 'asc');
@@ -240,14 +245,23 @@ class RegionController extends Controller
         }
 
         $validated = $request->validate([
-            'project_ids' => 'required|array',
-            'project_ids.*' => 'integer|exists:investment_projects,id',
+            'project_ids' => 'required|array|min:1',
+            'project_ids.*' => 'integer|distinct|exists:investment_projects,id',
         ]);
 
-        foreach ($validated['project_ids'] as $index => $projectId) {
-            InvestmentProject::where('id', $projectId)
+        $projectIds = $validated['project_ids'];
+        $projects = $this->projectAccess->scopeVisible(
+            InvestmentProject::query()
                 ->where('region_id', $region->id)
-                ->update(['sort_order' => $index]);
+                ->whereIn('id', $projectIds),
+            $user
+        )->get();
+
+        abort_unless($projects->count() === count($projectIds), 403);
+
+        foreach ($projectIds as $index => $projectId) {
+            $projects->firstWhere('id', $projectId)
+                ?->update(['sort_order' => $index]);
         }
 
         return response()->noContent();

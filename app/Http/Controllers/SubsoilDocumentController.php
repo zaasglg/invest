@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\SubsoilDocument;
 use App\Models\SubsoilUser;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class SubsoilDocumentController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files
+    ) {}
+
     public function index(SubsoilUser $subsoilUser)
     {
         $completedDocuments = $subsoilUser->documents()
@@ -29,14 +33,22 @@ class SubsoilDocumentController extends Controller
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'file' => 'required|file|max:10240',
+            'file' => [
+                'required',
+                'file',
+                'max:10240',
+                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+            ],
             'type' => 'nullable|string|max:100',
             'is_completed' => 'nullable|boolean',
         ]);
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store('subsoil-documents/'.$subsoilUser->id, 'public');
+            $path = $file->store(
+                'subsoil-documents/'.$subsoilUser->id,
+                'local'
+            );
 
             SubsoilDocument::create([
                 'subsoil_user_id' => $subsoilUser->id,
@@ -50,15 +62,27 @@ class SubsoilDocumentController extends Controller
         return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
 
+    public function download(
+        SubsoilUser $subsoilUser,
+        SubsoilDocument $document
+    ) {
+        if ($document->subsoil_user_id !== $subsoilUser->id) {
+            abort(404);
+        }
+
+        return $this->files->download(
+            $document->file_path,
+            $this->files->downloadName($document->name, $document->file_path)
+        );
+    }
+
     public function destroy(SubsoilUser $subsoilUser, SubsoilDocument $document)
     {
         if ($document->subsoil_user_id !== $subsoilUser->id) {
             abort(404);
         }
 
-        if (Storage::disk('public')->exists($document->file_path)) {
-            Storage::disk('public')->delete($document->file_path);
-        }
+        $this->files->delete($document->file_path);
 
         $document->delete();
 

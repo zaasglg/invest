@@ -39,6 +39,11 @@ class IndustrialZoneIssueController extends Controller
 
     public function update(Request $request, IndustrialZone $industrialZone, IndustrialZoneIssue $issue)
     {
+        abort_if(
+            $issue->industrial_zone_id !== $industrialZone->id,
+            404
+        );
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'required|string',
@@ -58,6 +63,11 @@ class IndustrialZoneIssueController extends Controller
 
     public function destroy(IndustrialZone $industrialZone, IndustrialZoneIssue $issue)
     {
+        abort_if(
+            $issue->industrial_zone_id !== $industrialZone->id,
+            404
+        );
+
         $issue->delete();
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');

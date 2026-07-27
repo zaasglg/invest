@@ -139,6 +139,9 @@ export default function Show({
     }>();
     const { auth } = page.props;
     const currentUserId = auth.user?.id;
+    const currentRole = auth.user?.role_model?.name;
+    const canReviewCompletions =
+        currentRole === 'superadmin' || currentRole === 'invest';
     const url = page.url;
     const isIspolnitel =
         (auth.user.role_model?.name || '').toLowerCase() === 'ispolnitel';
@@ -182,6 +185,15 @@ export default function Show({
     const [reviewTask, setReviewTask] = useState<SubsoilTaskItem | null>(null);
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
+
+    const getReviewFileUrl = (
+        fileId: number,
+        action: 'preview' | 'download',
+    ): string => {
+        if (!reviewTask || !reviewCompletion) return '#';
+
+        return `/subsoil-users/${subsoilUser.id}/tasks/${reviewTask.id}/completions/${reviewCompletion.id}/files/${fileId}/${action}`;
+    };
 
     const filteredUsers = useMemo(() => {
         const ispolnitelUsers = assignableUsers.filter((u) => {
@@ -918,8 +930,7 @@ export default function Show({
                                                                     Жіберу
                                                                 </Button>
                                                             )}
-                                                        {canModify &&
-                                                            !isIspolnitel &&
+                                                        {canReviewCompletions &&
                                                             pendingCompletion && (
                                                                 <Button
                                                                     variant="outline"
@@ -1481,7 +1492,10 @@ export default function Show({
                                                         'photo' ? (
                                                             <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
                                                                 <img
-                                                                    src={`/storage/${file.file_path}`}
+                                                                    src={getReviewFileUrl(
+                                                                        file.id,
+                                                                        'preview',
+                                                                    )}
                                                                     alt={
                                                                         file.file_name
                                                                     }
@@ -1505,7 +1519,10 @@ export default function Show({
                                                             </p>
                                                         </div>
                                                         <a
-                                                            href={`/storage/${file.file_path}`}
+                                                            href={getReviewFileUrl(
+                                                                file.id,
+                                                                'download',
+                                                            )}
                                                             target="_blank"
                                                             rel="noreferrer"
                                                             className="text-[#0f1b3d] hover:text-[#c8a44e]"
