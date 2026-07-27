@@ -24,6 +24,7 @@ import {
     Archive,
     ScrollText,
     Edit,
+    MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -41,6 +42,7 @@ import {
 } from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -97,6 +99,7 @@ interface InvestmentProject {
     end_date?: string;
     creator?: User;
     curators?: User[];
+    investors?: User[];
     executors?: User[];
     documents?: Array<{ id: number; name: string }>;
     issues?: Array<{
@@ -195,6 +198,7 @@ interface Props {
     renderPhotos?: Photo[];
     users?: UserOption[];
     canDownload: boolean;
+    canAccessChat?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
 }
@@ -326,6 +330,7 @@ export default function Show({
     renderPhotos = [],
     users = [],
     canDownload,
+    canAccessChat = false,
     isInvolved = true,
 }: Props) {
     const canModify = useCanModify();
@@ -333,15 +338,19 @@ export default function Show({
     const currentUserId = auth.user?.id;
     const isIspolnitel =
         (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
+    const isInvestor = auth.user?.role_model?.name === 'investor';
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isAkim = auth.user?.role_model?.name === 'akim';
     const isModerator = auth.user?.role_model?.name === 'moderator';
+    const isProkuror = auth.user?.role_model?.name === 'prokuror';
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;
-    const isRestrictedView = isIspolnitel && !isInvolved;
-    // Both district and oblast ispolnitel have same write permissions if involved
-    const ispolnitelCanWrite = isIspolnitel && isInvolved;
+    const canCreateTasks = canManageTasks || isProkuror;
+    const isExecutorParticipant = isIspolnitel || isInvestor;
+    const isRestrictedView = isExecutorParticipant && !isInvolved;
+    // Ispolnitel and investor have the same project-interior permissions.
+    const participantCanWrite = isExecutorParticipant && isInvolved;
     const photosCount =
         typeof project.photos_count === 'number'
             ? project.photos_count
@@ -447,7 +456,7 @@ export default function Show({
         // Defensive frontend filter — backend already strips non-approved
         // tasks for ispolnitels, but keep this so a refresh isn't required.
         if (
-            isIspolnitel &&
+            isExecutorParticipant &&
             task.approval_status &&
             task.approval_status !== 'approved'
         ) {
@@ -484,19 +493,24 @@ export default function Show({
         rejected: { label: 'Қабылданбады', dotColor: 'bg-red-500' },
     };
 
-    // Only show ispolnitel role users in task assignment
-    const ispolnitelUsers = users.filter((u) => {
+    // Tasks can be assigned to regular executors or this project's investors.
+    const taskAssignableUsers = users.filter((u) => {
         const roleName = (u.role_model?.name || '').toLowerCase();
-        return roleName === 'ispolnitel';
+        return roleName === 'ispolnitel' || roleName === 'investor';
     });
 
-    const filteredUsers = ispolnitelUsers.filter((u) => {
+    const filteredUsers = taskAssignableUsers.filter((u) => {
         if (!userSearch.trim()) return true;
         const name = (u.full_name || '').toLowerCase();
         const role = (u.role_model?.display_name || '').toLowerCase();
         const q = userSearch.toLowerCase();
         return name.includes(q) || role.includes(q);
     });
+
+    const getTaskAssigneeTypeLabel = (user: UserOption) =>
+        user.role_model?.name === 'investor'
+            ? 'Инвестор'
+            : getIspolnitelTypeLabel(user.baskarma_type, true);
 
     const handleTaskSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -605,7 +619,7 @@ export default function Show({
         const task = (project.tasks || []).find((t) => t.id === taskId);
         if (
             task &&
-            isIspolnitel &&
+            isExecutorParticipant &&
             task.assigned_to === currentUserId &&
             !task.viewed_at &&
             (task.approval_status ?? 'approved') === 'approved'
@@ -744,7 +758,7 @@ export default function Show({
         // the task yet, mark it viewed on the server. We do this silently
         // (preserveScroll) so the modal stays open.
         if (
-            isIspolnitel &&
+            isExecutorParticipant &&
             task.assigned_to === currentUserId &&
             !task.viewed_at &&
             (task.approval_status ?? 'approved') === 'approved'
@@ -1020,7 +1034,7 @@ export default function Show({
                                     description={project.description}
                                     currentStatus={project.current_status}
                                     showCurrentStatus={!isRestrictedView}
-                                    canEditStatus={ispolnitelCanWrite}
+                                    canEditStatus={participantCanWrite}
                                     projectId={project.id}
                                 />
                             </div>
@@ -1190,7 +1204,7 @@ export default function Show({
                                                     <SelectItem value="overdue">
                                                         Мерзімі өткен
                                                     </SelectItem>
-                                                    {!isIspolnitel && (
+                                                    {!isExecutorParticipant && (
                                                         <>
                                                             <SelectItem value="pending_approval">
                                                                 Растауды күтуде
@@ -1203,35 +1217,23 @@ export default function Show({
                                                     )}
                                                 </SelectContent>
                                             </Select>
-                                            {canModify &&
-                                                !isIspolnitel &&
-                                                !isModerator && (
-                                                    <Button
-                                                        size="icon"
-                                                        className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
-                                                        onClick={() => {
-                                                            setEditingTaskId(
-                                                                null,
-                                                            );
-                                                            setTaskTitle('');
-                                                            setTaskDescription(
-                                                                '',
-                                                            );
-                                                            setTaskStartDate(
-                                                                '',
-                                                            );
-                                                            setTaskDueDate('');
-                                                            setTaskAssignedTo(
-                                                                null,
-                                                            );
-                                                            setShowTaskModal(
-                                                                true,
-                                                            );
-                                                        }}
-                                                    >
-                                                        <Plus className="h-5 w-5" />
-                                                    </Button>
-                                                )}
+                                            {canCreateTasks && (
+                                                <Button
+                                                    size="icon"
+                                                    className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
+                                                    onClick={() => {
+                                                        setEditingTaskId(null);
+                                                        setTaskTitle('');
+                                                        setTaskDescription('');
+                                                        setTaskStartDate('');
+                                                        setTaskDueDate('');
+                                                        setTaskAssignedTo(null);
+                                                        setShowTaskModal(true);
+                                                    }}
+                                                >
+                                                    <Plus className="h-5 w-5" />
+                                                </Button>
+                                            )}
                                         </div>
                                     </div>
                                 </div>
@@ -1314,17 +1316,20 @@ export default function Show({
                                                             </p>
                                                             {task.assignee && (
                                                                 <p className="mt-1 text-sm text-gray-500">
-                                                                    {task
-                                                                        .assignee
-                                                                        .baskarma_type ===
-                                                                    'oblast'
-                                                                        ? 'Облыстық:'
-                                                                        : task
-                                                                                .assignee
-                                                                                .baskarma_type ===
-                                                                            'district'
-                                                                          ? 'Аудандық:'
-                                                                          : ''}{' '}
+                                                                    {getIspolnitelTypeLabel(
+                                                                        task
+                                                                            .assignee
+                                                                            .baskarma_type,
+                                                                        true,
+                                                                    )}
+                                                                    {getIspolnitelTypeLabel(
+                                                                        task
+                                                                            .assignee
+                                                                            .baskarma_type,
+                                                                        true,
+                                                                    )
+                                                                        ? ': '
+                                                                        : ''}
                                                                     {task
                                                                         .assignee
                                                                         .full_name ||
@@ -1348,7 +1353,7 @@ export default function Show({
                                                                 </Badge>
                                                             )}
                                                             {/* Approval status badge (visible to non-ispolnitel) */}
-                                                            {!isIspolnitel &&
+                                                            {!isExecutorParticipant &&
                                                                 task.approval_status &&
                                                                 task.approval_status !==
                                                                     'approved' && (
@@ -1466,7 +1471,7 @@ export default function Show({
                                                                     </>
                                                                 )}
                                                             {/* Ispolnitel: submit completion (when task is new or rejected) */}
-                                                            {isIspolnitel &&
+                                                            {isExecutorParticipant &&
                                                                 isAssignedToMe &&
                                                                 (task.status ===
                                                                     'new' ||
@@ -1488,7 +1493,7 @@ export default function Show({
                                                                 )}
                                                             {/* Invest: review pending completion */}
                                                             {canModify &&
-                                                                !isIspolnitel &&
+                                                                !isExecutorParticipant &&
                                                                 !isModerator &&
                                                                 pendingCompletion && (
                                                                     <Button
@@ -1635,6 +1640,64 @@ export default function Show({
                                     </div>
                                 </div>
 
+                                {project.investors &&
+                                    project.investors.length > 0 && (
+                                        <div>
+                                            <div className="my-4 h-px bg-gray-100"></div>
+                                            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+                                                Инвестор
+                                            </p>
+                                            <div className="flex flex-col gap-3">
+                                                {project.investors.map(
+                                                    (investor) => (
+                                                        <div
+                                                            key={investor.id}
+                                                            className="flex items-center gap-3"
+                                                        >
+                                                            {investor.avatar_url ? (
+                                                                <img
+                                                                    src={
+                                                                        investor.avatar_url
+                                                                    }
+                                                                    alt={
+                                                                        investor.full_name ||
+                                                                        investor.name ||
+                                                                        ''
+                                                                    }
+                                                                    className="h-7 w-7 rounded-full object-cover"
+                                                                />
+                                                            ) : (
+                                                                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-amber-100 text-[10px] font-bold text-amber-700">
+                                                                    {(
+                                                                        investor.full_name ||
+                                                                        investor.name
+                                                                    )
+                                                                        ?.slice(
+                                                                            0,
+                                                                            2,
+                                                                        )
+                                                                        .toUpperCase() ||
+                                                                        'IN'}
+                                                                </div>
+                                                            )}
+                                                            <div>
+                                                                <p className="text-sm text-gray-700">
+                                                                    {investor.full_name ||
+                                                                        investor.name ||
+                                                                        'Көрсетілмеген'}
+                                                                </p>
+                                                                <p className="text-xs text-gray-400">
+                                                                    Жоба
+                                                                    инвесторы
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+
                                 {project.executors &&
                                     project.executors.length > 0 && (
                                         <div>
@@ -1694,6 +1757,20 @@ export default function Show({
                                             </div>
                                         </div>
                                     )}
+
+                                {canAccessChat && (
+                                    <div className="border-t border-gray-100 pt-4">
+                                        <Link
+                                            href={`/chats/${project.id}`}
+                                            className="block w-full"
+                                        >
+                                            <Button className="w-full bg-[#0f1b3d] shadow-none hover:bg-[#1a2d5e]">
+                                                <MessageCircle className="mr-2 h-4 w-4" />
+                                                Чатқа өту
+                                            </Button>
+                                        </Link>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -1715,7 +1792,7 @@ export default function Show({
                                     </Link>
                                 )}
                                 {(canModify ||
-                                    ispolnitelCanWrite ||
+                                    participantCanWrite ||
                                     isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/documents`}
@@ -1741,7 +1818,7 @@ export default function Show({
                                     </Link>
                                 )}
                                 {(canModify ||
-                                    ispolnitelCanWrite ||
+                                    participantCanWrite ||
                                     isAkim) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/gallery`}
@@ -1761,7 +1838,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(!isRestrictedView || ispolnitelCanWrite) && (
+                                {(!isRestrictedView || participantCanWrite) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/issues`}
                                         className="w-full"
@@ -1781,7 +1858,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {isSuperAdmin && (
+                                {(isSuperAdmin || isProkuror) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/logs`}
                                         className="w-full"
@@ -1795,7 +1872,8 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(!isRestrictedView && !isIspolnitel) ||
+                                {(!isRestrictedView &&
+                                    !isExecutorParticipant) ||
                                 isAkim ? (
                                     <a
                                         href={`/investment-projects/${project.id}/passport`}
@@ -1972,11 +2050,15 @@ export default function Show({
                                                         <span className="mr-2 text-gray-400">
                                                             {idx + 1}
                                                         </span>
-                                                        {u.baskarma_type ===
-                                                        'oblast'
-                                                            ? 'Облыстық'
-                                                            : 'Аудандық'}
-                                                        : {u.full_name || '—'}
+                                                        {getTaskAssigneeTypeLabel(
+                                                            u,
+                                                        )}
+                                                        {getTaskAssigneeTypeLabel(
+                                                            u,
+                                                        )
+                                                            ? ': '
+                                                            : ''}
+                                                        {u.full_name || '—'}
                                                         {u.position &&
                                                             ` — ${u.position}`}
                                                     </span>

@@ -10,7 +10,6 @@ import {
     Tags,
     Users,
 } from 'lucide-react';
-import type { NavItem, User } from '@/types';
 import { dashboard } from '@/routes';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentProjects from '@/routes/investment-projects';
@@ -21,6 +20,7 @@ import * as roles from '@/routes/roles';
 import * as sezs from '@/routes/sezs';
 import * as subsoilUsers from '@/routes/subsoil-users';
 import * as usersRoutes from '@/routes/users';
+import type { NavItem, User } from '@/types';
 
 export const mainNavItems: NavItem[] = [
     {
@@ -119,6 +119,17 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Рөлдер',
         'Пайдаланушылар',
     ]),
+    investor: new Set([
+        'АЭА',
+        'ИА',
+        'Пром зона',
+        'Жер қойнауын пайдалану',
+        'Аймақтар',
+        'Жоба түрлері',
+        'Рейтинг',
+        'Рөлдер',
+        'Пайдаланушылар',
+    ]),
 };
 
 // Nav titles that each invest sub-role is NOT allowed to see.
@@ -154,6 +165,14 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
         return 'moderator';
     }
 
+    if (normalizedCandidates.some((value) => value === 'prokuror')) {
+        return 'prokuror';
+    }
+
+    if (normalizedCandidates.some((value) => value === 'investor')) {
+        return 'investor';
+    }
+
     if (normalizedCandidates.some((value) => value === 'invest')) {
         return 'invest';
     }
@@ -177,11 +196,13 @@ export const filterNavItemsByRole = (
     items: NavItem[],
     user: User | null | undefined,
 ) => {
-    // Only superadmin can see Аймақтар
+    // Superadmin and prokuror can see the full regions section.
     let filteredItems = items;
-    const isSuperAdmin =
-        user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
-    if (!isSuperAdmin) {
+    const canViewAllRegions =
+        user?.role_model?.name === 'superadmin' ||
+        user?.role === 'superadmin' ||
+        user?.role_model?.name === 'prokuror';
+    if (!canViewAllRegions) {
         filteredItems = filteredItems.filter(
             (item) => item.title !== 'Аймақтар',
         );

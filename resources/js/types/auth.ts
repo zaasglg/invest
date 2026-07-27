@@ -7,7 +7,7 @@ export type User = {
     email_verified_at: string | null;
     role?: string | null;
     region_id?: number | null;
-    baskarma_type?: 'district' | 'oblast' | null;
+    baskarma_type?: 'district' | 'oblast' | 'additional' | null;
     role_model?: {
         id: number;
         name?: string | null;

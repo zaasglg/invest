@@ -32,6 +32,7 @@ interface RatingItem {
 interface Props {
     districtRatings: RatingItem[];
     oblastRatings: RatingItem[];
+    additionalRatings: RatingItem[];
     allowedIds: number[] | null;
 }
 
@@ -256,9 +257,30 @@ function RatingTable({
 export default function BaskarmaRating({
     districtRatings,
     oblastRatings,
+    additionalRatings,
     allowedIds,
 }: Props) {
-    const [tab, setTab] = useState<'district' | 'oblast'>('district');
+    const [tab, setTab] = useState<'district' | 'oblast' | 'additional'>(
+        'district',
+    );
+    const activeRatings =
+        tab === 'district'
+            ? districtRatings
+            : tab === 'oblast'
+              ? oblastRatings
+              : additionalRatings;
+    const activeTitle =
+        tab === 'district'
+            ? 'Аудандық әкімдіктер'
+            : tab === 'oblast'
+              ? 'Басқармалар'
+              : 'Қосымша инстанциялар';
+    const activeIconColor =
+        tab === 'district'
+            ? 'text-blue-600'
+            : tab === 'oblast'
+              ? 'text-purple-600'
+              : 'text-emerald-600';
 
     return (
         <AppLayout
@@ -287,7 +309,7 @@ export default function BaskarmaRating({
                 {/* Tabs selector */}
                 <div className="flex items-center gap-3">
                     <div className="rounded-xl border border-gray-100 bg-white p-1 shadow-sm">
-                        <div role="tablist" className="flex">
+                        <div role="tablist" className="flex flex-wrap">
                             <button
                                 role="tab"
                                 aria-selected={tab === 'district'}
@@ -312,31 +334,34 @@ export default function BaskarmaRating({
                             >
                                 Басқармалар ({oblastRatings.length})
                             </button>
+                            <button
+                                role="tab"
+                                aria-selected={tab === 'additional'}
+                                onClick={() => setTab('additional')}
+                                className={`ml-1 rounded-lg px-4 py-2 text-sm font-medium transition ${
+                                    tab === 'additional'
+                                        ? 'bg-emerald-600 text-white'
+                                        : 'text-gray-600 hover:bg-gray-50'
+                                }`}
+                            >
+                                {`Қосымша инстанциялар (${additionalRatings.length})`}
+                            </button>
                         </div>
                     </div>
                 </div>
 
                 {/* Tables (only selected) */}
                 <div className="space-y-6">
-                    {tab === 'district' ? (
-                        <RatingTable
-                            ratings={districtRatings}
-                            title="Аудандық әкімдіктер"
-                            icon={
-                                <BarChart3 className="h-5 w-5 text-blue-600" />
-                            }
-                            allowedIds={allowedIds}
-                        />
-                    ) : (
-                        <RatingTable
-                            ratings={oblastRatings}
-                            title="Басқармалар"
-                            icon={
-                                <BarChart3 className="h-5 w-5 text-purple-600" />
-                            }
-                            allowedIds={allowedIds}
-                        />
-                    )}
+                    <RatingTable
+                        ratings={activeRatings}
+                        title={activeTitle}
+                        icon={
+                            <BarChart3
+                                className={`h-5 w-5 ${activeIconColor}`}
+                            />
+                        }
+                        allowedIds={allowedIds}
+                    />
                 </div>
             </div>
         </AppLayout>

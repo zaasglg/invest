@@ -13,6 +13,8 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
+    public const BASKARMA_TYPES = ['oblast', 'district', 'additional'];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -89,6 +91,15 @@ class User extends Authenticatable
     }
 
     /**
+     * Projects explicitly assigned to an investor account.
+     */
+    public function investorProjects()
+    {
+        return $this->belongsToMany(InvestmentProject::class, 'investment_project_investor')
+            ->withTimestamps();
+    }
+
+    /**
      * Get the restricted sector type for an invest sub-role.
      * Returns null if the user has no invest sub-role or is turkistan_invest.
      */
@@ -117,7 +128,7 @@ class User extends Authenticatable
     /**
      * Determine if the user is scoped to their district.
      * This applies to 'invest' role only.
-     * Ispolnitel (both district and oblast) can see everything.
+     * All ispolnitel types can see everything.
      */
     public function isDistrictScoped(): bool
     {
@@ -139,7 +150,7 @@ class User extends Authenticatable
             return $this->region && $this->region->type !== 'oblast';
         }
 
-        // Ispolnitel (both district and oblast) are NOT district scoped - they can see everything
+        // Ispolnitel accounts are NOT district scoped - they can see everything
         return false;
     }
 
@@ -164,7 +175,7 @@ class User extends Authenticatable
 
     /**
      * Determine if the user is Regional Management (any ispolnitel).
-     * Both district and oblast ispolnitel can see everything.
+     * All ispolnitel types can see everything.
      */
     public function isRegionalManagement(): bool
     {
@@ -177,6 +188,12 @@ class User extends Authenticatable
      */
     public function isInvolvedInProject(InvestmentProject $project): bool
     {
+        if ($this->roleModel?->name === 'investor') {
+            return $project->investors()
+                ->where('users.id', $this->id)
+                ->exists();
+        }
+
         // User is creator of the project
         if ((int) $project->created_by === (int) $this->id) {
             return true;
@@ -203,8 +220,8 @@ class User extends Authenticatable
     {
         $roleName = $this->roleModel?->name;
 
-        // Ispolnitel can only download from involved projects
-        if ($roleName === 'ispolnitel') {
+        // Ispolnitel and investor can only download from involved projects
+        if (in_array($roleName, ['ispolnitel', 'investor'], true)) {
             return $this->isInvolvedInProject($project);
         }
 

@@ -177,15 +177,15 @@ Route::resource('users', \App\Http\Controllers\UserController::class)
     ->middleware(['auth', 'verified', 'role.access']);
 
 Route::get('issues', [\App\Http\Controllers\IssuesController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('issues.index');
 
 Route::get('baskarma-rating', [\App\Http\Controllers\BaskarmaRatingController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('baskarma-rating');
 
 Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingController::class, 'show'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'role.access'])
     ->name('baskarma-rating.show');
 
 Route::middleware(['auth', 'verified'])->group(function () {
@@ -193,9 +193,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+
+    Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
+    Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');
+    Route::get('chats/attachments/{attachment}', [\App\Http\Controllers\ProjectChatController::class, 'downloadAttachment'])->name('chats.attachments.download');
+    Route::post('chats/{investmentProject}/messages', [\App\Http\Controllers\ProjectChatController::class, 'store'])->name('chats.messages.store');
+    Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
 });
 
-Route::middleware(['auth', 'verified'])->prefix('chat')->name('chat.')->group(function () {
+Route::middleware(['auth', 'verified', 'role.access'])->prefix('chat')->name('chat.')->group(function () {
     Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
 });
 

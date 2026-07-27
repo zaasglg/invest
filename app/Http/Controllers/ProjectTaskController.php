@@ -10,6 +10,7 @@ use App\Models\TaskNotification;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\ValidationException;
 
 class ProjectTaskController extends Controller
 {
@@ -18,8 +19,7 @@ class ProjectTaskController extends Controller
         $user = Auth::user();
         $creatorRole = $user?->roleModel?->name;
 
-        // Moderator may only approve/reject tasks; not create them.
-        if ($creatorRole === 'moderator') {
+        if (in_array($creatorRole, ['moderator', 'investor'], true)) {
             abort(403, 'Сізде тапсырма енгізу құқығы жоқ.');
         }
 
@@ -33,6 +33,11 @@ class ProjectTaskController extends Controller
             'start_date' => 'nullable|date',
             'due_date' => 'nullable|date|after_or_equal:start_date',
         ]);
+
+        $assignee = $this->validatedAssignee(
+            (int) $validated['assigned_to'],
+            $investmentProject
+        );
 
         $validated['project_id'] = $investmentProject->id;
         $validated['status'] = 'new';
@@ -68,8 +73,12 @@ class ProjectTaskController extends Controller
             ]);
         }
 
-        // Auto-attach the assigned user as a project executor
-        $investmentProject->executors()->syncWithoutDetaching([$validated['assigned_to']]);
+        // Investor participation is stored in its own pivot and must not be
+        // mixed into the regular executors list.
+        if ($assignee->roleModel?->name !== 'investor') {
+            $investmentProject->executors()
+                ->syncWithoutDetaching([$validated['assigned_to']]);
+        }
 
         // Notify assigned user only when the task is already visible to them.
         if ($task->approval_status === 'approved' && $validated['assigned_to'] != Auth::id()) {
@@ -203,7 +212,7 @@ class ProjectTaskController extends Controller
         }
 
         $editorRole = Auth::user()?->roleModel?->name;
-        if ($editorRole === 'moderator') {
+        if (in_array($editorRole, ['moderator', 'prokuror', 'investor'], true)) {
             abort(403, 'Сізде тапсырманы өзгерту құқығыңыз жоқ.');
         }
 
@@ -215,6 +224,13 @@ class ProjectTaskController extends Controller
             'due_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'sometimes|in:new,in_progress,done,rejected',
         ]);
+
+        $newAssignee = array_key_exists('assigned_to', $validated)
+            ? $this->validatedAssignee(
+                (int) $validated['assigned_to'],
+                $investmentProject
+            )
+            : null;
 
         $oldAssignedTo = $task->assigned_to;
         $wasRejected = $task->approval_status === 'rejected';
@@ -274,7 +290,10 @@ class ProjectTaskController extends Controller
             }
 
             if ($newAssignedTo) {
-                $investmentProject->executors()->syncWithoutDetaching([$newAssignedTo]);
+                if ($newAssignee?->roleModel?->name !== 'investor') {
+                    $investmentProject->executors()
+                        ->syncWithoutDetaching([$newAssignedTo]);
+                }
             }
         }
 
@@ -342,7 +361,11 @@ class ProjectTaskController extends Controller
             abort(404);
         }
 
-        if (Auth::user()?->roleModel?->name === 'moderator') {
+        if (in_array(
+            Auth::user()?->roleModel?->name,
+            ['moderator', 'prokuror', 'investor'],
+            true
+        )) {
             abort(403, 'Сізде тапсырманы жою құқығыңыз жоқ.');
         }
 
@@ -363,5 +386,23 @@ class ProjectTaskController extends Controller
         }
 
         return redirect()->back()->with('success', 'Кезең жойылды.');
+    }
+
+    private function validatedAssignee(
+        int $userId,
+        InvestmentProject $investmentProject
+    ): User {
+        $assignee = User::with('roleModel')->findOrFail($userId);
+
+        if ($assignee->roleModel?->name === 'investor'
+            && ! $investmentProject->investors()
+                ->where('users.id', $assignee->id)
+                ->exists()) {
+            throw ValidationException::withMessages([
+                'assigned_to' => 'Инвестор бұл жобаға бекітілмеген.',
+            ]);
+        }
+
+        return $assignee;
     }
 }

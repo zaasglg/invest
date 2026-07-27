@@ -73,6 +73,32 @@ class CheckRoleAccess
     ];
 
     /**
+     * Project routes available to an investor on explicitly assigned projects.
+     */
+    protected array $investorProjectRoutes = [
+        'investment-projects.index',
+        'investment-projects.show',
+        'investment-projects.passport',
+        'investment-projects.presentation',
+        'investment-projects.documents.index',
+        'investment-projects.documents.store',
+        'investment-projects.documents.download',
+        'investment-projects.documents.destroy',
+        'investment-projects.gallery.index',
+        'investment-projects.gallery.store',
+        'investment-projects.gallery.download',
+        'investment-projects.gallery.update',
+        'investment-projects.gallery.destroy',
+        'investment-projects.issues.index',
+        'investment-projects.issues.store',
+        'investment-projects.issues.update',
+        'investment-projects.issues.destroy',
+        'investment-projects.update-status',
+        'investment-projects.tasks.view',
+        'investment-projects.tasks.completions.store',
+    ];
+
+    /**
      * Handle an incoming request.
      */
     public function handle(Request $request, Closure $next): Response
@@ -87,23 +113,43 @@ class CheckRoleAccess
 
         $routeName = $request->route()?->getName();
 
-        // Only superadmin can access project-types (all actions)
+        if ($roleName === 'investor') {
+            if (! $routeName
+                || ! in_array($routeName, $this->investorProjectRoutes, true)) {
+                abort(403, 'Инвесторға бұл бөлімге қол жеткізуге рұқсат жоқ.');
+            }
+
+            $this->enforceInvestorProjectScope($request, $user, $routeName);
+
+            return $next($request);
+        }
+
+        // Superadmin manages project types; prokuror may view them.
         if ($routeName && ($routeName === 'project-types' || str_starts_with($routeName, 'project-types.'))) {
-            if ($roleName !== 'superadmin') {
+            if (! in_array($roleName, ['superadmin', 'prokuror'], true)) {
                 abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
         }
 
-        // Only superadmin can access regions routes, EXCEPT regions.show and regions.projects.reorder
+        // Superadmin manages regions; prokuror may view them.
         if ($routeName && str_starts_with($routeName, 'regions.')) {
             $allowedRegionsRoutes = ['regions.show', 'regions.projects.reorder'];
-            if (! in_array($routeName, $allowedRegionsRoutes, true) && $roleName !== 'superadmin') {
+            if (! in_array($routeName, $allowedRegionsRoutes, true)
+                && ! in_array($roleName, ['superadmin', 'prokuror'], true)) {
                 abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
             }
         }
 
-        if ($routeName === 'regions' && $roleName !== 'superadmin') {
+        if ($routeName === 'regions' && ! in_array($roleName, ['superadmin', 'prokuror'], true)) {
             abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
+        }
+
+        // Prokuror can view every section and every project. The only
+        // business-data write they may perform is creating a roadmap task.
+        if ($roleName === 'prokuror'
+            && $this->isWriteAction($request)
+            && $routeName !== 'investment-projects.tasks.store') {
+            abort(403, 'Прокурорға бұл деректі өзгертуге рұқсат жоқ.');
         }
 
         // Read-only roles (akim/zamakim): blocked sections + no writes
@@ -197,7 +243,7 @@ class CheckRoleAccess
             $this->enforceInvestSubRoleScope($request, $user, $roleName);
         }
 
-        // Block non-superadmin from accessing archived investment projects
+        // Block roles that do not have archive viewing rights.
         $this->blockArchivedProjectAccess($request, $user, $roleName);
 
         return $next($request);
@@ -283,6 +329,30 @@ class CheckRoleAccess
     }
 
     /**
+     * Investors may only open projects explicitly assigned to their account.
+     */
+    protected function enforceInvestorProjectScope(
+        Request $request,
+        $user,
+        string $routeName
+    ): void {
+        if ($routeName === 'investment-projects.index') {
+            return;
+        }
+
+        $project = $request->route('investmentProject')
+            ?? $request->route('investment_project');
+        $projectId = is_object($project) ? $project->id : (int) $project;
+
+        if (! $projectId
+            || ! $user->investorProjects()
+                ->where('investment_projects.id', $projectId)
+                ->exists()) {
+            abort(403, 'Бұл жоба инвестор аккаунтына бекітілмеген.');
+        }
+    }
+
+    /**
      * Enforce district-scoping for invest and district ispolnitel.
      * They can only access SEZ/IZ/Subsoil/Regions belonging to their region.
      * Oblast ispolnitel can access all.
@@ -364,11 +434,11 @@ class CheckRoleAccess
     }
 
     /**
-     * Block non-superadmin users from accessing archived investment projects.
+     * Block roles without archive viewing rights from archived projects.
      */
     protected function blockArchivedProjectAccess(Request $request, $user, ?string $roleName): void
     {
-        if (in_array($roleName, ['superadmin', 'invest'])) {
+        if (in_array($roleName, ['superadmin', 'invest', 'prokuror'], true)) {
             return;
         }
 

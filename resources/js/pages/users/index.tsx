@@ -13,10 +13,12 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { cn } from '@/lib/utils';
-import type { PaginatedData } from '@/types';
 import * as usersRoutes from '@/routes/users';
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -34,7 +36,7 @@ interface User {
     email: string;
     phone: string | null;
     avatar: string | null;
-    baskarma_type: 'oblast' | 'district' | null;
+    baskarma_type: 'oblast' | 'district' | 'additional' | null;
     position: string | null;
     region: Region | null;
     role_model: Role | null;
@@ -47,12 +49,13 @@ interface Props {
 
 const FILTER_TABS = [
     { label: 'Барлығы', value: '' },
-    { label: 'Облыстық басқарма', value: 'oblast' },
+    { label: 'Басқармалар', value: 'oblast' },
     { label: 'Аудандық', value: 'district' },
     { label: 'Қосымша инстанциялар', value: 'additional' },
 ] as const;
 
 export default function Index({ users, filters }: Props) {
+    const canModify = useCanModify();
     const activeFilter = filters.baskarma_type ?? '';
     const [search, setSearch] = useState(filters.search ?? '');
 
@@ -109,12 +112,14 @@ export default function Index({ users, filters }: Props) {
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Пайдаланушылар
                     </h1>
-                    <Link href={usersRoutes.create.url()}>
-                        <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                            <Plus className="mr-2 h-4 w-4" />
-                            Пайдаланушы құру
-                        </Button>
-                    </Link>
+                    {canModify && (
+                        <Link href={usersRoutes.create.url()}>
+                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
+                                <Plus className="mr-2 h-4 w-4" />
+                                Пайдаланушы құру
+                            </Button>
+                        </Link>
+                    )}
                 </div>
 
                 {/* Filter tabs */}
@@ -226,38 +231,54 @@ export default function Index({ users, filters }: Props) {
                                             {user.email}
                                         </TableCell>
                                         <TableCell className="text-gray-500">
-                                            {user.baskarma_type === 'district'
-                                                ? user.region?.name ||
-                                                  user.position ||
-                                                  '—'
-                                                : user.position || '—'}
+                                            <div className="flex flex-col gap-0.5">
+                                                {user.baskarma_type && (
+                                                    <span className="text-xs font-medium text-[#0f1b3d]">
+                                                        {getIspolnitelTypeLabel(
+                                                            user.baskarma_type,
+                                                        )}
+                                                    </span>
+                                                )}
+                                                <span>
+                                                    {user.baskarma_type ===
+                                                    'district'
+                                                        ? user.region?.name ||
+                                                          user.position ||
+                                                          '—'
+                                                        : user.position || '—'}
+                                                </span>
+                                            </div>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Link
-                                                    href={usersRoutes.edit.url(
-                                                        user.id,
-                                                    )}
-                                                >
+                                            {canModify && (
+                                                <div className="flex justify-end gap-1">
+                                                    <Link
+                                                        href={usersRoutes.edit.url(
+                                                            user.id,
+                                                        )}
+                                                    >
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        >
+                                                            <Pencil className="h-4 w-4" />
+                                                        </Button>
+                                                    </Link>
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                        onClick={() =>
+                                                            handleDelete(
+                                                                user.id,
+                                                            )
+                                                        }
                                                     >
-                                                        <Pencil className="h-4 w-4" />
+                                                        <Trash2 className="h-4 w-4" />
                                                     </Button>
-                                                </Link>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                    onClick={() =>
-                                                        handleDelete(user.id)
-                                                    }
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
+                                                </div>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))

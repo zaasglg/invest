@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\TaskNotification;
+use App\Services\ProjectChatService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -48,6 +49,9 @@ class HandleInertiaRequests extends Middleware
             'unreadNotificationsCount' => $request->user()
                 ? TaskNotification::where('user_id', $request->user()->id)->where('is_read', false)->count()
                 : 0,
+            'unreadChatMessagesCount' => fn () => $request->user()
+                ? app(ProjectChatService::class)->unreadMessageCount($request->user())
+                : 0,
         ];
     }
 
@@ -66,7 +70,11 @@ class HandleInertiaRequests extends Middleware
         foreach ($roleCandidates as $candidate) {
             $normalized = strtolower(str_replace(' ', '', $candidate));
 
-            if (str_contains($normalized, 'zamakim') || str_contains($normalized, 'akim') || str_contains($normalized, 'ispolnitel')) {
+            if (str_contains($normalized, 'zamakim')
+                || str_contains($normalized, 'akim')
+                || str_contains($normalized, 'ispolnitel')
+                || str_contains($normalized, 'investor')
+                || str_contains($normalized, 'prokuror')) {
                 return true;
             }
         }

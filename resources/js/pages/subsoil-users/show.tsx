@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 
 interface Region {
     id: number;
@@ -826,16 +827,20 @@ export default function Show({
                                                         </p>
                                                         {task.assignee && (
                                                             <p className="mt-1 text-sm text-gray-500">
-                                                                {task.assignee
-                                                                    .baskarma_type ===
-                                                                'oblast'
-                                                                    ? 'Облыстық:'
-                                                                    : task
-                                                                            .assignee
-                                                                            .baskarma_type ===
-                                                                        'district'
-                                                                      ? 'Аудандық:'
-                                                                      : ''}{' '}
+                                                                {getIspolnitelTypeLabel(
+                                                                    task
+                                                                        .assignee
+                                                                        .baskarma_type,
+                                                                    true,
+                                                                )}
+                                                                {getIspolnitelTypeLabel(
+                                                                    task
+                                                                        .assignee
+                                                                        .baskarma_type,
+                                                                    true,
+                                                                )
+                                                                    ? ': '
+                                                                    : ''}
                                                                 {task.assignee
                                                                     .full_name ||
                                                                     task
@@ -1196,14 +1201,14 @@ export default function Show({
                                                     <span className="mr-2 text-gray-400">
                                                         {idx + 1}
                                                     </span>
-                                                    {u.baskarma_type ===
-                                                    'oblast'
-                                                        ? 'Облыстық'
-                                                        : u.baskarma_type ===
-                                                            'district'
-                                                          ? 'Аудандық'
-                                                          : ''}
-                                                    {u.baskarma_type
+                                                    {getIspolnitelTypeLabel(
+                                                        u.baskarma_type,
+                                                        true,
+                                                    )}
+                                                    {getIspolnitelTypeLabel(
+                                                        u.baskarma_type,
+                                                        true,
+                                                    )
                                                         ? ': '
                                                         : ''}
                                                     {u.full_name || '—'}

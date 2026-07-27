@@ -57,9 +57,10 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { formatMoneyCompact } from '@/lib/utils';
-import type { PaginatedData, SharedData } from '@/types';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -226,6 +227,7 @@ export default function Index({
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
+    const isProkuror = auth.user?.role_model?.name === 'prokuror';
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -391,11 +393,13 @@ export default function Index({
     // Егер аймақ не сектор түрі өзгерсе, сектор мәнін тазалау
     const filteredUsers = useMemo(() => {
         if (!data.region_id) {
-            return users.filter((user) => user.baskarma_type === 'oblast');
+            return users.filter((user) =>
+                ['oblast', 'additional'].includes(user.baskarma_type ?? ''),
+            );
         }
         return users.filter(
             (user) =>
-                user.baskarma_type === 'oblast' ||
+                ['oblast', 'additional'].includes(user.baskarma_type ?? '') ||
                 String(user.region_id) === data.region_id,
         );
     }, [users, data.region_id]);
@@ -526,7 +530,7 @@ export default function Index({
                             <Calendar className="h-4 w-4" />
                             Биыл аяқталатын
                         </Button>
-                        {(isSuperAdmin || isInvest) && (
+                        {(isSuperAdmin || isInvest || isProkuror) && (
                             <Link href="/investment-projects-archived">
                                 <Button
                                     variant="outline"
@@ -669,6 +673,16 @@ export default function Index({
                                                     key={user.id}
                                                     value={String(user.id)}
                                                 >
+                                                    {getIspolnitelTypeLabel(
+                                                        user.baskarma_type,
+                                                        true,
+                                                    )}
+                                                    {getIspolnitelTypeLabel(
+                                                        user.baskarma_type,
+                                                        true,
+                                                    )
+                                                        ? ': '
+                                                        : ''}
                                                     {user.full_name}{' '}
                                                     {user.position
                                                         ? `- ${user.position}`

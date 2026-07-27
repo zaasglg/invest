@@ -10,9 +10,10 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
-import type { PaginatedData } from '@/types';
 import * as projectTypes from '@/routes/project-types';
+import type { PaginatedData } from '@/types';
 
 interface ProjectType {
     id: number;
@@ -26,6 +27,8 @@ interface Props {
 }
 
 export default function Index({ types }: Props) {
+    const canModify = useCanModify();
+
     const handleDelete = (id: number) => {
         if (confirm('Сенімдісіз бе?')) {
             router.delete(projectTypes.destroy.url(id));
@@ -45,13 +48,17 @@ export default function Index({ types }: Props) {
                     <h1 className="text-2xl font-bold text-[#0f1b3d]">
                         Жоба түрлері
                     </h1>
-                    <Button
-                        asChild
-                        size="sm"
-                        className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
-                    >
-                        <Link href={projectTypes.create.url()}>Жаңа қосу</Link>
-                    </Button>
+                    {canModify && (
+                        <Button
+                            asChild
+                            size="sm"
+                            className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                        >
+                            <Link href={projectTypes.create.url()}>
+                                Жаңа қосу
+                            </Link>
+                        </Button>
+                    )}
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
@@ -73,30 +80,34 @@ export default function Index({ types }: Props) {
                                     </TableCell>
                                     <TableCell>{type.name}</TableCell>
                                     <TableCell className="space-x-2 text-right">
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            asChild
-                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                        >
-                                            <Link
-                                                href={projectTypes.edit.url(
-                                                    type.id,
-                                                )}
-                                            >
-                                                <Edit className="h-4 w-4" />
-                                            </Link>
-                                        </Button>
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                            onClick={() =>
-                                                handleDelete(type.id)
-                                            }
-                                        >
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        {canModify && (
+                                            <>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    asChild
+                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                >
+                                                    <Link
+                                                        href={projectTypes.edit.url(
+                                                            type.id,
+                                                        )}
+                                                    >
+                                                        <Edit className="h-4 w-4" />
+                                                    </Link>
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                    onClick={() =>
+                                                        handleDelete(type.id)
+                                                    }
+                                                >
+                                                    <Trash2 className="h-4 w-4" />
+                                                </Button>
+                                            </>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

@@ -28,9 +28,16 @@ function createRole(string $name, string $displayName = ''): Role
 function createUserWithRole(string $roleName, ?int $regionId = null, array $extra = []): User
 {
     $role = createRole($roleName);
+    $legacyRole = match ($roleName) {
+        'superadmin' => 'admin',
+        'invest' => 'invest',
+        'akim' => 'akim',
+        'zamakim' => 'deputy_akim',
+        default => 'district_user',
+    };
 
     return User::factory()->create(array_merge([
-        'role' => $roleName,
+        'role' => $legacyRole,
         'role_id' => $role->id,
         'region_id' => $regionId,
     ], $extra));
@@ -375,6 +382,19 @@ describe('Zamakim role (read-only)', function () {
 // ================ ISPOLNITEL ROLE TESTS ================
 
 describe('Ispolnitel role', function () {
+    test('additional instance has the same base access as other ispolnitel types', function () {
+        $user = createUserWithRole('ispolnitel', null, [
+            'role' => 'district_user',
+            'baskarma_type' => 'additional',
+            'position' => 'Экология департаментінің басшысы',
+        ]);
+
+        $this->actingAs($user)->get('/dashboard')->assertStatus(200);
+        $this->actingAs($user)->get('/investment-projects')->assertStatus(200);
+        $this->actingAs($user)->get('/users')->assertStatus(403);
+        $this->actingAs($user)->get('/investment-projects/create')->assertStatus(403);
+    });
+
     test('cannot access users management', function () {
         $user = createUserWithRole('ispolnitel');
 

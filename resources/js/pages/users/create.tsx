@@ -2,6 +2,8 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
+import { InvestorProjectSelector } from '@/components/investor-project-selector';
+import type { InvestorProjectOption } from '@/components/investor-project-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,9 +33,10 @@ interface Role {
 interface Props {
     regions: Region[];
     roles: Role[];
+    projects: InvestorProjectOption[];
 }
 
-export default function Create({ regions, roles }: Props) {
+export default function Create({ regions, roles, projects }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         full_name: '',
         email: '',
@@ -46,6 +49,7 @@ export default function Create({ regions, roles }: Props) {
         baskarma_type: '',
         position: '',
         telegram_chat_id: '',
+        project_ids: [] as number[],
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>('');
@@ -71,6 +75,7 @@ export default function Create({ regions, roles }: Props) {
 
     const isIspolnitel = selectedRole?.name === 'ispolnitel';
     const isInvest = selectedRole?.name === 'invest';
+    const isInvestor = selectedRole?.name === 'investor';
     const isAkim = selectedRole?.name === 'akim';
     const showRegionSelects =
         (isIspolnitel && data.baskarma_type === 'district') || isAkim;
@@ -264,6 +269,7 @@ export default function Create({ regions, roles }: Props) {
                                     baskarma_type: '',
                                     position: '',
                                     region_id: '',
+                                    project_ids: [],
                                 }));
                                 setSelectedOblastId('');
                             }}
@@ -325,6 +331,18 @@ export default function Create({ regions, roles }: Props) {
                     )}
 
                     {/* Басқару түрін таңдау */}
+                    {isInvestor && (
+                        <InvestorProjectSelector
+                            projects={projects}
+                            regions={regions}
+                            value={data.project_ids}
+                            onChange={(projectIds) =>
+                                setData('project_ids', projectIds)
+                            }
+                            error={errors.project_ids}
+                        />
+                    )}
+
                     {isIspolnitel && (
                         <div className="flex flex-col gap-2">
                             <Label className="font-normal text-gray-500">
@@ -352,6 +370,9 @@ export default function Create({ regions, roles }: Props) {
                                     <SelectItem value="district">
                                         Аудандық әкімдіктер
                                     </SelectItem>
+                                    <SelectItem value="additional">
+                                        Қосымша инстанциялар
+                                    </SelectItem>
                                 </SelectContent>
                             </Select>
                             {errors.baskarma_type && (
@@ -362,31 +383,37 @@ export default function Create({ regions, roles }: Props) {
                         </div>
                     )}
 
-                    {/* Position field for oblast ispolnitel only */}
-                    {isIspolnitel && data.baskarma_type === 'oblast' && (
-                        <div className="flex flex-col gap-2">
-                            <Label
-                                htmlFor="position"
-                                className="font-normal text-gray-500"
-                            >
-                                Лауазымы
-                            </Label>
-                            <Input
-                                id="position"
-                                value={data.position}
-                                onChange={(e) =>
-                                    setData('position', e.target.value)
-                                }
-                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                placeholder="Мысалы: Басқарма басшысы"
-                            />
-                            {errors.position && (
-                                <span className="text-sm text-red-500">
-                                    {errors.position}
-                                </span>
-                            )}
-                        </div>
-                    )}
+                    {/* Position field for oblast and additional ispolnitel */}
+                    {isIspolnitel &&
+                        (data.baskarma_type === 'oblast' ||
+                            data.baskarma_type === 'additional') && (
+                            <div className="flex flex-col gap-2">
+                                <Label
+                                    htmlFor="position"
+                                    className="font-normal text-gray-500"
+                                >
+                                    Лауазымы
+                                </Label>
+                                <Input
+                                    id="position"
+                                    value={data.position}
+                                    onChange={(e) =>
+                                        setData('position', e.target.value)
+                                    }
+                                    className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                    placeholder={
+                                        data.baskarma_type === 'additional'
+                                            ? 'Мысалы: Экология департаментінің басшысы'
+                                            : 'Мысалы: Басқарма басшысы'
+                                    }
+                                />
+                                {errors.position && (
+                                    <span className="text-sm text-red-500">
+                                        {errors.position}
+                                    </span>
+                                )}
+                            </div>
+                        )}
 
                     {showRegionSelects && (
                         <div className="grid grid-cols-2 gap-4">
