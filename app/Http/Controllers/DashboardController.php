@@ -16,6 +16,7 @@ use App\Models\SubsoilUser;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -153,6 +154,14 @@ class DashboardController extends Controller
             ? $this->buildRegionStats($investSubRole, $investorId)
             : Cache::remember('dashboard.region_stats', 300, fn () => $this->buildRegionStats(null));
 
+        $regionYearly = $investSubRole || $investorId
+            ? $this->buildRegionYearlyStats($investSubRole, $investorId)
+            : Cache::remember(
+                'dashboard.region_yearly',
+                300,
+                fn () => $this->buildRegionYearlyStats(null)
+            );
+
         return Inertia::render('dashboard', [
             'regions' => $regions,
             'stats' => $stats,
@@ -160,6 +169,7 @@ class DashboardController extends Controller
             'projectsByStatus' => $projectsByStatus,
             'investmentTrend' => $investmentTrend,
             'regionStats' => $regionStats,
+            'regionYearly' => $regionYearly,
             'sectorSummary' => $this->buildSectorSummary(
                 $investSubRole,
                 $investorId
@@ -273,6 +283,97 @@ class DashboardController extends Controller
             'sezProjects' => $sezProjects,
             'subsoilUsers' => $subsoilUsers,
             'promProjects' => $promProjects,
+        ];
+    }
+
+    /**
+     * Yearly investment / project / jobs series for the last 5 years.
+     *
+     * @return array{
+     *     years: list<int>,
+     *     total: array{investment: list<float>, projects: list<int>, jobs: list<int>},
+     *     byRegion: array<int, array{investment: list<float>, projects: list<int>, jobs: list<int>}>
+     * }
+     */
+    private function buildRegionYearlyStats(
+        ?string $subRole,
+        ?int $investorId = null
+    ): array {
+        $currentYear = (int) now()->year;
+        $years = range($currentYear - 4, $currentYear);
+        $yearExpr = match (DB::getDriverName()) {
+            'pgsql' => 'EXTRACT(YEAR FROM investment_projects.created_at)::int',
+            'sqlite' => "CAST(strftime('%Y', investment_projects.created_at) AS INTEGER)",
+            default => 'YEAR(investment_projects.created_at)',
+        };
+
+        $rows = $this->projects($subRole, $investorId)
+            ->whereNotNull('region_id')
+            ->where(
+                'investment_projects.created_at',
+                '>=',
+                now()->subYears(4)->startOfYear()
+            )
+            ->selectRaw("
+                region_id,
+                {$yearExpr} as year,
+                COUNT(*) as projects,
+                COALESCE(SUM(total_investment), 0) as investment,
+                COALESCE(SUM(jobs_count), 0) as jobs
+            ")
+            ->groupBy('region_id')
+            ->groupBy(DB::raw($yearExpr))
+            ->get();
+
+        $emptySeries = [
+            'investment' => array_fill(0, count($years), 0.0),
+            'projects' => array_fill(0, count($years), 0),
+            'jobs' => array_fill(0, count($years), 0),
+        ];
+
+        $byRegion = [];
+        $total = [
+            'investment' => array_fill(0, count($years), 0.0),
+            'projects' => array_fill(0, count($years), 0),
+            'jobs' => array_fill(0, count($years), 0),
+        ];
+
+        $yearIndex = array_flip($years);
+
+        foreach ($rows as $row) {
+            $year = (int) $row->year;
+            if (! isset($yearIndex[$year])) {
+                continue;
+            }
+
+            $index = $yearIndex[$year];
+            $regionId = (int) $row->region_id;
+
+            if (! isset($byRegion[$regionId])) {
+                $byRegion[$regionId] = [
+                    'investment' => [...$emptySeries['investment']],
+                    'projects' => [...$emptySeries['projects']],
+                    'jobs' => [...$emptySeries['jobs']],
+                ];
+            }
+
+            $investment = (float) $row->investment;
+            $projects = (int) $row->projects;
+            $jobs = (int) $row->jobs;
+
+            $byRegion[$regionId]['investment'][$index] = $investment;
+            $byRegion[$regionId]['projects'][$index] = $projects;
+            $byRegion[$regionId]['jobs'][$index] = $jobs;
+
+            $total['investment'][$index] += $investment;
+            $total['projects'][$index] += $projects;
+            $total['jobs'][$index] += $jobs;
+        }
+
+        return [
+            'years' => $years,
+            'total' => $total,
+            'byRegion' => $byRegion,
         ];
     }
 

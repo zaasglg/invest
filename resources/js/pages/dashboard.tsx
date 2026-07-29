@@ -1,10 +1,8 @@
 import { Head } from '@inertiajs/react';
-import { useState } from 'react';
-import Map from '@/components/map';
-import { RegionSidebar } from '@/components/region-sidebar';
+import InMapApp from '@/components/inmap/App';
 import AppLayout from '@/layouts/app-layout';
-import type { BreadcrumbItem } from '@/types';
 import { dashboard } from '@/routes';
+import type { BreadcrumbItem } from '@/types';
 
 interface Region {
     id: number;
@@ -12,7 +10,10 @@ interface Region {
     color?: string | null;
     icon?: string | null;
     subtype?: string | null;
-    geometry: { lat: number; lng: number }[] | null;
+    geometry:
+        | { lat: number; lng: number }[]
+        | { lat: number; lng: number }[][]
+        | null;
 }
 
 interface SectorRow {
@@ -36,16 +37,22 @@ interface SectorSummary {
     byRegion: Record<number, SectorData>;
 }
 
+interface RegionYearlySeries {
+    investment: number[];
+    projects: number[];
+    jobs: number[];
+}
+
+interface RegionYearly {
+    years: number[];
+    total: RegionYearlySeries;
+    byRegion: Record<number, RegionYearlySeries>;
+}
+
 interface Props {
     regions: Region[];
-    regionStats: {
-        investments: Record<number, number>;
-        izProjects: Record<number, number>;
-        promProjects: Record<number, number>;
-        sezProjects: Record<number, number>;
-        subsoilUsers: Record<number, number>;
-    };
     sectorSummary: SectorSummary;
+    regionYearly: RegionYearly;
 }
 
 const breadcrumbs: BreadcrumbItem[] = [
@@ -57,38 +64,17 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 export default function Dashboard({
     regions,
-    regionStats,
     sectorSummary,
+    regionYearly,
 }: Props) {
-    const [selectedRegion, setSelectedRegion] = useState<Region | null>(null);
-    const [sidebarOpen, setSidebarOpen] = useState(false);
-
-    const handleRegionSelect = (region: Region) => {
-        setSelectedRegion(region);
-    };
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Статистика" />
-            <div className="relative">
-                <Map
-                    className="h-[calc(100vh-64px)] w-full"
-                    center={[42, 68.5]}
-                    zoom={7}
+            <div className="relative h-[calc(100vh-64px)] w-full overflow-hidden">
+                <InMapApp
                     regions={regions}
-                    regionStats={regionStats}
                     sectorSummary={sectorSummary}
-                    showRegionIconsDemo
-                    showOutsideRegionClouds
-                    interactive
-                    selectedRegion={selectedRegion}
-                />
-                <RegionSidebar
-                    regions={regions}
-                    activeRegionId={selectedRegion?.id ?? null}
-                    onRegionSelect={handleRegionSelect}
-                    open={sidebarOpen}
-                    onOpenChange={setSidebarOpen}
+                    regionYearly={regionYearly}
                 />
             </div>
         </AppLayout>
