@@ -38,6 +38,7 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import AppLayout from '@/layouts/app-layout';
+import { persistOrder } from '@/lib/persist-order';
 import * as regions from '@/routes/regions';
 import type { PaginatedData, SharedData } from '@/types';
 
@@ -130,6 +131,7 @@ export default function Index({ regions: regionsData }: Props) {
     const [orderedRegions, setOrderedRegions] = useState<Region[]>(
         regionsData.data,
     );
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [regionToMove, setRegionToMove] = useState<Region | null>(null);
     const [targetPage, setTargetPage] = useState<number>(1);
@@ -165,27 +167,29 @@ export default function Index({ regions: regionsData }: Props) {
         }),
     );
 
-    const saveOrder = (newOrder: Region[]) => {
-        const csrfTokenValue =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
+    const saveOrder = async (
+        newOrder: Region[],
+        previousOrder: Region[],
+    ): Promise<void> => {
+        setIsSavingOrder(true);
 
-        fetch('/regions/reorder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfTokenValue,
-            },
-            body: JSON.stringify({
+        try {
+            await persistOrder('/regions/reorder', {
                 region_ids: newOrder.map((r) => r.id),
                 page: regionsData.current_page || 1,
-            }),
-        });
+            });
+        } catch {
+            setOrderedRegions(previousOrder);
+            window.alert(
+                'Аймақ ретін сақтау мүмкін болмады. Алдыңғы рет қалпына келтірілді.',
+            );
+        } finally {
+            setIsSavingOrder(false);
+        }
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if (!isSuperAdmin) return;
+        if (!isSuperAdmin || isSavingOrder) return;
 
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -195,7 +199,7 @@ export default function Index({ regions: regionsData }: Props) {
 
         const newOrder = arrayMove(orderedRegions, oldIndex, newIndex);
         setOrderedRegions(newOrder);
-        saveOrder(newOrder);
+        void saveOrder(newOrder, orderedRegions);
     };
 
     const handleDelete = (id: number) => {
@@ -227,6 +231,11 @@ export default function Index({ regions: regionsData }: Props) {
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
+                    {isSavingOrder && (
+                        <p className="px-4 py-2 text-sm text-amber-700">
+                            Аймақ реті сақталуда…
+                        </p>
+                    )}
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}

@@ -5,13 +5,17 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
 use App\Models\ProjectDocument;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ProjectDocumentController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files
+    ) {}
+
     public function index(InvestmentProject $investmentProject)
     {
         $user = Auth::user();
@@ -54,13 +58,9 @@ class ProjectDocumentController extends Controller
             abort(403, 'Сіздің бұл жобаның құжаттарына қол жеткізуіңіз жоқ.');
         }
 
-        if (! Storage::disk('public')->exists($document->file_path)) {
-            abort(404, 'Файл табылмады.');
-        }
-
-        return Storage::disk('public')->download(
+        return $this->files->download(
             $document->file_path,
-            $document->name.'.'.$document->type
+            $this->files->downloadName($document->name, $document->file_path)
         );
     }
 
@@ -72,7 +72,12 @@ class ProjectDocumentController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'file' => 'required|file|max:10240', // 10MB max
+            'file' => [
+                'required',
+                'file',
+                'max:10240',
+                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+            ],
             'type' => 'nullable|string|max:100',
             'is_completed' => 'nullable|boolean',
         ]);
@@ -85,7 +90,10 @@ class ProjectDocumentController extends Controller
 
         if ($request->hasFile('file')) {
             $file = $request->file('file');
-            $path = $file->store('project-documents/'.$investmentProject->id, 'public');
+            $path = $file->store(
+                'project-documents/'.$investmentProject->id,
+                'local'
+            );
 
             ProjectDocument::create([
                 'project_id' => $investmentProject->id,
@@ -114,10 +122,7 @@ class ProjectDocumentController extends Controller
             abort(404);
         }
 
-        // Delete file from storage
-        if (Storage::disk('public')->exists($document->file_path)) {
-            Storage::disk('public')->delete($document->file_path);
-        }
+        $this->files->delete($document->file_path);
 
         $document->delete();
 

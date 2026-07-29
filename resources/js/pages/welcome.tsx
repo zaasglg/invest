@@ -2,8 +2,8 @@ import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
 import LandingApp from '@/components/inmap/LandingApp';
-import type { SharedData } from '@/types';
 import { dashboard } from '@/routes';
+import type { SharedData } from '@/types';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;

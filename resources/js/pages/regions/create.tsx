@@ -217,7 +217,7 @@ export default function Create({ parents }: Props) {
                         <Input
                             id="icon_file"
                             type="file"
-                            accept=".png,.jpg,.jpeg,.webp,.svg,image/*"
+                            accept=".png,.jpg,.jpeg,.webp"
                             onChange={(e) =>
                                 setData(
                                     'icon_file',

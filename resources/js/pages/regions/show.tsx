@@ -49,6 +49,7 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import { persistOrder } from '@/lib/persist-order';
 import { formatMoneyCompact } from '@/lib/utils';
 
 interface InfrastructureDetails {
@@ -274,6 +275,7 @@ export default function Show({
     // Local ordered copy of projects for drag-and-drop reordering
     const [orderedProjects, setOrderedProjects] =
         useState<InvestmentProject[]>(projects);
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
 
     const handleTabChange = (tab: string) => {
         setActiveTab(tab);
@@ -824,32 +826,43 @@ export default function Show({
         }),
     );
 
-    const saveProjectOrder = (newOrder: InvestmentProject[]) => {
+    const saveProjectOrder = async (
+        newOrder: InvestmentProject[],
+        previousOrder: InvestmentProject[],
+    ): Promise<void> => {
         const csrfToken =
             (csrf_token as string) ||
             document
                 .querySelector('meta[name="csrf-token"]')
                 ?.getAttribute('content') ||
             '';
-        fetch(`/regions/${region.id}/projects/reorder`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken,
-            },
-            body: JSON.stringify({ project_ids: newOrder.map((p) => p.id) }),
-        });
+        setIsSavingOrder(true);
+
+        try {
+            await persistOrder(
+                `/regions/${region.id}/projects/reorder`,
+                { project_ids: newOrder.map((p) => p.id) },
+                csrfToken,
+            );
+        } catch {
+            setOrderedProjects(previousOrder);
+            window.alert(
+                'Жоба ретін сақтау мүмкін болмады. Алдыңғы рет қалпына келтірілді.',
+            );
+        } finally {
+            setIsSavingOrder(false);
+        }
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if (!isSuperAdmin && !isInvest) return;
+        if ((!isSuperAdmin && !isInvest) || isSavingOrder) return;
         const { active, over } = event;
         if (!over || active.id === over.id) return;
         const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
         const newIndex = orderedProjects.findIndex((p) => p.id === over.id);
         const newOrder = arrayMove(orderedProjects, oldIndex, newIndex);
         setOrderedProjects(newOrder);
-        saveProjectOrder(newOrder);
+        void saveProjectOrder(newOrder, orderedProjects);
     };
 
     const [downloadingPresentations, setDownloadingPresentations] =
@@ -911,6 +924,11 @@ export default function Show({
             <Head title={region.name} />
 
             <div className="flex max-w-[1600px] flex-col gap-6 p-4 md:p-8">
+                {isSavingOrder && (
+                    <p className="text-sm text-amber-700">
+                        Жоба реті сақталуда…
+                    </p>
+                )}
                 {/* Header Section */}
                 <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-100 pb-6 md:flex-row md:items-end">
                     <div>

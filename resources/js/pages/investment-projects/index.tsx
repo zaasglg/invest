@@ -58,6 +58,7 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
+import { persistOrder } from '@/lib/persist-order';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import type { PaginatedData, SharedData } from '@/types';
@@ -264,6 +265,7 @@ export default function Index({
     const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(
         projects.data,
     );
+    const [isSavingOrder, setIsSavingOrder] = useState(false);
 
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [projectToMove, setProjectToMove] =
@@ -303,27 +305,29 @@ export default function Index({
         }),
     );
 
-    const saveProjectOrder = (newOrder: InvestmentProject[]) => {
-        const csrfTokenValue =
-            document
-                .querySelector('meta[name="csrf-token"]')
-                ?.getAttribute('content') || '';
+    const saveProjectOrder = async (
+        newOrder: InvestmentProject[],
+        previousOrder: InvestmentProject[],
+    ): Promise<void> => {
+        setIsSavingOrder(true);
 
-        fetch('/investment-projects/reorder', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfTokenValue,
-            },
-            body: JSON.stringify({
+        try {
+            await persistOrder('/investment-projects/reorder', {
                 project_ids: newOrder.map((p) => p.id),
                 page: projects.current_page || 1,
-            }),
-        });
+            });
+        } catch {
+            setOrderedProjects(previousOrder);
+            window.alert(
+                'Жоба ретін сақтау мүмкін болмады. Алдыңғы рет қалпына келтірілді.',
+            );
+        } finally {
+            setIsSavingOrder(false);
+        }
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if (!isSuperAdmin && !isInvest) return;
+        if ((!isSuperAdmin && !isInvest) || isSavingOrder) return;
 
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -333,7 +337,7 @@ export default function Index({
 
         const newOrder = arrayMove(orderedProjects, oldIndex, newIndex);
         setOrderedProjects(newOrder);
-        saveProjectOrder(newOrder);
+        void saveProjectOrder(newOrder, orderedProjects);
     };
 
     const handleDelete = (id: number) => {
@@ -954,6 +958,11 @@ export default function Index({
                 </div>
 
                 <div className="overflow-hidden rounded-xl">
+                    {isSavingOrder && (
+                        <p className="px-4 py-2 text-sm text-amber-700">
+                            Жоба реті сақталуда…
+                        </p>
+                    )}
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}

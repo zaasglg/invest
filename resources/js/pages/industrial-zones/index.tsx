@@ -25,8 +25,8 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
-import type { PaginatedData } from '@/types';
 import * as industrialZonesRoutes from '@/routes/industrial-zones';
+import type { PaginatedData } from '@/types';
 
 interface Region {
     id: number;

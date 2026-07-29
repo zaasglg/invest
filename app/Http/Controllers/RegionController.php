@@ -4,13 +4,22 @@ namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
 use App\Models\Region;
+use App\Services\InvestmentProjectAccessService;
+use App\Services\SortOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
+use RuntimeException;
+use Throwable;
 
 class RegionController extends Controller
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly SortOrderService $sortOrder
+    ) {}
+
     public function index(Request $request)
     {
         $regionsQuery = Region::query()->orderBy('sort_order', 'asc');
@@ -38,13 +47,14 @@ class RegionController extends Controller
 
         $targetIndex = ($targetPage - 1) * $perPage;
 
-        $regions = Region::orderBy('sort_order', 'asc')->where('id', '!=', $region->id)->get();
-        $regions->splice($targetIndex, 0, [$region]);
-
-        $index = 1;
-        foreach ($regions as $r) {
-            $r->update(['sort_order' => $index++]);
-        }
+        $regionIds = Region::query()
+            ->orderBy('sort_order')
+            ->where('id', '!=', $region->id)
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+        array_splice($regionIds, $targetIndex, 0, [(int) $region->id]);
+        $this->sortOrder->update(Region::class, $regionIds, 1);
 
         return redirect()->back()->with('success', 'Аймақтың орны ауыстырылды.');
     }
@@ -63,7 +73,7 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions',
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
+            'icon_file' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
@@ -84,15 +94,31 @@ class RegionController extends Controller
             $validated['sort_order'] = \App\Models\Region::max('sort_order') + 1;
         }
 
+        $storedIcon = null;
         if ($request->hasFile('icon_file')) {
-            $validated['icon'] = $request->file('icon_file')->store('region-icons', 'public');
+            $storedIcon = $request->file('icon_file')
+                ->store('region-icons', 'public');
+            if (! is_string($storedIcon)) {
+                throw new RuntimeException(
+                    'The region icon could not be stored.'
+                );
+            }
+            $validated['icon'] = $storedIcon;
         } else {
             $validated['icon'] = 'factory';
         }
 
         unset($validated['icon_file']);
 
-        Region::create($validated);
+        try {
+            Region::create($validated);
+        } catch (Throwable $exception) {
+            if (is_string($storedIcon)) {
+                Storage::disk('public')->delete($storedIcon);
+            }
+
+            throw $exception;
+        }
         $this->clearDashboardRegionCache();
 
         return redirect()->route('regions.index')->with('success', 'Аймақ құрылды.');
@@ -211,9 +237,9 @@ class RegionController extends Controller
         }
 
         $validated = $request->validate([
-            'region_ids' => 'required|array',
-            'region_ids.*' => 'integer|exists:regions,id',
-            'page' => 'integer',
+            'region_ids' => 'required|array|min:1',
+            'region_ids.*' => 'integer|distinct|exists:regions,id',
+            'page' => 'sometimes|integer|min:1',
         ]);
 
         // Using page to calculate relative sort_order offsets if necessary,
@@ -222,10 +248,11 @@ class RegionController extends Controller
         $perPage = 15; // default pagination in index
         $offset = ($page - 1) * $perPage;
 
-        foreach ($validated['region_ids'] as $index => $regionId) {
-            Region::where('id', $regionId)
-                ->update(['sort_order' => $offset + $index]);
-        }
+        $this->sortOrder->update(
+            Region::class,
+            array_map('intval', $validated['region_ids']),
+            $offset
+        );
 
         return response()->json(['success' => true]);
     }
@@ -240,15 +267,24 @@ class RegionController extends Controller
         }
 
         $validated = $request->validate([
-            'project_ids' => 'required|array',
-            'project_ids.*' => 'integer|exists:investment_projects,id',
+            'project_ids' => 'required|array|min:1',
+            'project_ids.*' => 'integer|distinct|exists:investment_projects,id',
         ]);
 
-        foreach ($validated['project_ids'] as $index => $projectId) {
-            InvestmentProject::where('id', $projectId)
+        $projectIds = $validated['project_ids'];
+        $allowedProjectCount = $this->projectAccess->scopeVisible(
+            InvestmentProject::query()
                 ->where('region_id', $region->id)
-                ->update(['sort_order' => $index]);
-        }
+                ->whereIn('id', $projectIds),
+            $user
+        )->count();
+
+        abort_unless($allowedProjectCount === count($projectIds), 403);
+
+        $this->sortOrder->update(
+            InvestmentProject::class,
+            array_map('intval', $projectIds)
+        );
 
         return response()->noContent();
     }
@@ -270,7 +306,7 @@ class RegionController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255|unique:regions,name,'.$region->id,
             'color' => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
-            'icon_file' => 'nullable|file|mimes:png,jpg,jpeg,webp,svg',
+            'icon_file' => 'nullable|image|mimes:png,jpg,jpeg,webp|max:2048',
             'area' => 'nullable|numeric|min:0',
             'type' => 'required|string|in:oblast,district',
             'subtype' => 'nullable|string|in:district,city',
@@ -291,17 +327,36 @@ class RegionController extends Controller
             $validated['sort_order'] = $region->sort_order;
         }
 
+        $oldIcon = $region->icon;
+        $storedIcon = null;
         if ($request->hasFile('icon_file')) {
-            if ($region->icon && str_contains($region->icon, '/')) {
-                Storage::disk('public')->delete($region->icon);
+            $storedIcon = $request->file('icon_file')
+                ->store('region-icons', 'public');
+            if (! is_string($storedIcon)) {
+                throw new RuntimeException(
+                    'The region icon could not be stored.'
+                );
             }
-
-            $validated['icon'] = $request->file('icon_file')->store('region-icons', 'public');
+            $validated['icon'] = $storedIcon;
         }
 
         unset($validated['icon_file']);
 
-        $region->update($validated);
+        try {
+            $region->update($validated);
+        } catch (Throwable $exception) {
+            if (is_string($storedIcon)) {
+                Storage::disk('public')->delete($storedIcon);
+            }
+
+            throw $exception;
+        }
+
+        if ($storedIcon
+            && $oldIcon
+            && str_contains($oldIcon, '/')) {
+            Storage::disk('public')->delete($oldIcon);
+        }
         $this->clearDashboardRegionCache();
 
         return redirect()->route('regions.index')->with('success', 'Аймақ жаңартылды.');
@@ -309,11 +364,12 @@ class RegionController extends Controller
 
     public function destroy(Region $region)
     {
-        if ($region->icon && str_contains($region->icon, '/')) {
-            Storage::disk('public')->delete($region->icon);
-        }
-
+        $oldIcon = $region->icon;
         $region->delete();
+
+        if ($oldIcon && str_contains($oldIcon, '/')) {
+            Storage::disk('public')->delete($oldIcon);
+        }
         $this->clearDashboardRegionCache();
 
         return redirect()->back()->with('success', 'Аймақ жойылды.');

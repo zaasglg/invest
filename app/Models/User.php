@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -14,6 +13,17 @@ class User extends Authenticatable
     use HasFactory, Notifiable, TwoFactorAuthenticatable;
 
     public const BASKARMA_TYPES = ['oblast', 'district', 'additional'];
+
+    public const SUPPORTED_ROLES = [
+        'superadmin',
+        'invest',
+        'akim',
+        'zamakim',
+        'ispolnitel',
+        'moderator',
+        'prokuror',
+        'investor',
+    ];
 
     /**
      * The attributes that are mass assignable.
@@ -55,7 +65,6 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'two_factor_confirmed_at' => 'datetime',
         ];
@@ -69,6 +78,15 @@ class User extends Authenticatable
     public function roleModel()
     {
         return $this->belongsTo(Role::class, 'role_id');
+    }
+
+    public function hasSupportedRole(): bool
+    {
+        return in_array(
+            $this->roleModel?->name,
+            self::SUPPORTED_ROLES,
+            true
+        );
     }
 
     // Проекты, в которых пользователь является исполнителем

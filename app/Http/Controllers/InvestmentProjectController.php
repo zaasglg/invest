@@ -11,6 +11,9 @@ use App\Models\Region;
 use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use App\Services\InvestmentProjectAccessService;
+use App\Services\PrivateFileService;
+use App\Services\SortOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -25,6 +28,12 @@ use ZipArchive;
 
 class InvestmentProjectController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files,
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly SortOrderService $sortOrder
+    ) {}
+
     public function index(Request $request)
     {
         $filters = $request->only([
@@ -56,38 +65,8 @@ class InvestmentProjectController extends Controller
             'subsoilUsers',
         ]);
 
-        // Region-scope: invest sees only their district's projects
-        // Ispolnitel sees ALL projects (no district or participation filter)
         $user = $request->user();
-        if ($user?->roleModel?->name === 'investor') {
-            $projectsQuery->whereHas('investors', function ($query) use ($user) {
-                $query->where('users.id', $user->id);
-            });
-        }
-
-        if ($user && $user->isDistrictScoped() && ! $this->isIspolnitelUser($user)) {
-            $projectsQuery->where('region_id', $user->region_id);
-        } elseif ($user && $user->isOblastScopedAkim()) {
-            // Akim assigned to an oblast sees all projects of that oblast and its child districts
-            $oblastId = $user->region_id;
-            $projectsQuery->where(function ($q) use ($oblastId) {
-                $q->where('region_id', $oblastId)
-                    ->orWhereHas('region', function ($qq) use ($oblastId) {
-                        $qq->where('parent_id', $oblastId);
-                    });
-            });
-        }
-
-        // Invest sub-role scope: filter by curators' invest_sub_role.
-        // A turkistan_invest/aea/ia/prom_zone user sees only projects where
-        // at least one curator has the same invest_sub_role.
-        if ($user && $user->roleModel?->name === 'invest'
-            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)) {
-            $subRole = $user->invest_sub_role;
-            $projectsQuery->whereHas('curators', function ($query) use ($subRole) {
-                $query->where('users.invest_sub_role', $subRole);
-            });
-        }
+        $this->projectAccess->scopeVisible($projectsQuery, $user);
 
         if (! empty($filters['search'])) {
             $search = $filters['search'];
@@ -221,22 +200,41 @@ class InvestmentProjectController extends Controller
 
     public function moveToPage(Request $request, InvestmentProject $investmentProject)
     {
-        $request->validate([
+        $user = $request->user();
+        $roleName = $user?->load('roleModel')->roleModel?->name;
+
+        abort_unless(in_array($roleName, ['superadmin', 'invest'], true), 403);
+        abort_unless($this->projectAccess->canView($user, $investmentProject), 403);
+
+        $validated = $request->validate([
             'target_page' => 'required|integer|min:1',
         ]);
 
-        $targetPage = $request->target_page;
+        $targetPage = $validated['target_page'];
         $perPage = 15;
 
         $targetIndex = ($targetPage - 1) * $perPage;
 
-        $projects = InvestmentProject::active()->orderBy('sort_order', 'asc')->orderBy('created_at', 'desc')->where('id', '!=', $investmentProject->id)->get();
-        $projects->splice($targetIndex, 0, [$investmentProject]);
+        $projectsQuery = InvestmentProject::active()
+            ->where('id', '!=', $investmentProject->id);
 
-        $index = 1;
-        foreach ($projects as $p) {
-            $p->update(['sort_order' => $index++]);
+        if ($roleName !== 'superadmin') {
+            $this->projectAccess->scopeVisible($projectsQuery, $user);
         }
+
+        $projectIds = $projectsQuery
+            ->orderBy('sort_order')
+            ->orderByDesc('created_at')
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
+        array_splice(
+            $projectIds,
+            $targetIndex,
+            0,
+            [(int) $investmentProject->id]
+        );
+        $this->sortOrder->update(InvestmentProject::class, $projectIds, 1);
 
         return redirect()->back()->with('success', 'Жобаның орны ауыстырылды.');
     }
@@ -251,18 +249,28 @@ class InvestmentProjectController extends Controller
         }
 
         $validated = $request->validate([
-            'project_ids' => 'required|array',
-            'project_ids.*' => 'integer|exists:investment_projects,id',
+            'project_ids' => 'required|array|min:1',
+            'project_ids.*' => 'integer|distinct|exists:investment_projects,id',
+            'page' => 'sometimes|integer|min:1',
         ]);
 
         $projectIds = $validated['project_ids'];
-        $page = $request->input('page', 1);
+        $allowedProjectCount = $this->projectAccess->scopeVisible(
+            InvestmentProject::query()->whereIn('id', $projectIds),
+            $user
+        )->count();
+
+        abort_unless($allowedProjectCount === count($projectIds), 403);
+
+        $page = $validated['page'] ?? 1;
         $perPage = 15;
         $offset = ($page - 1) * $perPage;
 
-        foreach ($projectIds as $index => $id) {
-            InvestmentProject::where('id', $id)->update(['sort_order' => $offset + $index]);
-        }
+        $this->sortOrder->update(
+            InvestmentProject::class,
+            array_map('intval', $projectIds),
+            $offset
+        );
 
         return response()->noContent();
     }
@@ -931,13 +939,12 @@ class InvestmentProjectController extends Controller
 
         // Add documents split by completion status
         foreach ($investmentProject->documents as $document) {
-            $filePath = Storage::disk('public')->path($document->file_path);
-            if (file_exists($filePath)) {
-                $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
-                $docName = $document->name;
-                if ($extension && ! str_ends_with(mb_strtolower($docName), '.'.mb_strtolower($extension))) {
-                    $docName .= '.'.$extension;
-                }
+            $filePath = $this->files->path($document->file_path);
+            if ($filePath !== null) {
+                $docName = $this->files->archiveName(
+                    $document->name,
+                    $document->file_path
+                );
                 $folder = $document->is_completed
                     ? 'Құжаттар/Аяқталған құжаттар'
                     : 'Құжаттар/Жүктелген құжаттар';
@@ -1043,7 +1050,7 @@ class InvestmentProjectController extends Controller
     {
         $validated = $request->validate([
             'project_ids' => 'required|array|min:1',
-            'project_ids.*' => 'integer|exists:investment_projects,id',
+            'project_ids.*' => 'integer|distinct|exists:investment_projects,id',
         ]);
 
         $projectIds = $validated['project_ids'];
@@ -1054,13 +1061,12 @@ class InvestmentProjectController extends Controller
         ])->whereIn('id', $projectIds);
 
         $user = $request->user();
-        if ($user?->load('roleModel')->roleModel?->name !== 'superadmin') {
+        $roleName = $user?->load('roleModel')->roleModel?->name;
+        if ($roleName !== 'superadmin') {
             $query->active();
         }
 
-        if ($user && $user->isDistrictScoped()) {
-            $query->where('region_id', $user->region_id);
-        }
+        $this->projectAccess->scopeVisible($query, $user);
 
         if ($this->isIspolnitelUser($user)) {
             $query->where(function ($projectQuery) use ($user) {
@@ -1070,6 +1076,12 @@ class InvestmentProjectController extends Controller
                     });
             });
         }
+
+        abort_unless(
+            (clone $query)->count() === count($projectIds),
+            403,
+            'Сұралған жобалардың бір бөлігіне қол жеткізуге рұқсат жоқ.'
+        );
 
         $projects = $query->get();
 
@@ -1583,6 +1595,7 @@ class InvestmentProjectController extends Controller
             'industrialZones',
             'subsoilUsers',
         ]);
+        $this->projectAccess->scopeVisible($projectsQuery, $user);
 
         if ($search) {
             $projectsQuery->where(function ($query) use ($search) {

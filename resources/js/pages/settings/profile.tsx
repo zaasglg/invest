@@ -1,7 +1,8 @@
 import { Transition } from '@headlessui/react';
-import { Form, Head, Link, router, usePage } from '@inertiajs/react';
+import { Form, Head, router, usePage } from '@inertiajs/react';
 import { Camera, Trash2 } from 'lucide-react';
 import React, { useRef, useState } from 'react';
+import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarCropper from '@/components/avatar-cropper';
 import DeleteUser from '@/components/delete-user';
 import Heading from '@/components/heading';
@@ -13,10 +14,8 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import type { BreadcrumbItem, SharedData } from '@/types';
-import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import { edit } from '@/routes/profile';
-import { send } from '@/routes/verification';
+import type { BreadcrumbItem, SharedData } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -25,13 +24,7 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Profile({
-    mustVerifyEmail,
-    status,
-}: {
-    mustVerifyEmail: boolean;
-    status?: string;
-}) {
+export default function Profile() {
     const { auth } = usePage<SharedData>().props;
     const getInitials = useInitials();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -233,32 +226,6 @@ export default function Profile({
                                         message={errors.email}
                                     />
                                 </div>
-
-                                {mustVerifyEmail &&
-                                    auth.user.email_verified_at === null && (
-                                        <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
-                                            <p className="text-sm text-amber-700">
-                                                Электрондық пошта мекенжайыңыз
-                                                расталмаған.{' '}
-                                                <Link
-                                                    href={send()}
-                                                    as="button"
-                                                    className="font-medium text-amber-800 underline underline-offset-4 transition-colors hover:text-amber-900"
-                                                >
-                                                    Растау хатын жіберу үшін
-                                                    басыңыз.
-                                                </Link>
-                                            </p>
-
-                                            {status ===
-                                                'verification-link-sent' && (
-                                                <div className="mt-2 text-sm font-medium text-green-600">
-                                                    Растау сілтемесі поштаңызға
-                                                    жіберілді.
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
 
                                 <div className="flex items-center gap-4">
                                     <Button

@@ -606,6 +606,15 @@ export default function Show({
     const [reviewComment, setReviewComment] = useState('');
     const [isReviewing, setIsReviewing] = useState(false);
 
+    const getReviewFileUrl = (
+        fileId: number,
+        action: 'preview' | 'download',
+    ): string => {
+        if (!reviewTask || !reviewCompletion) return '#';
+
+        return `/investment-projects/${project.id}/tasks/${reviewTask.id}/completions/${reviewCompletion.id}/files/${fileId}/${action}`;
+    };
+
     const handleOpenCompletionModal = (taskId: number) => {
         setCompletionTaskId(taskId);
         setCompletionComment('');
@@ -2340,7 +2349,10 @@ export default function Show({
                                                             'photo' ? (
                                                                 <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
                                                                     <img
-                                                                        src={`/storage/${file.file_path}`}
+                                                                        src={getReviewFileUrl(
+                                                                            file.id,
+                                                                            'preview',
+                                                                        )}
                                                                         alt={
                                                                             file.file_name
                                                                         }
@@ -2366,7 +2378,10 @@ export default function Show({
                                                                 </p>
                                                             </div>
                                                             <a
-                                                                href={`/storage/${file.file_path}`}
+                                                                href={getReviewFileUrl(
+                                                                    file.id,
+                                                                    'download',
+                                                                )}
                                                                 target="_blank"
                                                                 rel="noreferrer"
                                                                 className={`text-[#0f1b3d] hover:text-[#c8a44e] ${!canDownload ? 'pointer-events-none opacity-40' : ''}`}

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -12,6 +13,10 @@ use ZipArchive;
 
 class SubsoilUserController extends Controller
 {
+    public function __construct(
+        private readonly PrivateFileService $files
+    ) {}
+
     public function index(Request $request)
     {
         $query = SubsoilUser::with('region');
@@ -224,13 +229,12 @@ class SubsoilUserController extends Controller
 
         // Add documents split by completion status
         foreach ($subsoilUser->documents as $document) {
-            $filePath = Storage::disk('public')->path($document->file_path);
-            if (file_exists($filePath)) {
-                $extension = pathinfo($document->file_path, PATHINFO_EXTENSION);
-                $docName = $document->name;
-                if ($extension && ! str_ends_with(mb_strtolower($docName), '.'.mb_strtolower($extension))) {
-                    $docName .= '.'.$extension;
-                }
+            $filePath = $this->files->path($document->file_path);
+            if ($filePath !== null) {
+                $docName = $this->files->archiveName(
+                    $document->name,
+                    $document->file_path
+                );
                 $folder = $document->is_completed
                     ? 'Құжаттар/Аяқталған құжаттар'
                     : 'Құжаттар/Жүктелген құжаттар';

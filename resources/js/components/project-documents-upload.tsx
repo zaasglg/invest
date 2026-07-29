@@ -137,7 +137,7 @@ export default function ProjectDocumentsUpload({
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <a
-                                        href={`/storage/${doc.file_path}`}
+                                        href={`/investment-projects/${projectId}/documents/${doc.id}/download`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         className="rounded p-1.5 text-gray-500 hover:bg-blue-50 hover:text-blue-600"

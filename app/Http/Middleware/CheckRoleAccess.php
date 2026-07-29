@@ -96,6 +96,8 @@ class CheckRoleAccess
         'investment-projects.update-status',
         'investment-projects.tasks.view',
         'investment-projects.tasks.completions.store',
+        'investment-projects.tasks.completions.files.preview',
+        'investment-projects.tasks.completions.files.download',
     ];
 
     /**
@@ -110,6 +112,12 @@ class CheckRoleAccess
         }
 
         $roleName = $this->getRoleName($user);
+
+        abort_unless(
+            $user->hasSupportedRole(),
+            403,
+            'Сіздің аккаунтыңызға жарамды рөл тағайындалмаған.'
+        );
 
         $routeName = $request->route()?->getName();
 
@@ -179,21 +187,20 @@ class CheckRoleAccess
                 }
             }
 
-            // Moderator: project-level read access (similar to invest_turkistan),
-            // but cannot create / edit / delete tasks. They only approve or
-            // reject tasks via the dedicated review routes.
+            // Moderator has read access and may only approve/reject project
+            // tasks through the dedicated review endpoints.
             if ($roleName === 'moderator') {
                 if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
 
-                $blockedTaskRoutes = [
-                    'investment-projects.tasks.store',
-                    'investment-projects.tasks.update',
-                    'investment-projects.tasks.destroy',
+                $moderatorWriteRoutes = [
+                    'investment-projects.tasks.approve',
+                    'investment-projects.tasks.reject',
                 ];
-                if (in_array($routeName, $blockedTaskRoutes, true)) {
-                    abort(403, 'Сізде тапсырма енгізу/өзгерту құқығы жоқ.');
+                if ($this->isWriteAction($request)
+                    && ! in_array($routeName, $moderatorWriteRoutes, true)) {
+                    abort(403, 'Модератор тек тапсырманы мақұлдай немесе қайтара алады.');
                 }
             }
 

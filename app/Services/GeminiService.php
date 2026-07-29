@@ -14,8 +14,14 @@ class GeminiService
 
     // Только рабочие модели — минимум для быстрого fallback
     protected array $models = [
-        'gemini-2.5-flash-lite',
+        'gemini-3.6-flash',
+        'gemini-3.5-flash',
+        'gemini-3.5-flash-lite',
         'gemini-3.1-flash-lite',
+        'gemini-3-flash-preview',
+        'gemini-2.5-pro',
+        'gemini-2.5-flash',
+        'gemini-2.5-flash-lite',
     ];
 
     public function __construct()
@@ -62,7 +68,6 @@ class GeminiService
                         ],
                     ],
                     'generationConfig' => [
-                        'temperature' => 0.2,
                         'maxOutputTokens' => 600,
                     ],
                     'safetySettings' => [

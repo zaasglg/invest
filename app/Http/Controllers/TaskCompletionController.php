@@ -3,243 +3,161 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
-use App\Models\KpiLog;
-use App\Models\ProjectDocument;
 use App\Models\ProjectTask;
 use App\Models\TaskCompletion;
 use App\Models\TaskCompletionFile;
-use App\Models\TaskNotification;
-use App\Models\User;
+use App\Services\CompletionWorkflowService;
+use App\Services\PrivateFileService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 
 class TaskCompletionController extends Controller
 {
-    /**
-     * User submits a task completion (with files and comment).
-     */
-    public function store(Request $request, InvestmentProject $investmentProject, ProjectTask $task)
-    {
-        if ($task->project_id !== $investmentProject->id) {
-            abort(404);
-        }
+    public function __construct(
+        private readonly PrivateFileService $files,
+        private readonly CompletionWorkflowService $workflow
+    ) {}
 
-        // Verify that the user is the assigned executor of this task
-        if ($task->assigned_to !== Auth::id()) {
-            abort(403, 'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.');
-        }
+    public function store(
+        Request $request,
+        InvestmentProject $investmentProject,
+        ProjectTask $task
+    ) {
+        abort_if($task->project_id !== $investmentProject->id, 404);
 
-        // Tasks awaiting moderator approval (or rejected) are not yet
-        // visible to the executor and must not accept completions.
-        if (($task->approval_status ?? 'approved') !== 'approved') {
-            abort(403, 'Бұл тапсырма әлі расталмаған.');
-        }
+        $user = $request->user();
+        abort_unless(
+            $user && (int) $task->assigned_to === (int) $user->id,
+            403,
+            'Сіз бұл тапсырманы орындауға құқығыңыз жоқ.'
+        );
+        abort_unless(
+            ($task->approval_status ?? 'approved') === 'approved',
+            403,
+            'Бұл тапсырма әлі расталмаған.'
+        );
 
-        $request->validate([
+        $validated = $request->validate([
             'comment' => 'nullable|string|max:2000',
             'documents' => 'nullable|array|max:10',
-            'documents.*' => 'file|max:20480',
+            'documents.*' => [
+                'file',
+                'max:20480',
+                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+            ],
             'photos' => 'nullable|array|max:10',
             'photos.*' => 'image|max:20480',
         ]);
 
-        $completion = TaskCompletion::create([
-            'task_id' => $task->id,
-            'submitted_by' => Auth::id(),
-            'comment' => $request->input('comment'),
-            'status' => 'pending',
-        ]);
+        $documents = $request->file('documents', []);
+        $photos = $request->file('photos', []);
+        $this->workflow->ensureUploadBudget($documents, $photos);
+        $this->workflow->submitProject(
+            $task,
+            $user,
+            $validated['comment'] ?? null,
+            $documents,
+            $photos
+        );
 
-        // Save uploaded documents
-        if ($request->hasFile('documents')) {
-            foreach ($request->file('documents') as $file) {
-                $path = $file->store('task-completions', 'public');
-                TaskCompletionFile::create([
-                    'completion_id' => $completion->id,
-                    'file_path' => $path,
-                    'file_name' => $file->getClientOriginalName(),
-                    'type' => 'document',
-                ]);
-            }
-        }
-
-        // Save uploaded photos
-        if ($request->hasFile('photos')) {
-            foreach ($request->file('photos') as $file) {
-                $path = $file->store('task-completions', 'public');
-                TaskCompletionFile::create([
-                    'completion_id' => $completion->id,
-                    'file_path' => $path,
-                    'file_name' => $file->getClientOriginalName(),
-                    'type' => 'photo',
-                ]);
-            }
-        }
-
-        // Update task status to in_progress and ensure viewed_at is set
-        // (submitting completion implies the executor has seen the task).
-        $taskUpdate = ['status' => 'in_progress'];
-        $shouldLogView = $task->viewed_at === null;
-        if ($shouldLogView) {
-            $taskUpdate['viewed_at'] = now();
-        }
-        $task->update($taskUpdate);
-
-        if ($shouldLogView) {
-            \App\Models\ProjectTaskEvent::create([
-                'task_id' => $task->id,
-                'user_id' => Auth::id(),
-                'type' => 'viewed',
-            ]);
-        }
-
-        // Log completion submission event (executor submitted work).
-        \App\Models\ProjectTaskEvent::create([
-            'task_id' => $task->id,
-            'user_id' => Auth::id(),
-            'type' => 'completion_submitted',
-            'comment' => $request->input('comment'),
-        ]);
-
-        // Notify only the user who assigned the task (creator) and superadmins.
-        $notifyUserIds = collect();
-
-        // Task creator (the user who created the task)
-        if ($task->created_by) {
-            $notifyUserIds->push($task->created_by);
-        }
-
-        // Superadmins
-        $superadminIds = User::whereHas('roleModel', fn ($q) => $q->where('name', 'superadmin'))->pluck('id');
-        $notifyUserIds = $notifyUserIds->merge($superadminIds);
-
-        // Remove current user (submitter) and deduplicate
-        $notifyUserIds = $notifyUserIds->unique()->reject(fn ($id) => $id === Auth::id());
-
-        $submitterName = Auth::user()->full_name ?? 'Исполнитель';
-        $docCount = count($request->file('documents', []));
-        $photoCount = count($request->file('photos', []));
-        $fileInfo = [];
-        if ($docCount > 0) {
-            $fileInfo[] = "{$docCount} құжат";
-        }
-        if ($photoCount > 0) {
-            $fileInfo[] = "{$photoCount} фото";
-        }
-        $fileStr = count($fileInfo) > 0 ? ' ('.implode(', ', $fileInfo).')' : '';
-
-        foreach ($notifyUserIds as $userId) {
-            TaskNotification::create([
-                'user_id' => $userId,
-                'task_id' => $task->id,
-                'completion_id' => $completion->id,
-                'type' => 'completion_submitted',
-                'message' => "{$submitterName} тапсырманы орындады: \"{$task->title}\"{$fileStr}. Тексеру.",
-            ]);
-        }
-
-        KpiLog::log($investmentProject->id, 'Тапсырма орындалды: "'.$task->title.'"');
-
-        return redirect()->back()->with('success', 'Тапсырма орындалды және жіберілді.');
+        return back()->with(
+            'success',
+            'Тапсырма орындалды және тексеруге жіберілді.'
+        );
     }
 
-    /**
-     * Invest reviews a completion: approve or reject.
-     */
-    public function review(Request $request, InvestmentProject $investmentProject, ProjectTask $task, TaskCompletion $completion)
-    {
-        if ($task->project_id !== $investmentProject->id) {
-            abort(404);
-        }
+    public function previewFile(
+        InvestmentProject $investmentProject,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToProject(
+            $investmentProject,
+            $task,
+            $completion,
+            $file
+        );
+        abort_unless($file->type === 'photo', 404);
+        abort_unless(
+            request()->user()?->canDownloadFromProject($investmentProject),
+            403,
+            'Сізде бұл файлды көруге рұқсат жоқ.'
+        );
 
-        if ($completion->task_id !== $task->id) {
-            abort(404);
-        }
+        return $this->files->inline($file->file_path, $file->file_name);
+    }
 
-        $request->validate([
+    public function downloadFile(
+        InvestmentProject $investmentProject,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ) {
+        $this->ensureFileBelongsToProject(
+            $investmentProject,
+            $task,
+            $completion,
+            $file
+        );
+        abort_unless(
+            request()->user()?->canDownloadFromProject($investmentProject),
+            403,
+            'Сізде бұл файлды жүктеуге рұқсат жоқ.'
+        );
+
+        return $this->files->download($file->file_path, $file->file_name);
+    }
+
+    public function review(
+        Request $request,
+        InvestmentProject $investmentProject,
+        ProjectTask $task,
+        TaskCompletion $completion
+    ) {
+        abort_if($task->project_id !== $investmentProject->id, 404);
+        abort_if($completion->task_id !== $task->id, 404);
+
+        $user = $request->user();
+        abort_unless(
+            in_array(
+                $user?->roleModel?->name,
+                ['superadmin', 'invest'],
+                true
+            ),
+            403,
+            'Сізде тапсырма нәтижесін тексеру құқығы жоқ.'
+        );
+        abort_if(
+            (int) $completion->submitted_by === (int) $user?->id,
+            403,
+            'Өзіңіз жіберген нәтижені тексере алмайсыз.'
+        );
+
+        $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
             'reviewer_comment' => 'nullable|string|max:2000',
         ]);
 
-        $completion->update([
-            'status' => $request->input('status'),
-            'reviewer_comment' => $request->input('reviewer_comment'),
-            'reviewed_by' => Auth::id(),
-            'reviewed_at' => now(),
-        ]);
+        $this->workflow->reviewProject(
+            $investmentProject,
+            $task,
+            $completion,
+            $user,
+            $validated['status'],
+            $validated['reviewer_comment'] ?? null
+        );
 
-        \App\Models\ProjectTaskEvent::create([
-            'task_id' => $task->id,
-            'user_id' => Auth::id(),
-            'type' => $request->input('status') === 'approved'
-                ? 'completion_approved'
-                : 'completion_rejected',
-            'comment' => $request->input('reviewer_comment'),
-        ]);
-
-        $reviewerName = Auth::user()->full_name ?? 'Орындаушы';
-
-        if ($request->input('status') === 'approved') {
-            $task->update(['status' => 'done']);
-            $notificationType = 'completion_approved';
-            $message = "{$reviewerName} тапсырманы қабылдады: \"{$task->title}\".";
-
-            // Auto-copy completion document files to project documents as "Аяқталған құжаттар"
-            $this->copyCompletionDocumentsToProject($completion, $investmentProject, $task);
-        } else {
-            $task->update(['status' => 'rejected']);
-            $notificationType = 'completion_rejected';
-            $reviewerComment = $request->input('reviewer_comment');
-            $commentStr = $reviewerComment ? " Себебі: {$reviewerComment}" : '';
-            $message = "{$reviewerName} тапсырманы қабылдамады: \"{$task->title}\". Қайта орындаңыз.{$commentStr}";
-        }
-
-        // Notify the ispolnitel who submitted the completion
-        if ($completion->submitted_by !== Auth::id()) {
-            TaskNotification::create([
-                'user_id' => $completion->submitted_by,
-                'task_id' => $task->id,
-                'completion_id' => $completion->id,
-                'type' => $notificationType,
-                'message' => $message,
-            ]);
-        }
-
-        $statusLabel = $request->input('status') === 'approved' ? 'қабылданды' : 'қабылданбады';
-        KpiLog::log($investmentProject->id, 'Тапсырма '.$statusLabel.': "'.$task->title.'"');
-
-        return redirect()->back()->with('success', 'Тексеру нәтижесі сақталды.');
+        return back()->with('success', 'Тексеру нәтижесі сақталды.');
     }
 
-    /**
-     * Copy completion document files to the project's documents section
-     * as "Аяқталған құжаттар" (is_completed = true).
-     */
-    protected function copyCompletionDocumentsToProject(TaskCompletion $completion, InvestmentProject $project, ProjectTask $task): void
-    {
-        $documentFiles = $completion->files()->where('type', 'document')->get();
-
-        foreach ($documentFiles as $file) {
-            if (! Storage::disk('public')->exists($file->file_path)) {
-                continue;
-            }
-
-            // Copy the file to project-documents directory
-            $extension = pathinfo($file->file_name, PATHINFO_EXTENSION);
-            $newFileName = pathinfo($file->file_name, PATHINFO_FILENAME)
-                .'_'.time().'.'.$extension;
-            $newPath = 'project-documents/'.$project->id.'/'.$newFileName;
-
-            Storage::disk('public')->copy($file->file_path, $newPath);
-
-            ProjectDocument::create([
-                'project_id' => $project->id,
-                'name' => $file->file_name.' (Тапсырма: '.$task->title.')',
-                'file_path' => $newPath,
-                'type' => $extension ?: 'document',
-                'is_completed' => true,
-            ]);
-        }
+    private function ensureFileBelongsToProject(
+        InvestmentProject $project,
+        ProjectTask $task,
+        TaskCompletion $completion,
+        TaskCompletionFile $file
+    ): void {
+        abort_if($task->project_id !== $project->id, 404);
+        abort_if($completion->task_id !== $task->id, 404);
+        abort_if($file->completion_id !== $completion->id, 404);
     }
 }

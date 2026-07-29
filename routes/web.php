@@ -8,67 +8,67 @@ Route::get('/', function () {
 })->name('home');
 
 Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.valid'])
     ->name('dashboard');
 
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, 'reorder'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('regions.reorder');
 
 Route::post('regions/{region}/move-to-page', [\App\Http\Controllers\RegionController::class, 'moveToPage'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('regions.moveToPage');
 
 Route::resource('regions', \App\Http\Controllers\RegionController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::post('regions/{region}/projects/reorder', [\App\Http\Controllers\RegionController::class, 'reorderProjects'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.access'])
     ->name('regions.projects.reorder');
 
 Route::resource('sezs', \App\Http\Controllers\SezController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::resource('industrial-zones', \App\Http\Controllers\IndustrialZoneController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::resource('prom-zones', \App\Http\Controllers\PromZoneController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProjectController::class, 'reorder'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.reorder');
 
 Route::post('investment-projects/{investmentProject}/move-to-page', [\App\Http\Controllers\InvestmentProjectController::class, 'moveToPage'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.moveToPage');
 
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::get('investment-projects-archived', [\App\Http\Controllers\InvestmentProjectController::class, 'archived'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.archived');
 
 Route::post('investment-projects/{investmentProject}/archive', [\App\Http\Controllers\InvestmentProjectController::class, 'archive'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.archive');
 
 Route::post('investment-projects/{investmentProject}/unarchive', [\App\Http\Controllers\InvestmentProjectController::class, 'unarchive'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.unarchive');
 
 Route::post('investment-projects-bulk-presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'bulkPresentation'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('investment-projects.bulk-presentation');
 
-Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'role.access'])->group(function () {
     Route::get('passport', [\App\Http\Controllers\InvestmentProjectController::class, 'passport'])->name('investment-projects.passport');
     Route::get('presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'presentation'])->name('investment-projects.presentation');
 
@@ -101,9 +101,11 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'v
 
     Route::post('tasks/{task}/completions', [\App\Http\Controllers\TaskCompletionController::class, 'store'])->name('investment-projects.tasks.completions.store');
     Route::put('tasks/{task}/completions/{completion}/review', [\App\Http\Controllers\TaskCompletionController::class, 'review'])->name('investment-projects.tasks.completions.review');
+    Route::get('tasks/{task}/completions/{completion}/files/{file}/preview', [\App\Http\Controllers\TaskCompletionController::class, 'previewFile'])->name('investment-projects.tasks.completions.files.preview');
+    Route::get('tasks/{task}/completions/{completion}/files/{file}/download', [\App\Http\Controllers\TaskCompletionController::class, 'downloadFile'])->name('investment-projects.tasks.completions.files.download');
 });
 
-Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+Route::prefix('sezs/{sez}')->middleware(['auth', 'role.access'])->group(function () {
     Route::get('gallery', [\App\Http\Controllers\SezPhotoController::class, 'index'])->name('sezs.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\SezPhotoController::class, 'store'])->name('sezs.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\SezPhotoController::class, 'update'])->name('sezs.gallery.update');
@@ -115,7 +117,7 @@ Route::prefix('sezs/{sez}')->middleware(['auth', 'verified', 'role.access'])->gr
     Route::delete('issues/{issue}', [\App\Http\Controllers\SezIssueController::class, 'destroy'])->name('sezs.issues.destroy');
 });
 
-Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'role.access'])->group(function () {
     Route::get('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'index'])->name('industrial-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'store'])->name('industrial-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'update'])->name('industrial-zones.gallery.update');
@@ -127,7 +129,7 @@ Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'verifie
     Route::delete('issues/{issue}', [\App\Http\Controllers\IndustrialZoneIssueController::class, 'destroy'])->name('industrial-zones.issues.destroy');
 });
 
-Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'role.access'])->group(function () {
     Route::get('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'index'])->name('prom-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'store'])->name('prom-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\PromZonePhotoController::class, 'update'])->name('prom-zones.gallery.update');
@@ -139,7 +141,7 @@ Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'verified', 'role.ac
     Route::delete('issues/{issue}', [\App\Http\Controllers\PromZoneIssueController::class, 'destroy'])->name('prom-zones.issues.destroy');
 });
 
-Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'role.access'])->group(function () {
+Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access'])->group(function () {
     Route::get('passport', [\App\Http\Controllers\SubsoilUserController::class, 'passport'])->name('subsoil-users.passport');
 
     Route::get('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'index'])->name('subsoil-users.issues.index');
@@ -149,6 +151,7 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'r
 
     Route::get('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'index'])->name('subsoil-users.documents.index');
     Route::post('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'store'])->name('subsoil-users.documents.store');
+    Route::get('documents/{document}/download', [\App\Http\Controllers\SubsoilDocumentController::class, 'download'])->name('subsoil-users.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\SubsoilDocumentController::class, 'destroy'])->name('subsoil-users.documents.destroy');
 
     Route::get('gallery', [\App\Http\Controllers\SubsoilPhotoController::class, 'index'])->name('subsoil-users.gallery.index');
@@ -162,27 +165,29 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'verified', 'r
 
     Route::post('tasks/{task}/completions', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'store'])->name('subsoil-users.tasks.completions.store');
     Route::put('tasks/{task}/completions/{completion}/review', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'review'])->name('subsoil-users.tasks.completions.review');
+    Route::get('tasks/{task}/completions/{completion}/files/{file}/preview', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'previewFile'])->name('subsoil-users.tasks.completions.files.preview');
+    Route::get('tasks/{task}/completions/{completion}/files/{file}/download', [\App\Http\Controllers\SubsoilTaskCompletionController::class, 'downloadFile'])->name('subsoil-users.tasks.completions.files.download');
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::resource('users', \App\Http\Controllers\UserController::class)
-    ->middleware(['auth', 'verified', 'role.access']);
+    ->middleware(['auth', 'role.access']);
 
 Route::get('issues', [\App\Http\Controllers\IssuesController::class, 'index'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('issues.index');
 
 Route::get('baskarma-rating', [\App\Http\Controllers\BaskarmaRatingController::class, 'index'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('baskarma-rating');
 
 Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingController::class, 'show'])
-    ->middleware(['auth', 'verified', 'role.access'])
+    ->middleware(['auth', 'role.access'])
     ->name('baskarma-rating.show');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'role.valid'])->group(function () {
     Route::get('notifications', [\App\Http\Controllers\TaskNotificationController::class, 'index'])->name('notifications.index');
     Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
@@ -195,7 +200,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
 });
 
-Route::middleware(['auth', 'verified', 'role.access'])->prefix('chat')->name('chat.')->group(function () {
+Route::middleware(['auth', 'role.access'])->prefix('chat')->name('chat.')->group(function () {
     Route::post('send', [\App\Http\Controllers\ChatController::class, 'send'])->name('send');
 });
 

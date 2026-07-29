@@ -864,7 +864,7 @@ export default function Map({
                 // Don't clear — let internal clicks manage themselves
             }
         }
-    }, [selectedProjectId, plots]);
+    }, [activePlot, selectedProjectId, plots]);
 
     useEffect(() => {
         const projectPlots: Plot[] = projects

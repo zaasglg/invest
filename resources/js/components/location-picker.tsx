@@ -204,9 +204,9 @@ export default function LocationPicker(props: Props) {
         }
         const normalized = normalizeToMultiPolygon(value);
         setPolygons(normalized);
-        if (activeIndex >= normalized.length) {
-            setActiveIndex(Math.max(0, normalized.length - 1));
-        }
+        setActiveIndex((currentIndex) =>
+            Math.min(currentIndex, Math.max(0, normalized.length - 1)),
+        );
     }, [value]);
 
     const emitChange = useCallback(

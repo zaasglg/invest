@@ -37,6 +37,8 @@ class SubsoilIssueController extends Controller
 
     public function update(Request $request, SubsoilUser $subsoilUser, SubsoilIssue $issue)
     {
+        abort_if($issue->subsoil_user_id !== $subsoilUser->id, 404);
+
         $validated = $request->validate([
             'description' => 'required|string',
             'severity' => 'required|in:medium,high',
@@ -54,6 +56,8 @@ class SubsoilIssueController extends Controller
 
     public function destroy(SubsoilUser $subsoilUser, SubsoilIssue $issue)
     {
+        abort_if($issue->subsoil_user_id !== $subsoilUser->id, 404);
+
         $issue->delete();
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
