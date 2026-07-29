@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { Line } from '@react-three/drei'
+import { Edges, Line } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
@@ -77,23 +77,13 @@ interface DistrictMapModel {
 
 const MAP_MAX_SIZE = 14
 
-/** Teal / cyan palette like the original map (not lime-green). */
-const districtMapColors = [
-  '#0e7490',
-  '#0891b2',
-  '#06b6d4',
-  '#0d9488',
-  '#14b8a6',
-  '#155e75',
-  '#0f766e',
-  '#22d3ee',
-  '#2dd4bf',
-  '#164e63',
-]
+/** Color of non-selected districts when one is highlighted. */
+const DISTRICT_FILL = '#2a5570'
+const DISTRICT_FILL_SELECTED = '#22d3ee'
+const DISTRICT_FILL_DIMMED = '#1a3a50'
 
-function districtColorForId(regionId: number) {
-  // Stable "random" pick from the palette by region id.
-  return districtMapColors[Math.abs(regionId) % districtMapColors.length]
+function districtColorForId(_regionId: number) {
+  return DISTRICT_FILL
 }
 
 type IndicatorKey = 'investment' | 'projects' | 'jobs' | 'problems'
@@ -283,34 +273,6 @@ function createProjection(allCoordinates: GeoCoordinate[]): Projection {
   }
 }
 
-function isPointInRing(
-  longitude: number,
-  latitude: number,
-  ring: GeoCoordinate[],
-) {
-  let inside = false
-
-  for (
-    let current = 0, previous = ring.length - 1;
-    current < ring.length;
-    previous = current++
-  ) {
-    const [currentLongitude, currentLatitude] = ring[current]
-    const [previousLongitude, previousLatitude] = ring[previous]
-    const crossesRay =
-      currentLatitude > latitude !== previousLatitude > latitude &&
-      longitude <
-        ((previousLongitude - currentLongitude) *
-          (latitude - currentLatitude)) /
-          (previousLatitude - currentLatitude) +
-          currentLongitude
-
-    if (crossesRay) inside = !inside
-  }
-
-  return inside
-}
-
 function addDistrictRingToPath(
   path: Shape | Path,
   coordinates: GeoCoordinate[],
@@ -333,76 +295,18 @@ function createDistrictShapes(
   rings: GeoCoordinate[][],
   project: Projection['project'],
 ) {
-  const containers = rings.map((ring, ringIndex) => {
-    const sample = ring[Math.floor(ring.length / 3)]
-
-    return rings.flatMap((candidate, candidateIndex) => {
-      if (
-        ringIndex === candidateIndex ||
-        !isPointInRing(sample[0], sample[1], candidate)
-      ) {
-        return []
-      }
-
-      return [candidateIndex]
+  // One filled surface per ring — district geometries from DB are outer polygons.
+  return rings
+    .filter((ring) => ring.length >= 4)
+    .map((ring) => {
+      const shape = new Shape()
+      addDistrictRingToPath(shape, ring, project)
+      return shape
     })
-  })
-
-  return rings.flatMap((ring, ringIndex) => {
-    if (containers[ringIndex].length % 2 !== 0) return []
-
-    const shape = new Shape()
-    addDistrictRingToPath(shape, ring, project)
-
-    rings.forEach((holeRing, holeIndex) => {
-      const isDirectHole =
-        containers[holeIndex].includes(ringIndex) &&
-        containers[holeIndex].length === containers[ringIndex].length + 1
-
-      if (!isDirectHole) return
-
-      const hole = new Path()
-      addDistrictRingToPath(hole, holeRing, project)
-      shape.holes.push(hole)
-    })
-
-    return [shape]
-  })
-}
-
-function createBasePlateShape(
-  project: Projection['project'],
-  allCoordinates: GeoCoordinate[],
-) {
-  if (allCoordinates.length === 0) {
-    const shape = new Shape()
-    shape.moveTo(-6, -6)
-    shape.lineTo(6, -6)
-    shape.lineTo(6, 6)
-    shape.lineTo(-6, 6)
-    shape.closePath()
-    return shape
-  }
-
-  const projected = allCoordinates.map((coordinate) => project(coordinate))
-  const padding = 0.45
-  const minX = Math.min(...projected.map((point) => point.x)) - padding
-  const maxX = Math.max(...projected.map((point) => point.x)) + padding
-  const minZ = Math.min(...projected.map((point) => point.z)) - padding
-  const maxZ = Math.max(...projected.map((point) => point.z)) + padding
-
-  const shape = new Shape()
-  shape.moveTo(minX, -maxZ)
-  shape.lineTo(maxX, -maxZ)
-  shape.lineTo(maxX, -minZ)
-  shape.lineTo(minX, -minZ)
-  shape.closePath()
-  return shape
 }
 
 function buildDistrictMapModels(regions: DashboardRegion[]): {
   models: DistrictMapModel[]
-  baseShape: Shape
 } {
   const prepared = regions
     .map((region, index) => {
@@ -443,7 +347,8 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
       lines: rings.map((ring) =>
         ring.map((coordinate) => {
           const { x, z } = project(coordinate)
-          return [x, 0.145, z] as WorldCoordinate
+          // Sit slightly above the extruded top so borders stay visible.
+          return [x, 0.16, z] as WorldCoordinate
         }),
       ),
     }
@@ -451,17 +356,8 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
     return model
   })
 
-  const largestDistrict = models.reduce<DistrictMapModel | null>(
-    (current, model) => (!current || model.extent > current.extent ? model : current),
-    null,
-  )
-  const fallbackBaseShape = createBasePlateShape(project, allCoordinates)
-
   return {
     models,
-    // Avoid "beige rectangle" by using the biggest district outline as a base.
-    // If it can't be computed, fallback to rectangle.
-    baseShape: largestDistrict?.shapes[0] ?? fallbackBaseShape,
   }
 }
 
@@ -560,6 +456,7 @@ function DistrictMapCamera({
     }
 
     camera.lookAt(0, 0, 0)
+    currentTargetRef.current.set(0, 0, 0)
   }, [camera, size.width])
 
   useFrame((_, delta) => {
@@ -617,14 +514,14 @@ function DistrictSurface({
   isDimmed: boolean
   onSelect: () => void
 }) {
-  const groupRef = useRef<Group>(null)
+  const topLayerRef = useRef<Group>(null)
 
   useFrame((_, delta) => {
-    if (!groupRef.current) return
+    if (!topLayerRef.current) return
 
-    const targetHeight = isSelected ? 0.52 : 0
-    groupRef.current.position.y = MathUtils.damp(
-      groupRef.current.position.y,
+    const targetHeight = isSelected ? 0.55 : 0
+    topLayerRef.current.position.y = MathUtils.damp(
+      topLayerRef.current.position.y,
       targetHeight,
       6,
       delta,
@@ -641,58 +538,101 @@ function DistrictSurface({
   }
 
   return (
-    <group ref={groupRef}>
+    <group>
+      {/* Fixed underlay — stays put when selected. */}
       {district.shapes.map((shape, index) => (
         <mesh
-          key={`${district.id}-surface-${index}`}
+          key={`${district.id}-base-${index}`}
+          position-y={-0.3}
           rotation-x={-Math.PI / 2}
-          castShadow
           receiveShadow
-          onClick={(event) => {
-            event.stopPropagation()
-            onSelect()
-          }}
-          onPointerOver={handlePointerOver}
-          onPointerOut={handlePointerOut}
         >
           <extrudeGeometry
             args={[
               shape,
               {
-                depth: 0.12,
+                depth: 0.26,
                 bevelEnabled: true,
                 bevelSegments: 1,
-                bevelSize: 0.025,
-                bevelThickness: 0.025,
+                bevelSize: 0.02,
+                bevelThickness: 0.02,
               },
             ]}
           />
           <meshStandardMaterial
-            color={
-              isSelected ? '#22d3ee' : isDimmed ? '#123342' : district.color
-            }
-            emissive={
-              isSelected ? '#0891b2' : isDimmed ? '#071827' : '#042f2e'
-            }
-            emissiveIntensity={isSelected ? 1.25 : 0.18}
+            color={isDimmed ? '#0c1824' : '#152433'}
+            emissive="#0a1420"
+            emissiveIntensity={0.08}
             metalness={0.2}
-            roughness={0.68}
+            roughness={0.92}
           />
         </mesh>
       ))}
 
-      {district.lines.map((points, index) => (
-        <Line
-          key={`${district.id}-line-${index}`}
-          points={points}
-          color={isSelected ? '#ecfeff' : '#99f6e4'}
-          lineWidth={isSelected ? 2.5 : 1.1}
-          opacity={isDimmed ? 0.22 : 0.82}
-          transparent
-          depthTest={false}
-          renderOrder={isSelected ? 10 : 4}
-        />
-      ))}
+      {/* Top layer — only this rises on click. */}
+      <group ref={topLayerRef}>
+        {district.shapes.map((shape, index) => (
+          <mesh
+            key={`${district.id}-surface-${index}`}
+            position-y={0.02}
+            rotation-x={-Math.PI / 2}
+            castShadow
+            receiveShadow
+            onClick={(event) => {
+              event.stopPropagation()
+              onSelect()
+            }}
+            onPointerOver={handlePointerOver}
+            onPointerOut={handlePointerOut}
+          >
+            <extrudeGeometry
+              args={[
+                shape,
+                {
+                  depth: 0.1,
+                  bevelEnabled: true,
+                  bevelSegments: 1,
+                  bevelSize: 0.018,
+                  bevelThickness: 0.018,
+                },
+              ]}
+            />
+            <meshStandardMaterial
+              color={
+                isSelected
+                  ? DISTRICT_FILL_SELECTED
+                  : isDimmed
+                    ? DISTRICT_FILL_DIMMED
+                    : DISTRICT_FILL
+              }
+              emissive={
+                isSelected ? '#0891b2' : isDimmed ? '#0e2434' : '#1c4058'
+              }
+              emissiveIntensity={isSelected ? 0.9 : 0.18}
+              metalness={0.22}
+              roughness={0.82}
+            />
+            <Edges
+              threshold={45}
+              color={isSelected ? '#ecfeff' : isDimmed ? '#2f5a6e' : '#9ad4e3'}
+              scale={1}
+            />
+          </mesh>
+        ))}
+
+        {district.lines.map((points, index) => (
+          <Line
+            key={`${district.id}-line-${index}`}
+            points={points}
+            color={isSelected ? '#ecfeff' : isDimmed ? '#3d6a82' : '#c8eef7'}
+            lineWidth={isSelected ? 2.4 : 1.4}
+            opacity={isDimmed ? 0.55 : 0.95}
+            transparent
+            depthTest={false}
+            renderOrder={isSelected ? 10 : 5}
+          />
+        ))}
+      </group>
     </group>
   )
 }
@@ -701,37 +641,13 @@ function DistrictMap3D({
   selectedDistrictId,
   onSelectDistrict,
   districts,
-  baseShape,
 }: {
   selectedDistrictId: string | null
   onSelectDistrict: (districtId: string | null) => void
   districts: DistrictMapModel[]
-  baseShape: Shape
 }) {
   return (
     <group position-y={-0.08} onPointerMissed={() => onSelectDistrict(null)}>
-      <mesh position-y={-0.44} rotation-x={-Math.PI / 2} receiveShadow>
-        <extrudeGeometry
-          args={[
-            baseShape,
-            {
-              depth: 0.38,
-              bevelEnabled: true,
-              bevelSegments: 2,
-              bevelSize: 0.05,
-              bevelThickness: 0.04,
-            },
-          ]}
-        />
-        <meshStandardMaterial
-          color="#052e3d"
-          emissive="#042f2e"
-          emissiveIntensity={0.4}
-          metalness={0.26}
-          roughness={0.72}
-        />
-      </mesh>
-
       {districts.map((district) => (
         <DistrictSurface
           key={district.id}
@@ -794,8 +710,9 @@ function DistrictExplorer({
   )
   const [activeIndicatorKey, setActiveIndicatorKey] =
     useState<IndicatorKey>('investment')
+  const [mapMenuOpen, setMapMenuOpen] = useState(false)
 
-  const { models: districtMapModels, baseShape } = useMemo(
+  const { models: districtMapModels } = useMemo(
     () => buildDistrictMapModels(regions),
     [regions],
   )
@@ -846,30 +763,67 @@ function DistrictExplorer({
     <div className="district-explorer">
       <div className="district-dashboard">
         <section className="district-map-panel" aria-label="3D-карта районов">
-          <div className="district-map-panel__topbar">
-            <div>
-              <span className="live-dot" />
-              Интерактивная 3D-карта
-            </div>
-            <select
-              value={selectedDistrictId ?? ''}
-              onChange={(event) =>
-                setSelectedDistrictId(event.target.value || null)
-              }
-              aria-label="Выбрать район"
+          <div
+            className={`district-map-menu${mapMenuOpen ? ' is-open' : ''}`}
+          >
+            <button
+              type="button"
+              className="district-map-menu__toggle"
+              aria-expanded={mapMenuOpen}
+              aria-controls="district-map-menu-panel"
+              aria-label={mapMenuOpen ? 'Закрыть меню карты' : 'Меню карты'}
+              onClick={() => setMapMenuOpen((open) => !open)}
             >
-              <option value="">Вся область</option>
-              {districtMapModels
-                .slice()
-                .sort((first, second) =>
-                  first.name.localeCompare(second.name, 'ru'),
-                )
-                .map((district) => (
-                  <option key={district.id} value={district.id}>
-                    {district.name}
-                  </option>
-                ))}
-            </select>
+              <span />
+              <span />
+              <span />
+            </button>
+
+            {mapMenuOpen && (
+              <div
+                id="district-map-menu-panel"
+                className="district-map-menu__panel"
+                role="listbox"
+                aria-label="Регионы"
+              >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={selectedDistrictId === null}
+                  className={`district-map-menu__item${
+                    selectedDistrictId === null ? ' is-active' : ''
+                  }`}
+                  onClick={() => {
+                    setSelectedDistrictId(null)
+                    setMapMenuOpen(false)
+                  }}
+                >
+                  Вся область
+                </button>
+                {districtMapModels
+                  .slice()
+                  .sort((first, second) =>
+                    first.name.localeCompare(second.name, 'ru'),
+                  )
+                  .map((district) => (
+                    <button
+                      key={district.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selectedDistrictId === district.id}
+                      className={`district-map-menu__item${
+                        selectedDistrictId === district.id ? ' is-active' : ''
+                      }`}
+                      onClick={() => {
+                        setSelectedDistrictId(district.id)
+                        setMapMenuOpen(false)
+                      }}
+                    >
+                      {district.name}
+                    </button>
+                  ))}
+              </div>
+            )}
           </div>
 
           <div className="district-map-canvas">
@@ -887,25 +841,24 @@ function DistrictExplorer({
                 selectedDistrictId={selectedDistrictId}
                 districts={districtMapModels}
               />
-              <ambientLight intensity={0.65} />
-              <hemisphereLight args={['#cffafe', '#020617', 1.45]} />
+              <ambientLight intensity={0.72} />
+              <hemisphereLight args={['#4a5c6e', '#0a121c', 0.7]} />
               <directionalLight
                 castShadow
-                color="#ecfeff"
-                intensity={3.4}
+                color="#c5d0da"
+                intensity={1.05}
                 position={[7, 13, 8]}
                 shadow-mapSize={[1024, 1024]}
               />
               <directionalLight
-                color="#0f766e"
-                intensity={1.5}
+                color="#2a3a4c"
+                intensity={0.45}
                 position={[-9, 5, -6]}
               />
               <DistrictMap3D
                 selectedDistrictId={selectedDistrictId}
                 onSelectDistrict={setSelectedDistrictId}
                 districts={districtMapModels}
-                baseShape={baseShape}
               />
             </Canvas>
           </div>
