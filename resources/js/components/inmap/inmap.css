@@ -97,11 +97,11 @@
   overflow: hidden;
 }
 
-.inmap-embed--landing .district-map-panel {
+.inmap-embed--districts.inmap-embed--landing .district-map-panel {
   width: 100%;
 }
 
-.inmap-embed--landing .district-analytics {
+.inmap-embed--districts.inmap-embed--landing .district-analytics {
   display: none;
 }
 

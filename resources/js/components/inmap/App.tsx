@@ -4,10 +4,39 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
 import { MathUtils, Path, Shape, Vector3 } from 'three'
+import districtsRaw from './data/turkistan-districts.geojson?raw'
+import elevationRaw from './data/turkistan-elevation.json?raw'
+import boundaryRaw from './data/turkistan-region.geojson?raw'
 import './inmap.css'
 
 type GeoCoordinate = [longitude: number, latitude: number]
 type WorldCoordinate = [x: number, y: number, z: number]
+
+interface BoundaryData {
+  features: Array<{
+    geometry: {
+      type: 'Polygon'
+      coordinates: GeoCoordinate[][]
+    }
+  }>
+}
+
+interface ElevationData {
+  bbox: [number, number, number, number]
+}
+
+interface DistrictData {
+  features: Array<{
+    properties: {
+      osmId: string
+      name: string
+    }
+    geometry: {
+      type: 'MultiLineString'
+      coordinates: GeoCoordinate[][]
+    }
+  }>
+}
 
 interface LatLngPoint {
   lat: number
@@ -62,37 +91,26 @@ export interface InMapAppProps {
   variant?: 'dashboard' | 'landing'
 }
 
-interface Projection {
-  project: (coordinate: GeoCoordinate) => { x: number; z: number }
-}
-
 interface DistrictMapModel {
   id: string
-  regionId: number
+  regionId: number | null
   name: string
-  color: string
   center: { x: number; z: number }
   extent: number
-  /** 0 = outer, higher = nested enclave drawn/clicked on top. */
-  stackLevel: number
   shapes: Shape[]
   lines: WorldCoordinate[][]
 }
 
+const boundaryData = JSON.parse(boundaryRaw) as BoundaryData
+const elevationData = JSON.parse(elevationRaw) as ElevationData
+const districtData = JSON.parse(districtsRaw) as DistrictData
+const regionRings = boundaryData.features[0].geometry.coordinates
+const [minLongitude, minLatitude, maxLongitude, maxLatitude] =
+  elevationData.bbox
+
 const MAP_MAX_SIZE = 14
-const TOP_LAYER_Y = 0.02
-const TOP_LAYER_DEPTH = 0.1
-/** Border sits on the top face (not floating above it). */
-const TOP_BORDER_Y = TOP_LAYER_Y + TOP_LAYER_DEPTH + 0.002
-
-/** Color of non-selected districts when one is highlighted. */
-const DISTRICT_FILL = '#2a5570'
+const DISTRICT_FILL_DEFAULT = '#123342'
 const DISTRICT_FILL_SELECTED = '#22d3ee'
-const DISTRICT_FILL_DIMMED = '#1a3a50'
-
-function districtColorForId(_regionId: number) {
-  return DISTRICT_FILL
-}
 
 type IndicatorKey = 'investment' | 'projects' | 'jobs' | 'problems'
 
@@ -155,6 +173,15 @@ const emptySectorRow: SectorRow = {
   jobCount: 0,
 }
 
+const emptySectorData: SectorData = {
+  sez: emptySectorRow,
+  iz: emptySectorRow,
+  prom: emptySectorRow,
+  nedro: emptySectorRow,
+  invest: emptySectorRow,
+  all_projects: emptySectorRow,
+}
+
 function longitudeToMercator(longitude: number) {
   return MathUtils.degToRad(longitude)
 }
@@ -164,68 +191,104 @@ function latitudeToMercator(latitude: number) {
   return Math.log(Math.tan(Math.PI / 4 + latitudeRadians / 2))
 }
 
-function normalizeLatLng(point: unknown): LatLngPoint | null {
-  if (!point || typeof point !== 'object') return null
+const minMercatorX = longitudeToMercator(minLongitude)
+const maxMercatorX = longitudeToMercator(maxLongitude)
+const minMercatorY = latitudeToMercator(minLatitude)
+const maxMercatorY = latitudeToMercator(maxLatitude)
+const mercatorCenterX = (minMercatorX + maxMercatorX) / 2
+const mercatorCenterY = (minMercatorY + maxMercatorY) / 2
+const mapScale =
+  MAP_MAX_SIZE /
+  Math.max(maxMercatorX - minMercatorX, maxMercatorY - minMercatorY)
 
-  const record = point as Record<string, unknown>
-  let rawLat = record.lat
-  let rawLng = record.lng
-
-  if (Array.isArray(rawLat)) rawLat = rawLat[0]
-  if (Array.isArray(rawLng)) rawLng = rawLng[0]
-
-  let lat = Number(rawLat)
-  let lng = Number(rawLng)
-
-  if (Number.isNaN(lat) || Number.isNaN(lng)) return null
-
-  // Fix swapped lat/lng (Kazakhstan: lat ~40–46, lng ~66–72)
-  if (lat > 50 && lng < 50) {
-    ;[lat, lng] = [lng, lat]
+function projectCoordinate([longitude, latitude]: GeoCoordinate) {
+  return {
+    x: (longitudeToMercator(longitude) - mercatorCenterX) * mapScale,
+    z: -(latitudeToMercator(latitude) - mercatorCenterY) * mapScale,
   }
-
-  if (lat < 35 || lat > 55 || lng < 50 || lng > 90) return null
-
-  return { lat, lng }
 }
 
-function getRegionPolygons(geometry: unknown): LatLngPoint[][] {
-  if (!geometry || !Array.isArray(geometry) || geometry.length === 0) {
-    return []
+function isPointInRing(
+  longitude: number,
+  latitude: number,
+  ring: GeoCoordinate[],
+) {
+  let inside = false
+
+  for (
+    let current = 0, previous = ring.length - 1;
+    current < ring.length;
+    previous = current++
+  ) {
+    const [currentLongitude, currentLatitude] = ring[current]
+    const [previousLongitude, previousLatitude] = ring[previous]
+    const crossesRay =
+      currentLatitude > latitude !== previousLatitude > latitude &&
+      longitude <
+        ((previousLongitude - currentLongitude) *
+          (latitude - currentLatitude)) /
+          (previousLatitude - currentLatitude) +
+          currentLongitude
+
+    if (crossesRay) inside = !inside
   }
 
-  if (Array.isArray(geometry[0])) {
-    return geometry
-      .map((polygon) =>
-        (polygon as unknown[])
-          .map((point) => normalizeLatLng(point))
-          .filter((point): point is LatLngPoint => point !== null),
-      )
-      .filter((polygon) => polygon.length >= 3)
-  }
-
-  const points = geometry
-    .map((point) => normalizeLatLng(point))
-    .filter((point): point is LatLngPoint => point !== null)
-
-  return points.length >= 3 ? [points] : []
+  return inside
 }
 
-function polygonsToRings(polygons: LatLngPoint[][]): GeoCoordinate[][] {
-  return polygons.map((polygon) => {
-    const ring: GeoCoordinate[] = polygon.map((point) => [
-      point.lng,
-      point.lat,
-    ])
-    const first = ring[0]
-    const last = ring[ring.length - 1]
+function createRegionShape() {
+  const shape = new Shape()
 
-    if (first[0] !== last[0] || first[1] !== last[1]) {
-      ring.push(first)
-    }
+  regionRings.forEach((ring, ringIndex) => {
+    const path = ringIndex === 0 ? shape : new Path()
 
-    return ring
+    ring.forEach((coordinate, pointIndex) => {
+      const { x, z } = projectCoordinate(coordinate)
+
+      if (pointIndex === 0) {
+        path.moveTo(x, -z)
+      } else {
+        path.lineTo(x, -z)
+      }
+    })
+
+    path.closePath()
+
+    if (ringIndex > 0) shape.holes.push(path)
   })
+
+  return shape
+}
+
+function getDistrictDisplayName(name: string) {
+  const displayNames: Record<string, string> = {
+    'Арысь городская администрация': 'г. Арысь',
+    'городская администрация Кентау': 'г. Кентау',
+    'район Байдибека': 'Байдибекский район',
+    'Туркестан Г.А.': 'г. Туркестан',
+  }
+
+  return displayNames[name] ?? name
+}
+
+const districtRegionNames: Record<string, string> = {
+  'Арысь городская администрация': 'Арыс қаласы',
+  'городская администрация Кентау': 'Кентау қаласы',
+  'Жетисайский район': 'Жетісай ауданы',
+  'Казыгуртский район': 'Қазығұрт ауданы',
+  'Келесский район': 'Келес ауданы',
+  'Мактааральский район': 'Мақтаарал ауданы',
+  'Ордабасынский район': 'Ордабасы ауданы',
+  'Отрарский район': 'Отырар ауданы',
+  'район Байдибека': 'Бәйдібек ауданы',
+  'Сайрамский район': 'Сайрам ауданы',
+  'Сарыагашский район': 'Сарыағаш ауданы',
+  'Сауранский район': 'Сауран ауданы',
+  'Сузакский район': 'Созақ ауданы',
+  'Толебийский район': 'Төлеби ауданы',
+  'Туркестан Г.А.': 'Түркістан қаласы',
+  'Тюлькубасский район': 'Түлкібас ауданы',
+  'Шардаринский район': 'Шардара ауданы',
 }
 
 function simplifyDistrictRing(coordinates: GeoCoordinate[]) {
@@ -244,50 +307,12 @@ function simplifyDistrictRing(coordinates: GeoCoordinate[]) {
   return simplified
 }
 
-function createProjection(allCoordinates: GeoCoordinate[]): Projection {
-  if (allCoordinates.length === 0) {
-    return {
-      project: () => ({ x: 0, z: 0 }),
-    }
-  }
-
-  const longitudes = allCoordinates.map(([longitude]) => longitude)
-  const latitudes = allCoordinates.map(([, latitude]) => latitude)
-  const minLongitude = Math.min(...longitudes)
-  const maxLongitude = Math.max(...longitudes)
-  const minLatitude = Math.min(...latitudes)
-  const maxLatitude = Math.max(...latitudes)
-
-  const minMercatorX = longitudeToMercator(minLongitude)
-  const maxMercatorX = longitudeToMercator(maxLongitude)
-  const minMercatorY = latitudeToMercator(minLatitude)
-  const maxMercatorY = latitudeToMercator(maxLatitude)
-  const mercatorCenterX = (minMercatorX + maxMercatorX) / 2
-  const mercatorCenterY = (minMercatorY + maxMercatorY) / 2
-  const span = Math.max(
-    maxMercatorX - minMercatorX,
-    maxMercatorY - minMercatorY,
-    0.0001,
-  )
-  const mapScale = MAP_MAX_SIZE / span
-
-  return {
-    project([longitude, latitude]) {
-      return {
-        x: (longitudeToMercator(longitude) - mercatorCenterX) * mapScale,
-        z: -(latitudeToMercator(latitude) - mercatorCenterY) * mapScale,
-      }
-    },
-  }
-}
-
 function addDistrictRingToPath(
   path: Shape | Path,
   coordinates: GeoCoordinate[],
-  project: Projection['project'],
 ) {
   coordinates.forEach((coordinate, index) => {
-    const { x, z } = project(coordinate)
+    const { x, z } = projectCoordinate(coordinate)
 
     if (index === 0) {
       path.moveTo(x, -z)
@@ -299,114 +324,76 @@ function addDistrictRingToPath(
   path.closePath()
 }
 
-function createDistrictShapes(
-  rings: GeoCoordinate[][],
-  project: Projection['project'],
-) {
-  // One filled surface per ring — district geometries from DB are outer polygons.
-  return rings
-    .filter((ring) => ring.length >= 4)
-    .map((ring) => {
-      const shape = new Shape()
-      addDistrictRingToPath(shape, ring, project)
-      return shape
-    })
-}
+function createDistrictShapes(rings: GeoCoordinate[][]) {
+  const containers = rings.map((ring, ringIndex) => {
+    const sample = ring[Math.floor(ring.length / 3)]
 
-function pointInPolygonXZ(
-  x: number,
-  z: number,
-  ring: WorldCoordinate[],
-) {
-  let inside = false
-
-  for (
-    let current = 0, previous = ring.length - 1;
-    current < ring.length;
-    previous = current++
-  ) {
-    const [currentX, , currentZ] = ring[current]
-    const [previousX, , previousZ] = ring[previous]
-    const crosses =
-      currentZ > z !== previousZ > z &&
-      x <
-        ((previousX - currentX) * (z - currentZ)) /
-          (previousZ - currentZ + Number.EPSILON) +
-          currentX
-
-    if (crosses) inside = !inside
-  }
-
-  return inside
-}
-
-function assignDistrictStackLevels(
-  models: DistrictMapModel[],
-): DistrictMapModel[] {
-  return models.map((model) => {
-    let stackLevel = 0
-
-    for (const other of models) {
-      if (other.id === model.id) continue
-      // Parent must be clearly larger.
-      if (other.extent < model.extent * 1.15) continue
-
-      const outerRing = other.lines[0]
-      if (!outerRing || outerRing.length < 4) continue
-
-      if (pointInPolygonXZ(model.center.x, model.center.z, outerRing)) {
-        stackLevel += 1
+    return rings.flatMap((candidate, candidateIndex) => {
+      if (
+        ringIndex === candidateIndex ||
+        !isPointInRing(sample[0], sample[1], candidate)
+      ) {
+        return []
       }
-    }
 
-    return { ...model, stackLevel }
+      return [candidateIndex]
+    })
+  })
+
+  return rings.flatMap((ring, ringIndex) => {
+    if (containers[ringIndex].length % 2 !== 0) return []
+
+    const shape = new Shape()
+    addDistrictRingToPath(shape, ring)
+
+    rings.forEach((holeRing, holeIndex) => {
+      const isDirectHole =
+        containers[holeIndex].includes(ringIndex) &&
+        containers[holeIndex].length === containers[ringIndex].length + 1
+
+      if (!isDirectHole) return
+
+      const hole = new Path()
+      addDistrictRingToPath(hole, holeRing)
+      shape.holes.push(hole)
+    })
+
+    return [shape]
   })
 }
 
 function buildDistrictMapModels(regions: DashboardRegion[]): {
   models: DistrictMapModel[]
 } {
-  const prepared = regions
-    .map((region, index) => {
-      const polygons = getRegionPolygons(region.geometry)
-      const rings = polygonsToRings(polygons).map(simplifyDistrictRing)
+  const regionsByName = new Map(regions.map((region) => [region.name, region]))
 
-      return {
-        region,
-        index,
-        rings,
-      }
-    })
-    .filter((item) => item.rings.some((ring) => ring.length >= 4))
-
-  const allCoordinates = prepared.flatMap((item) => item.rings.flat())
-  const { project } = createProjection(allCoordinates)
-
-  const models = prepared.map(({ region, rings }) => {
+  const models = districtData.features.map((district) => {
+    const rings = district.geometry.coordinates.map(simplifyDistrictRing)
     const projectedPoints = rings.flatMap((ring) =>
-      ring.map((coordinate) => project(coordinate)),
+      ring.map((coordinate) => projectCoordinate(coordinate)),
     )
     const minimumX = Math.min(...projectedPoints.map((point) => point.x))
     const maximumX = Math.max(...projectedPoints.map((point) => point.x))
     const minimumZ = Math.min(...projectedPoints.map((point) => point.z))
     const maximumZ = Math.max(...projectedPoints.map((point) => point.z))
+    const region = regionsByName.get(
+      districtRegionNames[district.properties.name],
+    )
 
     const model: DistrictMapModel = {
-      id: String(region.id),
-      regionId: region.id,
-      name: region.name,
-      color: districtColorForId(region.id),
+      id: district.properties.osmId,
+      regionId: region?.id ?? null,
+      name: region?.name ?? getDistrictDisplayName(district.properties.name),
       center: {
         x: (minimumX + maximumX) / 2,
         z: (minimumZ + maximumZ) / 2,
       },
       extent: Math.max(maximumX - minimumX, maximumZ - minimumZ),
-      stackLevel: 0,
-      shapes: createDistrictShapes(rings, project),
+      shapes: createDistrictShapes(rings),
       lines: rings.map((ring) =>
         ring.map((coordinate) => {
-          const { x, z } = project(coordinate)
-          return [x, TOP_BORDER_Y, z] as WorldCoordinate
+          const { x, z } = projectCoordinate(coordinate)
+          return [x, 0.145, z] as WorldCoordinate
         }),
       ),
     }
@@ -415,7 +402,7 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
   })
 
   return {
-    models: assignDistrictStackLevels(models),
+    models,
   }
 }
 
@@ -572,16 +559,14 @@ function DistrictSurface({
   isDimmed: boolean
   onSelect: () => void
 }) {
-  const topLayerRef = useRef<Group>(null)
-  const stackOffset = district.stackLevel * 0.14
-  const renderOrder = 2 + district.stackLevel * 4
+  const groupRef = useRef<Group>(null)
 
   useFrame((_, delta) => {
-    if (!topLayerRef.current) return
+    if (!groupRef.current) return
 
-    const targetHeight = isSelected ? 0.55 : 0
-    topLayerRef.current.position.y = MathUtils.damp(
-      topLayerRef.current.position.y,
+    const targetHeight = isSelected ? 0.52 : 0
+    groupRef.current.position.y = MathUtils.damp(
+      groupRef.current.position.y,
       targetHeight,
       6,
       delta,
@@ -598,103 +583,56 @@ function DistrictSurface({
   }
 
   return (
-    <group position-y={stackOffset}>
-      {/* Fixed underlay — stays put when selected. */}
+    <group ref={groupRef}>
       {district.shapes.map((shape, index) => (
         <mesh
-          key={`${district.id}-base-${index}`}
-          position-y={-0.3}
+          key={`${district.id}-surface-${index}`}
           rotation-x={-Math.PI / 2}
+          castShadow
           receiveShadow
-          renderOrder={renderOrder}
+          onClick={(event) => {
+            event.stopPropagation()
+            onSelect()
+          }}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
         >
           <extrudeGeometry
             args={[
               shape,
               {
-                depth: 0.26,
+                depth: 0.12,
                 bevelEnabled: true,
                 bevelSegments: 1,
-                bevelSize: 0.02,
-                bevelThickness: 0.02,
+                bevelSize: 0.025,
+                bevelThickness: 0.025,
               },
             ]}
           />
           <meshStandardMaterial
-            color={isDimmed ? '#0c1824' : '#152433'}
-            emissive="#0a1420"
-            emissiveIntensity={0.08}
+            color={
+              isSelected ? DISTRICT_FILL_SELECTED : DISTRICT_FILL_DEFAULT
+            }
+            emissive={isSelected ? '#0891b2' : '#071827'}
+            emissiveIntensity={isSelected ? 1.25 : 0.18}
             metalness={0.2}
-            roughness={0.92}
+            roughness={0.68}
           />
         </mesh>
       ))}
 
-      {/* Top layer — only this rises on click. */}
-      <group ref={topLayerRef}>
-        {district.shapes.map((shape, index) => (
-          <mesh
-            key={`${district.id}-surface-${index}`}
-            position-y={TOP_LAYER_Y}
-            rotation-x={-Math.PI / 2}
-            castShadow
-            receiveShadow
-            renderOrder={renderOrder + 1}
-            onClick={(event) => {
-              event.stopPropagation()
-              onSelect()
-            }}
-            onPointerOver={handlePointerOver}
-            onPointerOut={handlePointerOut}
-          >
-            <extrudeGeometry
-              args={[
-                shape,
-                {
-                  depth: TOP_LAYER_DEPTH,
-                  // No bevel — keeps the white border flush with the top edge.
-                  bevelEnabled: false,
-                },
-              ]}
-            />
-            <meshStandardMaterial
-              color={
-                isSelected
-                  ? DISTRICT_FILL_SELECTED
-                  : isDimmed
-                    ? DISTRICT_FILL_DIMMED
-                    : DISTRICT_FILL
-              }
-              emissive={
-                isSelected ? '#0891b2' : isDimmed ? '#0e2434' : '#1c4058'
-              }
-              emissiveIntensity={isSelected ? 0.9 : 0.18}
-              metalness={0.22}
-              roughness={0.82}
-              depthWrite
-              polygonOffset
-              polygonOffsetFactor={1}
-              polygonOffsetUnits={1}
-            />
-          </mesh>
-        ))}
-
-        {/* Border locked to the top face of this block. */}
-        {district.lines.map((points, index) => (
-          <Line
-            key={`${district.id}-line-${index}`}
-            points={points}
-            color={isSelected ? '#ffffff' : '#9ec4d4'}
-            lineWidth={isSelected ? 2.4 : 1}
-            opacity={isSelected ? 1 : isDimmed ? 0.28 : 0.55}
-            transparent
-            depthTest
-            renderOrder={
-              isSelected ? 40 + district.stackLevel : 8 + district.stackLevel
-            }
-          />
-        ))}
-      </group>
+      {district.lines.map((points, index) => (
+        <Line
+          key={`${district.id}-line-${index}`}
+          points={points}
+          color={isSelected ? '#ecfeff' : '#99f6e4'}
+          lineWidth={isSelected ? 2.5 : 1.1}
+          opacity={isDimmed ? 0.22 : 0.82}
+          transparent
+          depthTest={false}
+          renderOrder={isSelected ? 10 : 4}
+        />
+      ))}
     </group>
   )
 }
@@ -708,22 +646,33 @@ function DistrictMap3D({
   onSelectDistrict: (districtId: string | null) => void
   districts: DistrictMapModel[]
 }) {
-  const sortedDistricts = useMemo(
-    () =>
-      [...districts].sort((first, second) => {
-        if (first.stackLevel !== second.stackLevel) {
-          return first.stackLevel - second.stackLevel
-        }
-
-        // Larger regions first so smaller enclaves paint/hit on top.
-        return second.extent - first.extent
-      }),
-    [districts],
-  )
+  const regionShape = useMemo(() => createRegionShape(), [])
 
   return (
     <group position-y={-0.08} onPointerMissed={() => onSelectDistrict(null)}>
-      {sortedDistricts.map((district) => (
+      <mesh position-y={-0.44} rotation-x={-Math.PI / 2} receiveShadow>
+        <extrudeGeometry
+          args={[
+            regionShape,
+            {
+              depth: 0.38,
+              bevelEnabled: true,
+              bevelSegments: 2,
+              bevelSize: 0.05,
+              bevelThickness: 0.04,
+            },
+          ]}
+        />
+        <meshStandardMaterial
+          color="#052e3d"
+          emissive="#042f2e"
+          emissiveIntensity={0.4}
+          metalness={0.26}
+          roughness={0.72}
+        />
+      </mesh>
+
+      {districts.map((district) => (
         <DistrictSurface
           key={district.id}
           district={district}
@@ -798,9 +747,21 @@ function DistrictExplorer({
     districtMapModels.find((district) => district.id === selectedDistrictId) ??
     null
   const regionId = selectedDistrict?.regionId ?? null
-  const sectorRow = getSectorRow(sectorSummary, regionId)
-  const sectorData = getSectorData(sectorSummary, regionId)
-  const yearly = getYearlySeries(regionYearly, regionId)
+  const hasSelectedRegion =
+    selectedDistrict === null || selectedDistrict.regionId !== null
+  const sectorRow = hasSelectedRegion
+    ? getSectorRow(sectorSummary, regionId)
+    : emptySectorRow
+  const sectorData = hasSelectedRegion
+    ? getSectorData(sectorSummary, regionId)
+    : emptySectorData
+  const yearly = hasSelectedRegion
+    ? getYearlySeries(regionYearly, regionId)
+    : {
+        investment: regionYearly.years.map(() => 0),
+        projects: regionYearly.years.map(() => 0),
+        jobs: regionYearly.years.map(() => 0),
+      }
 
   const activeIndicator =
     indicatorDefinitions.find(
@@ -841,9 +802,7 @@ function DistrictExplorer({
       <div className="district-dashboard">
         <section className="district-map-panel" aria-label="3D-карта районов">
           {!isLanding && (
-            <div
-              className={`district-map-menu${mapMenuOpen ? ' is-open' : ''}`}
-            >
+            <div className={`district-map-menu${mapMenuOpen ? 'is-open' : ''}`}>
               <button
                 type="button"
                 className="district-map-menu__toggle"
@@ -869,7 +828,7 @@ function DistrictExplorer({
                     role="option"
                     aria-selected={selectedDistrictId === null}
                     className={`district-map-menu__item${
-                      selectedDistrictId === null ? ' is-active' : ''
+                      selectedDistrictId === null ? 'is-active' : ''
                     }`}
                     onClick={() => {
                       setSelectedDistrictId(null)
@@ -890,7 +849,7 @@ function DistrictExplorer({
                         role="option"
                         aria-selected={selectedDistrictId === district.id}
                         className={`district-map-menu__item${
-                          selectedDistrictId === district.id ? ' is-active' : ''
+                          selectedDistrictId === district.id ? 'is-active' : ''
                         }`}
                         onClick={() => {
                           setSelectedDistrictId(district.id)
@@ -907,7 +866,7 @@ function DistrictExplorer({
 
           <div className="district-map-canvas">
             <Canvas
-              shadows="percentage"
+              shadows
               camera={{ fov: 42, near: 0.1, far: 80 }}
               dpr={[1, 1.5]}
               gl={{
@@ -920,18 +879,18 @@ function DistrictExplorer({
                 selectedDistrictId={selectedDistrictId}
                 districts={districtMapModels}
               />
-              <ambientLight intensity={0.72} />
-              <hemisphereLight args={['#4a5c6e', '#0a121c', 0.7]} />
+              <ambientLight intensity={0.65} />
+              <hemisphereLight args={['#cffafe', '#020617', 1.45]} />
               <directionalLight
                 castShadow
-                color="#c5d0da"
-                intensity={1.05}
+                color="#ecfeff"
+                intensity={3.4}
                 position={[7, 13, 8]}
                 shadow-mapSize={[1024, 1024]}
               />
               <directionalLight
-                color="#2a3a4c"
-                intensity={0.45}
+                color="#0f766e"
+                intensity={1.5}
                 position={[-9, 5, -6]}
               />
               <DistrictMap3D
@@ -944,108 +903,110 @@ function DistrictExplorer({
         </section>
 
         {!isLanding && (
-        <aside className="district-analytics" aria-live="polite">
-          <div className="district-analytics__heading">
-            <div>
-              <p>{selectedDistrict ? 'Профиль территории' : 'Сводка региона'}</p>
-              <h2>
-                {selectedDistrict
-                  ? selectedDistrict.name
-                  : 'Туркестанская область'}
-              </h2>
-            </div>
-            {selectedDistrict && (
-              <button
-                type="button"
-                onClick={() => setSelectedDistrictId(null)}
-              >
-                Вся область
-              </button>
-            )}
-          </div>
-
-          <div className="analytics-kpis">
-            {indicatorDefinitions.map((indicator) => {
-              const value = kpiValues[indicator.key]
-              const seriesGrowth =
-                indicator.key === 'problems'
-                  ? null
-                  : growthPercent(
-                      yearly[indicator.key].map((item) =>
-                        toDisplayValue(indicator.key, item),
-                      ),
-                    )
-
-              return (
-                <article key={indicator.key}>
-                  <span>{indicator.shortLabel}</span>
-                  <strong>
-                    {formatAnalyticsValue(value, indicator)}
-                    <small>{indicator.unit}</small>
-                  </strong>
-                  {seriesGrowth !== null ? (
-                    <p>
-                      {seriesGrowth >= 0 ? '+' : ''}
-                      {seriesGrowth.toFixed(1)}% за период
-                    </p>
-                  ) : (
-                    <p>Текущие данные</p>
-                  )}
-                </article>
-              )
-            })}
-          </div>
-
-          <div className="analytics-detail">
-            <div className="analytics-detail__header">
+          <aside className="district-analytics" aria-live="polite">
+            <div className="district-analytics__heading">
               <div>
-                <span>
-                  {activeIndicatorKey === 'problems'
-                    ? 'По секторам'
-                    : `Динамика ${yearRangeLabel}`}
-                </span>
-                <h3>{activeIndicator.label}</h3>
+                <p>
+                  {selectedDistrict ? 'Профиль территории' : 'Сводка региона'}
+                </p>
+                <h2>
+                  {selectedDistrict
+                    ? selectedDistrict.name
+                    : 'Туркестанская область'}
+                </h2>
               </div>
-              {growth !== null && (
-                <strong>
-                  {growth >= 0 ? '+' : ''}
-                  {growth.toFixed(1)}%
-                </strong>
+              {selectedDistrict && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedDistrictId(null)}
+                >
+                  Вся область
+                </button>
               )}
             </div>
 
-            <div className="indicator-tabs" aria-label="Выбор показателя">
-              {indicatorDefinitions.map((indicator) => (
-                <button
-                  key={indicator.key}
-                  type="button"
-                  className={
-                    activeIndicatorKey === indicator.key ? 'is-active' : ''
-                  }
-                  onClick={() => setActiveIndicatorKey(indicator.key)}
-                >
-                  {indicator.shortLabel}
-                </button>
-              ))}
+            <div className="analytics-kpis">
+              {indicatorDefinitions.map((indicator) => {
+                const value = kpiValues[indicator.key]
+                const seriesGrowth =
+                  indicator.key === 'problems'
+                    ? null
+                    : growthPercent(
+                        yearly[indicator.key].map((item) =>
+                          toDisplayValue(indicator.key, item),
+                        ),
+                      )
+
+                return (
+                  <article key={indicator.key}>
+                    <span>{indicator.shortLabel}</span>
+                    <strong>
+                      {formatAnalyticsValue(value, indicator)}
+                      <small>{indicator.unit}</small>
+                    </strong>
+                    {seriesGrowth !== null ? (
+                      <p>
+                        {seriesGrowth >= 0 ? '+' : ''}
+                        {seriesGrowth.toFixed(1)}% за период
+                      </p>
+                    ) : (
+                      <p>Текущие данные</p>
+                    )}
+                  </article>
+                )
+              })}
             </div>
 
-            <AnalyticsBarChart
-              indicator={activeIndicator}
-              values={chartValues}
-              labels={chartLabels}
-            />
-          </div>
+            <div className="analytics-detail">
+              <div className="analytics-detail__header">
+                <div>
+                  <span>
+                    {activeIndicatorKey === 'problems'
+                      ? 'По секторам'
+                      : `Динамика ${yearRangeLabel}`}
+                  </span>
+                  <h3>{activeIndicator.label}</h3>
+                </div>
+                {growth !== null && (
+                  <strong>
+                    {growth >= 0 ? '+' : ''}
+                    {growth.toFixed(1)}%
+                  </strong>
+                )}
+              </div>
 
-          {selectedDistrict && (
+              <div className="indicator-tabs" aria-label="Выбор показателя">
+                {indicatorDefinitions.map((indicator) => (
+                  <button
+                    key={indicator.key}
+                    type="button"
+                    className={
+                      activeIndicatorKey === indicator.key ? 'is-active' : ''
+                    }
+                    onClick={() => setActiveIndicatorKey(indicator.key)}
+                  >
+                    {indicator.shortLabel}
+                  </button>
+                ))}
+              </div>
+
+              <AnalyticsBarChart
+                indicator={activeIndicator}
+                values={chartValues}
+                labels={chartLabels}
+              />
+            </div>
+
+          {selectedDistrict && selectedDistrict.regionId !== null && (
             <Link
               href={`/regions/${selectedDistrict.regionId}`}
               className="district-analytics__open"
-            >
-              Открыть страницу района
-              <span aria-hidden="true">→</span>
-            </Link>
-          )}
-        </aside>
+              >
+                Открыть страницу района
+                <span aria-hidden="true">→</span>
+              </Link>
+            )}
+          </aside>
         )}
       </div>
     </div>
