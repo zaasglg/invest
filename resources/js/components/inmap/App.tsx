@@ -58,6 +58,8 @@ export interface InMapAppProps {
   regions: DashboardRegion[]
   sectorSummary: SectorSummary
   regionYearly: RegionYearly
+  /** Landing hero: full-bleed map without analytics chrome. */
+  variant?: 'dashboard' | 'landing'
 }
 
 interface Projection {
@@ -777,7 +779,9 @@ function DistrictExplorer({
   regions,
   sectorSummary,
   regionYearly,
+  variant = 'dashboard',
 }: InMapAppProps) {
+  const isLanding = variant === 'landing'
   const [selectedDistrictId, setSelectedDistrictId] = useState<string | null>(
     null,
   )
@@ -836,68 +840,70 @@ function DistrictExplorer({
     <div className="district-explorer">
       <div className="district-dashboard">
         <section className="district-map-panel" aria-label="3D-карта районов">
-          <div
-            className={`district-map-menu${mapMenuOpen ? ' is-open' : ''}`}
-          >
-            <button
-              type="button"
-              className="district-map-menu__toggle"
-              aria-expanded={mapMenuOpen}
-              aria-controls="district-map-menu-panel"
-              aria-label={mapMenuOpen ? 'Закрыть меню карты' : 'Меню карты'}
-              onClick={() => setMapMenuOpen((open) => !open)}
+          {!isLanding && (
+            <div
+              className={`district-map-menu${mapMenuOpen ? ' is-open' : ''}`}
             >
-              <span />
-              <span />
-              <span />
-            </button>
-
-            {mapMenuOpen && (
-              <div
-                id="district-map-menu-panel"
-                className="district-map-menu__panel"
-                role="listbox"
-                aria-label="Регионы"
+              <button
+                type="button"
+                className="district-map-menu__toggle"
+                aria-expanded={mapMenuOpen}
+                aria-controls="district-map-menu-panel"
+                aria-label={mapMenuOpen ? 'Закрыть меню карты' : 'Меню карты'}
+                onClick={() => setMapMenuOpen((open) => !open)}
               >
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={selectedDistrictId === null}
-                  className={`district-map-menu__item${
-                    selectedDistrictId === null ? ' is-active' : ''
-                  }`}
-                  onClick={() => {
-                    setSelectedDistrictId(null)
-                    setMapMenuOpen(false)
-                  }}
+                <span />
+                <span />
+                <span />
+              </button>
+
+              {mapMenuOpen && (
+                <div
+                  id="district-map-menu-panel"
+                  className="district-map-menu__panel"
+                  role="listbox"
+                  aria-label="Регионы"
                 >
-                  Вся область
-                </button>
-                {districtMapModels
-                  .slice()
-                  .sort((first, second) =>
-                    first.name.localeCompare(second.name, 'ru'),
-                  )
-                  .map((district) => (
-                    <button
-                      key={district.id}
-                      type="button"
-                      role="option"
-                      aria-selected={selectedDistrictId === district.id}
-                      className={`district-map-menu__item${
-                        selectedDistrictId === district.id ? ' is-active' : ''
-                      }`}
-                      onClick={() => {
-                        setSelectedDistrictId(district.id)
-                        setMapMenuOpen(false)
-                      }}
-                    >
-                      {district.name}
-                    </button>
-                  ))}
-              </div>
-            )}
-          </div>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={selectedDistrictId === null}
+                    className={`district-map-menu__item${
+                      selectedDistrictId === null ? ' is-active' : ''
+                    }`}
+                    onClick={() => {
+                      setSelectedDistrictId(null)
+                      setMapMenuOpen(false)
+                    }}
+                  >
+                    Вся область
+                  </button>
+                  {districtMapModels
+                    .slice()
+                    .sort((first, second) =>
+                      first.name.localeCompare(second.name, 'ru'),
+                    )
+                    .map((district) => (
+                      <button
+                        key={district.id}
+                        type="button"
+                        role="option"
+                        aria-selected={selectedDistrictId === district.id}
+                        className={`district-map-menu__item${
+                          selectedDistrictId === district.id ? ' is-active' : ''
+                        }`}
+                        onClick={() => {
+                          setSelectedDistrictId(district.id)
+                          setMapMenuOpen(false)
+                        }}
+                      >
+                        {district.name}
+                      </button>
+                    ))}
+                </div>
+              )}
+            </div>
+          )}
 
           <div className="district-map-canvas">
             <Canvas
@@ -937,6 +943,7 @@ function DistrictExplorer({
           </div>
         </section>
 
+        {!isLanding && (
         <aside className="district-analytics" aria-live="polite">
           <div className="district-analytics__heading">
             <div>
@@ -1039,18 +1046,31 @@ function DistrictExplorer({
             </Link>
           )}
         </aside>
+        )}
       </div>
     </div>
   )
 }
 
-function App({ regions, sectorSummary, regionYearly }: InMapAppProps) {
+function App({
+  regions,
+  sectorSummary,
+  regionYearly,
+  variant = 'dashboard',
+}: InMapAppProps) {
+  const isLanding = variant === 'landing'
+
   return (
-    <div className="inmap-embed inmap-embed--districts">
+    <div
+      className={`inmap-embed inmap-embed--districts${
+        isLanding ? ' inmap-embed--landing' : ''
+      }`}
+    >
       <DistrictExplorer
         regions={regions}
         sectorSummary={sectorSummary}
         regionYearly={regionYearly}
+        variant={variant}
       />
     </div>
   )

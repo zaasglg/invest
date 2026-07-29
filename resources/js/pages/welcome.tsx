@@ -1,15 +1,7 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
-import {
-    AboutSection,
-    HeroSection,
-    LandingFooter,
-    SectorsBentoGrid,
-    StatisticsSection,
-    StickyNavbar,
-    WhyTurkistanSection,
-} from '@/components/landing';
+import LandingApp from '@/components/inmap/LandingApp';
 import type { SharedData } from '@/types';
 import { dashboard } from '@/routes';
 
@@ -29,26 +21,20 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="Turkistan Invest — Gateway to Central Asia">
+            <Head title="IN-MAP — Туркестанская область">
                 <link rel="preconnect" href="https://fonts.bunny.net" />
                 <link
-                    href="https://fonts.bunny.net/css?family=inter:300,400,500,600,700,800,900"
+                    href="https://fonts.bunny.net/css?family=inter:400,500,600,700,800,900"
                     rel="stylesheet"
                 />
                 <meta
                     name="description"
-                    content="Discover world-class investment opportunities in Turkistan, Kazakhstan. Agriculture, tourism, industry, and special economic zones."
+                    content="Единая цифровая экосистема инвестиций Туркестанской области."
                 />
             </Head>
 
-            <div className="min-h-screen bg-white">
-                <StickyNavbar />
-                <HeroSection />
-                <AboutSection />
-                <SectorsBentoGrid />
-                <StatisticsSection />
-                <WhyTurkistanSection />
-                <LandingFooter />
+            <div className="inmap-page">
+                <LandingApp />
             </div>
         </>
     );
