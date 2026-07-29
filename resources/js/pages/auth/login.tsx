@@ -129,7 +129,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                 data-test="login-button"
                             >
                                 {processing && <Spinner />}
-                                Кіру
+                                Кір
                             </Button>
                         </div>
                     </>
