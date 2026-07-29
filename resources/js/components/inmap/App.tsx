@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react'
-import { Edges, Line } from '@react-three/drei'
+import { Line } from '@react-three/drei'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
@@ -78,6 +78,10 @@ interface DistrictMapModel {
 }
 
 const MAP_MAX_SIZE = 14
+const TOP_LAYER_Y = 0.02
+const TOP_LAYER_DEPTH = 0.1
+/** Border sits on the top face (not floating above it). */
+const TOP_BORDER_Y = TOP_LAYER_Y + TOP_LAYER_DEPTH + 0.002
 
 /** Color of non-selected districts when one is highlighted. */
 const DISTRICT_FILL = '#2a5570'
@@ -400,8 +404,7 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
       lines: rings.map((ring) =>
         ring.map((coordinate) => {
           const { x, z } = project(coordinate)
-          // Sit slightly above the extruded top so borders stay visible.
-          return [x, 0.16, z] as WorldCoordinate
+          return [x, TOP_BORDER_Y, z] as WorldCoordinate
         }),
       ),
     }
@@ -630,7 +633,7 @@ function DistrictSurface({
         {district.shapes.map((shape, index) => (
           <mesh
             key={`${district.id}-surface-${index}`}
-            position-y={0.02}
+            position-y={TOP_LAYER_Y}
             rotation-x={-Math.PI / 2}
             castShadow
             receiveShadow
@@ -646,11 +649,9 @@ function DistrictSurface({
               args={[
                 shape,
                 {
-                  depth: 0.1,
-                  bevelEnabled: true,
-                  bevelSegments: 1,
-                  bevelSize: 0.018,
-                  bevelThickness: 0.018,
+                  depth: TOP_LAYER_DEPTH,
+                  // No bevel — keeps the white border flush with the top edge.
+                  bevelEnabled: false,
                 },
               ]}
             />
@@ -669,27 +670,26 @@ function DistrictSurface({
               metalness={0.22}
               roughness={0.82}
               depthWrite
-            />
-            <Edges
-              threshold={45}
-              color={isSelected ? '#ecfeff' : isDimmed ? '#2f5a6e' : '#9ad4e3'}
-              scale={1}
-              visible={!isDimmed || isSelected}
+              polygonOffset
+              polygonOffsetFactor={1}
+              polygonOffsetUnits={1}
             />
           </mesh>
         ))}
 
+        {/* Border locked to the top face of this block. */}
         {district.lines.map((points, index) => (
           <Line
             key={`${district.id}-line-${index}`}
             points={points}
-            color={isSelected ? '#ecfeff' : '#c8eef7'}
-            lineWidth={isSelected ? 2.4 : 1.4}
-            opacity={isDimmed ? 0 : 0.95}
+            color={isSelected ? '#ffffff' : '#9ec4d4'}
+            lineWidth={isSelected ? 2.4 : 1}
+            opacity={isSelected ? 1 : isDimmed ? 0.28 : 0.55}
             transparent
             depthTest
-            renderOrder={renderOrder + 2 + (isSelected ? 10 : 0)}
-            visible={!isDimmed}
+            renderOrder={
+              isSelected ? 40 + district.stackLevel : 8 + district.stackLevel
+            }
           />
         ))}
       </group>
