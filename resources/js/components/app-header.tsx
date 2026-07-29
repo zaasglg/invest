@@ -91,7 +91,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     return (
         <>
             {/* ── Main nav bar ── */}
-            <div className="border-b border-white/10 bg-[#0f1b3d]">
+            <div className="border-b border-white/10 bg-[#081224]">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Logo */}
                     <Link
@@ -127,7 +127,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             </SheetTrigger>
                             <SheetContent
                                 side="left"
-                                className="flex h-full w-72 flex-col items-stretch justify-between border-r-white/10 bg-[#0f1b3d]"
+                                className="flex h-full w-72 flex-col items-stretch justify-between border-r-white/10 bg-[#081224]"
                             >
                                 <SheetTitle className="sr-only">
                                     Навигация мәзірі
