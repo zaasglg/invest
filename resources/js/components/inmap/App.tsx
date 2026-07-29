@@ -71,6 +71,8 @@ interface DistrictMapModel {
   color: string
   center: { x: number; z: number }
   extent: number
+  /** 0 = outer, higher = nested enclave drawn/clicked on top. */
+  stackLevel: number
   shapes: Shape[]
   lines: WorldCoordinate[][]
 }
@@ -305,6 +307,56 @@ function createDistrictShapes(
     })
 }
 
+function pointInPolygonXZ(
+  x: number,
+  z: number,
+  ring: WorldCoordinate[],
+) {
+  let inside = false
+
+  for (
+    let current = 0, previous = ring.length - 1;
+    current < ring.length;
+    previous = current++
+  ) {
+    const [currentX, , currentZ] = ring[current]
+    const [previousX, , previousZ] = ring[previous]
+    const crosses =
+      currentZ > z !== previousZ > z &&
+      x <
+        ((previousX - currentX) * (z - currentZ)) /
+          (previousZ - currentZ + Number.EPSILON) +
+          currentX
+
+    if (crosses) inside = !inside
+  }
+
+  return inside
+}
+
+function assignDistrictStackLevels(
+  models: DistrictMapModel[],
+): DistrictMapModel[] {
+  return models.map((model) => {
+    let stackLevel = 0
+
+    for (const other of models) {
+      if (other.id === model.id) continue
+      // Parent must be clearly larger.
+      if (other.extent < model.extent * 1.15) continue
+
+      const outerRing = other.lines[0]
+      if (!outerRing || outerRing.length < 4) continue
+
+      if (pointInPolygonXZ(model.center.x, model.center.z, outerRing)) {
+        stackLevel += 1
+      }
+    }
+
+    return { ...model, stackLevel }
+  })
+}
+
 function buildDistrictMapModels(regions: DashboardRegion[]): {
   models: DistrictMapModel[]
 } {
@@ -343,6 +395,7 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
         z: (minimumZ + maximumZ) / 2,
       },
       extent: Math.max(maximumX - minimumX, maximumZ - minimumZ),
+      stackLevel: 0,
       shapes: createDistrictShapes(rings, project),
       lines: rings.map((ring) =>
         ring.map((coordinate) => {
@@ -357,7 +410,7 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
   })
 
   return {
-    models,
+    models: assignDistrictStackLevels(models),
   }
 }
 
@@ -515,6 +568,8 @@ function DistrictSurface({
   onSelect: () => void
 }) {
   const topLayerRef = useRef<Group>(null)
+  const stackOffset = district.stackLevel * 0.14
+  const renderOrder = 2 + district.stackLevel * 4
 
   useFrame((_, delta) => {
     if (!topLayerRef.current) return
@@ -538,7 +593,7 @@ function DistrictSurface({
   }
 
   return (
-    <group>
+    <group position-y={stackOffset}>
       {/* Fixed underlay — stays put when selected. */}
       {district.shapes.map((shape, index) => (
         <mesh
@@ -546,6 +601,7 @@ function DistrictSurface({
           position-y={-0.3}
           rotation-x={-Math.PI / 2}
           receiveShadow
+          renderOrder={renderOrder}
         >
           <extrudeGeometry
             args={[
@@ -578,6 +634,7 @@ function DistrictSurface({
             rotation-x={-Math.PI / 2}
             castShadow
             receiveShadow
+            renderOrder={renderOrder + 1}
             onClick={(event) => {
               event.stopPropagation()
               onSelect()
@@ -611,11 +668,13 @@ function DistrictSurface({
               emissiveIntensity={isSelected ? 0.9 : 0.18}
               metalness={0.22}
               roughness={0.82}
+              depthWrite
             />
             <Edges
               threshold={45}
               color={isSelected ? '#ecfeff' : isDimmed ? '#2f5a6e' : '#9ad4e3'}
               scale={1}
+              visible={!isDimmed || isSelected}
             />
           </mesh>
         ))}
@@ -624,12 +683,13 @@ function DistrictSurface({
           <Line
             key={`${district.id}-line-${index}`}
             points={points}
-            color={isSelected ? '#ecfeff' : isDimmed ? '#3d6a82' : '#c8eef7'}
+            color={isSelected ? '#ecfeff' : '#c8eef7'}
             lineWidth={isSelected ? 2.4 : 1.4}
-            opacity={isDimmed ? 0.55 : 0.95}
+            opacity={isDimmed ? 0 : 0.95}
             transparent
-            depthTest={false}
-            renderOrder={isSelected ? 10 : 5}
+            depthTest
+            renderOrder={renderOrder + 2 + (isSelected ? 10 : 0)}
+            visible={!isDimmed}
           />
         ))}
       </group>
@@ -646,9 +706,22 @@ function DistrictMap3D({
   onSelectDistrict: (districtId: string | null) => void
   districts: DistrictMapModel[]
 }) {
+  const sortedDistricts = useMemo(
+    () =>
+      [...districts].sort((first, second) => {
+        if (first.stackLevel !== second.stackLevel) {
+          return first.stackLevel - second.stackLevel
+        }
+
+        // Larger regions first so smaller enclaves paint/hit on top.
+        return second.extent - first.extent
+      }),
+    [districts],
+  )
+
   return (
     <group position-y={-0.08} onPointerMissed={() => onSelectDistrict(null)}>
-      {districts.map((district) => (
+      {sortedDistricts.map((district) => (
         <DistrictSurface
           key={district.id}
           district={district}
