@@ -1556,7 +1556,20 @@ function HtmlOverlay() {
 
 type InfoPage = 'contacts' | 'about'
 
-const navigationItems: Array<{ page: InfoPage; label: string }> = [
+type NavigationItem =
+  | { page: InfoPage; label: string }
+  | { href: string; label: string; external?: boolean }
+
+const PROJECT_ANALYSIS_URL =
+  'https://alpha-turkistan-investor-2026-0722.chatgpt-edu-7368.chatgpt.site/'
+
+const navigationItems: NavigationItem[] = [
+  { href: '/dashboard', label: 'Районы области' },
+  {
+    href: PROJECT_ANALYSIS_URL,
+    label: 'Анализ проекта',
+    external: true,
+  },
   { page: 'contacts', label: 'Контакты' },
   { page: 'about', label: 'Кто мы' },
 ]
@@ -2978,7 +2991,9 @@ function ContactPage() {
 function getPageFromHash(): InfoPage | null {
   const page = window.location.hash.replace(/^#\/?/, '')
 
-  return navigationItems.some((item) => item.page === page)
+  return navigationItems.some(
+    (item) => 'page' in item && item.page === page,
+  )
     ? (page as InfoPage)
     : null
 }
@@ -3093,27 +3108,48 @@ function SiteNavigation() {
           aria-hidden={!isMenuOpen}
         >
           <p>Навигация</p>
-          {navigationItems.map((item, index) => (
-            <button
-              key={item.page}
-              type="button"
-              onClick={() => openPage(item.page)}
-              tabIndex={isMenuOpen ? 0 : -1}
-            >
-              <span>{String(index + 1).padStart(2, '0')}</span>
-              {item.label}
-              <strong aria-hidden="true">↗</strong>
-            </button>
-          ))}
-          <a
-            href="/login"
-            tabIndex={isMenuOpen ? 0 : -1}
-            onClick={() => setIsMenuOpen(false)}
-          >
-            <span>03</span>
-            Войти в платформу
-            <strong aria-hidden="true">→</strong>
-          </a>
+          {navigationItems.map((item, index) => {
+            const itemContent = (
+              <>
+                <span>{String(index + 1).padStart(2, '0')}</span>
+                {item.label}
+                <strong aria-hidden="true">↗</strong>
+              </>
+            )
+
+            if ('page' in item) {
+              return (
+                <button
+                  key={item.page}
+                  type="button"
+                  onClick={() => openPage(item.page)}
+                  tabIndex={isMenuOpen ? 0 : -1}
+                >
+                  {itemContent}
+                </button>
+              )
+            }
+
+            return (
+              <a
+                key={item.label}
+                href={item.href}
+                target={item.external ? '_blank' : undefined}
+                rel={item.external ? 'noreferrer' : undefined}
+                aria-disabled={item.href === '#'}
+                tabIndex={isMenuOpen ? 0 : -1}
+                onClick={(event) => {
+                  setIsMenuOpen(false)
+
+                  if (item.href === '#') {
+                    event.preventDefault()
+                  }
+                }}
+              >
+                {itemContent}
+              </a>
+            )
+          })}
         </div>
       </nav>
     </>

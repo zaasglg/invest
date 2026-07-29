@@ -1,15 +1,8 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
-import {
-    AboutSection,
-    HeroSection,
-    LandingFooter,
-    SectorsBentoGrid,
-    StatisticsSection,
-    StickyNavbar,
-    WhyTurkistanSection,
-} from '@/components/landing';
+import LandingApp from '@/components/inmap/LandingApp';
+import { dashboard } from '@/routes';
 import type { SharedData } from '@/types';
 
 export default function Welcome() {
