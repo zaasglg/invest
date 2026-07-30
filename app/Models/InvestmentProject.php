@@ -13,6 +13,7 @@ class InvestmentProject extends Model
     protected $fillable = [
         'name',
         'company_name',
+        'company_id',
         'description',
         'current_status',
         'region_id',
@@ -86,6 +87,11 @@ class InvestmentProject extends Model
     public function projectType()
     {
         return $this->belongsTo(ProjectType::class);
+    }
+
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
     }
 
     public function sezs()

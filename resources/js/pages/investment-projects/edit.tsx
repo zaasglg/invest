@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import CompanySelect from '@/components/companies/company-select';
+import type { CompanyOption } from '@/components/companies/company-select';
 import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -75,6 +77,7 @@ interface PromZone {
 interface InvestmentProject {
     id: number;
     name: string;
+    company_id: number | null;
     company_name: string | null;
     description: string | null;
     current_status: string | null;
@@ -113,6 +116,7 @@ interface InvestUser {
 
 interface Props {
     project: InvestmentProject;
+    companies: CompanyOption[];
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -127,6 +131,7 @@ interface Props {
 
 export default function Edit({
     project,
+    companies,
     regions,
     projectTypes,
     users,
@@ -143,7 +148,7 @@ export default function Edit({
 
     const { data, setData, put, processing, errors } = useForm({
         name: project.name || '',
-        company_name: project.company_name || '',
+        company_id: project.company_id?.toString() || '',
         description: project.description || '',
         current_status: project.current_status || '',
         region_id: project.region_id?.toString() || '',
@@ -171,6 +176,14 @@ export default function Edit({
         curator_ids: (project.curator_ids || []).map((id) => id.toString()),
         return_to: returnUrl || '',
     });
+
+    const selectedCompany = useMemo(
+        () =>
+            companies.find(
+                (company) => company.id.toString() === data.company_id,
+            ),
+        [companies, data.company_id],
+    );
 
     const initialRegion = regions.find((r) => r.id === project.region_id);
     const initialOblastId = initialRegion
@@ -381,8 +394,8 @@ export default function Edit({
         } else if (isNaN(Number(data.total_investment))) {
             errors.total_investment = 'Жалпы инвестиция сан болуы керек';
         }
-        if (!data.company_name.trim()) {
-            errors.company_name = 'Компания атауын енгізіңіз';
+        if (!data.company_id) {
+            errors.company_id = 'Компанияны таңдаңыз';
         }
 
         setValidationErrors(errors);
@@ -530,46 +543,23 @@ export default function Edit({
                                         )}
                                     </div>
 
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="company_name"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Компания{' '}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </Label>
-                                        <Input
-                                            id="company_name"
-                                            value={data.company_name}
-                                            onChange={(e) => {
-                                                setData(
-                                                    'company_name',
-                                                    e.target.value,
-                                                );
-                                                if (
-                                                    validationErrors.company_name
-                                                ) {
-                                                    setValidationErrors(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            company_name: '',
-                                                        }),
-                                                    );
-                                                }
-                                            }}
-                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.company_name ? 'border-red-500' : ''}`}
-                                            placeholder="Мысалы: Green Energy Corp"
-                                        />
-                                        {(errors.company_name ||
-                                            validationErrors.company_name) && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.company_name ||
-                                                    validationErrors.company_name}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <CompanySelect
+                                        companies={companies}
+                                        value={data.company_id}
+                                        onValueChange={(value) => {
+                                            setData('company_id', value);
+                                            if (validationErrors.company_id) {
+                                                setValidationErrors((prev) => ({
+                                                    ...prev,
+                                                    company_id: '',
+                                                }));
+                                            }
+                                        }}
+                                        error={
+                                            errors.company_id ||
+                                            validationErrors.company_id
+                                        }
+                                    />
                                 </div>
 
                                 {isSuperAdmin && investUsers.length > 0 && (
@@ -1470,7 +1460,9 @@ export default function Edit({
                                                 Компания:
                                             </span>
                                             <p className="font-medium">
-                                                {data.company_name || '—'}
+                                                {selectedCompany?.display_name ||
+                                                    project.company_name ||
+                                                    '—'}
                                             </p>
                                         </div>
                                         <div>

@@ -14,6 +14,9 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::resource('companies', \App\Http\Controllers\CompanyController::class)
+    ->middleware(['auth', 'role.access']);
+
 Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, 'reorder'])
     ->middleware(['auth', 'role.access'])
     ->name('regions.reorder');

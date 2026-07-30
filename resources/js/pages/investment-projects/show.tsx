@@ -77,10 +77,22 @@ interface SectorEntity {
     name: string;
 }
 
+interface CompanySummary {
+    id: number;
+    display_name: string;
+    bin: string | null;
+    activity_type: string | null;
+    director_full_name: string | null;
+    phone: string | null;
+    region?: { id: number; name: string } | null;
+}
+
 interface InvestmentProject {
     id: number;
     name: string;
+    company_id?: number | null;
     company_name?: string;
+    company?: CompanySummary | null;
     description?: string;
     current_status?: string;
     region_id: number;
@@ -978,13 +990,68 @@ export default function Show({
                                 </div>
                             </CardContent>
 
-                            {/* Company Name */}
+                            {/* Company */}
                             <div className="border-t border-gray-200 px-6 py-5">
-                                <h2 className="flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                    <Building2 className="h-5 w-5 text-gray-500" />
-                                    {project.company_name ||
-                                        'Компания көрсетілмеген'}
-                                </h2>
+                                <div className="flex items-start gap-3">
+                                    <div className="rounded-lg bg-[#fff8e7] p-2.5">
+                                        <Building2 className="h-5 w-5 text-[#a9842f]" />
+                                    </div>
+                                    <div className="min-w-0">
+                                        <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                            Жоба бастамашысы
+                                        </p>
+                                        <h2 className="mt-1 text-lg font-semibold text-[#0f1b3d]">
+                                            {project.company?.display_name ||
+                                                project.company_name ||
+                                                'Компания көрсетілмеген'}
+                                        </h2>
+                                        {project.company && (
+                                            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
+                                                {project.company.bin && (
+                                                    <span>
+                                                        БСН/БИН:{' '}
+                                                        {project.company.bin}
+                                                    </span>
+                                                )}
+                                                {project.company.region && (
+                                                    <span>
+                                                        Өңір:{' '}
+                                                        {
+                                                            project.company
+                                                                .region.name
+                                                        }
+                                                    </span>
+                                                )}
+                                                {project.company
+                                                    .activity_type && (
+                                                    <span>
+                                                        Қызметі:{' '}
+                                                        {
+                                                            project.company
+                                                                .activity_type
+                                                        }
+                                                    </span>
+                                                )}
+                                                {project.company
+                                                    .director_full_name && (
+                                                    <span>
+                                                        Басшысы:{' '}
+                                                        {
+                                                            project.company
+                                                                .director_full_name
+                                                        }
+                                                    </span>
+                                                )}
+                                                {project.company.phone && (
+                                                    <span>
+                                                        Телефон:{' '}
+                                                        {project.company.phone}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Инфрақұрылымға қажеттілік */}
