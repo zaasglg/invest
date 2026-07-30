@@ -138,9 +138,22 @@ class CompletionWorkflowService
                     count($photos)
                 );
 
-                KpiLog::log(
-                    $lockedTask->project_id,
-                    'Тапсырма орындалды: "'.$lockedTask->title.'"'
+                KpiLog::activity(
+                    projectId: $lockedTask->project_id,
+                    event: 'completion.submitted',
+                    category: 'completion',
+                    action: 'Тапсырма орындалып, тексеруге жіберілді: "'
+                        .$lockedTask->title.'"',
+                    subject: $completion,
+                    properties: [
+                        'details' => [
+                            'Тапсырма' => $lockedTask->title,
+                            'Пікір' => $comment,
+                            'Құжаттар саны' => count($documents),
+                            'Фотолар саны' => count($photos),
+                        ],
+                    ],
+                    actor: $submitter
                 );
 
                 return $completion;
@@ -302,9 +315,24 @@ class CompletionWorkflowService
                 $statusLabel = $status === 'approved'
                     ? 'қабылданды'
                     : 'қабылданбады';
-                KpiLog::log(
-                    $project->id,
-                    'Тапсырма '.$statusLabel.': "'.$lockedTask->title.'"'
+                KpiLog::activity(
+                    projectId: $project->id,
+                    event: $status === 'approved'
+                        ? 'completion.approved'
+                        : 'completion.rejected',
+                    category: 'completion',
+                    action: 'Тапсырма нәтижесі '.$statusLabel.': "'
+                        .$lockedTask->title.'"',
+                    subject: $lockedCompletion,
+                    properties: [
+                        'project_name' => $project->name,
+                        'details' => [
+                            'Тапсырма' => $lockedTask->title,
+                            'Шешім' => $status,
+                            'Тексеруші пікірі' => $comment,
+                        ],
+                    ],
+                    actor: $reviewer
                 );
             });
         } catch (Throwable $exception) {

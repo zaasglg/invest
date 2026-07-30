@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectChatAttachment;
 use App\Services\ProjectChatService;
 use Illuminate\Http\Request;
@@ -171,6 +172,31 @@ class ProjectChatController extends Controller
                 ]);
             }
 
+            KpiLog::activity(
+                projectId: $investmentProject->id,
+                event: 'chat.message_sent',
+                category: 'chat',
+                action: 'Жоба чатына хабарлама жіберілді',
+                subject: $message,
+                properties: [
+                    'project_name' => $investmentProject->name,
+                    'details' => [
+                        'Хабарлама' => Str::limit(
+                            $message->message,
+                            160
+                        ),
+                        'Тіркемелер саны' => count($files),
+                        'Тіркемелер' => collect($files)
+                            ->map(
+                                fn ($file) => $file->getClientOriginalName()
+                            )
+                            ->values()
+                            ->all(),
+                    ],
+                ],
+                actor: $request->user()
+            );
+
             DB::commit();
         } catch (Throwable $exception) {
             DB::rollBack();
@@ -195,6 +221,24 @@ class ProjectChatController extends Controller
         if (! Storage::disk('local')->exists($attachment->file_path)) {
             abort(404, 'Файл табылмады.');
         }
+
+        $project = $attachment->message->project;
+        KpiLog::activity(
+            projectId: $project->id,
+            event: 'download.chat_attachment',
+            category: 'download',
+            action: 'Чат тіркемесі жүктелді: "'
+                .$attachment->original_name.'"',
+            subject: $attachment,
+            properties: [
+                'project_name' => $project->name,
+                'details' => [
+                    'Файл атауы' => $attachment->original_name,
+                    'Файл көлемі' => $attachment->size,
+                ],
+            ],
+            actor: $request->user()
+        );
 
         return Storage::disk('local')->download(
             $attachment->file_path,

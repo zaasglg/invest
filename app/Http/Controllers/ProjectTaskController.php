@@ -105,7 +105,23 @@ class ProjectTaskController extends Controller
             }
         }
 
-        KpiLog::log($investmentProject->id, 'Кезең қосылды: "'.$task->title.'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'task.created',
+            category: 'task',
+            action: 'Кезең қосылды: "'.$task->title.'"',
+            subject: $task,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Жауапты' => $assignee->full_name,
+                    'Басталу күні' => $task->start_date,
+                    'Аяқталу күні' => $task->due_date,
+                    'Модерация статусы' => $task->approval_status,
+                    'Сипаттама' => $task->description,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Кезең қосылды.');
     }
@@ -195,9 +211,21 @@ class ProjectTaskController extends Controller
             }
         }
 
-        KpiLog::log(
-            $investmentProject->id,
-            'Тапсырма '.$statusKk.': "'.$task->title.'"'
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: $decision === 'approved'
+                ? 'task.approved'
+                : 'task.rejected',
+            category: 'task',
+            action: 'Тапсырма '.$statusKk.': "'.$task->title.'"',
+            subject: $task,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Шешім' => $decision,
+                    'Пікір' => $request->input('approval_comment'),
+                ],
+            ]
         );
 
         return redirect()->back()->with('success', 'Тапсырма '.$statusKk.'.');
@@ -230,6 +258,15 @@ class ProjectTaskController extends Controller
 
         $oldAssignedTo = $task->assigned_to;
         $wasRejected = $task->approval_status === 'rejected';
+        $trackedFields = [
+            'title',
+            'description',
+            'assigned_to',
+            'start_date',
+            'due_date',
+            'approval_status',
+        ];
+        $before = $task->only($trackedFields);
 
         // Determine if this update is a content edit (not just a status toggle).
         // Status-only updates (e.g. mark as done) must not re-trigger moderation.
@@ -309,15 +346,40 @@ class ProjectTaskController extends Controller
                 ]);
             }
 
-            KpiLog::log(
-                $investmentProject->id,
-                'Тапсырма қайта расталуға жіберілді: "'.$task->title.'"'
+            KpiLog::activity(
+                projectId: $investmentProject->id,
+                event: 'task.resubmitted',
+                category: 'task',
+                action: 'Тапсырма қайта расталуға жіберілді: "'.$task->title.'"',
+                subject: $task,
+                properties: [
+                    'project_name' => $investmentProject->name,
+                    'changes' => KpiLog::changes(
+                        $before,
+                        $task->only($trackedFields),
+                        $this->activityLabels()
+                    ),
+                ]
             );
 
             return redirect()->back()->with('success', 'Тапсырма қайта расталуға жіберілді.');
         }
 
-        KpiLog::log($investmentProject->id, 'Кезең жаңартылды: "'.$task->title.'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'task.updated',
+            category: 'task',
+            action: 'Кезең жаңартылды: "'.$task->title.'"',
+            subject: $task,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    $before,
+                    $task->only($trackedFields),
+                    $this->activityLabels()
+                ),
+            ]
+        );
 
         return redirect()->back()->with('success', 'Кезең жаңартылды.');
     }
@@ -346,6 +408,16 @@ class ProjectTaskController extends Controller
                 'user_id' => Auth::id(),
                 'type' => 'viewed',
             ]);
+            KpiLog::activity(
+                projectId: $investmentProject->id,
+                event: 'task.viewed',
+                category: 'task',
+                action: 'Орындаушы тапсырманы көрді: "'.$task->title.'"',
+                subject: $task,
+                properties: [
+                    'project_name' => $investmentProject->name,
+                ]
+            );
         }
 
         return redirect()->back();
@@ -359,11 +431,27 @@ class ProjectTaskController extends Controller
 
         $this->authorizeTaskManagement($investmentProject);
 
-        KpiLog::log($investmentProject->id, 'Кезең жойылды: "'.$task->title.'"');
-
         $assignedTo = $task->assigned_to;
 
         $task->delete();
+
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'task.deleted',
+            category: 'task',
+            action: 'Кезең жойылды: "'.$task->title.'"',
+            subject: $task,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Жауапты ID' => $assignedTo,
+                    'Басталу күні' => $task->start_date,
+                    'Аяқталу күні' => $task->due_date,
+                    'Статус' => $task->status,
+                    'Сипаттама' => $task->description,
+                ],
+            ]
+        );
 
         if ($assignedTo) {
             $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
@@ -376,6 +464,21 @@ class ProjectTaskController extends Controller
         }
 
         return redirect()->back()->with('success', 'Кезең жойылды.');
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function activityLabels(): array
+    {
+        return [
+            'title' => 'Тақырып',
+            'description' => 'Сипаттама',
+            'assigned_to' => 'Жауапты пайдаланушы ID',
+            'start_date' => 'Басталу күні',
+            'due_date' => 'Аяқталу күні',
+            'approval_status' => 'Модерация статусы',
+        ];
     }
 
     private function validatedAssignee(
