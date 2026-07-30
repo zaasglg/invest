@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Company;
 use App\Models\InvestmentProject;
 use App\Models\ProjectType;
 use App\Models\Region;
@@ -296,10 +297,27 @@ class InvestmentProjectSeeder extends Seeder
             // Get random project type or use first
             $projectType = $projectTypes->first() ? $projectTypes->skip($index % $projectTypes->count())->first() : null;
 
+            $company = Company::updateOrCreate(
+                ['name' => $data['company_name']],
+                [
+                    'legal_form' => 'too',
+                    'bin' => sprintf('99000000%04d', $index + 1),
+                    'registration_date' => now()->subYears(3)->toDateString(),
+                    'region_id' => $region->id,
+                    'activity_type' => $data['sector'] ?? 'Инвестициялық жоба',
+                    'director_full_name' => 'Демо компания басшысы',
+                    'phone' => '+7 700 000 00 00',
+                    'legal_address' => $region->name,
+                    'status' => 'active',
+                    'created_by' => $creator->id,
+                ]
+            );
+
             InvestmentProject::updateOrCreate(
                 ['name' => $data['name']],
                 [
-                    'company_name' => $data['company_name'],
+                    'company_id' => $company->id,
+                    'company_name' => $company->display_name,
                     'region_id' => $region->id,
                     'project_type_id' => $projectType ? $projectType->id : null,
                     'total_investment' => $data['total_investment'],

@@ -9,6 +9,8 @@ import {
 } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
+import CompanySelect from '@/components/companies/company-select';
+import type { CompanyOption } from '@/components/companies/company-select';
 import LocationPicker from '@/components/location-picker';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -77,6 +79,7 @@ interface InvestUser {
 }
 
 interface Props {
+    companies: CompanyOption[];
     regions: Region[];
     projectTypes: ProjectType[];
     users: User[];
@@ -92,6 +95,7 @@ interface Props {
 }
 
 export default function Create({
+    companies,
     regions,
     projectTypes,
     users,
@@ -118,7 +122,7 @@ export default function Create({
 
     const { data, setData, post, processing, errors } = useForm({
         name: '',
-        company_name: '',
+        company_id: '',
         description: '',
         current_status: '',
         region_id: userRegionId ? userRegionId.toString() : '',
@@ -140,6 +144,14 @@ export default function Create({
         } as Record<string, { needed: boolean; capacity: string }>,
         curator_ids: [] as string[],
     });
+
+    const selectedCompany = useMemo(
+        () =>
+            companies.find(
+                (company) => company.id.toString() === data.company_id,
+            ),
+        [companies, data.company_id],
+    );
 
     const [selectedOblastId, setSelectedOblastId] =
         useState<string>(userOblastId);
@@ -343,8 +355,8 @@ export default function Create({
         } else if (isNaN(Number(data.total_investment))) {
             errors.total_investment = 'Жалпы инвестиция сан болуы керек';
         }
-        if (!data.company_name.trim()) {
-            errors.company_name = 'Компания атауын енгізіңіз';
+        if (!data.company_id) {
+            errors.company_id = 'Компанияны таңдаңыз';
         }
 
         setValidationErrors(errors);
@@ -492,46 +504,23 @@ export default function Create({
                                         )}
                                     </div>
 
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="company_name"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Компания{' '}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </Label>
-                                        <Input
-                                            id="company_name"
-                                            value={data.company_name}
-                                            onChange={(e) => {
-                                                setData(
-                                                    'company_name',
-                                                    e.target.value,
-                                                );
-                                                if (
-                                                    validationErrors.company_name
-                                                ) {
-                                                    setValidationErrors(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            company_name: '',
-                                                        }),
-                                                    );
-                                                }
-                                            }}
-                                            className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.company_name ? 'border-red-500' : ''}`}
-                                            placeholder="Мысалы: Green Energy Corp"
-                                        />
-                                        {(errors.company_name ||
-                                            validationErrors.company_name) && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.company_name ||
-                                                    validationErrors.company_name}
-                                            </span>
-                                        )}
-                                    </div>
+                                    <CompanySelect
+                                        companies={companies}
+                                        value={data.company_id}
+                                        onValueChange={(value) => {
+                                            setData('company_id', value);
+                                            if (validationErrors.company_id) {
+                                                setValidationErrors((prev) => ({
+                                                    ...prev,
+                                                    company_id: '',
+                                                }));
+                                            }
+                                        }}
+                                        error={
+                                            errors.company_id ||
+                                            validationErrors.company_id
+                                        }
+                                    />
                                 </div>
 
                                 {isSuperAdmin && investUsers.length > 0 && (
@@ -1376,7 +1365,8 @@ export default function Create({
                                                 Компания:
                                             </span>
                                             <p className="font-medium">
-                                                {data.company_name || '—'}
+                                                {selectedCompany?.display_name ||
+                                                    '—'}
                                             </p>
                                         </div>
                                         <div>

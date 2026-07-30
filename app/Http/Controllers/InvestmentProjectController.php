@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Company;
 use App\Models\IndustrialZone;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
@@ -16,6 +17,7 @@ use App\Services\PrivateFileService;
 use App\Services\SortOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PhpOffice\PhpPresentation\IOFactory;
 use PhpOffice\PhpPresentation\PhpPresentation;
@@ -53,6 +55,7 @@ class InvestmentProjectController extends Controller
         ]);
 
         $projectsQuery = InvestmentProject::active()->with([
+            'company',
             'region',
             'projectType',
             'creator',
@@ -72,7 +75,12 @@ class InvestmentProjectController extends Controller
             $search = $filters['search'];
             $projectsQuery->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('company_name', 'like', "%{$search}%");
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('bin', 'like', "%{$search}%");
+                    });
             });
         }
 
@@ -391,6 +399,11 @@ class InvestmentProjectController extends Controller
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
+            'companies' => Company::query()
+                ->active()
+                ->profileComplete()
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -402,7 +415,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'required|string|max:255',
+            'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
@@ -471,7 +484,22 @@ class InvestmentProjectController extends Controller
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
+            'company_id.required' => 'Компанияны таңдаңыз.',
+            'company_id.exists' => 'Таңдалған компания табылмады.',
         ]);
+
+        $company = Company::query()
+            ->active()
+            ->profileComplete()
+            ->find($validated['company_id']);
+
+        if (! $company) {
+            throw ValidationException::withMessages([
+                'company_id' => 'Компания белсенді болуы және карточкасы толық толтырылуы керек.',
+            ]);
+        }
+
+        $validated['company_name'] = $company->display_name;
 
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
         $curatorIds = $isSuperAdmin ? ($validated['curator_ids'] ?? []) : [];
@@ -546,6 +574,7 @@ class InvestmentProjectController extends Controller
         $currentRole = $currentUser?->roleModel?->name;
 
         $project = InvestmentProject::with([
+            'company.region:id,name',
             'region',
             'projectType',
             'creator',
@@ -631,7 +660,9 @@ class InvestmentProjectController extends Controller
             $project = [
                 'id' => (int) $id,
                 'name' => 'Демо жоба '.$id,
+                'company_id' => null,
                 'company_name' => 'Demo Company Ltd.',
+                'company' => null,
                 'description' => 'Бұл дерекқорда жазба табылмағандықтан автоматты түрде жасалған демонстрациялық жоба. Мұнда инвестициялық жобаның толық сипаттамасы, мақсаттары, міндеттері және күтілетін нәтижелері болады.',
                 'region' => ['name' => 'Түркістан облысы'],
                 'project_type' => ['name' => 'Өндіріс'],
@@ -716,7 +747,13 @@ class InvestmentProjectController extends Controller
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
-        $investmentProject->load(['sezs', 'industrialZones', 'promZones', 'curators']);
+        $investmentProject->load([
+            'company',
+            'sezs',
+            'industrialZones',
+            'promZones',
+            'curators',
+        ]);
 
         $regionsQuery = Region::query();
         $sezQuery = Sez::select('id', 'name', 'region_id', 'location');
@@ -792,6 +829,22 @@ class InvestmentProjectController extends Controller
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
+            'companies' => Company::query()
+                ->where(function ($query) use ($investmentProject) {
+                    $query
+                        ->where(function ($availableQuery) {
+                            $availableQuery
+                                ->active()
+                                ->profileComplete();
+                        })
+                        ->when(
+                            $investmentProject->company_id,
+                            fn ($companyQuery, $companyId) => $companyQuery
+                                ->orWhere('companies.id', $companyId)
+                        );
+                })
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -959,7 +1012,7 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_name' => 'required|string|max:255',
+            'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
@@ -1029,7 +1082,24 @@ class InvestmentProjectController extends Controller
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
+            'company_id.required' => 'Компанияны таңдаңыз.',
+            'company_id.exists' => 'Таңдалған компания табылмады.',
         ]);
+
+        $company = Company::find($validated['company_id']);
+        $keepsCurrentCompany = (int) $investmentProject->company_id
+            === (int) $company?->id;
+
+        if (! $company
+            || (! $keepsCurrentCompany
+                && ($company->status !== 'active'
+                    || ! $company->is_profile_complete))) {
+            throw ValidationException::withMessages([
+                'company_id' => 'Компания белсенді болуы және карточкасы толық толтырылуы керек.',
+            ]);
+        }
+
+        $validated['company_name'] = $company->display_name;
 
         $activityBefore = $this->projectActivitySnapshot(
             $investmentProject
@@ -1944,6 +2014,7 @@ class InvestmentProjectController extends Controller
         $search = $request->input('search');
 
         $projectsQuery = InvestmentProject::archived()->with([
+            'company',
             'region',
             'projectType',
             'creator',
@@ -1957,7 +2028,12 @@ class InvestmentProjectController extends Controller
         if ($search) {
             $projectsQuery->where(function ($query) use ($search) {
                 $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('company_name', 'like', "%{$search}%");
+                    ->orWhere('company_name', 'like', "%{$search}%")
+                    ->orWhereHas('company', function ($companyQuery) use ($search) {
+                        $companyQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('bin', 'like', "%{$search}%");
+                    });
             });
         }
 

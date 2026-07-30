@@ -1,6 +1,7 @@
 import {
     Award,
     Briefcase,
+    Building2,
     Factory,
     Folder,
     LayoutDashboard,
@@ -65,6 +66,11 @@ export const projectNavItems: NavItem[] = [
         icon: Briefcase,
     },
     {
+        title: 'Компаниялар',
+        href: '/companies',
+        icon: Building2,
+    },
+    {
         title: 'Жоба түрлері',
         href: projectTypes.index.url(),
         icon: Tags,
@@ -109,12 +115,14 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     invest: new Set(['Аймақтар', 'Жоба түрлері', 'Рөлдер', 'Пайдаланушылар']),
     ispolnitel: new Set([
         'Аймақтар',
+        'Компаниялар',
         'Жоба түрлері',
         'Рөлдер',
         'Пайдаланушылар',
     ]),
     moderator: new Set([
         'Аймақтар',
+        'Компаниялар',
         'Жоба түрлері',
         'Рөлдер',
         'Пайдаланушылар',
@@ -125,6 +133,7 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
         'Пром зона',
         'Жер қойнауын пайдалану',
         'Аймақтар',
+        'Компаниялар',
         'Жоба түрлері',
         'Рейтинг',
         'Рөлдер',

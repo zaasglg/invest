@@ -139,6 +139,25 @@ class CheckRoleAccess
             }
         }
 
+        if ($routeName && str_starts_with($routeName, 'companies.')) {
+            $companyReadRoles = [
+                'superadmin',
+                'invest',
+                'prokuror',
+                'akim',
+                'zamakim',
+            ];
+
+            if (! in_array($roleName, $companyReadRoles, true)) {
+                abort(403, 'Сіздің компаниялар бөліміне қол жеткізуіңіз жоқ.');
+            }
+
+            if ($this->isWriteAction($request)
+                && ! in_array($roleName, ['superadmin', 'invest'], true)) {
+                abort(403, 'Сізде компания мәліметтерін өзгерту құқығы жоқ.');
+            }
+        }
+
         // Superadmin manages regions; prokuror may view them.
         if ($routeName && str_starts_with($routeName, 'regions.')) {
             $allowedRegionsRoutes = ['regions.show', 'regions.projects.reorder'];
