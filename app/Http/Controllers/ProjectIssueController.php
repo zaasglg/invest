@@ -43,12 +43,27 @@ class ProjectIssueController extends Controller
             'status' => 'required|in:open,in_progress,resolved',
         ]);
 
-        $investmentProject->issues()->create([
+        $issue = $investmentProject->issues()->create([
             ...$validated,
             'created_by' => $user?->id,
         ]);
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе қосылды: "'.$validated['title'].'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'issue.created',
+            category: 'issue',
+            action: 'Проблемалық мәселе қосылды: "'.$validated['title'].'"',
+            subject: $issue,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Санат' => $issue->category,
+                    'Маңыздылық' => $issue->severity,
+                    'Статус' => $issue->status,
+                    'Сипаттама' => $issue->description,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
     }
@@ -77,9 +92,37 @@ class ProjectIssueController extends Controller
             $validated['created_by'] = $user?->id;
         }
 
+        $trackedFields = [
+            'title',
+            'description',
+            'category',
+            'severity',
+            'status',
+        ];
+        $before = $issue->only($trackedFields);
         $issue->update($validated);
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жаңартылды: "'.$issue->title.'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'issue.updated',
+            category: 'issue',
+            action: 'Проблемалық мәселе жаңартылды: "'.$issue->title.'"',
+            subject: $issue,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    $before,
+                    $issue->only($trackedFields),
+                    [
+                        'title' => 'Тақырып',
+                        'description' => 'Сипаттама',
+                        'category' => 'Санат',
+                        'severity' => 'Маңыздылық',
+                        'status' => 'Статус',
+                    ]
+                ),
+            ]
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
     }
@@ -97,9 +140,24 @@ class ProjectIssueController extends Controller
             abort(403, 'Сізге проблемалық мәселені жоюға рұқсат жоқ.');
         }
 
-        KpiLog::log($investmentProject->id, 'Проблемалық мәселе жойылды: "'.$issue->title.'"');
-
         $issue->delete();
+
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'issue.deleted',
+            category: 'issue',
+            action: 'Проблемалық мәселе жойылды: "'.$issue->title.'"',
+            subject: $issue,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Санат' => $issue->category,
+                    'Маңыздылық' => $issue->severity,
+                    'Статус' => $issue->status,
+                    'Сипаттама' => $issue->description,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }

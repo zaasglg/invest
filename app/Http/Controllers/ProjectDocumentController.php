@@ -58,6 +58,21 @@ class ProjectDocumentController extends Controller
             abort(403, 'Сіздің бұл жобаның құжаттарына қол жеткізуіңіз жоқ.');
         }
 
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'download.document',
+            category: 'download',
+            action: 'Құжат жүктелді: "'.$document->name.'"',
+            subject: $document,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Құжат атауы' => $document->name,
+                    'Құжат түрі' => $document->type,
+                ],
+            ]
+        );
+
         return $this->files->download(
             $document->file_path,
             $this->files->downloadName($document->name, $document->file_path)
@@ -88,6 +103,8 @@ class ProjectDocumentController extends Controller
             $isCompleted = false;
         }
 
+        $document = null;
+
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store(
@@ -95,7 +112,7 @@ class ProjectDocumentController extends Controller
                 'local'
             );
 
-            ProjectDocument::create([
+            $document = ProjectDocument::create([
                 'project_id' => $investmentProject->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
@@ -104,7 +121,21 @@ class ProjectDocumentController extends Controller
             ]);
         }
 
-        KpiLog::log($investmentProject->id, 'Құжат жүктелді: "'.$validated['name'].'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'document.uploaded',
+            category: 'document',
+            action: 'Құжат қосылды: "'.$validated['name'].'"',
+            subject: $document,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Құжат атауы' => $validated['name'],
+                    'Құжат түрі' => $document?->type,
+                    'Аяқталған құжат' => $isCompleted,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Құжат жүктелді.');
     }
@@ -126,7 +157,21 @@ class ProjectDocumentController extends Controller
 
         $document->delete();
 
-        KpiLog::log($investmentProject->id, 'Құжат жойылды: "'.$document->name.'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'document.deleted',
+            category: 'document',
+            action: 'Құжат жойылды: "'.$document->name.'"',
+            subject: $document,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Құжат атауы' => $document->name,
+                    'Құжат түрі' => $document->type,
+                    'Аяқталған құжат' => $document->is_completed,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Құжат жойылды.');
     }

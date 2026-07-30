@@ -80,6 +80,22 @@ class ProjectPhotoController extends Controller
             abort(404, 'Файл табылмады.');
         }
 
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'download.photo',
+            category: 'download',
+            action: 'Жоба фотосы жүктелді',
+            subject: $photo,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Фото түрі' => $photo->photo_type,
+                    'Галерея күні' => $photo->gallery_date,
+                    'Сипаттама' => $photo->description,
+                ],
+            ]
+        );
+
         return Storage::disk('public')->download($photo->file_path);
     }
 
@@ -106,19 +122,37 @@ class ProjectPhotoController extends Controller
                 : now()->toDateString();
         }
 
+        $createdPhotoIds = [];
+
         foreach ($validated['photos'] as $photo) {
             $path = $photo->store('project-photos/'.$investmentProject->id, 'public');
 
-            ProjectPhoto::create([
+            $createdPhoto = ProjectPhoto::create([
                 'project_id' => $investmentProject->id,
                 'file_path' => $path,
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
                 'description' => $validated['description'] ?? null,
             ]);
+            $createdPhotoIds[] = $createdPhoto->id;
         }
 
-        KpiLog::log($investmentProject->id, 'Фотосуреттер жүктелді ('.count($validated['photos']).' фото)');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'photo.uploaded',
+            category: 'photo',
+            action: 'Фотосуреттер қосылды ('.count($createdPhotoIds).' фото)',
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Фото саны' => count($createdPhotoIds),
+                    'Фото түрі' => $photoType,
+                    'Галерея күні' => $galleryDate,
+                    'Сипаттама' => $validated['description'] ?? null,
+                ],
+                'subject_ids' => $createdPhotoIds,
+            ]
+        );
 
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
@@ -138,6 +172,7 @@ class ProjectPhotoController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
+        $before = $photo->only(['gallery_date', 'description']);
         $payload = [];
 
         if ($request->exists('description')) {
@@ -156,7 +191,24 @@ class ProjectPhotoController extends Controller
             $photo->update($payload);
         }
 
-        KpiLog::log($investmentProject->id, 'Фото мәліметтері жаңартылды');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'photo.updated',
+            category: 'photo',
+            action: 'Фото мәліметтері жаңартылды',
+            subject: $photo,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    $before,
+                    $photo->only(['gallery_date', 'description']),
+                    [
+                        'gallery_date' => 'Галерея күні',
+                        'description' => 'Сипаттама',
+                    ]
+                ),
+            ]
+        );
 
         return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
@@ -184,7 +236,21 @@ class ProjectPhotoController extends Controller
         // Delete photo record
         $photoModel->delete();
 
-        KpiLog::log($investmentProject->id, 'Фото жойылды');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'photo.deleted',
+            category: 'photo',
+            action: 'Фото жойылды',
+            subject: $photoModel,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Фото түрі' => $photoModel->photo_type,
+                    'Галерея күні' => $photoModel->gallery_date,
+                    'Сипаттама' => $photoModel->description,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Фото жойылды.');
     }

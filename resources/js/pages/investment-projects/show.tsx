@@ -1877,7 +1877,7 @@ export default function Show({
                                             className="w-full justify-start"
                                         >
                                             <ScrollText className="mr-2 h-4 w-4" />
-                                            Логирование
+                                            Әрекеттер тарихы
                                         </Button>
                                     </Link>
                                 )}

@@ -214,6 +214,7 @@ class InvestmentProjectController extends Controller
         $perPage = 15;
 
         $targetIndex = ($targetPage - 1) * $perPage;
+        $previousSortOrder = $investmentProject->sort_order;
 
         $projectsQuery = InvestmentProject::active()
             ->where('id', '!=', $investmentProject->id);
@@ -235,6 +236,26 @@ class InvestmentProjectController extends Controller
             [(int) $investmentProject->id]
         );
         $this->sortOrder->update(InvestmentProject::class, $projectIds, 1);
+
+        $investmentProject->refresh();
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.position_changed',
+            category: 'project',
+            action: 'Жобаның тізімдегі орны ауыстырылды',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    ['sort_order' => $previousSortOrder],
+                    ['sort_order' => $investmentProject->sort_order],
+                    ['sort_order' => 'Тізімдегі орны']
+                ),
+                'details' => [
+                    'Мақсатты бет' => $targetPage,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Жобаның орны ауыстырылды.');
     }
@@ -265,12 +286,48 @@ class InvestmentProjectController extends Controller
         $page = $validated['page'] ?? 1;
         $perPage = 15;
         $offset = ($page - 1) * $perPage;
+        $previousSortOrders = InvestmentProject::query()
+            ->whereIn('id', $projectIds)
+            ->pluck('sort_order', 'id');
 
         $this->sortOrder->update(
             InvestmentProject::class,
             array_map('intval', $projectIds),
             $offset
         );
+
+        InvestmentProject::query()
+            ->whereIn('id', $projectIds)
+            ->get()
+            ->each(function (InvestmentProject $project) use (
+                $previousSortOrders,
+                $page
+            ): void {
+                $previousSortOrder = $previousSortOrders->get($project->id);
+
+                if ((int) $previousSortOrder === (int) $project->sort_order) {
+                    return;
+                }
+
+                KpiLog::activity(
+                    projectId: $project->id,
+                    event: 'project.position_changed',
+                    category: 'project',
+                    action: 'Жобаның тізімдегі реті өзгертілді',
+                    subject: $project,
+                    properties: [
+                        'project_name' => $project->name,
+                        'changes' => KpiLog::changes(
+                            ['sort_order' => $previousSortOrder],
+                            ['sort_order' => $project->sort_order],
+                            ['sort_order' => 'Тізімдегі орны']
+                        ),
+                        'details' => [
+                            'Бет' => $page,
+                        ],
+                    ]
+                );
+            });
 
         return response()->noContent();
     }
@@ -464,7 +521,21 @@ class InvestmentProjectController extends Controller
         $project->industrialZones()->sync($izIds);
         $project->promZones()->sync($promZoneIds);
 
-        KpiLog::log($project->id, 'Жаңа жоба құрылды: "'.$project->name.'"');
+        KpiLog::activity(
+            projectId: $project->id,
+            event: 'project.created',
+            category: 'project',
+            action: 'Жаңа жоба құрылды: "'.$project->name.'"',
+            subject: $project,
+            properties: [
+                'project_name' => $project->name,
+                'details' => [
+                    'Компания' => $project->company_name,
+                    'Инвестиция сомасы' => $project->total_investment,
+                    'Жоба статусы' => $project->status,
+                ],
+            ]
+        );
 
         return redirect()->route('investment-projects.index')->with('success', 'Жоба құрылды.');
     }
@@ -730,29 +801,151 @@ class InvestmentProjectController extends Controller
             'current_status' => 'nullable|string',
         ]);
 
+        $previousStatus = $investmentProject->current_status;
         $investmentProject->update(['current_status' => $validated['current_status']]);
 
-        KpiLog::log($investmentProject->id, 'Ағымдағы жағдайы жаңартылды');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.status_updated',
+            category: 'project',
+            action: 'Жобаның ағымдағы жағдайы жаңартылды',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    ['current_status' => $previousStatus],
+                    ['current_status' => $investmentProject->current_status],
+                    ['current_status' => 'Ағымдағы жағдай']
+                ),
+            ]
+        );
 
         return redirect()->back()->with('success', 'Ағымдағы жағдайы жаңартылды.');
     }
 
-    public function logs(InvestmentProject $investmentProject)
-    {
+    public function logs(
+        Request $request,
+        InvestmentProject $investmentProject
+    ) {
         $user = request()->user();
 
         if (! in_array($user?->roleModel?->name, ['superadmin', 'prokuror'], true)) {
             abort(403);
         }
 
-        $logs = KpiLog::where('project_id', $investmentProject->id)
-            ->with('user:id,full_name')
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:100',
+            'category' => 'nullable|in:project,task,completion,document,photo,issue,chat,download',
+            'user_id' => 'nullable|integer|exists:users,id',
+            'date_from' => 'nullable|date',
+            'date_to' => 'nullable|date|after_or_equal:date_from',
+        ]);
+
+        $baseQuery = KpiLog::query()
+            ->where('project_id', $investmentProject->id);
+
+        $logs = (clone $baseQuery)
+            ->with([
+                'user:id,full_name,role_id',
+                'user.roleModel:id,name,display_name',
+            ])
+            ->when(
+                $validated['search'] ?? null,
+                fn ($query, $search) => $query->where(
+                    function ($searchQuery) use ($search): void {
+                        $searchQuery
+                            ->whereLike(
+                                'action',
+                                '%'.$search.'%',
+                                caseSensitive: false
+                            )
+                            ->orWhereLike(
+                                'event',
+                                '%'.$search.'%',
+                                caseSensitive: false
+                            )
+                            ->orWhereHas(
+                                'user',
+                                fn ($userQuery) => $userQuery->whereLike(
+                                    'full_name',
+                                    '%'.$search.'%',
+                                    caseSensitive: false
+                                )
+                            )
+                            ->orWhereRaw(
+                                'CAST(properties AS TEXT) ILIKE ?',
+                                ['%'.$search.'%']
+                            );
+                    }
+                )
+            )
+            ->when(
+                $validated['category'] ?? null,
+                fn ($query, $category) => $query->where(
+                    'category',
+                    $category
+                )
+            )
+            ->when(
+                $validated['user_id'] ?? null,
+                fn ($query, $userId) => $query->where(
+                    'user_id',
+                    $userId
+                )
+            )
+            ->when(
+                $validated['date_from'] ?? null,
+                fn ($query, $date) => $query->whereDate(
+                    'created_at',
+                    '>=',
+                    $date
+                )
+            )
+            ->when(
+                $validated['date_to'] ?? null,
+                fn ($query, $date) => $query->whereDate(
+                    'created_at',
+                    '<=',
+                    $date
+                )
+            )
             ->latest()
-            ->paginate(10);
+            ->paginate(20)
+            ->withQueryString();
+
+        $actors = User::query()
+            ->select('id', 'full_name')
+            ->whereIn(
+                'id',
+                (clone $baseQuery)
+                    ->whereNotNull('user_id')
+                    ->select('user_id')
+                    ->distinct()
+            )
+            ->orderBy('full_name')
+            ->get();
+
+        $categoryCounts = (clone $baseQuery)
+            ->selectRaw(
+                "COALESCE(category, 'legacy') as category, COUNT(*) as total"
+            )
+            ->groupByRaw("COALESCE(category, 'legacy')")
+            ->pluck('total', 'category');
 
         return Inertia::render('investment-projects/logs', [
             'project' => $investmentProject->load(['region', 'projectType']),
             'logs' => $logs,
+            'actors' => $actors,
+            'filters' => [
+                'search' => $validated['search'] ?? '',
+                'category' => $validated['category'] ?? '',
+                'user_id' => isset($validated['user_id'])
+                    ? (string) $validated['user_id']
+                    : '',
+                'date_from' => $validated['date_from'] ?? '',
+                'date_to' => $validated['date_to'] ?? '',
+            ],
+            'categoryCounts' => $categoryCounts,
         ]);
     }
 
@@ -838,6 +1031,10 @@ class InvestmentProjectController extends Controller
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
         ]);
 
+        $activityBefore = $this->projectActivitySnapshot(
+            $investmentProject
+        );
+
         // Superadmin can change curators; others cannot
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
         $curatorIds = null;
@@ -887,13 +1084,104 @@ class InvestmentProjectController extends Controller
         $investmentProject->industrialZones()->sync($izIds);
         $investmentProject->promZones()->sync($promZoneIds);
 
-        KpiLog::log($investmentProject->id, 'Жоба мәліметтері жаңартылды');
+        $investmentProject->refresh();
+        $activityAfter = $this->projectActivitySnapshot(
+            $investmentProject
+        );
+
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.updated',
+            category: 'project',
+            action: 'Жоба мәліметтері жаңартылды',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'changes' => KpiLog::changes(
+                    $activityBefore,
+                    $activityAfter,
+                    $this->projectActivityLabels()
+                ),
+            ]
+        );
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
         }
 
         return redirect()->route('investment-projects.show', $investmentProject->id)->with('success', 'Жоба жаңартылды.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function projectActivitySnapshot(
+        InvestmentProject $project
+    ): array {
+        return [
+            'name' => $project->name,
+            'company_name' => $project->company_name,
+            'description' => $project->description,
+            'current_status' => $project->current_status,
+            'jobs_count' => $project->jobs_count,
+            'capacity' => $project->capacity,
+            'region' => $project->region()->value('name'),
+            'project_type' => $project->projectType()->value('name'),
+            'total_investment' => $project->total_investment,
+            'status' => $project->status,
+            'start_date' => $project->start_date,
+            'end_date' => $project->end_date,
+            'geometry' => $project->geometry,
+            'infrastructure' => $project->infrastructure,
+            'curators' => $project->curators()
+                ->orderBy('full_name')
+                ->pluck('full_name')
+                ->all(),
+            'executors' => $project->executors()
+                ->orderBy('full_name')
+                ->pluck('full_name')
+                ->all(),
+            'sezs' => $project->sezs()
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'industrial_zones' => $project->industrialZones()
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+            'prom_zones' => $project->promZones()
+                ->orderBy('name')
+                ->pluck('name')
+                ->all(),
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function projectActivityLabels(): array
+    {
+        return [
+            'name' => 'Жоба атауы',
+            'company_name' => 'Компания',
+            'description' => 'Сипаттама',
+            'current_status' => 'Ағымдағы жағдай',
+            'jobs_count' => 'Жұмыс орындары',
+            'capacity' => 'Жоба қуаттылығы',
+            'region' => 'Өңір',
+            'project_type' => 'Жоба түрі',
+            'total_investment' => 'Инвестиция сомасы',
+            'status' => 'Жоба статусы',
+            'start_date' => 'Басталу күні',
+            'end_date' => 'Аяқталу күні',
+            'geometry' => 'Картадағы аумақ',
+            'infrastructure' => 'Инфрақұрылым',
+            'curators' => 'Кураторлар',
+            'executors' => 'Орындаушылар',
+            'sezs' => 'АЭА',
+            'industrial_zones' => 'Индустриялық аймақтар',
+            'prom_zones' => 'Өндірістік аймақтар',
+        ];
     }
 
     private function parseSector(string $sector): array
@@ -987,6 +1275,21 @@ class InvestmentProjectController extends Controller
 
         $zip->close();
 
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'download.project_archive',
+            category: 'download',
+            action: 'Жобаның құжаттар архиві жүктелді',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Құжаттар саны' => $investmentProject->documents->count(),
+                    'Фотолар саны' => $investmentProject->photos->count(),
+                ],
+            ]
+        );
+
         $downloadName = 'Төлқұжат_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $investmentProject->name).'.zip';
 
         return response()->download($zipPath, $downloadName)->deleteFileAfterSend(true);
@@ -1027,6 +1330,17 @@ class InvestmentProjectController extends Controller
         $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
         $writer->save($filePath);
 
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'download.presentation',
+            category: 'download',
+            action: 'Жоба презентациясы жүктелді',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+            ]
+        );
+
         $downloadName = 'Презентация_'.$projectName.'.pptx';
 
         return response()->download($filePath, $downloadName)->deleteFileAfterSend(true);
@@ -1036,7 +1350,16 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
-        KpiLog::log($investmentProject->id, 'Жоба жойылды: "'.$investmentProject->name.'"');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.deleted',
+            category: 'project',
+            action: 'Жоба жойылды: "'.$investmentProject->name.'"',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+            ]
+        );
 
         $investmentProject->delete();
 
@@ -1110,6 +1433,22 @@ class InvestmentProjectController extends Controller
 
         $writer = IOFactory::createWriter($pptx, 'PowerPoint2007');
         $writer->save($filePath);
+
+        foreach ($projects as $project) {
+            KpiLog::activity(
+                projectId: $project->id,
+                event: 'download.bulk_presentation',
+                category: 'download',
+                action: 'Жоба топтық презентация құрамында жүктелді',
+                subject: $project,
+                properties: [
+                    'project_name' => $project->name,
+                    'details' => [
+                        'Топтағы жобалар саны' => $projects->count(),
+                    ],
+                ]
+            );
+        }
 
         $downloadName = 'Жобалар_презентациялары.pptx';
 
@@ -1556,7 +1895,16 @@ class InvestmentProjectController extends Controller
 
         $investmentProject->update(['is_archived' => true]);
 
-        KpiLog::log($investmentProject->id, 'Жоба архивке жіберілді');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.archived',
+            category: 'project',
+            action: 'Жоба архивке жіберілді',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+            ]
+        );
 
         return redirect()->back()->with('success', 'Жоба архивке жіберілді.');
     }
@@ -1571,7 +1919,16 @@ class InvestmentProjectController extends Controller
 
         $investmentProject->update(['is_archived' => false]);
 
-        KpiLog::log($investmentProject->id, 'Жоба архивтен қайтарылды');
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'project.unarchived',
+            category: 'project',
+            action: 'Жоба архивтен қайтарылды',
+            subject: $investmentProject,
+            properties: [
+                'project_name' => $investmentProject->name,
+            ]
+        );
 
         return redirect()->back()->with('success', 'Жоба архивтен қайтарылды.');
     }

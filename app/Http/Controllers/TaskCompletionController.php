@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectTask;
 use App\Models\TaskCompletion;
 use App\Models\TaskCompletionFile;
@@ -103,6 +104,23 @@ class TaskCompletionController extends Controller
             request()->user()?->canDownloadFromProject($investmentProject),
             403,
             'Сізде бұл файлды жүктеуге рұқсат жоқ.'
+        );
+
+        KpiLog::activity(
+            projectId: $investmentProject->id,
+            event: 'download.completion_file',
+            category: 'download',
+            action: 'Тапсырма нәтижесінің файлы жүктелді: "'
+                .$file->file_name.'"',
+            subject: $file,
+            properties: [
+                'project_name' => $investmentProject->name,
+                'details' => [
+                    'Тапсырма' => $task->title,
+                    'Файл атауы' => $file->file_name,
+                    'Файл түрі' => $file->type,
+                ],
+            ]
         );
 
         return $this->files->download($file->file_path, $file->file_name);
