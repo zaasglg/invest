@@ -179,7 +179,7 @@ button {
 .hero-copy {
   position: absolute;
   z-index: 5;
-  top: 46%;
+  top: 42%;
   left: clamp(24px, 8vw, 136px);
   width: min(590px, 42vw);
   transform: translateY(-47%);
