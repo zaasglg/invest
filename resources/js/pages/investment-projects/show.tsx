@@ -1,7 +1,6 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Factory,
-    ArrowLeft,
     Calendar,
     Building2,
     MapPin,
@@ -27,6 +26,8 @@ import {
     MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
+import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
+import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -94,7 +95,7 @@ interface InvestmentProject {
     company_name?: string;
     company?: CompanySummary | null;
     description?: string;
-    current_status?: string;
+    current_status?: string | null;
     region_id: number;
     region?: Region;
     project_type_id: number;
@@ -130,6 +131,7 @@ interface InvestmentProject {
         { needed: boolean; capacity: string }
     > | null;
     created_at: string;
+    updated_at?: string;
 }
 
 interface CompletionFile {
@@ -213,6 +215,7 @@ interface Props {
     canAccessChat?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
+    passportSummary?: ProjectPassportSummary | null;
 }
 
 function DescriptionTabs({
@@ -223,7 +226,7 @@ function DescriptionTabs({
     projectId,
 }: {
     description?: string;
-    currentStatus?: string;
+    currentStatus?: string | null;
     showCurrentStatus?: boolean;
     canEditStatus?: boolean;
     projectId?: number;
@@ -344,18 +347,26 @@ export default function Show({
     canDownload,
     canAccessChat = false,
     isInvolved = true,
+    passportSummary,
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
-    const isIspolnitel =
-        (auth.user?.role_model?.name || '').toLowerCase() === 'ispolnitel';
-    const isInvestor = auth.user?.role_model?.name === 'investor';
-    const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
-    const isInvest = auth.user?.role_model?.name === 'invest';
-    const isAkim = auth.user?.role_model?.name === 'akim';
-    const isModerator = auth.user?.role_model?.name === 'moderator';
-    const isProkuror = auth.user?.role_model?.name === 'prokuror';
+    const currentRoleName = (auth.user?.role_model?.name || '').toLowerCase();
+    const isIspolnitel = currentRoleName === 'ispolnitel';
+    const isInvestor = currentRoleName === 'investor';
+    const isSuperAdmin = currentRoleName === 'superadmin';
+    const isInvest = currentRoleName === 'invest';
+    const isAkim = currentRoleName === 'akim';
+    const isModerator = currentRoleName === 'moderator';
+    const isProkuror = currentRoleName === 'prokuror';
+    const canViewCompanyDetails = [
+        'superadmin',
+        'invest',
+        'prokuror',
+        'akim',
+        'zamakim',
+    ].includes(currentRoleName);
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;
     const canCreateTasks = canManageTasks || isProkuror;
@@ -426,8 +437,7 @@ export default function Show({
         return details;
     };
 
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const _sectorDetails = getSectorDetails();
+    const sectorDetails = getSectorDetails();
 
     const formatCurrency = (amount: number) => {
         return formatMoneyCompact(amount);
@@ -457,6 +467,61 @@ export default function Show({
         due.setHours(0, 0, 0, 0);
         return due < now;
     };
+
+    const effectivePassportSummary: ProjectPassportSummary =
+        passportSummary ?? {
+            health: {
+                level: 'warning',
+                label: 'Деректер жаңартылуда',
+                reasons: ['Жобаның жиынтық көрсеткіштері әлі есептелмеген'],
+            },
+            progress_percent: 0,
+            timeline: {
+                elapsed_percent: 0,
+                days_remaining: null,
+                is_overdue: false,
+                has_dates: Boolean(project.start_date && project.end_date),
+            },
+            tasks: {
+                total: tasks.length,
+                completed: tasks.filter((task) => task.status === 'done')
+                    .length,
+                in_progress: tasks.filter(
+                    (task) => task.status === 'in_progress',
+                ).length,
+                overdue: tasks.filter(isTaskOverdue).length,
+                pending_approval: tasks.filter(
+                    (task) => task.approval_status === 'pending',
+                ).length,
+            },
+            issues: {
+                total: project.issues?.length ?? 0,
+                open:
+                    project.issues?.filter(
+                        (issue) => issue.status !== 'resolved',
+                    ).length ?? 0,
+                critical:
+                    project.issues?.filter(
+                        (issue) =>
+                            issue.status !== 'resolved' &&
+                            ['critical', 'high'].includes(issue.severity ?? ''),
+                    ).length ?? 0,
+                resolved:
+                    project.issues?.filter(
+                        (issue) => issue.status === 'resolved',
+                    ).length ?? 0,
+            },
+            documents_count: project.documents?.length ?? 0,
+            photos_count: photosCount,
+            completeness: {
+                percent: 0,
+                completed: 0,
+                total: 14,
+                missing: [],
+            },
+            next_milestone: null,
+            last_updated_at: project.updated_at ?? project.created_at,
+        };
 
     const getTaskDotColor = (task: ProjectTaskItem): string => {
         if (task.status === 'done') return 'bg-green-500';
@@ -844,41 +909,57 @@ export default function Show({
         >
             <Head title={project.name} />
 
-            <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
-                {/* Back link */}
-                <Link
-                    href="/investment-projects"
-                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
-                >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
-                </Link>
-                {/* <button
-                    type='button'
-                    onClick={() => window.history.back()}
-                    className='inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d] transition-colors'
-                >
-                    <ArrowLeft className='h-4 w-4 mr-1' /> Тізімге қайту
-                </button> */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            <div className="flex h-full w-full flex-1 flex-col gap-6 bg-slate-50/60 p-4 sm:p-6 print:bg-white print:p-0">
+                <ProjectPassportOverview
+                    project={{
+                        id: project.id,
+                        name: project.name,
+                        statusLabel:
+                            statusMap[project.status]?.label ?? project.status,
+                        statusClassName:
+                            statusMap[project.status]?.color ??
+                            'bg-gray-100 text-gray-800',
+                        regionName:
+                            project.region?.name ?? 'Аймақ көрсетілмеген',
+                        projectTypeName:
+                            project.project_type?.name ??
+                            'Жоба түрі көрсетілмеген',
+                    }}
+                    summary={effectivePassportSummary}
+                    canEdit={canModify}
+                    canDownload={
+                        canDownload &&
+                        ((!isRestrictedView && !isExecutorParticipant) ||
+                            isAkim)
+                    }
+                    canSeeOperationalDetails={!isRestrictedView}
+                />
+
+                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px] print:block">
                     {/* Main Content */}
-                    <div className="space-y-6 lg:col-span-2">
+                    <div className="min-w-0 space-y-6">
                         {/* Project Banner + Info */}
-                        <Card className="overflow-hidden py-0 shadow-none">
+                        <Card
+                            id="project-details"
+                            className="scroll-mt-6 overflow-hidden py-0 shadow-none"
+                        >
                             {/* Banner Header */}
-                            <div className="bg-[#0f1b3d] px-6 py-4">
+                            <div className="border-b border-slate-200 bg-white px-6 py-4">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Activity className="h-5 w-5" />
-                                        <h1 className="text-xl font-bold">
-                                            Жоба № {project.id} - {project.name}
-                                        </h1>
+                                    <div className="flex items-center gap-2 text-[#0f1b3d]">
+                                        <FileText className="h-5 w-5 text-[#c8a44e]" />
+                                        <h2 className="text-lg font-bold">
+                                            Жоба туралы негізгі мәлімет
+                                        </h2>
                                     </div>
-                                    <Badge
-                                        className={`${statusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
-                                    >
-                                        {statusMap[project.status]?.label ||
-                                            project.status}
-                                    </Badge>
+                                    <span className="text-xs text-slate-500">
+                                        {
+                                            effectivePassportSummary.documents_count
+                                        }{' '}
+                                        құжат ·{' '}
+                                        {effectivePassportSummary.photos_count}{' '}
+                                        фото
+                                    </span>
                                 </div>
                             </div>
 
@@ -991,7 +1072,10 @@ export default function Show({
                             </CardContent>
 
                             {/* Company */}
-                            <div className="border-t border-gray-200 px-6 py-5">
+                            <div
+                                id="project-description"
+                                className="scroll-mt-6 border-t border-gray-200 px-6 py-5"
+                            >
                                 <div className="flex items-start gap-3">
                                     <div className="rounded-lg bg-[#fff8e7] p-2.5">
                                         <Building2 className="h-5 w-5 text-[#a9842f]" />
@@ -1050,9 +1134,38 @@ export default function Show({
                                                 )}
                                             </div>
                                         )}
+                                        {project.company &&
+                                            canViewCompanyDetails && (
+                                                <Link
+                                                    href={`/companies/${project.company.id}`}
+                                                    className="mt-3 inline-flex text-sm font-semibold text-[#a9842f] hover:text-[#80631f]"
+                                                >
+                                                    Компанияның толық
+                                                    карточкасын ашу →
+                                                </Link>
+                                            )}
                                     </div>
                                 </div>
                             </div>
+
+                            {sectorDetails.length > 0 && (
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-[#0f1b3d]">
+                                        <MapPin className="h-5 w-5 text-[#c8a44e]" />
+                                        Арнайы аумақтар мен салалық байланыс
+                                    </h2>
+                                    <div className="flex flex-wrap gap-2">
+                                        {sectorDetails.map((detail) => (
+                                            <span
+                                                key={detail}
+                                                className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900"
+                                            >
+                                                {detail}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Инфрақұрылымға қажеттілік */}
                             {project.infrastructure &&
@@ -1128,107 +1241,110 @@ export default function Show({
                                             </span>
                                         </h2>
                                         <div className="space-y-3">
-                                            {project.issues.map((issue) => {
-                                                const severityStyles: Record<
-                                                    string,
-                                                    string
-                                                > = {
-                                                    high: 'border-red-200 bg-red-50',
-                                                    medium: 'border-amber-200 bg-amber-50',
-                                                    low: 'border-blue-200 bg-blue-50',
-                                                    critical:
-                                                        'border-red-300 bg-red-100',
-                                                };
-                                                const severityLabels: Record<
-                                                    string,
-                                                    string
-                                                > = {
-                                                    high: 'Жоғары',
-                                                    medium: 'Орта',
-                                                    low: 'Төмен',
-                                                    critical: 'Сыни жағдай',
-                                                };
-                                                const severityDot: Record<
-                                                    string,
-                                                    string
-                                                > = {
-                                                    high: 'bg-red-500',
-                                                    medium: 'bg-amber-500',
-                                                    low: 'bg-blue-500',
-                                                    critical: 'bg-red-600',
-                                                };
-                                                const statusLabels: Record<
-                                                    string,
-                                                    string
-                                                > = {
-                                                    open: 'Ашық',
-                                                    in_progress: 'Орындалуда',
-                                                    resolved: 'Шешілді',
-                                                };
-                                                const style =
-                                                    severityStyles[
-                                                        issue.severity || ''
-                                                    ] ||
-                                                    'border-gray-200 bg-gray-50';
-                                                return (
-                                                    <div
-                                                        key={issue.id}
-                                                        className={`rounded-lg border p-4 ${style}`}
-                                                    >
-                                                        <div className="flex items-start justify-between gap-3">
-                                                            <div className="flex min-w-0 items-start gap-3">
-                                                                <div
-                                                                    className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
-                                                                />
-                                                                <div className="min-w-0">
-                                                                    <p className="font-semibold text-[#0f1b3d]">
-                                                                        {
-                                                                            issue.title
-                                                                        }
-                                                                    </p>
-                                                                    {issue.description && (
-                                                                        <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+                                            {project.issues
+                                                .slice(0, 3)
+                                                .map((issue) => {
+                                                    const severityStyles: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        high: 'border-red-200 bg-red-50',
+                                                        medium: 'border-amber-200 bg-amber-50',
+                                                        low: 'border-blue-200 bg-blue-50',
+                                                        critical:
+                                                            'border-red-300 bg-red-100',
+                                                    };
+                                                    const severityLabels: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        high: 'Жоғары',
+                                                        medium: 'Орта',
+                                                        low: 'Төмен',
+                                                        critical: 'Сыни жағдай',
+                                                    };
+                                                    const severityDot: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        high: 'bg-red-500',
+                                                        medium: 'bg-amber-500',
+                                                        low: 'bg-blue-500',
+                                                        critical: 'bg-red-600',
+                                                    };
+                                                    const statusLabels: Record<
+                                                        string,
+                                                        string
+                                                    > = {
+                                                        open: 'Ашық',
+                                                        in_progress:
+                                                            'Орындалуда',
+                                                        resolved: 'Шешілді',
+                                                    };
+                                                    const style =
+                                                        severityStyles[
+                                                            issue.severity || ''
+                                                        ] ||
+                                                        'border-gray-200 bg-gray-50';
+                                                    return (
+                                                        <div
+                                                            key={issue.id}
+                                                            className={`rounded-lg border p-4 ${style}`}
+                                                        >
+                                                            <div className="flex items-start justify-between gap-3">
+                                                                <div className="flex min-w-0 items-start gap-3">
+                                                                    <div
+                                                                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
+                                                                    />
+                                                                    <div className="min-w-0">
+                                                                        <p className="font-semibold text-[#0f1b3d]">
                                                                             {
-                                                                                issue.description
+                                                                                issue.title
                                                                             }
                                                                         </p>
-                                                                    )}
-                                                                    {issue.creator && (
-                                                                        <p className="mt-1 text-xs text-gray-500">
-                                                                            Қосқан:{' '}
-                                                                            {
+                                                                        {issue.description && (
+                                                                            <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+                                                                                {
+                                                                                    issue.description
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                        {issue.creator && (
+                                                                            <p className="mt-1 text-xs text-gray-500">
+                                                                                Қосқан:{' '}
+                                                                                {
+                                                                                    issue
+                                                                                        .creator
+                                                                                        .full_name
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                                <div className="flex shrink-0 items-center gap-2">
+                                                                    {issue.severity && (
+                                                                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                            {severityLabels[
                                                                                 issue
-                                                                                    .creator
-                                                                                    .full_name
-                                                                            }
-                                                                        </p>
+                                                                                    .severity
+                                                                            ] ||
+                                                                                issue.severity}
+                                                                        </span>
+                                                                    )}
+                                                                    {issue.status && (
+                                                                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                            {statusLabels[
+                                                                                issue
+                                                                                    .status
+                                                                            ] ||
+                                                                                issue.status}
+                                                                        </span>
                                                                     )}
                                                                 </div>
                                                             </div>
-                                                            <div className="flex shrink-0 items-center gap-2">
-                                                                {issue.severity && (
-                                                                    <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                        {severityLabels[
-                                                                            issue
-                                                                                .severity
-                                                                        ] ||
-                                                                            issue.severity}
-                                                                    </span>
-                                                                )}
-                                                                {issue.status && (
-                                                                    <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                        {statusLabels[
-                                                                            issue
-                                                                                .status
-                                                                        ] ||
-                                                                            issue.status}
-                                                                    </span>
-                                                                )}
-                                                            </div>
                                                         </div>
-                                                    </div>
-                                                );
-                                            })}
+                                                    );
+                                                })}
                                         </div>
                                         <div className="mt-4">
                                             <Link
@@ -1240,11 +1356,47 @@ export default function Show({
                                         </div>
                                     </div>
                                 )}
+                            {!isRestrictedView &&
+                                (!project.issues ||
+                                    project.issues.length === 0) && (
+                                    <div className="border-t border-gray-200 px-6 py-5">
+                                        <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div className="rounded-lg bg-emerald-100 p-2">
+                                                    <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+                                                </div>
+                                                <div>
+                                                    <p className="font-semibold text-emerald-900">
+                                                        Ашық мәселе жоқ
+                                                    </p>
+                                                    <p className="text-sm text-emerald-700">
+                                                        Жоба бойынша тіркелген
+                                                        белсенді тәуекелдер
+                                                        анықталмады.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            {(canModify ||
+                                                participantCanWrite ||
+                                                isAkim) && (
+                                                <Link
+                                                    href={`/investment-projects/${project.id}/issues`}
+                                                    className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
+                                                >
+                                                    Мәселе қосу
+                                                </Link>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                         </Card>
 
                         {/* Roadmap / Дорожная карта */}
                         {!isRestrictedView && (
-                            <Card className="overflow-hidden py-0 shadow-none">
+                            <Card
+                                id="project-roadmap"
+                                className="scroll-mt-6 overflow-hidden py-0 shadow-none"
+                            >
                                 <div className="bg-[#0f1b3d] px-6 py-4">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-2 text-white">
@@ -1646,7 +1798,10 @@ export default function Show({
                         )}
 
                         {/* Executors Card */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="project-team"
+                            className="scroll-mt-6 shadow-none"
+                        >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <Users className="h-5 w-5 text-gray-500" />
@@ -1850,8 +2005,77 @@ export default function Show({
                             </CardContent>
                         </Card>
 
+                        {effectivePassportSummary.completeness.percent <
+                            100 && (
+                            <Card className="border-amber-200 bg-amber-50/60 shadow-none print:hidden">
+                                <CardHeader className="pb-3">
+                                    <CardTitle className="flex items-center gap-2 text-base text-amber-950">
+                                        <AlertTriangle className="h-5 w-5 text-amber-600" />
+                                        Паспортты толықтыру қажет
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="mb-3 text-sm text-amber-800">
+                                        Толтырылуы:{' '}
+                                        <span className="font-bold">
+                                            {
+                                                effectivePassportSummary
+                                                    .completeness.percent
+                                            }
+                                            %
+                                        </span>
+                                    </p>
+                                    <ul className="space-y-2">
+                                        {effectivePassportSummary.completeness.missing
+                                            .slice(0, 5)
+                                            .map((field) => (
+                                                <li
+                                                    key={field}
+                                                    className="flex items-center gap-2 text-sm text-amber-900"
+                                                >
+                                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
+                                                    {field}
+                                                </li>
+                                            ))}
+                                    </ul>
+                                    {effectivePassportSummary.completeness
+                                        .missing.length > 5 && (
+                                        <p className="mt-2 text-xs text-amber-700">
+                                            Тағы{' '}
+                                            {effectivePassportSummary
+                                                .completeness.missing.length -
+                                                5}{' '}
+                                            бөлім толтырылмаған
+                                        </p>
+                                    )}
+                                    {canModify && (
+                                        <Link
+                                            href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
+                                            className="mt-4 block"
+                                        >
+                                            <Button
+                                                variant="outline"
+                                                className="w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
+                                            >
+                                                <Edit className="mr-2 h-4 w-4" />
+                                                Жетіспейтін деректерді толтыру
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {/* Actions */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="project-actions"
+                            className="scroll-mt-6 shadow-none xl:sticky xl:top-6 print:hidden"
+                        >
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base text-[#0f1b3d]">
+                                    Жылдам әрекеттер
+                                </CardTitle>
+                            </CardHeader>
                             <CardContent className="flex flex-col gap-3 p-4">
                                 {canModify && (
                                     <Link
