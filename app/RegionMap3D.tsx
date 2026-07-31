@@ -30,7 +30,52 @@ type CameraView = {
   translate: [number, number];
 };
 
+type RegionMetric = {
+  id: string;
+  label: string;
+  unit: string;
+  decimals: number;
+  series: number[];
+  target: number;
+  test?: boolean;
+  facts?: Array<{ value: string; label: string }>;
+};
+
 const REGION_ID = "kz.61";
+
+const REGION_METRICS: RegionMetric[] = [
+  { id: "grp", label: "ВРП", unit: "трлн ₸", decimals: 1, series: [3.8, 4.4, 5], target: 5.6 },
+  {
+    id: "investment",
+    label: "Инвестиции",
+    unit: "трлн ₸",
+    decimals: 1,
+    series: [1.1, 1.4, 1.7],
+    target: 2,
+    facts: [{ value: "80%+", label: "частные" }, { value: "$1,4 млрд", label: "ПИИ" }],
+  },
+  { id: "industry", label: "Промышленность", unit: "трлн ₸", decimals: 2, series: [1.05, 1.28, 1.59], target: 1.8 },
+  {
+    id: "agriculture",
+    label: "АПК",
+    unit: "трлн ₸",
+    decimals: 2,
+    series: [0.95, 1.08, 1.2],
+    target: 1.35,
+    facts: [{ value: "70%+", label: "теплицы РК" }, { value: "+48%", label: "масличные" }, { value: "+36%", label: "хлопок" }],
+  },
+  { id: "tourism", label: "Турпоток", unit: "тыс. чел.", decimals: 0, series: [380, 430, 500], target: 600, facts: [{ value: "1 млн+", label: "все посетители" }] },
+  {
+    id: "spaces",
+    label: "Свободные места",
+    unit: "площадок",
+    decimals: 0,
+    series: [48, 57, 68],
+    target: 100,
+    test: true,
+    facts: [{ value: "21", label: "индустр. зона" }, { value: "25", label: "промпарков" }, { value: "55", label: "проектов" }],
+  },
+];
 
 const clamp = (value: number, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
@@ -50,26 +95,31 @@ function territoryName(feature?: RegionFeature) {
   return feature.properties.name;
 }
 
-function demoStats(id: string) {
+function metricsFor(id: string): RegionMetric[] {
+  if (id === REGION_ID) return REGION_METRICS;
   const seed = id
     .split("")
     .reduce((sum, character) => sum + character.charCodeAt(0), 0);
-  if (id === REGION_ID) {
+  const coefficient = 0.045 + (seed % 7) * 0.008;
+  return REGION_METRICS.map((metric, metricIndex) => {
+    const series = metric.id === "spaces"
+      ? [4 + seed % 5, 6 + seed % 7, 9 + seed % 9]
+      : metric.series.map((value) => Number((value * coefficient).toFixed(metric.decimals + 1)));
     return {
-      investment: "3 493,9",
-      projects: "327",
-      jobs: "35 660",
-      sites: "19",
-      chart: [18, 24, 32, 43, 88],
+      ...metric,
+      series,
+      target: Number((series.at(-1)! * (1.14 + metricIndex * 0.015)).toFixed(metric.decimals + 1)),
+      test: true,
+      facts: undefined,
     };
-  }
-  return {
-    investment: `${8 + seed % 17},${(seed * 7) % 10}00`,
-    projects: String(5 + seed % 14),
-    jobs: String(180 + (seed % 24) * 35),
-    sites: String(1 + seed % 6),
-    chart: [20 + seed % 14, 27 + seed % 18, 35 + seed % 20, 48 + seed % 17, 72 + seed % 24],
-  };
+  });
+}
+
+function formatMetric(value: number, decimals: number) {
+  return new Intl.NumberFormat("ru-RU", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  }).format(value);
 }
 
 function cameraFor(
@@ -115,6 +165,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const [regions, setRegions] = useState<RegionCollection | null>(null);
   const hoveredIdRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState(REGION_ID);
+  const [activeMetricId, setActiveMetricId] = useState("investment");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -130,8 +181,13 @@ export function RegionMap3D({ progress }: { progress: number }) {
     [regions, selectedId],
   );
   const selectedName = territoryName(selected);
-  const stats = demoStats(selectedId);
   const isWholeRegion = selectedId === REGION_ID;
+  const metrics = useMemo(() => metricsFor(selectedId), [selectedId]);
+  const activeMetric = metrics.find((metric) => metric.id === activeMetricId) || metrics[0];
+  const currentMetricValue = activeMetric.series.at(-1)!;
+  const metricGrowth = Math.round((currentMetricValue / activeMetric.series[0] - 1) * 100);
+  const metricProgress = Math.min(100, Math.round((currentMetricValue / activeMetric.target) * 100));
+  const metricChartMax = Math.max(activeMetric.target, ...activeMetric.series);
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -421,7 +477,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
       >
         <div className="data-panel-topline">
           <span>{isWholeRegion ? "Сводка по региону" : "Профиль территории"}</span>
-          <b>Тестовые данные</b>
+          <b>{isWholeRegion ? "2023–2025" : "Тест"}</b>
         </div>
         <div className="data-panel-heading">
           <div><MapPin size={17} /></div>
@@ -442,20 +498,56 @@ export function RegionMap3D({ progress }: { progress: number }) {
           </select>
         </label>
 
-        <div className="region-stat-grid">
-          <div><span>Инвестиции</span><strong>{stats.investment}</strong><small>млрд ₸</small><em>+0.0% за период</em></div>
-          <div><span>Проекты</span><strong>{stats.projects}</strong><small>ед.</small><em>+0.0% за период</em></div>
-          <div><span>Рабочие места</span><strong>{stats.jobs}</strong><small>чел.</small><em>+0.0% за период</em></div>
-          <div><span>Площадки</span><strong>{stats.sites}</strong><small>ед.</small><em>Демо-показатель</em></div>
+        <div className="region-metric-grid">
+          {metrics.map((metric) => {
+            const current = metric.series.at(-1)!;
+            const growth = Math.round((current / metric.series[0] - 1) * 100);
+            return (
+              <button
+                key={metric.id}
+                className={activeMetric.id === metric.id ? "active" : ""}
+                type="button"
+                aria-pressed={activeMetric.id === metric.id}
+                onClick={() => setActiveMetricId(metric.id)}
+              >
+                <span>{metric.label}</span>
+                <strong>{formatMetric(current, metric.decimals)}</strong>
+                <small>{metric.unit}</small>
+                <em>+{growth}%</em>
+                {metric.test && <i>Тест</i>}
+              </button>
+            );
+          })}
         </div>
 
         <div className="region-chart-section">
-          <div className="chart-period"><span>2022–2026</span><strong>+0.0%</strong></div>
-          <h3>Инвестиции в проекты</h3>
-          <div className="chart-tabs"><button className="active" type="button">Инвестиции</button><button type="button">Проекты</button><button type="button">Рабочие места</button></div>
-          <div className="region-bars" aria-label="Демонстрационный график инвестиций за 2022–2026 годы">
-            {stats.chart.map((height, index) => (
-              <div key={index}><i style={{ height: `${height}%` }} /><span>{2022 + index}</span></div>
+          <div className="chart-period"><span>Динамика 2023–2025</span><strong>+{metricGrowth}%</strong></div>
+          <h3>{activeMetric.label}</h3>
+
+          <div className="metric-target">
+            <div className="metric-target-head"><span>Выполнение цели</span><strong>{metricProgress}%</strong></div>
+            <div className="metric-target-track"><i style={{ width: `${metricProgress}%` }} /></div>
+            <div className="metric-target-values">
+              <span>Факт <b>{formatMetric(currentMetricValue, activeMetric.decimals)}</b></span>
+              <span>Цель · тест <b>{formatMetric(activeMetric.target, activeMetric.decimals)} {activeMetric.unit}</b></span>
+            </div>
+          </div>
+
+          {activeMetric.facts && (
+            <div className="metric-facts">
+              {activeMetric.facts.map((fact) => (
+                <div key={fact.label}><strong>{fact.value}</strong><span>{fact.label}</span></div>
+              ))}
+            </div>
+          )}
+
+          <div className="region-bars" aria-label={`Динамика показателя ${activeMetric.label}`}>
+            {[...activeMetric.series, activeMetric.target].map((value, index) => (
+              <div key={index} className={index === activeMetric.series.length ? "target" : ""}>
+                <b>{formatMetric(value, activeMetric.decimals)}</b>
+                <i style={{ height: `${Math.max(8, (value / metricChartMax) * 82)}%` }} />
+                <span>{index === activeMetric.series.length ? "Цель" : 2023 + index}</span>
+              </div>
             ))}
           </div>
         </div>
