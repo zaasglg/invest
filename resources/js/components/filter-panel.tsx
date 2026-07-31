@@ -52,7 +52,7 @@ export default function FilterPanel({
                 <DrawerTrigger asChild>
                     <Button variant="outline">
                         <SlidersHorizontal data-icon="inline-start" />
-                        Сүзгілер
+                        Сүзгі
                         {activeCount > 0 && (
                             <span className="flex size-5 items-center justify-center rounded-md bg-navy text-[11px] font-bold text-white tabular-nums">
                                 {activeCount}
@@ -70,7 +70,7 @@ export default function FilterPanel({
                         </span>
                         <div>
                             <DrawerTitle className="text-lg font-extrabold text-navy">
-                                Сүзгілер
+                                Сүзгі
                             </DrawerTitle>
                             <DrawerDescription>
                                 Тізімдегі нәтижелерді нақтылау

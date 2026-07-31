@@ -122,7 +122,7 @@ export default function Index({ sezs: sezsData, regions, filters }: Props) {
                             onClick={() => setFiltersOpen(true)}
                         >
                             <SlidersHorizontal data-icon="inline-start" />
-                            Сүзгілер
+                            Сүзгі
                         </Button>
                         {canModify && (
                             <Link href={sezs.create.url()}>

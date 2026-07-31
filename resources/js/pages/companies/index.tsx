@@ -122,7 +122,7 @@ export default function Index({
                             onClick={() => setFiltersOpen(true)}
                         >
                             <SlidersHorizontal data-icon="inline-start" />
-                            Сүзгілер
+                            Сүзгі
                             {activeFilterCount > 0 && (
                                 <span className="flex size-5 items-center justify-center rounded-md bg-navy text-[11px] font-bold text-white">
                                     {activeFilterCount}

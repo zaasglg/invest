@@ -454,7 +454,7 @@ export default function Logs({
                                 </p>
                                 <p className="mt-1 text-sm text-gray-400">
                                     {hasActiveFilters
-                                        ? 'Сүзгілерді өзгертіп көріңіз.'
+                                        ? 'Сүзгіні өзгертіп көріңіз.'
                                         : 'Жоба бойынша алғашқы әрекет жасалғанда осы жерде пайда болады.'}
                                 </p>
                             </div>

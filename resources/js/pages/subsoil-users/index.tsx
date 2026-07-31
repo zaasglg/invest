@@ -152,7 +152,7 @@ export default function Index({
                             onClick={() => setFiltersOpen(true)}
                         >
                             <SlidersHorizontal data-icon="inline-start" />
-                            Сүзгілер
+                            Сүзгі
                         </Button>
                         {canModify && (
                             <Link href={subsoilUsersRoutes.create.url()}>

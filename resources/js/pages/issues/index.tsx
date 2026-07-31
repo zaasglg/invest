@@ -159,7 +159,7 @@ export default function IssuesIndex({
                         onClick={() => setFiltersOpen(true)}
                     >
                         <Filter data-icon="inline-start" />
-                        Сүзгілер
+                        Сүзгі
                     </Button>
                 </header>
 
@@ -171,7 +171,7 @@ export default function IssuesIndex({
                     <DrawerContent className="w-[min(92vw,32rem)] border-slate-200 bg-[#f7f8fa] sm:max-w-lg">
                         <DrawerHeader className="border-b border-slate-200 bg-white px-6 py-5">
                             <DrawerTitle className="text-lg font-extrabold text-navy">
-                                Сүзгілер
+                                Сүзгі
                             </DrawerTitle>
                             <DrawerDescription>
                                 Мәселелерді сектор және аймақ бойынша нақтылау

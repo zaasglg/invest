@@ -530,7 +530,7 @@ export default function Index({
                             onClick={() => setFiltersOpen(true)}
                         >
                             <SlidersHorizontal data-icon="inline-start" />
-                            Сүзгілер
+                            Сүзгі
                             {Object.values(data).filter(Boolean).length > 0 && (
                                 <span className="flex size-5 items-center justify-center rounded-md bg-navy text-[11px] font-bold text-white">
                                     {Object.values(data).filter(Boolean).length}

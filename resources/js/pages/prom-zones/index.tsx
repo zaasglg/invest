@@ -127,7 +127,7 @@ export default function Index({ promZones, regions, filters }: Props) {
                             onClick={() => setFiltersOpen(true)}
                         >
                             <SlidersHorizontal data-icon="inline-start" />
-                            Сүзгілер
+                            Сүзгі
                         </Button>
                         {canModify && (
                             <Link href={promZonesRoutes.create.url()}>

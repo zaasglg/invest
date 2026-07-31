@@ -114,48 +114,44 @@ function CapacityMeter({
     const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
 
     return (
-        <div className="contents">
-            <div className="min-w-0">
-                <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-[11px] font-semibold text-slate-500">
-                        Жүктеме
-                    </span>
-                    <span className="text-xs font-extrabold text-navy tabular-nums">
-                        {percentage}%
-                    </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-sm bg-slate-100">
-                    <div
-                        className={cn(
-                            'h-full rounded-sm transition-[width] duration-500',
-                            getLoadColor(percentage),
-                        )}
-                        style={{ width: `${Math.min(100, percentage)}%` }}
-                    />
-                </div>
-            </div>
-            <dl className="grid grid-cols-3 gap-2 lg:border-l lg:border-slate-100 lg:pl-5">
+        <div>
+            <div className="mb-2.5 flex items-end justify-between gap-3">
                 <div>
-                    <dt className="text-[10px] font-bold text-slate-400 uppercase">
-                        Жалпы
-                    </dt>
-                    <dd className="mt-1 text-xs font-bold whitespace-nowrap text-navy tabular-nums">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">
+                        Жалпы қуат
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold text-navy tabular-nums">
                         {formatAmount(total, unit)}
-                    </dd>
+                    </p>
                 </div>
-                <div>
+                <p className="text-2xl font-extrabold text-navy tabular-nums">
+                    {percentage}
+                    <span className="ml-0.5 text-sm text-slate-400">%</span>
+                </p>
+            </div>
+            <div className="h-1.5 overflow-hidden rounded-sm bg-slate-100">
+                <div
+                    className={cn(
+                        'h-full rounded-sm transition-[width] duration-700 ease-out',
+                        getLoadColor(percentage),
+                    )}
+                    style={{ width: `${Math.min(100, percentage)}%` }}
+                />
+            </div>
+            <dl className="mt-4 grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 pt-3">
+                <div className="pr-3">
                     <dt className="text-[10px] font-bold text-slate-400 uppercase">
                         Қолданылды
                     </dt>
-                    <dd className="mt-1 text-xs font-bold whitespace-nowrap text-amber-700 tabular-nums">
+                    <dd className="mt-1 text-sm font-bold whitespace-nowrap text-amber-700 tabular-nums">
                         {formatAmount(used, unit)}
                     </dd>
                 </div>
-                <div>
+                <div className="pl-3">
                     <dt className="text-[10px] font-bold text-slate-400 uppercase">
                         Қалды
                     </dt>
-                    <dd className="mt-1 text-xs font-bold whitespace-nowrap text-emerald-700 tabular-nums">
+                    <dd className="mt-1 text-sm font-bold whitespace-nowrap text-emerald-700 tabular-nums">
                         {formatAmount(remaining, unit)}
                     </dd>
                 </div>
@@ -212,35 +208,25 @@ export default function InfrastructureList({
                 </span>
             </div>
 
-            <div className="overflow-hidden rounded-lg border border-slate-200/80 bg-white">
-                {metered.map((item, index) => (
+            <div className="grid overflow-hidden rounded-lg border border-slate-200/80 bg-white md:grid-cols-3">
+                {metered.map((item) => (
                     <article
                         key={item.key}
-                        className={cn(
-                            'grid gap-4 p-4 transition-colors hover:bg-slate-50/60 lg:grid-cols-[minmax(220px,0.8fr)_minmax(180px,1fr)_minmax(330px,1.1fr)] lg:items-center',
-                            index < metered.length - 1 &&
-                                'border-b border-slate-100',
-                        )}
+                        className="min-w-0 border-b border-slate-100 p-5 transition-colors hover:bg-slate-50/60 md:border-r md:border-b-0 md:last:border-r-0"
                     >
-                        <div className="flex min-w-0 items-center justify-between gap-3 lg:justify-start">
-                            <span className="flex min-w-0 items-center gap-3">
-                                <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-navy">
-                                    <item.icon className="size-[18px]" />
-                                </span>
-                                <span className="min-w-0">
-                                    <span className="block truncate text-sm font-bold text-navy">
-                                        {item.name}
-                                    </span>
-                                    {item.details.capacity && (
-                                        <span className="mt-0.5 block text-xs font-medium text-slate-400 tabular-nums">
-                                            Қуаттылығы: {item.details.capacity}
-                                        </span>
-                                    )}
-                                </span>
+                        <div className="mb-5 flex min-w-0 items-center gap-3">
+                            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-navy">
+                                <item.icon className="size-[18px]" />
                             </span>
-                            <AvailabilityBadge
-                                available={item.details.available}
-                            />
+                            <div className="min-w-0">
+                                <h4 className="text-sm leading-snug font-bold text-navy">
+                                    {item.name}
+                                </h4>
+                                <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                                    <span className="size-1.5 rounded-full bg-emerald-500" />
+                                    Қолжетімді
+                                </p>
+                            </div>
                         </div>
                         <CapacityMeter
                             resourceKey={item.key as MeteredResource}
@@ -251,7 +237,7 @@ export default function InfrastructureList({
                 ))}
 
                 {simple.length > 0 && (
-                    <div className="grid border-t border-slate-100 sm:grid-cols-3">
+                    <div className="grid border-t border-slate-100 sm:grid-cols-3 md:col-span-3">
                         {simple.map((item) => {
                             const detail =
                                 item.details.capacity ||

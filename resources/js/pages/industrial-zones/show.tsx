@@ -10,6 +10,7 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import React from 'react';
+import InfrastructureAnalytics from '@/components/infrastructure-analytics';
 import InfrastructureList from '@/components/infrastructure-list';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -171,6 +172,13 @@ export default function Show({
         typeof industrialZone.photos_count === 'number'
             ? industrialZone.photos_count
             : 0;
+    const totalInvestment = projects.reduce(
+        (sum, project) => sum + Number(project.total_investment || 0),
+        0,
+    );
+    const openIssues = issues.filter(
+        (issue) => issue.status !== 'resolved',
+    ).length;
 
     return (
         <AppLayout
@@ -185,104 +193,108 @@ export default function Show({
             <Head title={industrialZone.name} />
 
             <div className="page-surface flex h-full flex-1 flex-col gap-5 sm:gap-6">
-                {/* Back link */}
-                <Link
-                    href={`/industrial-zones`}
-                    className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-navy"
-                >
-                    <ArrowLeft className="size-4" /> Тізімге қайту
-                </Link>
+                <div className="flex items-center justify-between gap-4">
+                    <Link
+                        href="/industrial-zones"
+                        className="group inline-flex w-fit items-center gap-2 text-sm font-semibold text-slate-500 transition-colors hover:text-navy"
+                    >
+                        <span className="flex size-8 items-center justify-center rounded-md border border-slate-200 bg-white transition-transform group-hover:-translate-x-0.5">
+                            <ArrowLeft className="size-4" />
+                        </span>
+                        Индустриялық аймақтар
+                    </Link>
+                    <span className="hidden text-xs font-semibold text-slate-400 sm:block">
+                        ID #{industrialZone.id}
+                    </span>
+                </div>
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}
                     <div className="flex min-w-0 flex-col gap-6">
                         {/* Banner + Info + Description */}
                         <Card className="overflow-hidden border-slate-200/80 py-0 shadow-none">
-                            {/* Banner Header */}
-                            <div className="border-b border-slate-200 bg-white px-6 py-5">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 text-navy">
-                                        <span className="flex size-10 items-center justify-center rounded-md bg-navy text-gold">
-                                            <Layers className="size-5" />
+                            <header className="relative overflow-hidden border-b border-slate-200 bg-navy px-6 py-7 text-white sm:px-8">
+                                <div className="absolute inset-y-0 right-0 w-1/3 border-l border-white/5 bg-[linear-gradient(90deg,transparent,rgba(200,164,78,0.08))]" />
+                                <div className="relative flex items-start justify-between gap-5">
+                                    <div className="flex min-w-0 items-start gap-4">
+                                        <span className="flex size-12 shrink-0 items-center justify-center rounded-md border border-white/10 bg-white/8 text-gold">
+                                            <Layers className="size-6" />
                                         </span>
-                                        <h1 className="text-xl font-extrabold sm:text-2xl">
-                                            {industrialZone.name}
-                                        </h1>
+                                        <div className="min-w-0">
+                                            <p className="mb-1 text-[11px] font-bold text-gold uppercase">
+                                                Индустриялық аймақ
+                                            </p>
+                                            <h1 className="text-2xl leading-tight font-extrabold text-balance sm:text-3xl">
+                                                {industrialZone.name}
+                                            </h1>
+                                            <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-300">
+                                                <MapPin className="size-3.5" />
+                                                {industrialZone.region?.name ||
+                                                    'Аймақ көрсетілмеген'}
+                                            </p>
+                                        </div>
                                     </div>
-                                    <Badge
-                                        className={`${statusMap[industrialZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
-                                    >
+                                    <Badge className="shrink-0 border border-emerald-400/20 bg-emerald-400/10 px-3 py-1 text-sm font-semibold text-emerald-300">
                                         {statusMap[industrialZone.status]
                                             ?.label || industrialZone.status}
                                     </Badge>
                                 </div>
-                            </div>
+                            </header>
 
                             {/* Info Cards */}
-                            <CardContent className="p-6">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-                                    <div className="overflow-hidden rounded-lg md:col-span-2">
+                            <CardContent className="p-5 sm:p-6">
+                                <div className="grid grid-cols-1 gap-5 md:grid-cols-[minmax(240px,0.85fr)_minmax(0,1.15fr)]">
+                                    <div className="overflow-hidden rounded-md bg-slate-100">
                                         <ProjectGallerySlider
                                             photos={mainGallery}
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 md:col-span-3">
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Аудан
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {industrialZone.region?.name ||
-                                                    'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Activity className="h-3.5 w-3.5" />{' '}
-                                                Күйі
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {statusMap[
-                                                    industrialZone.status
-                                                ]?.label ||
-                                                    industrialZone.status}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Аумағы
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {industrialZone.total_area
+                                    <div className="grid grid-cols-2 overflow-hidden rounded-md border border-slate-200 bg-slate-50/60">
+                                        {[
+                                            {
+                                                label: 'Жалпы аумақ',
+                                                value: industrialZone.total_area
                                                     ? `${industrialZone.total_area} га`
-                                                    : 'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Building2 className="h-3.5 w-3.5" />{' '}
-                                                Инвестиция көлемі
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {(() => {
-                                                    const sum = projects.reduce(
-                                                        (acc, p) =>
-                                                            acc +
-                                                            Number(
-                                                                p.total_investment ||
-                                                                    0,
-                                                            ),
-                                                        0,
-                                                    );
-                                                    return sum > 0
-                                                        ? formatCurrency(sum)
-                                                        : 'Көрсетілмеген';
-                                                })()}
-                                            </p>
-                                        </div>
+                                                    : '—',
+                                                icon: MapPin,
+                                            },
+                                            {
+                                                label: 'Жобалар',
+                                                value: projects.length,
+                                                icon: Building2,
+                                            },
+                                            {
+                                                label: 'Инвестициялар',
+                                                value:
+                                                    totalInvestment > 0
+                                                        ? formatCurrency(
+                                                              totalInvestment,
+                                                          )
+                                                        : '—',
+                                                icon: Activity,
+                                            },
+                                            {
+                                                label: 'Ашық мәселелер',
+                                                value: openIssues,
+                                                icon: AlertTriangle,
+                                            },
+                                        ].map((metric, index) => (
+                                            <div
+                                                key={metric.label}
+                                                className={`p-4 sm:p-5 ${index % 2 === 0 ? 'border-r border-slate-200' : ''} ${index < 2 ? 'border-b border-slate-200' : ''}`}
+                                            >
+                                                <div className="mb-4 flex items-center justify-between">
+                                                    <span className="text-xs font-semibold text-slate-500">
+                                                        {metric.label}
+                                                    </span>
+                                                    <metric.icon className="size-4 text-gold-dark" />
+                                                </div>
+                                                <p className="text-xl font-extrabold text-navy tabular-nums sm:text-2xl">
+                                                    {metric.value}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 
@@ -296,6 +308,9 @@ export default function Show({
                                         usage={infrastructureUsage}
                                     />
                                 )}
+                                <InfrastructureAnalytics
+                                    usage={infrastructureUsage}
+                                />
                             </CardContent>
 
                             {/* Description */}
