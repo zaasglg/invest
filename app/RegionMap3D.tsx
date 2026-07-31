@@ -36,6 +36,8 @@ type RegionMetric = {
   unit: string;
   decimals: number;
   series: number[];
+  years: string[];
+  period: string;
   target: number;
   test?: boolean;
   facts?: Array<{ value: string; label: string }>;
@@ -44,36 +46,148 @@ type RegionMetric = {
 const REGION_ID = "kz.61";
 
 const REGION_METRICS: RegionMetric[] = [
-  { id: "grp", label: "ВРП", unit: "трлн ₸", decimals: 1, series: [3.8, 4.4, 5], target: 5.6 },
   {
     id: "investment",
     label: "Инвестиции",
     unit: "трлн ₸",
-    decimals: 1,
-    series: [1.1, 1.4, 1.7],
-    target: 2,
-    facts: [{ value: "80%+", label: "частные" }, { value: "$1,4 млрд", label: "ПИИ" }],
+    decimals: 2,
+    series: [1.1, 1.4, 1.746],
+    years: ["2023", "2024", "2025"],
+    period: "Динамика 2023–2025",
+    target: 1.784,
+    facts: [{ value: "$2 млрд", label: "ПИИ" }, { value: "58", label: "запущено проектов" }, { value: "8 340", label: "новых рабочих мест" }],
   },
-  { id: "industry", label: "Промышленность", unit: "трлн ₸", decimals: 2, series: [1.05, 1.28, 1.59], target: 1.8 },
+  {
+    id: "grp",
+    label: "ВРП",
+    unit: "трлн ₸",
+    decimals: 2,
+    series: [2.85, 3.25, 3.586],
+    years: ["9М 2023", "9М 2024", "9М 2025"],
+    period: "Сопоставимая оценка · 9 месяцев",
+    target: 4,
+    test: true,
+    facts: [{ value: "+10,1%", label: "реальный рост" }, { value: "1,67 млн ₸", label: "ВРП на человека" }, { value: "334,9 млрд ₸", label: "транспорт и склады" }],
+  },
+  {
+    id: "market",
+    label: "Рынок / население",
+    unit: "млн чел.",
+    decimals: 2,
+    series: [2.12, 2.14, 2.147],
+    years: ["2024", "2025", "6М 2026"],
+    period: "Ёмкость локального рынка",
+    target: 2.2,
+    test: true,
+    facts: [{ value: "2,147 млн", label: "население региона" }, { value: "74,6%", label: "сельские жители" }, { value: "4,3%", label: "зарегистр. безработица" }],
+  },
+  {
+    id: "industry",
+    label: "Промышленность",
+    unit: "трлн ₸",
+    decimals: 2,
+    series: [1.05, 1.28, 1.59],
+    years: ["2023", "2024", "2025"],
+    period: "Динамика 2023–2025",
+    target: 1.8,
+    test: true,
+    facts: [{ value: "+50,8%", label: "обработка · 6М 2026" }, { value: "+32,4%", label: "вся промышленность" }, { value: "+19%", label: "добывающий сектор" }],
+  },
   {
     id: "agriculture",
     label: "АПК",
     unit: "трлн ₸",
-    decimals: 2,
-    series: [0.95, 1.08, 1.2],
-    target: 1.35,
-    facts: [{ value: "70%+", label: "теплицы РК" }, { value: "+48%", label: "масличные" }, { value: "+36%", label: "хлопок" }],
+    decimals: 3,
+    series: [0.95, 1.08, 1.154],
+    years: ["2023", "2024", "11М 2025"],
+    period: "Выпуск сельского хозяйства",
+    target: 1.3,
+    test: true,
+    facts: [{ value: "76%", label: "теплиц Казахстана" }, { value: "$355,5 млн", label: "экспорт АПК" }, { value: "214,4 млрд ₸", label: "инвестиции в АПК" }],
   },
-  { id: "tourism", label: "Турпоток", unit: "тыс. чел.", decimals: 0, series: [380, 430, 500], target: 600, facts: [{ value: "1 млн+", label: "все посетители" }] },
+  {
+    id: "fdi",
+    label: "Прямые инвестиции",
+    unit: "млрд $",
+    decimals: 2,
+    series: [0.9, 1.4, 1.998],
+    years: ["2023", "2024", "2025"],
+    period: "Иностранный капитал",
+    target: 2.2,
+    test: true,
+    facts: [{ value: "$1,998 млрд", label: "факт 2025" }, { value: "121,6%", label: "рост всех инвестиций" }, { value: "111", label: "проектов в портфеле" }],
+  },
+  {
+    id: "trade",
+    label: "Торговля ЕАЭС",
+    unit: "млн $",
+    decimals: 1,
+    series: [245, 281, 319.4],
+    years: ["5М 2024", "5М 2025", "5М 2026"],
+    period: "Взаимная торговля со странами ЕАЭС",
+    target: 350,
+    test: true,
+    facts: [{ value: "$189,3 млн", label: "экспорт" }, { value: "$130,1 млн", label: "импорт" }, { value: "Узбекистан", label: "прямой выход на рынок" }],
+  },
+  {
+    id: "tourism",
+    label: "Туристический поток",
+    unit: "тыс. чел.",
+    decimals: 0,
+    series: [380, 431, 500],
+    years: ["2023", "2024", "2025"],
+    period: "Гости в местах размещения",
+    target: 600,
+    test: true,
+    facts: [{ value: "+15,9%", label: "рост в 2025" }, { value: "1,012 млн", label: "исторические объекты" }, { value: "36,3 млрд ₸", label: "инвестиции · 5М 2026" }],
+  },
+  {
+    id: "projects",
+    label: "Проекты",
+    unit: "проектов",
+    decimals: 0,
+    series: [38, 47, 58],
+    years: ["2023", "2024", "2025"],
+    period: "Запущенные и плановые проекты",
+    target: 111,
+    test: true,
+    facts: [{ value: "2,8 трлн ₸", label: "портфель 2026–2029" }, { value: "66", label: "запусков в 2026" }, { value: "20 000", label: "рабочих мест в плане" }],
+  },
+  {
+    id: "jobs",
+    label: "Новые рабочие места",
+    unit: "мест",
+    decimals: 0,
+    series: [5200, 6800, 8340],
+    years: ["2023", "2024", "2025"],
+    period: "Занятость в инвестпроектах",
+    target: 20000,
+    test: true,
+    facts: [{ value: "8 340", label: "создано в 2025" }, { value: "20 000", label: "план 2026–2029" }, { value: "5 879", label: "мест на промплощадках" }],
+  },
+  {
+    id: "salary",
+    label: "Средняя зарплата",
+    unit: "тыс. ₸",
+    decimals: 1,
+    series: [276, 310.6, 332.6],
+    years: ["2024", "2025", "1К 2026"],
+    period: "Стоимость трудовых ресурсов",
+    target: 350,
+    test: true,
+    facts: [{ value: "+7,1%", label: "рост за год" }, { value: "187,7 тыс.", label: "кадры в АПК" }, { value: "98,4 тыс.", label: "промышленность и стройка" }],
+  },
   {
     id: "spaces",
-    label: "Свободные места",
+    label: "Свободные площадки",
     unit: "площадок",
     decimals: 0,
     series: [48, 57, 68],
+    years: ["2023", "2024", "2025"],
+    period: "Готовность инвестиционных площадок",
     target: 100,
     test: true,
-    facts: [{ value: "21", label: "индустр. зона" }, { value: "25", label: "промпарков" }, { value: "55", label: "проектов" }],
+    facts: [{ value: "29", label: "производственных площадок" }, { value: "275", label: "готовых зданий" }, { value: "6%", label: "льготная ставка" }],
   },
 ];
 
@@ -477,7 +591,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
       >
         <div className="data-panel-topline">
           <span>{isWholeRegion ? "Сводка по региону" : "Профиль территории"}</span>
-          <b>{isWholeRegion ? "2023–2025" : "Тест"}</b>
+          <b>{isWholeRegion ? "Факт + оценка" : "Тестовые данные"}</b>
         </div>
         <div className="data-panel-heading">
           <div><MapPin size={17} /></div>
@@ -514,14 +628,14 @@ export function RegionMap3D({ progress }: { progress: number }) {
                 <strong>{formatMetric(current, metric.decimals)}</strong>
                 <small>{metric.unit}</small>
                 <em>+{growth}%</em>
-                {metric.test && <i>Тест</i>}
+                {metric.test && <i>{isWholeRegion && metric.id !== "spaces" ? "Оценка" : "Тест"}</i>}
               </button>
             );
           })}
         </div>
 
         <div className="region-chart-section">
-          <div className="chart-period"><span>Динамика 2023–2025</span><strong>+{metricGrowth}%</strong></div>
+          <div className="chart-period"><span>{activeMetric.period}</span><strong>+{metricGrowth}%</strong></div>
           <h3>{activeMetric.label}</h3>
 
           <div className="metric-target">
@@ -529,7 +643,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
             <div className="metric-target-track"><i style={{ width: `${metricProgress}%` }} /></div>
             <div className="metric-target-values">
               <span>Факт <b>{formatMetric(currentMetricValue, activeMetric.decimals)}</b></span>
-              <span>Цель · тест <b>{formatMetric(activeMetric.target, activeMetric.decimals)} {activeMetric.unit}</b></span>
+              <span>Ориентир <b>{formatMetric(activeMetric.target, activeMetric.decimals)} {activeMetric.unit}</b></span>
             </div>
           </div>
 
@@ -546,7 +660,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
               <div key={index} className={index === activeMetric.series.length ? "target" : ""}>
                 <b>{formatMetric(value, activeMetric.decimals)}</b>
                 <i style={{ height: `${Math.max(8, (value / metricChartMax) * 82)}%` }} />
-                <span>{index === activeMetric.series.length ? "Цель" : 2023 + index}</span>
+                <span>{index === activeMetric.series.length ? "Цель" : activeMetric.years[index]}</span>
               </div>
             ))}
           </div>
