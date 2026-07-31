@@ -126,33 +126,33 @@ interface IndicatorDefinition {
 const indicatorDefinitions: IndicatorDefinition[] = [
   {
     key: 'investment',
-    label: 'Инвестиции проектов',
-    shortLabel: 'Инвестиции',
+    label: 'Жобаларға салынған инвестициялар',
+    shortLabel: 'Инвестициялар',
     unit: 'млн ₸',
     decimals: 1,
     color: '#22d3ee',
   },
   {
     key: 'projects',
-    label: 'Инвестиционные проекты',
-    shortLabel: 'Проекты',
-    unit: 'шт.',
+    label: 'Инвестициялық жобалар',
+    shortLabel: 'Жобалар',
+    unit: 'дана',
     decimals: 0,
     color: '#2dd4bf',
   },
   {
     key: 'jobs',
-    label: 'Рабочие места',
-    shortLabel: 'Рабочие места',
-    unit: 'чел.',
+    label: 'Жұмыс орындары',
+    shortLabel: 'Жұмыс орындары',
+    unit: 'адам',
     decimals: 0,
     color: '#a5f3fc',
   },
   {
     key: 'problems',
-    label: 'Проблемы по секторам',
-    shortLabel: 'Проблемы',
-    unit: 'шт.',
+    label: 'Секторлар бойынша мәселелер',
+    shortLabel: 'Мәселелер',
+    unit: 'дана',
     decimals: 0,
     color: '#fbbf24',
   },
@@ -161,9 +161,9 @@ const indicatorDefinitions: IndicatorDefinition[] = [
 const problemSectorLabels = [
   { key: 'sez' as const, label: 'АЭА' },
   { key: 'iz' as const, label: 'ИА' },
-  { key: 'prom' as const, label: 'Пром' },
-  { key: 'nedro' as const, label: 'Недро' },
-  { key: 'invest' as const, label: 'Инвест' },
+  { key: 'prom' as const, label: 'Өнеркәсіп' },
+  { key: 'nedro' as const, label: 'Жер қойнауы' },
+  { key: 'invest' as const, label: 'Инвестиция' },
 ]
 
 const emptySectorRow: SectorRow = {
@@ -262,10 +262,10 @@ function createRegionShape() {
 
 function getDistrictDisplayName(name: string) {
   const displayNames: Record<string, string> = {
-    'Арысь городская администрация': 'г. Арысь',
-    'городская администрация Кентау': 'г. Кентау',
-    'район Байдибека': 'Байдибекский район',
-    'Туркестан Г.А.': 'г. Туркестан',
+    'Арысь городская администрация': 'Арыс қаласы',
+    'городская администрация Кентау': 'Кентау қаласы',
+    'район Байдибека': 'Бәйдібек ауданы',
+    'Туркестан Г.А.': 'Түркістан қаласы',
   }
 
   return displayNames[name] ?? name
@@ -463,7 +463,7 @@ function toDisplayValue(key: IndicatorKey, value: number) {
 }
 
 function formatAnalyticsValue(value: number, indicator: IndicatorDefinition) {
-  return new Intl.NumberFormat('ru-RU', {
+  return new Intl.NumberFormat('kk-KZ', {
     minimumFractionDigits: indicator.decimals,
     maximumFractionDigits: indicator.decimals,
   }).format(value)
@@ -800,7 +800,10 @@ function DistrictExplorer({
   return (
     <div className="district-explorer">
       <div className="district-dashboard">
-        <section className="district-map-panel" aria-label="3D-карта районов">
+        <section
+          className="district-map-panel"
+          aria-label="Аудандардың 3D картасы"
+        >
           {!isLanding && (
             <div className={`district-map-menu${mapMenuOpen ? 'is-open' : ''}`}>
               <button
@@ -808,7 +811,9 @@ function DistrictExplorer({
                 className="district-map-menu__toggle"
                 aria-expanded={mapMenuOpen}
                 aria-controls="district-map-menu-panel"
-                aria-label={mapMenuOpen ? 'Закрыть меню карты' : 'Меню карты'}
+                aria-label={
+                  mapMenuOpen ? 'Карта мәзірін жабу' : 'Карта мәзірі'
+                }
                 onClick={() => setMapMenuOpen((open) => !open)}
               >
                 <span />
@@ -821,7 +826,7 @@ function DistrictExplorer({
                   id="district-map-menu-panel"
                   className="district-map-menu__panel"
                   role="listbox"
-                  aria-label="Регионы"
+                  aria-label="Аймақтар"
                 >
                   <button
                     type="button"
@@ -835,12 +840,12 @@ function DistrictExplorer({
                       setMapMenuOpen(false)
                     }}
                   >
-                    Вся область
+                    Бүкіл облыс
                   </button>
                   {districtMapModels
                     .slice()
                     .sort((first, second) =>
-                      first.name.localeCompare(second.name, 'ru'),
+                      first.name.localeCompare(second.name, 'kk'),
                     )
                     .map((district) => (
                       <button
@@ -907,12 +912,14 @@ function DistrictExplorer({
             <div className="district-analytics__heading">
               <div>
                 <p>
-                  {selectedDistrict ? 'Профиль территории' : 'Сводка региона'}
+                  {selectedDistrict
+                    ? 'Аумақ профилі'
+                    : 'Аймақ бойынша жиынтық'}
                 </p>
                 <h2>
                   {selectedDistrict
                     ? selectedDistrict.name
-                    : 'Туркестанская область'}
+                    : 'Түркістан облысы'}
                 </h2>
               </div>
               {selectedDistrict && (
@@ -920,7 +927,7 @@ function DistrictExplorer({
                   type="button"
                   onClick={() => setSelectedDistrictId(null)}
                 >
-                  Вся область
+                  Бүкіл облыс
                 </button>
               )}
             </div>
@@ -947,10 +954,10 @@ function DistrictExplorer({
                     {seriesGrowth !== null ? (
                       <p>
                         {seriesGrowth >= 0 ? '+' : ''}
-                        {seriesGrowth.toFixed(1)}% за период
+                        {seriesGrowth.toFixed(1)}% кезең ішінде
                       </p>
                     ) : (
-                      <p>Текущие данные</p>
+                      <p>Ағымдағы деректер</p>
                     )}
                   </article>
                 )
@@ -962,8 +969,8 @@ function DistrictExplorer({
                 <div>
                   <span>
                     {activeIndicatorKey === 'problems'
-                      ? 'По секторам'
-                      : `Динамика ${yearRangeLabel}`}
+                      ? 'Секторлар бойынша'
+                      : `${yearRangeLabel} аралығындағы өзгеріс`}
                   </span>
                   <h3>{activeIndicator.label}</h3>
                 </div>
@@ -975,7 +982,10 @@ function DistrictExplorer({
                 )}
               </div>
 
-              <div className="indicator-tabs" aria-label="Выбор показателя">
+              <div
+                className="indicator-tabs"
+                aria-label="Көрсеткішті таңдау"
+              >
                 {indicatorDefinitions.map((indicator) => (
                   <button
                     key={indicator.key}
@@ -1002,7 +1012,7 @@ function DistrictExplorer({
               href={`/regions/${selectedDistrict.regionId}`}
               className="district-analytics__open"
               >
-                Открыть страницу района
+                Аудан бетін ашу
                 <span aria-hidden="true">→</span>
               </Link>
             )}
