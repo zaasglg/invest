@@ -42,7 +42,10 @@ class ProjectDocumentController extends Controller
             'completedDocuments' => $completedDocuments,
             'documents' => $documents,
             'canDownload' => $canDownload,
-            'ispolnitelCanWrite' => $this->ispolnitelCanWrite($user, $investmentProject),
+            'participantCanCreate' => $this->participantCanCreate(
+                $user,
+                $investmentProject
+            ),
         ]);
     }
 
@@ -99,7 +102,11 @@ class ProjectDocumentController extends Controller
 
         $isCompleted = $request->boolean('is_completed', false);
 
-        if ($user->roleModel?->name === 'ispolnitel') {
+        if (in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             $isCompleted = false;
         }
 
@@ -144,8 +151,12 @@ class ProjectDocumentController extends Controller
     {
         $user = Auth::user();
 
-        // Ispolnitel cannot delete documents
-        if ($user->roleModel?->name === 'ispolnitel') {
+        // Project participants may add documents but cannot delete them.
+        if (in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             abort(403, 'Сізге құжатты жоюға рұқсат жоқ.');
         }
 
@@ -176,9 +187,15 @@ class ProjectDocumentController extends Controller
         return redirect()->back()->with('success', 'Құжат жойылды.');
     }
 
-    private function ispolnitelCanWrite($user, InvestmentProject $project): bool
-    {
-        if ($user->roleModel?->name !== 'ispolnitel') {
+    private function participantCanCreate(
+        $user,
+        InvestmentProject $project
+    ): bool {
+        if (! in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             return false;
         }
 
@@ -192,7 +209,11 @@ class ProjectDocumentController extends Controller
 
     private function ensureCanUploadDocuments($user, InvestmentProject $project): void
     {
-        if ($user?->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+        if (in_array(
+            $user?->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        ) && ! $this->participantCanCreate($user, $project)) {
             abort(403, 'Сіз бұл жобаға құжат қоса алмайсыз.');
         }
     }

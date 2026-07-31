@@ -38,6 +38,7 @@ class User extends Authenticatable
         'role',
         'region_id',
         'role_id',
+        'company_id',
         'invest_sub_role',
         'baskarma_type',
         'position',
@@ -80,6 +81,11 @@ class User extends Authenticatable
         return $this->belongsTo(Role::class, 'role_id');
     }
 
+    public function company()
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function hasSupportedRole(): bool
     {
         return in_array(
@@ -109,12 +115,15 @@ class User extends Authenticatable
     }
 
     /**
-     * Projects explicitly assigned to an investor account.
+     * Projects owned by the investor account's company.
      */
     public function investorProjects()
     {
-        return $this->belongsToMany(InvestmentProject::class, 'investment_project_investor')
-            ->withTimestamps();
+        return $this->hasMany(
+            InvestmentProject::class,
+            'company_id',
+            'company_id'
+        );
     }
 
     /**
@@ -207,9 +216,8 @@ class User extends Authenticatable
     public function isInvolvedInProject(InvestmentProject $project): bool
     {
         if ($this->roleModel?->name === 'investor') {
-            return $project->investors()
-                ->where('users.id', $this->id)
-                ->exists();
+            return $this->company_id !== null
+                && (int) $this->company_id === (int) $project->company_id;
         }
 
         // User is creator of the project

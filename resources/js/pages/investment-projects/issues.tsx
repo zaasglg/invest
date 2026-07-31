@@ -52,7 +52,7 @@ interface Issue {
 interface Props {
     project: InvestmentProject;
     issues: Issue[];
-    ispolnitelCanWrite?: boolean;
+    participantCanCreate?: boolean;
 }
 
 const severityMap: Record<string, { label: string; color: string }> = {
@@ -71,12 +71,12 @@ const statusMap: Record<string, { label: string; color: string }> = {
 export default function Issues({
     project,
     issues,
-    ispolnitelCanWrite = false,
+    participantCanCreate = false,
 }: Props) {
     const canModify = useCanModify();
-    const canCreate = canModify || ispolnitelCanWrite;
+    const canCreate = canModify || participantCanCreate;
     const canUpdate = canModify;
-    // Ispolnitel can add but cannot delete
+    // Project participants may add issues but cannot delete them.
     const canDelete = canModify;
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');

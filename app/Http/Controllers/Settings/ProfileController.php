@@ -98,6 +98,12 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        abort_if(
+            $user->roleModel?->name === 'investor' && $user->company_id,
+            403,
+            'Компанияның инвестор аккаунтын жоюға болмайды.'
+        );
+
         Auth::logout();
 
         $user->delete();

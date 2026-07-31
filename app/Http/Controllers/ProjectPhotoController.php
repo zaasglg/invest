@@ -60,7 +60,10 @@ class ProjectPhotoController extends Controller
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
             'canDownload' => $canDownload,
-            'ispolnitelCanWrite' => $this->ispolnitelCanWrite($user, $investmentProject),
+            'participantCanCreate' => $this->participantCanCreate(
+                $user,
+                $investmentProject
+            ),
         ]);
     }
 
@@ -165,6 +168,10 @@ class ProjectPhotoController extends Controller
 
         $user = Auth::user();
 
+        if ($user->roleModel?->name === 'investor') {
+            abort(403, 'Инвестор фотоны өзгерте алмайды.');
+        }
+
         $this->ensureCanWritePhotos($user, $investmentProject);
 
         $validated = $request->validate([
@@ -219,8 +226,12 @@ class ProjectPhotoController extends Controller
 
         $this->ensureCanWritePhotos($user, $investmentProject);
 
-        // Ispolnitel cannot delete photos
-        if ($user->roleModel?->name === 'ispolnitel') {
+        // Project participants may add photos but cannot delete them.
+        if (in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             abort(403, 'Сізге фотоны жоюға рұқсат жоқ.');
         }
 
@@ -255,9 +266,15 @@ class ProjectPhotoController extends Controller
         return redirect()->back()->with('success', 'Фото жойылды.');
     }
 
-    private function ispolnitelCanWrite($user, InvestmentProject $project): bool
-    {
-        if ($user->roleModel?->name !== 'ispolnitel') {
+    private function participantCanCreate(
+        $user,
+        InvestmentProject $project
+    ): bool {
+        if (! in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             return false;
         }
 
@@ -271,7 +288,11 @@ class ProjectPhotoController extends Controller
 
     private function ensureCanWritePhotos($user, InvestmentProject $project): void
     {
-        if ($user->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+        if (in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        ) && ! $this->participantCanCreate($user, $project)) {
             abort(403, 'Сіз бұл жобаға фото жүктей алмайсыз.');
         }
     }

@@ -2,8 +2,6 @@ import { Head, useForm, Link } from '@inertiajs/react';
 import { Eye, EyeOff } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
-import { InvestorProjectSelector } from '@/components/investor-project-selector';
-import type { InvestorProjectOption } from '@/components/investor-project-selector';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,10 +31,9 @@ interface Role {
 interface Props {
     regions: Region[];
     roles: Role[];
-    projects: InvestorProjectOption[];
 }
 
-export default function Create({ regions, roles, projects }: Props) {
+export default function Create({ regions, roles }: Props) {
     const { data, setData, post, processing, errors } = useForm({
         full_name: '',
         email: '',
@@ -49,7 +46,6 @@ export default function Create({ regions, roles, projects }: Props) {
         baskarma_type: '',
         position: '',
         telegram_chat_id: '',
-        project_ids: [] as number[],
     });
 
     const [selectedOblastId, setSelectedOblastId] = useState<string>('');
@@ -75,7 +71,6 @@ export default function Create({ regions, roles, projects }: Props) {
 
     const isIspolnitel = selectedRole?.name === 'ispolnitel';
     const isInvest = selectedRole?.name === 'invest';
-    const isInvestor = selectedRole?.name === 'investor';
     const isAkim = selectedRole?.name === 'akim';
     const showRegionSelects =
         (isIspolnitel && data.baskarma_type === 'district') || isAkim;
@@ -269,7 +264,6 @@ export default function Create({ regions, roles, projects }: Props) {
                                     baskarma_type: '',
                                     position: '',
                                     region_id: '',
-                                    project_ids: [],
                                 }));
                                 setSelectedOblastId('');
                             }}
@@ -328,19 +322,6 @@ export default function Create({ regions, roles, projects }: Props) {
                                 </span>
                             )}
                         </div>
-                    )}
-
-                    {/* Басқару түрін таңдау */}
-                    {isInvestor && (
-                        <InvestorProjectSelector
-                            projects={projects}
-                            regions={regions}
-                            value={data.project_ids}
-                            onChange={(projectIds) =>
-                                setData('project_ids', projectIds)
-                            }
-                            error={errors.project_ids}
-                        />
                     )}
 
                     {isIspolnitel && (

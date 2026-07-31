@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Http\Requests\CompanyRequest;
 use App\Models\Company;
 use App\Models\Region;
+use App\Models\Role;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class CompanyController extends Controller
@@ -101,6 +104,7 @@ class CompanyController extends Controller
             'company' => $company->load([
                 'region:id,name',
                 'creator:id,full_name',
+                'investor:id,company_id,full_name,email,phone',
             ]),
             'projects' => $company->projects()
                 ->with(['region:id,name', 'projectType:id,name'])
@@ -121,10 +125,20 @@ class CompanyController extends Controller
 
     public function store(CompanyRequest $request)
     {
-        $company = Company::create([
-            ...$request->validated(),
-            'created_by' => $request->user()->id,
-        ]);
+        $company = DB::transaction(function () use ($request): Company {
+            $validated = $request->validated();
+            $investorData = $this->investorData($validated);
+            $companyData = $this->companyData($validated);
+
+            $company = Company::create([
+                ...$companyData,
+                'created_by' => $request->user()->id,
+            ]);
+
+            $this->createInvestor($company, $investorData);
+
+            return $company;
+        });
 
         return redirect()
             ->route('companies.show', $company)
@@ -136,7 +150,9 @@ class CompanyController extends Controller
         abort_unless($this->canManage($request), 403);
 
         return Inertia::render('companies/edit', [
-            'company' => $company,
+            'company' => $company->load(
+                'investor:id,company_id,full_name,email,phone'
+            ),
             ...$this->formOptions(),
         ]);
     }
@@ -144,7 +160,18 @@ class CompanyController extends Controller
     public function update(CompanyRequest $request, Company $company)
     {
         DB::transaction(function () use ($request, $company): void {
-            $company->update($request->validated());
+            $validated = $request->validated();
+            $company->update($this->companyData($validated));
+
+            $investorData = $this->investorData($validated);
+            $investor = $company->investor()->first();
+
+            if ($investor) {
+                $investor->update($investorData);
+            } else {
+                $this->createInvestor($company, $investorData);
+            }
+
             $company->projects()->update([
                 'company_name' => $company->display_name,
             ]);
@@ -164,7 +191,7 @@ class CompanyController extends Controller
             'Жобаларға тіркелген компанияны жоюға болмайды. Алдымен статусын белсенді емес етіп өзгертіңіз.'
         );
 
-        $company->delete();
+        DB::transaction(fn () => $company->delete());
 
         return redirect()
             ->route('companies.index')
@@ -201,5 +228,58 @@ class CompanyController extends Controller
     private function canManage(Request $request): bool
     {
         return $request->user()?->roleModel?->name === 'superadmin';
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function companyData(array $validated): array
+    {
+        unset(
+            $validated['investor_full_name'],
+            $validated['investor_email'],
+            $validated['investor_password'],
+            $validated['investor_password_confirmation']
+        );
+
+        return $validated;
+    }
+
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private function investorData(array $validated): array
+    {
+        $data = [
+            'full_name' => $validated['investor_full_name'],
+            'email' => Str::lower($validated['investor_email']),
+            'phone' => $validated['phone'] ?? null,
+        ];
+
+        if (! empty($validated['investor_password'])) {
+            $data['password'] = $validated['investor_password'];
+        }
+
+        return $data;
+    }
+
+    /**
+     * @param  array<string, mixed>  $investorData
+     */
+    private function createInvestor(
+        Company $company,
+        array $investorData
+    ): User {
+        $investorRole = Role::query()
+            ->where('name', 'investor')
+            ->firstOrFail();
+
+        return $company->investor()->create([
+            ...$investorData,
+            'role' => 'district_user',
+            'role_id' => $investorRole->id,
+        ]);
     }
 }

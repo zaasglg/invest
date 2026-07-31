@@ -14,11 +14,11 @@ class InvestmentProjectAccessService
         $roleName = $user->roleModel?->name;
 
         if ($roleName === 'investor') {
-            $query->whereHas(
-                'investors',
-                fn (Builder $investors) => $investors
-                    ->where('users.id', $user->id)
-            );
+            if ($user->company_id === null) {
+                $query->whereRaw('1 = 0');
+            } else {
+                $query->where('company_id', $user->company_id);
+            }
         }
 
         if ($roleName === 'moderator') {

@@ -25,7 +25,10 @@ class ProjectIssueController extends Controller
         return Inertia::render('investment-projects/issues', [
             'project' => $investmentProject->load(['region', 'projectType']),
             'issues' => $issues,
-            'ispolnitelCanWrite' => $this->ispolnitelCanWrite($user, $investmentProject),
+            'participantCanCreate' => $this->participantCanCreate(
+                $user,
+                $investmentProject
+            ),
         ]);
     }
 
@@ -42,6 +45,10 @@ class ProjectIssueController extends Controller
             'severity' => 'required|in:low,medium,high,critical',
             'status' => 'required|in:open,in_progress,resolved',
         ]);
+
+        if ($user?->roleModel?->name === 'investor') {
+            $validated['status'] = 'open';
+        }
 
         $issue = $investmentProject->issues()->create([
             ...$validated,
@@ -76,7 +83,11 @@ class ProjectIssueController extends Controller
 
         $user = Auth::user();
 
-        if ($user?->roleModel?->name === 'ispolnitel') {
+        if (in_array(
+            $user?->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             abort(403, 'Сізге проблемалық мәселені өзгертуге рұқсат жоқ.');
         }
 
@@ -135,8 +146,12 @@ class ProjectIssueController extends Controller
 
         $user = Auth::user();
 
-        // Ispolnitel cannot delete issues
-        if ($user->roleModel?->name === 'ispolnitel') {
+        // Project participants may add issues but cannot delete them.
+        if (in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             abort(403, 'Сізге проблемалық мәселені жоюға рұқсат жоқ.');
         }
 
@@ -162,9 +177,15 @@ class ProjectIssueController extends Controller
         return redirect()->back()->with('success', 'Проблемалық мәселе жойылды.');
     }
 
-    private function ispolnitelCanWrite($user, InvestmentProject $project): bool
-    {
-        if ($user->roleModel?->name !== 'ispolnitel') {
+    private function participantCanCreate(
+        $user,
+        InvestmentProject $project
+    ): bool {
+        if (! in_array(
+            $user->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        )) {
             return false;
         }
 
@@ -178,7 +199,11 @@ class ProjectIssueController extends Controller
 
     private function ensureCanCreateIssues($user, InvestmentProject $project): void
     {
-        if ($user?->roleModel?->name === 'ispolnitel' && ! $this->ispolnitelCanWrite($user, $project)) {
+        if (in_array(
+            $user?->roleModel?->name,
+            ['ispolnitel', 'investor'],
+            true
+        ) && ! $this->participantCanCreate($user, $project)) {
             abort(403, 'Сіз бұл жобаға проблемалық мәселе қоса алмайсыз.');
         }
     }

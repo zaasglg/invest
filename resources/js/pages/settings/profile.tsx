@@ -253,7 +253,7 @@ export default function Profile() {
                     </Form>
                 </div>
 
-                <DeleteUser />
+                {auth.user?.role_model?.name !== 'investor' && <DeleteUser />}
 
                 {/* Avatar Cropper Modal */}
                 {rawImageSrc && (

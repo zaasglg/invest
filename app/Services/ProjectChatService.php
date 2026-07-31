@@ -101,7 +101,7 @@ class ProjectChatService
     {
         $project->loadMissing([
             'curators:id,full_name,avatar,position',
-            'investors:id,full_name,avatar,position',
+            'investors:id,company_id,full_name,avatar,position',
             'executors:id,full_name,avatar,position',
             'creator:id,full_name,avatar,position',
         ]);
