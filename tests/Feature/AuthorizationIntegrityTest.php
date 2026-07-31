@@ -101,6 +101,80 @@ test('only task managers can mutate project tasks and assignees are restricted',
         ->and(ProjectTask::query()->count())->toBe(1);
 });
 
+test('reassigning the last task keeps the automatic district executor attached', function () {
+    $admin = createAuthorizationTestUser('superadmin');
+    $districtExecutor = createAuthorizationTestUser('ispolnitel');
+    $replacement = createAuthorizationTestUser('ispolnitel');
+    $region = createAuthorizationTestRegion();
+    $project = createAuthorizationTestProject($admin, $region);
+
+    $districtExecutor->update([
+        'baskarma_type' => 'district',
+        'region_id' => $region->id,
+    ]);
+    $replacement->update(['baskarma_type' => 'oblast']);
+    $project->executors()->attach($districtExecutor);
+
+    $task = ProjectTask::create([
+        'project_id' => $project->id,
+        'title' => 'Аудандық орындаушы тапсырмасы',
+        'assigned_to' => $districtExecutor->id,
+        'created_by' => $admin->id,
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+
+    $this->actingAs($admin)
+        ->put(route(
+            'investment-projects.tasks.update',
+            [$project, $task]
+        ), [
+            'assigned_to' => $replacement->id,
+        ])
+        ->assertRedirect();
+
+    expect(
+        $project->executors()->whereKey($districtExecutor->id)->exists()
+    )->toBeTrue()
+        ->and(
+            $project->executors()->whereKey($replacement->id)->exists()
+        )->toBeTrue();
+});
+
+test('deleting the last task keeps the automatic district executor attached', function () {
+    $admin = createAuthorizationTestUser('superadmin');
+    $districtExecutor = createAuthorizationTestUser('ispolnitel');
+    $region = createAuthorizationTestRegion();
+    $project = createAuthorizationTestProject($admin, $region);
+
+    $districtExecutor->update([
+        'baskarma_type' => 'district',
+        'region_id' => $region->id,
+    ]);
+    $project->executors()->attach($districtExecutor);
+
+    $task = ProjectTask::create([
+        'project_id' => $project->id,
+        'title' => 'Өшірілетін аудандық тапсырма',
+        'assigned_to' => $districtExecutor->id,
+        'created_by' => $admin->id,
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+
+    $this->actingAs($admin)
+        ->delete(route(
+            'investment-projects.tasks.destroy',
+            [$project, $task]
+        ))
+        ->assertRedirect();
+
+    expect($task->fresh())->toBeNull()
+        ->and(
+            $project->executors()->whereKey($districtExecutor->id)->exists()
+        )->toBeTrue();
+});
+
 test('completion review is authorized once and duplicate submissions are blocked', function () {
     $admin = createAuthorizationTestUser('superadmin');
     $executor = createAuthorizationTestUser('ispolnitel');

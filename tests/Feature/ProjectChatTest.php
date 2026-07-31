@@ -170,6 +170,50 @@ test('users outside project participants cannot read or write its chat', functio
     ]);
 });
 
+test('archived project chat is unavailable to its executor', function () {
+    $curator = createProjectChatUser('invest', 'Архив чат кураторы');
+    $executor = createProjectChatUser('ispolnitel', 'Архив чат орындаушысы');
+    $project = createProjectChatProject($curator);
+    $project->curators()->attach($curator);
+    $project->executors()->attach($executor);
+
+    ProjectChatMessage::create([
+        'investment_project_id' => $project->id,
+        'user_id' => $curator->id,
+        'message' => 'Архивке дейінгі хабарлама',
+    ]);
+
+    $project->update(['is_archived' => true]);
+
+    $this->actingAs($executor)
+        ->get('/chats')
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('chats/index')
+            ->has('chats', 0)
+            ->where('selectedChat', null));
+
+    $this->actingAs($executor)
+        ->get('/chats/unread-count')
+        ->assertOk()
+        ->assertJson(['count' => 0]);
+
+    $this->actingAs($executor)
+        ->get("/chats/{$project->id}")
+        ->assertForbidden();
+
+    $this->actingAs($executor)
+        ->post("/chats/{$project->id}/messages", [
+            'message' => 'Архивке жазылмауы керек',
+        ])
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('project_chat_messages', [
+        'investment_project_id' => $project->id,
+        'user_id' => $executor->id,
+        'message' => 'Архивке жазылмауы керек',
+    ]);
+});
+
 test('participants can exchange protected images and documents', function () {
     Storage::fake('local');
 

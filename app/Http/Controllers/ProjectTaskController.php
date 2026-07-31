@@ -324,15 +324,10 @@ class ProjectTaskController extends Controller
 
         if ($oldAssignedTo !== $newAssignedTo) {
             if ($oldAssignedTo) {
-                // Check for other tasks excluding the current one (since it's now reassigned)
-                $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
-                    ->where('assigned_to', $oldAssignedTo)
-                    ->where('id', '!=', $task->id)
-                    ->exists();
-
-                if (! $hasOtherTasks) {
-                    $investmentProject->executors()->detach($oldAssignedTo);
-                }
+                $this->detachExecutorIfNoTasksRemain(
+                    $investmentProject,
+                    (int) $oldAssignedTo
+                );
             }
 
             if ($newAssignedTo) {
@@ -467,13 +462,10 @@ class ProjectTaskController extends Controller
         );
 
         if ($assignedTo) {
-            $hasOtherTasks = ProjectTask::where('project_id', $investmentProject->id)
-                ->where('assigned_to', $assignedTo)
-                ->exists();
-
-            if (! $hasOtherTasks) {
-                $investmentProject->executors()->detach($assignedTo);
-            }
+            $this->detachExecutorIfNoTasksRemain(
+                $investmentProject,
+                (int) $assignedTo
+            );
         }
 
         return redirect()->back()->with('success', 'Кезең жойылды.');
@@ -492,6 +484,40 @@ class ProjectTaskController extends Controller
             'due_date' => 'Аяқталу күні',
             'approval_status' => 'Модерация статусы',
         ];
+    }
+
+    private function detachExecutorIfNoTasksRemain(
+        InvestmentProject $project,
+        int $userId
+    ): void {
+        $hasOtherTasks = ProjectTask::query()
+            ->where('project_id', $project->id)
+            ->where('assigned_to', $userId)
+            ->exists();
+
+        if ($hasOtherTasks || $this->isAutomaticDistrictExecutor(
+            $project,
+            $userId
+        )) {
+            return;
+        }
+
+        $project->executors()->detach($userId);
+    }
+
+    private function isAutomaticDistrictExecutor(
+        InvestmentProject $project,
+        int $userId
+    ): bool {
+        return User::query()
+            ->whereKey($userId)
+            ->where('region_id', $project->region_id)
+            ->where('baskarma_type', 'district')
+            ->whereHas(
+                'roleModel',
+                fn ($query) => $query->where('name', 'ispolnitel')
+            )
+            ->exists();
     }
 
     private function validatedAssignee(
