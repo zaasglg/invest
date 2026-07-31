@@ -37,8 +37,8 @@ button {
 
 .story {
   position: relative;
-  height: 245vh;
-  min-height: 1500px;
+  height: 360vh;
+  min-height: 2250px;
 }
 
 .stage {
@@ -287,7 +287,7 @@ button {
 .side-index > i {
   position: relative;
   width: 1px;
-  height: 86px;
+  height: 54px;
   overflow: hidden;
   background: rgba(255,255,255,.12);
 }
@@ -300,7 +300,8 @@ button {
   background: var(--acid);
 }
 
-.country-copy {
+.country-copy,
+.region-copy {
   position: absolute;
   z-index: 6;
   left: clamp(24px, 8vw, 136px);
@@ -320,7 +321,8 @@ button {
   font-size: 10px;
 }
 
-.country-copy h2 {
+.country-copy h2,
+.region-copy h2 {
   margin: 20px 0 18px;
   font-size: clamp(42px, 4.7vw, 76px);
   font-weight: 450;
@@ -328,11 +330,38 @@ button {
   letter-spacing: -.06em;
 }
 
-.country-copy p {
+.country-copy p,
+.region-copy p {
   max-width: 360px;
   color: var(--muted);
   font-size: 15px;
   line-height: 1.65;
+}
+
+.region-copy h2 em {
+  color: var(--acid);
+  font-style: normal;
+}
+
+.continue-region {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 0 0 8px;
+  border-bottom: 1px solid rgba(165, 239, 82, .5);
+  background: transparent;
+  color: #e9f8ee;
+  cursor: pointer;
+  font-size: 12px;
+  pointer-events: auto;
+}
+
+.map-source {
+  margin-top: 18px;
+  color: #5f756d;
+  font-size: 9px;
+  letter-spacing: .04em;
 }
 
 .coordinate {
@@ -439,7 +468,7 @@ button {
 }
 
 @media (max-width: 700px) {
-  .story { height: 225vh; }
+  .story { height: 330vh; }
   .stage { min-height: 620px; }
   .site-header {
     height: 74px;
@@ -472,13 +501,16 @@ button {
     right: 20px;
     bottom: 26px;
   }
-  .country-copy {
+  .country-copy,
+  .region-copy {
     left: 24px;
     bottom: 7vh;
     width: calc(100vw - 48px);
   }
-  .country-copy h2 { font-size: 48px; }
-  .country-copy p { width: 78%; }
+  .country-copy h2,
+  .region-copy h2 { font-size: 46px; }
+  .country-copy p,
+  .region-copy p { width: 82%; }
   .next-chapter {
     grid-template-columns: 1fr;
     align-content: center;

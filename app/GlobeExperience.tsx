@@ -42,6 +42,16 @@ export function GlobeExperience() {
     const kazakhstan = countries.features.find(
       (country) => String(country.id).padStart(3, "0") === KAZAKHSTAN_ID,
     );
+    let turkestanRegion: { type: string; features: Array<{ type: string }> } | null = null;
+    const regionController = new AbortController();
+    fetch("/data/turkestan-region.json", { signal: regionController.signal })
+      .then((response) => response.json())
+      .then((data) => {
+        turkestanRegion = data;
+      })
+      .catch(() => {
+        // The country sequence remains usable if regional data is unavailable.
+      });
 
     let frame = 0;
     let width = window.innerWidth;
@@ -69,24 +79,29 @@ export function GlobeExperience() {
 
     const draw = (time: number) => {
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
-      const focus = ease(clamp((currentProgress - 0.18) / 0.74));
+      const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
+      const regionFocus = ease(clamp((currentProgress - 0.64) / 0.34));
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
-      const globeScale = baseScale * (1 + focus * (mobile ? 2.4 : 3.35));
+      const countryScale = 1 + countryFocus * (mobile ? 2.35 : 3.2);
+      const globeScale = baseScale * countryScale * (1 + regionFocus * (mobile ? 1.72 : 2.08));
       const initialX = mobile ? width * 0.5 : width * 0.73;
       const initialY = mobile ? height * 0.64 : height * 0.54;
       const targetX = mobile ? width * 0.5 : width * 0.57;
       const targetY = mobile ? height * 0.51 : height * 0.53;
+      const regionX = mobile ? width * 0.52 : width * 0.66;
+      const regionY = mobile ? height * 0.47 : height * 0.52;
       const drift = reducedMotion ? 0 : time * 0.00155;
       const startLon = 14 + drift;
-      const viewLon = startLon + (67 - startLon) * focus;
-      const viewLat = 13 + (48 - 13) * focus;
+      const countryLon = startLon + (67 - startLon) * countryFocus;
+      const countryLat = 13 + (48 - 13) * countryFocus;
+      const viewLon = countryLon + (68.25 - countryLon) * regionFocus;
+      const viewLat = countryLat + (43.3 - countryLat) * regionFocus;
+      const globeX = initialX + (targetX - initialX) * countryFocus + (regionX - targetX) * regionFocus;
+      const globeY = initialY + (targetY - initialY) * countryFocus + (regionY - targetY) * regionFocus;
 
       const projection = geoOrthographic()
-        .translate([
-          initialX + (targetX - initialX) * focus,
-          initialY + (targetY - initialY) * focus,
-        ])
+        .translate([globeX, globeY])
         .scale(globeScale)
         .rotate([-viewLon, -viewLat, 0])
         .clipAngle(90)
@@ -100,7 +115,7 @@ export function GlobeExperience() {
       for (let i = 0; i < 92; i += 1) {
         const x = (Math.sin(i * 982.31) * 0.5 + 0.5) * width;
         const y = (Math.sin(i * 371.17 + 2) * 0.5 + 0.5) * height;
-        const alpha = (0.12 + (i % 5) * 0.045) * (1 - focus * 0.75);
+        const alpha = (0.12 + (i % 5) * 0.045) * (1 - countryFocus * 0.75);
         context.fillStyle = `rgba(192, 228, 213, ${alpha})`;
         context.beginPath();
         context.arc(x, y, i % 11 === 0 ? 1.3 : 0.65, 0, Math.PI * 2);
@@ -110,8 +125,8 @@ export function GlobeExperience() {
 
       // Outer atmosphere.
       context.save();
-      context.shadowColor = `rgba(81, 255, 180, ${0.16 + focus * 0.14})`;
-      context.shadowBlur = 44 + focus * 20;
+      context.shadowColor = `rgba(81, 255, 180, ${0.16 + countryFocus * 0.14})`;
+      context.shadowBlur = 44 + countryFocus * 20;
       context.beginPath();
       path({ type: "Sphere" } as never);
       context.fillStyle = "rgba(8, 30, 31, .9)";
@@ -138,7 +153,7 @@ export function GlobeExperience() {
 
       context.beginPath();
       path(geoGraticule10());
-      context.strokeStyle = `rgba(145, 194, 180, ${0.09 + focus * 0.035})`;
+      context.strokeStyle = `rgba(145, 194, 180, ${0.09 + countryFocus * 0.035})`;
       context.lineWidth = 0.55;
       context.stroke();
 
@@ -147,20 +162,35 @@ export function GlobeExperience() {
       context.fillStyle = "#31584b";
       context.fill();
       context.strokeStyle = "rgba(175, 213, 195, .22)";
-      context.lineWidth = Math.max(0.35, 0.72 - focus * 0.25);
+      context.lineWidth = Math.max(0.25, 0.72 - countryFocus * 0.25 - regionFocus * 0.18);
       context.stroke();
 
       if (kazakhstan) {
         context.save();
         context.beginPath();
         path(kazakhstan as never);
-        context.fillStyle = `rgba(159, 239, 78, ${0.26 + focus * 0.74})`;
-        context.shadowColor = `rgba(166, 255, 90, ${focus * 0.8})`;
-        context.shadowBlur = 18 + focus * 28;
+        context.fillStyle = `rgba(159, 239, 78, ${0.26 + countryFocus * 0.74 - regionFocus * 0.56})`;
+        context.shadowColor = `rgba(166, 255, 90, ${countryFocus * 0.8})`;
+        context.shadowBlur = 18 + countryFocus * 28;
         context.fill();
         context.shadowBlur = 0;
-        context.strokeStyle = `rgba(218, 255, 178, ${0.35 + focus * 0.65})`;
-        context.lineWidth = 1.2 + focus * 0.6;
+        context.strokeStyle = `rgba(218, 255, 178, ${0.35 + countryFocus * 0.65 - regionFocus * 0.42})`;
+        context.lineWidth = 1.2 + countryFocus * 0.6;
+        context.stroke();
+        context.restore();
+      }
+
+      if (turkestanRegion?.features?.[0]) {
+        context.save();
+        context.beginPath();
+        path(turkestanRegion.features[0] as never);
+        context.fillStyle = `rgba(165, 239, 82, ${regionFocus * 0.94})`;
+        context.shadowColor = `rgba(165, 239, 82, ${regionFocus * 0.9})`;
+        context.shadowBlur = 12 + regionFocus * 32;
+        context.fill();
+        context.shadowBlur = 0;
+        context.strokeStyle = `rgba(239, 255, 222, ${regionFocus})`;
+        context.lineWidth = 1.15 + regionFocus * 0.7;
         context.stroke();
         context.restore();
       }
@@ -204,16 +234,27 @@ export function GlobeExperience() {
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", updateProgress);
       motionQuery.removeEventListener("change", updateMotion);
+      regionController.abort();
     };
   }, []);
 
   const heroFade = 1 - ease(clamp((progress - 0.05) / 0.32));
-  const countryReveal = ease(clamp((progress - 0.61) / 0.25));
+  const countryReveal =
+    ease(clamp((progress - 0.38) / 0.16)) *
+    (1 - ease(clamp((progress - 0.64) / 0.13)));
+  const regionReveal = ease(clamp((progress - 0.78) / 0.18));
 
   const goToKazakhstan = () => {
     const story = storyRef.current;
     if (!story) return;
-    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.83;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.53;
+    window.scrollTo({ top: target, behavior: "smooth" });
+  };
+
+  const goToRegion = () => {
+    const story = storyRef.current;
+    if (!story) return;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.94;
     window.scrollTo({ top: target, behavior: "smooth" });
   };
 
@@ -225,7 +266,7 @@ export function GlobeExperience() {
             className="globe-canvas"
             ref={canvasRef}
             role="img"
-            aria-label="Вращающийся глобус, приближающийся к Казахстану при прокрутке"
+            aria-label="Вращающийся глобус, приближающийся к Казахстану и Туркестанской области при прокрутке"
           />
           <div className="ambient-glow" aria-hidden="true" />
 
@@ -237,7 +278,7 @@ export function GlobeExperience() {
             <nav aria-label="Главная навигация">
               <button type="button">О платформе</button>
               <button type="button" onClick={goToKazakhstan}>Возможности</button>
-              <button type="button" onClick={goToKazakhstan}>Регион</button>
+              <button type="button" onClick={goToRegion}>Регион</button>
             </nav>
             <div className="header-actions">
               <button className="lang" type="button" aria-label="Выбрать язык">RU <span>⌄</span></button>
@@ -264,9 +305,11 @@ export function GlobeExperience() {
           </div>
 
           <aside className="side-index" aria-label="Этапы путешествия">
-            <span className={progress < 0.5 ? "active" : ""}>Мир</span>
-            <i><b style={{ height: `${Math.max(7, progress * 100)}%` }} /></i>
-            <span className={progress >= 0.5 ? "active" : ""}>Казахстан</span>
+            <span className={progress < 0.36 ? "active" : ""}>Мир</span>
+            <i><b style={{ height: `${Math.max(5, clamp(progress / 0.5) * 100)}%` }} /></i>
+            <span className={progress >= 0.36 && progress < 0.73 ? "active" : ""}>Казахстан</span>
+            <i><b style={{ height: `${Math.max(0, clamp((progress - 0.5) / 0.5) * 100)}%` }} /></i>
+            <span className={progress >= 0.73 ? "active" : ""}>Туркестан</span>
           </aside>
 
           <div
@@ -278,6 +321,24 @@ export function GlobeExperience() {
             <h2>В центре<br />новых возможностей</h2>
             <p>Страна становится отправной точкой инвестиционного маршрута.</p>
             <div className="coordinate">48.0196° N&nbsp;&nbsp; 66.9237° E</div>
+            <button className="continue-region" type="button" onClick={goToRegion}>
+              Перейти к области <ArrowDown size={15} />
+            </button>
+          </div>
+
+          <div
+            className="region-copy"
+            style={{ opacity: regionReveal, transform: `translateY(${(1 - regionReveal) * 34}px)` }}
+            aria-hidden={regionReveal < 0.3}
+          >
+            <div className="country-kicker"><span>02</span> Туркестанская область</div>
+            <h2>Регион, где<br /><em>начинается рост</em></h2>
+            <p>
+              Следующий масштаб инвестиционной карты — территория, проекты
+              и точки развития Туркестанской области.
+            </p>
+            <div className="coordinate">43.3000° N&nbsp;&nbsp; 68.2500° E</div>
+            <div className="map-source">Границы: © OpenStreetMap contributors</div>
           </div>
 
           <button
@@ -297,7 +358,7 @@ export function GlobeExperience() {
       </section>
       <section className="next-chapter" aria-label="Следующий раздел">
         <span>Следующий маршрут</span>
-        <strong>Инвестиционный потенциал Казахстана</strong>
+        <strong>Детальная карта районов и городов области</strong>
         <i>Скоро</i>
       </section>
     </main>
