@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
-import { geoCentroid, geoContains, geoMercator, geoPath } from "d3-geo";
+import { geoArea, geoCentroid, geoContains, geoMercator, geoPath } from "d3-geo";
 
 type RegionFeature = {
   type: "Feature";
@@ -44,6 +44,32 @@ type RegionMetric = {
 };
 
 const REGION_ID = "kz.61";
+const SINGLE_CONTOUR_CITIES = new Set(["kz.61.10", "kz.61.20"]);
+
+function removeDetachedCityZones(collection: RegionCollection): RegionCollection {
+  return {
+    ...collection,
+    features: collection.features.map((feature) => {
+      if (!SINGLE_CONTOUR_CITIES.has(feature.id)) return feature;
+      const geometry = feature.geometry as {
+        type?: string;
+        coordinates?: number[][][][];
+      };
+      if (geometry.type !== "MultiPolygon" || !geometry.coordinates?.length) return feature;
+
+      const mainContour = geometry.coordinates.reduce((largest, polygon) => {
+        const largestArea = geoArea({ type: "Polygon", coordinates: largest } as never);
+        const polygonArea = geoArea({ type: "Polygon", coordinates: polygon } as never);
+        return polygonArea > largestArea ? polygon : largest;
+      });
+
+      return {
+        ...feature,
+        geometry: { ...geometry, coordinates: [mainContour] },
+      };
+    }),
+  };
+}
 
 const REGION_METRICS: RegionMetric[] = [
   {
@@ -285,7 +311,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
     const controller = new AbortController();
     fetch("/data/turkestan-districts.json", { signal: controller.signal })
       .then((response) => response.json())
-      .then((data: RegionCollection) => setRegions(data))
+      .then((data: RegionCollection) => setRegions(removeDetachedCityZones(data)))
       .catch(() => undefined);
     return () => controller.abort();
   }, []);
