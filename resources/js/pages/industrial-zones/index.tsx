@@ -1,7 +1,8 @@
 import { Head, Link, usePage, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Edit, Eye, Plus, Trash2 } from 'lucide-react';
+import { Edit, Eye, Plus, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import FilterPanel from '@/components/filter-panel';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -106,112 +107,92 @@ export default function Index({ industrialZones, regions, filters }: Props) {
         >
             <Head title="Индустриялық аймақтар" />
 
-            <div className="flex h-full flex-col space-y-5 p-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Индустриялық аймақтар
-                    </h1>
-                    {canModify && (
-                        <Link href={industrialZonesRoutes.create.url()}>
-                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                                <Plus className="mr-2 h-4 w-4" />
-                                ИА құру
-                            </Button>
-                        </Link>
-                    )}
-                </div>
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
+                            Өндірістік инфрақұрылым
+                        </p>
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
+                            Индустриялық аймақтар
+                        </h1>
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Өндірістік алаңдардың аумағы, инвестициялары және
+                            даму күйі.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        <Button
+                            variant="outline"
+                            onClick={() => setFiltersOpen(true)}
+                        >
+                            <SlidersHorizontal data-icon="inline-start" />
+                            Сүзгілер
+                        </Button>
+                        {canModify && (
+                            <Link href={industrialZonesRoutes.create.url()}>
+                                <Button className="bg-gold text-white hover:bg-gold-dark">
+                                    <Plus data-icon="inline-start" />
+                                    ИА құру
+                                </Button>
+                            </Link>
+                        )}
+                    </div>
+                </header>
 
-                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                    <button
-                        type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#0f1b3d]"
-                        onClick={() => setFiltersOpen((prev) => !prev)}
-                        aria-expanded={filtersOpen}
-                    >
-                        Сүзгілер
-                        <ChevronDown
-                            className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                <FilterPanel
+                    open={filtersOpen}
+                    onToggle={() => setFiltersOpen((prev) => !prev)}
+                    onSubmit={submitFilters}
+                    onClear={clearFilters}
+                    activeCount={Object.values(data).filter(Boolean).length}
+                    showTrigger={false}
+                >
+                    <div className="space-y-1.5">
+                        <Label htmlFor="search">Іздеу</Label>
+                        <Input
+                            id="search"
+                            value={data.search}
+                            onChange={(e) => setData('search', e.target.value)}
+                            placeholder="ИА атауы"
                         />
-                    </button>
-
-                    {filtersOpen && (
-                        <form onSubmit={submitFilters} className="mt-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="search">Іздеу</Label>
-                                    <Input
-                                        id="search"
-                                        value={data.search}
-                                        onChange={(e) =>
-                                            setData('search', e.target.value)
-                                        }
-                                        placeholder="ИА атауы"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Аймақ</Label>
-                                    <Select
-                                        value={data.region_id}
-                                        onValueChange={(v) =>
-                                            setData('region_id', v)
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық аймақтар" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {regions.map((r) => (
-                                                <SelectItem
-                                                    key={r.id}
-                                                    value={String(r.id)}
-                                                >
-                                                    {r.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Күйі</Label>
-                                    <Select
-                                        value={data.status}
-                                        onValueChange={(v) =>
-                                            setData('status', v)
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық күйлер" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="active">
-                                                Белсенді
-                                            </SelectItem>
-                                            <SelectItem value="developing">
-                                                Дамушы
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                            </div>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                <Button
-                                    type="submit"
-                                    className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
-                                >
-                                    Қолдану
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="border-gray-200 shadow-none hover:bg-gray-50"
-                                    onClick={clearFilters}
-                                >
-                                    Тазалау
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </div>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Аймақ</Label>
+                        <Select
+                            value={data.region_id}
+                            onValueChange={(v) => setData('region_id', v)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық аймақтар" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {regions.map((r) => (
+                                    <SelectItem key={r.id} value={String(r.id)}>
+                                        {r.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Күйі</Label>
+                        <Select
+                            value={data.status}
+                            onValueChange={(v) => setData('status', v)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық күйлер" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="active">Белсенді</SelectItem>
+                                <SelectItem value="developing">
+                                    Дамушы
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </FilterPanel>
 
                 <div className="overflow-hidden rounded-xl">
                     <Table>

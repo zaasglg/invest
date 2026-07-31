@@ -231,7 +231,7 @@ export default function ProjectPassportOverview({
                                     {project.statusLabel}
                                 </Badge>
                             </div>
-                            <h1 className="text-2xl leading-tight font-bold tracking-tight sm:text-3xl">
+                            <h1 className="text-2xl leading-tight font-bold tracking-tight text-white sm:text-3xl">
                                 {project.name}
                             </h1>
                             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">

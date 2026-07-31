@@ -290,21 +290,21 @@ export default function BaskarmaRating({
         >
             <Head title="Пайдалы қызмет коэффициенттері" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            <div className="page-surface flex h-full flex-1 flex-col gap-6">
                 {/* Header */}
-                <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f1b3d]">
+                <header className="flex items-center gap-3 border-b border-slate-200/80 pb-5">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-md bg-navy">
                         <Award className="h-5 w-5 text-[#c8a44e]" />
                     </div>
                     <div>
-                        <h1 className="text-2xl font-bold text-[#0f1b3d]">
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
                             Пайдалы қызмет коэффициенттері
                         </h1>
                         <p className="text-sm text-gray-500">
                             Тапсырмаларды орындау нәтижелері бойынша
                         </p>
                     </div>
-                </div>
+                </header>
 
                 {/* Tabs selector */}
                 <div className="flex items-center gap-3">

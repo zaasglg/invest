@@ -45,20 +45,28 @@ export default function Index({ roles }: Props) {
         <AppLayout breadcrumbs={[{ title: 'Рөлдер', href: '#' }]}>
             <Head title="Рөлдер" />
 
-            <div className="flex h-full flex-col space-y-5 p-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Пайдаланушы рөлдері
-                    </h1>
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
+                            Қолжетімділікті басқару
+                        </p>
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
+                            Пайдаланушы рөлдері
+                        </h1>
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Жүйелік рөлдер мен оларға тиесілі пайдаланушылар.
+                        </p>
+                    </div>
                     {canModify && (
                         <Link href={rolesRoutes.create.url()}>
-                            <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                                <Plus className="mr-2 h-4 w-4" />
+                            <Button className="bg-gold text-white hover:bg-gold-dark">
+                                <Plus className="h-4 w-4" />
                                 Рөл құру
                             </Button>
                         </Link>
                     )}
-                </div>
+                </header>
 
                 <div className="overflow-hidden rounded-xl">
                     <Table>

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Region;
 use App\Models\Sez;
+use App\Services\InfrastructureUsageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -105,7 +106,7 @@ class SezController extends Controller
         return redirect()->route('sezs.index')->with('success', 'АЭА құрылды.');
     }
 
-    public function show(Sez $sez)
+    public function show(Sez $sez, InfrastructureUsageService $usageService)
     {
         $sez->load(['region', 'issues', 'issues.creator:id,full_name'])
             ->loadCount('photos');
@@ -120,19 +121,25 @@ class SezController extends Controller
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
 
-        $investmentProjects = $sez->investmentProjects()
+        $projectsQuery = $sez->investmentProjects()
             ->where('is_archived', false)
             ->when(
                 $isModerator,
                 fn ($query) => $query->curatedByTurkistanInvest()
             )
-            ->with('region')
+            ->with('region');
+        $usageProjects = (clone $projectsQuery)->get();
+        $investmentProjects = $projectsQuery
             ->latest()
             ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('sezs/show', [
             'sez' => $sez,
+            'infrastructureUsage' => $usageService->summarize(
+                $sez->infrastructure,
+                $usageProjects,
+            ),
             'investmentProjects' => $investmentProjects,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,

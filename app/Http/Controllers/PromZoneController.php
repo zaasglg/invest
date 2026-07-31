@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PromZone;
 use App\Models\Region;
+use App\Services\InfrastructureUsageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -105,8 +106,10 @@ class PromZoneController extends Controller
         return redirect()->route('prom-zones.index')->with('success', 'Пром зона құрылды.');
     }
 
-    public function show(PromZone $promZone)
-    {
+    public function show(
+        PromZone $promZone,
+        InfrastructureUsageService $usageService,
+    ) {
         $user = auth()->user();
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
@@ -128,6 +131,10 @@ class PromZoneController extends Controller
 
         return Inertia::render('prom-zones/show', [
             'promZone' => $promZone,
+            'infrastructureUsage' => $usageService->summarize(
+                $promZone->infrastructure,
+                $promZone->investmentProjects,
+            ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);

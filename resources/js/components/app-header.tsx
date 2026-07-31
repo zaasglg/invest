@@ -4,6 +4,7 @@ import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
+import InMapLogo from '@/components/inmap-logo';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -118,21 +119,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     {/* Logo */}
                     <Link
                         href="/dashboard"
-                        className="mr-4 flex shrink-0 items-center gap-2.5"
+                        className="mr-4 flex shrink-0 items-center"
                     >
-                        <img
-                            src="/assets/images/logo-3.png"
-                            alt="Turkistan Invest"
-                            className="h-10 shrink-0"
-                        />
-                        <div className="hidden flex-col leading-none sm:flex">
-                            <span className="text-xs font-bold tracking-wider text-white">
-                                Түркістан
-                            </span>
-                            <span className="pt-0.5 text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                ОБЛЫСЫ
-                            </span>
-                        </div>
+                        <InMapLogo />
                     </Link>
 
                     {/* Mobile Menu */}
@@ -155,21 +144,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     Навигация мәзірі
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start border-b border-white/10 px-4 pb-4 text-left">
-                                    <div className="flex items-center gap-2.5">
-                                        <img
-                                            src="/assets/images/logo-3.png"
-                                            alt="Turkistan Invest"
-                                            className="h-7 shrink-0"
-                                        />
-                                        <div className="flex flex-col leading-none">
-                                            <span className="text-xs font-bold tracking-wider text-white">
-                                                Түркістан
-                                            </span>
-                                            <span className="text-[9px] font-medium tracking-[0.2em] text-[#c8a44e]">
-                                                ОБЛЫСЫ
-                                            </span>
-                                        </div>
-                                    </div>
+                                    <InMapLogo />
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-1 p-3">
                                     {filteredHeaderNavItems.map((item) => (

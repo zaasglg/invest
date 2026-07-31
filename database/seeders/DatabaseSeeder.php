@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
             IndustrialZoneSeeder::class,
             SubsoilUserSeeder::class,
             InvestmentProjectSeeder::class,
+            InvestmentProjectInfrastructureSeeder::class,
         ]);
 
     }

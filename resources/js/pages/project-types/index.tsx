@@ -43,23 +43,31 @@ export default function Index({ types }: Props) {
         >
             <Head title="Жоба түрлері" />
 
-            <div className="flex h-full flex-col space-y-5 p-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Жоба түрлері
-                    </h1>
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
+                            Анықтамалық
+                        </p>
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
+                            Жоба түрлері
+                        </h1>
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Инвестициялық жобаларды жіктеуге арналған санаттар.
+                        </p>
+                    </div>
                     {canModify && (
                         <Button
                             asChild
                             size="sm"
-                            className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
+                            className="bg-gold text-white hover:bg-gold-dark"
                         >
                             <Link href={projectTypes.create.url()}>
                                 Жаңа қосу
                             </Link>
                         </Button>
                     )}
-                </div>
+                </header>
 
                 <div className="overflow-hidden rounded-xl">
                     <Table>

@@ -2,20 +2,15 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     Building2,
-    Car,
-    Droplets,
     Eye,
-    Flame,
     ImageIcon,
     MapPin,
     Activity,
     Layers,
     AlertTriangle,
-    TrainFront,
-    Wifi,
-    Zap,
 } from 'lucide-react';
 import React from 'react';
+import InfrastructureList from '@/components/infrastructure-list';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -61,6 +56,10 @@ interface InvestmentProject {
 interface InfrastructureDetails {
     available: boolean;
     capacity?: string;
+    used_capacity_kw?: number;
+    remaining_capacity_kw?: number;
+    used_capacity?: number;
+    remaining_capacity?: number;
     type?: string;
     distance?: string;
 }
@@ -99,6 +98,10 @@ interface Photo {
 
 interface Props {
     sez: Sez;
+    infrastructureUsage?: Record<
+        string,
+        { total: number; used: number; remaining: number }
+    >;
     investmentProjects: PaginatedData<InvestmentProject>;
     mainGallery?: Photo[];
     renderPhotos?: Photo[];
@@ -106,6 +109,7 @@ interface Props {
 
 export default function Show({
     sez,
+    infrastructureUsage = {},
     investmentProjects,
     mainGallery = [],
     renderPhotos = [],
@@ -182,26 +186,28 @@ export default function Show({
         >
             <Head title={sez.name} />
 
-            <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
+            <div className="page-surface flex h-full flex-1 flex-col gap-5 sm:gap-6">
                 {/* Back link */}
                 <Link
                     href={`/sezs`}
-                    className="inline-flex items-center text-sm text-gray-500 transition-colors hover:text-[#0f1b3d]"
+                    className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-navy"
                 >
-                    <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
+                    <ArrowLeft className="size-4" /> Тізімге қайту
                 </Link>
 
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}
-                    <div className="space-y-6 lg:col-span-2">
+                    <div className="flex min-w-0 flex-col gap-6">
                         {/* Banner + Info + Description */}
-                        <Card className="overflow-hidden py-0 shadow-none">
+                        <Card className="overflow-hidden border-slate-200/80 py-0 shadow-none">
                             {/* Banner Header */}
-                            <div className="bg-[#0f1b3d] px-6 py-4">
+                            <div className="border-b border-slate-200 bg-white px-6 py-5">
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Layers className="h-5 w-5" />
-                                        <h1 className="text-xl font-bold">
+                                    <div className="flex items-center gap-3 text-navy">
+                                        <span className="flex size-10 items-center justify-center rounded-md bg-navy text-gold">
+                                            <Layers className="size-5" />
+                                        </span>
+                                        <h1 className="text-xl font-extrabold sm:text-2xl">
                                             {sez.name}
                                         </h1>
                                     </div>
@@ -281,111 +287,13 @@ export default function Show({
                                 </div>
 
                                 {/* Infrastructure */}
-                                {sez.infrastructure &&
-                                    (() => {
-                                        const infraItems = [
-                                            {
-                                                key: 'electricity',
-                                                name: 'Электрмен жабдықтау',
-                                                icon: Zap,
-                                                val: sez.infrastructure
-                                                    .electricity,
-                                            },
-                                            {
-                                                key: 'gas',
-                                                name: 'Газ',
-                                                icon: Flame,
-                                                val: sez.infrastructure.gas,
-                                            },
-                                            {
-                                                key: 'water',
-                                                name: 'Сумен жабдықтау',
-                                                icon: Droplets,
-                                                val: sez.infrastructure.water,
-                                            },
-                                            {
-                                                key: 'roads',
-                                                name: 'Жолдар',
-                                                icon: Car,
-                                                val: sez.infrastructure.roads,
-                                            },
-                                            {
-                                                key: 'railway',
-                                                name: 'Теміржол тұйығы',
-                                                icon: TrainFront,
-                                                val: sez.infrastructure.railway,
-                                            },
-                                            {
-                                                key: 'internet',
-                                                name: 'Интернет',
-                                                icon: Wifi,
-                                                val: sez.infrastructure
-                                                    .internet,
-                                            },
-                                        ].filter(
-                                            (i) =>
-                                                i.val &&
-                                                i.val.available !== undefined,
-                                        );
-
-                                        if (infraItems.length === 0)
-                                            return null;
-
-                                        return (
-                                            <div className="mt-6">
-                                                <p className="mb-2 text-sm font-medium text-gray-500">
-                                                    Инфрақұрылым
-                                                </p>
-                                                <div className="divide-y divide-gray-100 rounded-lg border border-gray-100">
-                                                    {infraItems.map((item) => {
-                                                        const active =
-                                                            item.val?.available;
-                                                        const detail =
-                                                            item.val
-                                                                ?.capacity ||
-                                                            item.val?.type ||
-                                                            item.val
-                                                                ?.distance ||
-                                                            '';
-                                                        return (
-                                                            <div
-                                                                key={item.key}
-                                                                className="flex items-center justify-between p-3 transition-colors hover:bg-gray-50/50"
-                                                            >
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className="rounded-md bg-gray-50 p-2 text-gray-500">
-                                                                        <item.icon className="h-4 w-4" />
-                                                                    </div>
-                                                                    <span className="text-sm font-medium text-gray-700">
-                                                                        {
-                                                                            item.name
-                                                                        }
-                                                                    </span>
-                                                                </div>
-                                                                <div className="flex flex-col items-end text-right">
-                                                                    <Badge
-                                                                        variant="outline"
-                                                                        className={` ${active ? 'border-emerald-100 bg-emerald-50 text-emerald-700' : 'border-amber-100 bg-amber-50 text-amber-700'} h-5 border px-1.5 py-0 text-[10px] font-medium`}
-                                                                    >
-                                                                        {active
-                                                                            ? 'Қолжетімді'
-                                                                            : 'Жоқ'}
-                                                                    </Badge>
-                                                                    {detail && (
-                                                                        <div className="mt-0.5 text-[10px] font-medium text-gray-400">
-                                                                            {
-                                                                                detail
-                                                                            }
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
+                                {sez.infrastructure && (
+                                    <InfrastructureList
+                                        className="mt-6"
+                                        infrastructure={sez.infrastructure}
+                                        usage={infrastructureUsage}
+                                    />
+                                )}
                             </CardContent>
 
                             {/* Description */}
@@ -485,7 +393,7 @@ export default function Show({
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <aside className="flex flex-col gap-5 lg:sticky lg:top-20 lg:self-start">
                         {renderPhotos.length > 0 && (
                             <Card className="overflow-hidden shadow-none">
                                 <CardHeader>
@@ -644,7 +552,7 @@ export default function Show({
                                 )}
                             </CardContent>
                         </Card>
-                    </div>
+                    </aside>
                 </div>
             </div>
         </AppLayout>

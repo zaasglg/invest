@@ -1,5 +1,5 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Archive, Eye, RotateCcw, Search } from 'lucide-react';
+import { Eye, RotateCcw, Search } from 'lucide-react';
 import { type FormEvent } from 'react';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
@@ -115,13 +115,19 @@ export default function Archived({ projects, filters }: Props) {
         >
             <Head title="Архивтелген жобалар" />
 
-            <div className="flex h-full flex-col space-y-5 p-6">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                        <Archive className="h-6 w-6 text-gray-500" />
-                        <h1 className="text-2xl font-bold text-[#0f1b3d]">
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
+                            Жобалар портфелі
+                        </p>
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
                             Архивтелген жобалар
                         </h1>
+                        <p className="mt-1.5 text-sm text-slate-500">
+                            Жұмысы аяқталған немесе белсенді тізімнен шығарылған
+                            жобалар.
+                        </p>
                     </div>
                     <Link href="/investment-projects">
                         <Button
@@ -131,7 +137,7 @@ export default function Archived({ projects, filters }: Props) {
                             Белсенді жобаларға оралу
                         </Button>
                     </Link>
-                </div>
+                </header>
 
                 {/* Search */}
                 <form

@@ -18,16 +18,20 @@ import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
     Archive,
-    ChevronDown,
+    BriefcaseBusiness,
+    Calendar,
+    CircleDollarSign,
     Eye,
     GripVertical,
+    MoveRight,
     Pencil,
     Plus,
+    SlidersHorizontal,
     Trash2,
-    MoveRight,
-    Calendar,
+    Waypoints,
 } from 'lucide-react';
 import { useMemo, useState, useEffect, type FormEvent } from 'react';
+import FilterPanel from '@/components/filter-panel';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -506,15 +510,36 @@ export default function Index({
         >
             <Head title="Инвестициялық жобалар" />
 
-            <div className="flex h-full flex-col space-y-5 p-6">
-                <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Инвестициялық жобалар
-                    </h1>
-                    <div className="flex items-center gap-3">
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
+                    <div>
+                        <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
+                            Жобалар портфелі
+                        </p>
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
+                            Инвестициялық жобалар
+                        </h1>
+                        <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-500">
+                            Аймақтағы жобалардың орындалуы, инвестиция көлемі
+                            және жауапты орындаушылар.
+                        </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                         <Button
                             variant="outline"
-                            className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]"
+                            onClick={() => setFiltersOpen(true)}
+                        >
+                            <SlidersHorizontal data-icon="inline-start" />
+                            Сүзгілер
+                            {Object.values(data).filter(Boolean).length > 0 && (
+                                <span className="flex size-5 items-center justify-center rounded-md bg-navy text-[11px] font-bold text-white">
+                                    {Object.values(data).filter(Boolean).length}
+                                </span>
+                            )}
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="text-slate-600"
                             onClick={() => {
                                 const currentYear = new Date().getFullYear();
                                 const newData = {
@@ -541,424 +566,387 @@ export default function Index({
                             <Link href="/investment-projects-archived">
                                 <Button
                                     variant="outline"
-                                    className="border-gray-200 text-gray-600 hover:text-[#0f1b3d]"
+                                    className="text-slate-600"
                                 >
-                                    <Archive className="mr-2 h-4 w-4" />
+                                    <Archive className="h-4 w-4" />
                                     Архив
                                 </Button>
                             </Link>
                         )}
                         {canCreateProject && (
                             <Link href={investmentProjectsRoutes.create.url()}>
-                                <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
-                                    <Plus className="mr-2 h-4 w-4" />
+                                <Button className="bg-gold text-white shadow-[0_10px_24px_-12px_rgba(154,125,53,0.9)] hover:bg-gold-dark">
+                                    <Plus className="h-4 w-4" />
                                     Жоба құру
                                 </Button>
                             </Link>
                         )}
                     </div>
-                </div>
+                </header>
 
-                <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                    <button
-                        type="button"
-                        className="flex w-full items-center justify-between text-left text-sm font-semibold text-[#0f1b3d]"
-                        onClick={() => setFiltersOpen((prev) => !prev)}
-                        aria-expanded={filtersOpen}
-                    >
-                        Сүзгілер
-                        <ChevronDown
-                            className={`h-4 w-4 text-gray-400 transition-transform ${filtersOpen ? 'rotate-180' : ''}`}
+                <FilterPanel
+                    open={filtersOpen}
+                    onToggle={() => setFiltersOpen((prev) => !prev)}
+                    onSubmit={submitFilters}
+                    onClear={clearFilters}
+                    activeCount={Object.values(data).filter(Boolean).length}
+                    showTrigger={false}
+                >
+                    <div className="space-y-1.5">
+                        <Label htmlFor="search">Іздеу</Label>
+                        <Input
+                            id="search"
+                            value={data.search}
+                            onChange={(event) =>
+                                setData('search', event.target.value)
+                            }
+                            placeholder="Атауы немесе компания"
                         />
-                    </button>
-
-                    {filtersOpen && (
-                        <form onSubmit={submitFilters} className="mt-4">
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="search">Іздеу</Label>
-                                    <Input
-                                        id="search"
-                                        value={data.search}
-                                        onChange={(event) =>
-                                            setData(
-                                                'search',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="Атауы немесе компания"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Аймақ</Label>
-                                    <Select
-                                        value={data.region_id}
-                                        onValueChange={(value) => {
-                                            setData('region_id', value);
-                                            setData('sector_id', '');
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық аймақтар" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {regions.map((region) => (
-                                                <SelectItem
-                                                    key={region.id}
-                                                    value={String(region.id)}
-                                                >
-                                                    {region.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Жоба түрі</Label>
-                                    <Select
-                                        value={data.project_type_id}
-                                        onValueChange={(value) =>
-                                            setData('project_type_id', value)
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық түрлер" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {projectTypes.map((type) => (
-                                                <SelectItem
-                                                    key={type.id}
-                                                    value={String(type.id)}
-                                                >
-                                                    {type.name}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Мәртебесі</Label>
-                                    <Select
-                                        value={data.status}
-                                        onValueChange={(value) =>
-                                            setData('status', value)
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық мәртебелер" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="plan">
-                                                Жоспарлау
-                                            </SelectItem>
-                                            <SelectItem value="implementation">
-                                                Іске асыру
-                                            </SelectItem>
-                                            <SelectItem value="launched">
-                                                Іске қосылған
-                                            </SelectItem>
-                                            <SelectItem value="suspended">
-                                                Тоқтатылған
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Орындаушы</Label>
-                                    <Select
-                                        value={data.executor_id}
-                                        onValueChange={(value) =>
-                                            setData('executor_id', value)
-                                        }
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Барлық орындаушылар" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {filteredUsers.map((user) => (
-                                                <SelectItem
-                                                    key={user.id}
-                                                    value={String(user.id)}
-                                                >
-                                                    {getIspolnitelTypeLabel(
-                                                        user.baskarma_type,
-                                                        true,
-                                                    )}
-                                                    {getIspolnitelTypeLabel(
-                                                        user.baskarma_type,
-                                                        true,
-                                                    )
-                                                        ? ': '
-                                                        : ''}
-                                                    {user.full_name}{' '}
-                                                    {user.position
-                                                        ? `- ${user.position}`
-                                                        : ''}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Сектор түрі</Label>
-                                    <Select
-                                        value={data.sector_type}
-                                        onValueChange={(value) => {
-                                            setData('sector_type', value);
-                                            setData('sector_id', '');
-                                        }}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Кез келген" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="sez">
-                                                АЭА
-                                            </SelectItem>
-                                            <SelectItem value="industrial_zone">
-                                                ИА
-                                            </SelectItem>
-                                            <SelectItem value="prom_zone">
-                                                Пром зона
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label>Сектор</Label>
-                                    <Select
-                                        value={data.sector_id}
-                                        onValueChange={(value) =>
-                                            setData('sector_id', value)
-                                        }
-                                        disabled={!data.sector_type}
-                                    >
-                                        <SelectTrigger>
-                                            <SelectValue
-                                                placeholder={
-                                                    data.sector_type
-                                                        ? 'Барлығы'
-                                                        : 'Түрін таңдаңыз'
-                                                }
-                                            />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {sectorOptions.map((option) => (
-                                                <SelectItem
-                                                    key={option.value}
-                                                    value={option.value}
-                                                >
-                                                    {option.label}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="min_investment">
-                                        Инвестиция бастап
-                                    </Label>
-                                    <Input
-                                        id="min_investment"
-                                        type="number"
-                                        value={data.min_investment}
-                                        onChange={(event) =>
-                                            setData(
-                                                'min_investment',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="0"
-                                        min="0"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="max_investment">
-                                        Инвестиция дейін
-                                    </Label>
-                                    <Input
-                                        id="max_investment"
-                                        type="number"
-                                        value={data.max_investment}
-                                        onChange={(event) =>
-                                            setData(
-                                                'max_investment',
-                                                event.target.value,
-                                            )
-                                        }
-                                        placeholder="∞"
-                                        min="0"
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_from">
-                                        Басталуы бастап (жыл)
-                                    </Label>
-                                    <Input
-                                        id="start_date_from"
-                                        type="number"
-                                        min="1990"
-                                        max="2100"
-                                        placeholder="Мысалы: 2023"
-                                        value={
-                                            data.start_date_from
-                                                ? data.start_date_from.split(
-                                                      '-',
-                                                  )[0]
-                                                : ''
-                                        }
-                                        onChange={(event) =>
-                                            setData(
-                                                'start_date_from',
-                                                event.target.value
-                                                    ? `${event.target.value}-01-01`
-                                                    : '',
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="start_date_to">
-                                        Басталуы дейін (жыл)
-                                    </Label>
-                                    <Input
-                                        id="start_date_to"
-                                        type="number"
-                                        min="1990"
-                                        max="2100"
-                                        placeholder="Мысалы: 2025"
-                                        value={
-                                            data.start_date_to
-                                                ? data.start_date_to.split(
-                                                      '-',
-                                                  )[0]
-                                                : ''
-                                        }
-                                        onChange={(event) =>
-                                            setData(
-                                                'start_date_to',
-                                                event.target.value
-                                                    ? `${event.target.value}-12-31`
-                                                    : '',
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_from">
-                                        Аяқталуы бастап (жыл)
-                                    </Label>
-                                    <Input
-                                        id="end_date_from"
-                                        type="number"
-                                        min="1990"
-                                        max="2100"
-                                        placeholder="Мысалы: 2024"
-                                        value={
-                                            data.end_date_from
-                                                ? data.end_date_from.split(
-                                                      '-',
-                                                  )[0]
-                                                : ''
-                                        }
-                                        onChange={(event) =>
-                                            setData(
-                                                'end_date_from',
-                                                event.target.value
-                                                    ? `${event.target.value}-01-01`
-                                                    : '',
-                                            )
-                                        }
-                                    />
-                                </div>
-                                <div className="space-y-1.5">
-                                    <Label htmlFor="end_date_to">
-                                        Аяқталуы дейін (жыл)
-                                    </Label>
-                                    <Input
-                                        id="end_date_to"
-                                        type="number"
-                                        min="1990"
-                                        max="2100"
-                                        placeholder="Мысалы: 2026"
-                                        value={
-                                            data.end_date_to
-                                                ? data.end_date_to.split('-')[0]
-                                                : ''
-                                        }
-                                        onChange={(event) =>
-                                            setData(
-                                                'end_date_to',
-                                                event.target.value
-                                                    ? `${event.target.value}-12-31`
-                                                    : '',
-                                            )
-                                        }
-                                    />
-                                </div>
-                            </div>
-                            <div className="mt-4 flex flex-wrap gap-2">
-                                <Button
-                                    type="submit"
-                                    className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
-                                >
-                                    Қолдану
-                                </Button>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    className="border-gray-200 shadow-none hover:bg-gray-50"
-                                    onClick={clearFilters}
-                                >
-                                    Тазалау
-                                </Button>
-                            </div>
-                        </form>
-                    )}
-                </div>
-
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                            Жобалар саны
-                        </h3>
-                        <p className="mt-2 text-2xl font-bold text-[#0f1b3d]">
-                            {stats.total_projects}
-                        </p>
                     </div>
-                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                            Инвестиция көлемі
-                        </h3>
-                        <p className="mt-2 text-2xl font-bold text-[#c8a44e]">
-                            {formatTotalInvestment(stats.total_investment)}
-                        </p>
+                    <div className="space-y-1.5">
+                        <Label>Аймақ</Label>
+                        <Select
+                            value={data.region_id}
+                            onValueChange={(value) => {
+                                setData('region_id', value);
+                                setData('sector_id', '');
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық аймақтар" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {regions.map((region) => (
+                                    <SelectItem
+                                        key={region.id}
+                                        value={String(region.id)}
+                                    >
+                                        {region.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
-                    <div className="rounded-xl border border-gray-100 bg-white p-5 shadow-sm">
-                        <h3 className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
-                            Мәртебесі бойынша
-                        </h3>
-                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm font-medium text-[#0f1b3d]">
+                    <div className="space-y-1.5">
+                        <Label>Жоба түрі</Label>
+                        <Select
+                            value={data.project_type_id}
+                            onValueChange={(value) =>
+                                setData('project_type_id', value)
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық түрлер" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {projectTypes.map((type) => (
+                                    <SelectItem
+                                        key={type.id}
+                                        value={String(type.id)}
+                                    >
+                                        {type.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Мәртебесі</Label>
+                        <Select
+                            value={data.status}
+                            onValueChange={(value) => setData('status', value)}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық мәртебелер" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="plan">Жоспарлау</SelectItem>
+                                <SelectItem value="implementation">
+                                    Іске асыру
+                                </SelectItem>
+                                <SelectItem value="launched">
+                                    Іске қосылған
+                                </SelectItem>
+                                <SelectItem value="suspended">
+                                    Тоқтатылған
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Орындаушы</Label>
+                        <Select
+                            value={data.executor_id}
+                            onValueChange={(value) =>
+                                setData('executor_id', value)
+                            }
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Барлық орындаушылар" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {filteredUsers.map((user) => (
+                                    <SelectItem
+                                        key={user.id}
+                                        value={String(user.id)}
+                                    >
+                                        {getIspolnitelTypeLabel(
+                                            user.baskarma_type,
+                                            true,
+                                        )}
+                                        {getIspolnitelTypeLabel(
+                                            user.baskarma_type,
+                                            true,
+                                        )
+                                            ? ': '
+                                            : ''}
+                                        {user.full_name}{' '}
+                                        {user.position
+                                            ? `- ${user.position}`
+                                            : ''}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Сектор түрі</Label>
+                        <Select
+                            value={data.sector_type}
+                            onValueChange={(value) => {
+                                setData('sector_type', value);
+                                setData('sector_id', '');
+                            }}
+                        >
+                            <SelectTrigger>
+                                <SelectValue placeholder="Кез келген" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="sez">АЭА</SelectItem>
+                                <SelectItem value="industrial_zone">
+                                    ИА
+                                </SelectItem>
+                                <SelectItem value="prom_zone">
+                                    Пром зона
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label>Сектор</Label>
+                        <Select
+                            value={data.sector_id}
+                            onValueChange={(value) =>
+                                setData('sector_id', value)
+                            }
+                            disabled={!data.sector_type}
+                        >
+                            <SelectTrigger>
+                                <SelectValue
+                                    placeholder={
+                                        data.sector_type
+                                            ? 'Барлығы'
+                                            : 'Түрін таңдаңыз'
+                                    }
+                                />
+                            </SelectTrigger>
+                            <SelectContent>
+                                {sectorOptions.map((option) => (
+                                    <SelectItem
+                                        key={option.value}
+                                        value={option.value}
+                                    >
+                                        {option.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="min_investment">
+                            Инвестиция бастап
+                        </Label>
+                        <Input
+                            id="min_investment"
+                            type="number"
+                            value={data.min_investment}
+                            onChange={(event) =>
+                                setData('min_investment', event.target.value)
+                            }
+                            placeholder="0"
+                            min="0"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="max_investment">Инвестиция дейін</Label>
+                        <Input
+                            id="max_investment"
+                            type="number"
+                            value={data.max_investment}
+                            onChange={(event) =>
+                                setData('max_investment', event.target.value)
+                            }
+                            placeholder="∞"
+                            min="0"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="start_date_from">
+                            Басталуы бастап (жыл)
+                        </Label>
+                        <Input
+                            id="start_date_from"
+                            type="number"
+                            min="1990"
+                            max="2100"
+                            placeholder="Мысалы: 2023"
+                            value={
+                                data.start_date_from
+                                    ? data.start_date_from.split('-')[0]
+                                    : ''
+                            }
+                            onChange={(event) =>
+                                setData(
+                                    'start_date_from',
+                                    event.target.value
+                                        ? `${event.target.value}-01-01`
+                                        : '',
+                                )
+                            }
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="start_date_to">
+                            Басталуы дейін (жыл)
+                        </Label>
+                        <Input
+                            id="start_date_to"
+                            type="number"
+                            min="1990"
+                            max="2100"
+                            placeholder="Мысалы: 2025"
+                            value={
+                                data.start_date_to
+                                    ? data.start_date_to.split('-')[0]
+                                    : ''
+                            }
+                            onChange={(event) =>
+                                setData(
+                                    'start_date_to',
+                                    event.target.value
+                                        ? `${event.target.value}-12-31`
+                                        : '',
+                                )
+                            }
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="end_date_from">
+                            Аяқталуы бастап (жыл)
+                        </Label>
+                        <Input
+                            id="end_date_from"
+                            type="number"
+                            min="1990"
+                            max="2100"
+                            placeholder="Мысалы: 2024"
+                            value={
+                                data.end_date_from
+                                    ? data.end_date_from.split('-')[0]
+                                    : ''
+                            }
+                            onChange={(event) =>
+                                setData(
+                                    'end_date_from',
+                                    event.target.value
+                                        ? `${event.target.value}-01-01`
+                                        : '',
+                                )
+                            }
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="end_date_to">
+                            Аяқталуы дейін (жыл)
+                        </Label>
+                        <Input
+                            id="end_date_to"
+                            type="number"
+                            min="1990"
+                            max="2100"
+                            placeholder="Мысалы: 2026"
+                            value={
+                                data.end_date_to
+                                    ? data.end_date_to.split('-')[0]
+                                    : ''
+                            }
+                            onChange={(event) =>
+                                setData(
+                                    'end_date_to',
+                                    event.target.value
+                                        ? `${event.target.value}-12-31`
+                                        : '',
+                                )
+                            }
+                        />
+                    </div>
+                </FilterPanel>
+
+                <section className="grid grid-cols-1 gap-3 md:grid-cols-[0.8fr_1fr_1.35fr]">
+                    <div className="metric-panel flex items-center justify-between gap-4 p-5 sm:p-6">
+                        <div>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase">
+                                Жобалар саны
+                            </h3>
+                            <p className="mt-2 text-3xl font-extrabold text-navy tabular-nums">
+                                {stats.total_projects}
+                            </p>
+                        </div>
+                        <div className="flex size-11 items-center justify-center rounded-md bg-navy text-white shadow-lg shadow-navy/15">
+                            <BriefcaseBusiness className="size-5" />
+                        </div>
+                    </div>
+                    <div className="metric-panel flex items-center justify-between gap-4 p-5 sm:p-6">
+                        <div>
+                            <h3 className="text-xs font-bold text-slate-400 uppercase">
+                                Инвестиция көлемі
+                            </h3>
+                            <p className="mt-2 text-3xl font-extrabold text-gold-dark tabular-nums">
+                                {formatTotalInvestment(stats.total_investment)}
+                            </p>
+                        </div>
+                        <div className="flex size-11 items-center justify-center rounded-md border border-gold/20 bg-gold/10 text-gold-dark">
+                            <CircleDollarSign className="size-5" />
+                        </div>
+                    </div>
+                    <div className="metric-panel p-5 sm:p-6">
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-xs font-bold text-slate-400 uppercase">
+                                Мәртебесі бойынша
+                            </h3>
+                            <Waypoints className="size-5 text-slate-300" />
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-semibold text-navy">
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-blue-500" />{' '}
+                                <span className="h-2 w-2 shrink-0 rounded-sm bg-blue-500" />{' '}
                                 Жоспарлау: {stats.status_counts.plan}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-emerald-500" />{' '}
+                                <span className="h-2 w-2 shrink-0 rounded-sm bg-emerald-500" />{' '}
                                 Іске қосылған: {stats.status_counts.launched}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-amber-500" />{' '}
+                                <span className="h-2 w-2 shrink-0 rounded-sm bg-amber-500" />{' '}
                                 Іске асырылуда:{' '}
                                 {stats.status_counts.implementation}
                             </span>
                             <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 rounded-full bg-red-500" />{' '}
+                                <span className="h-2 w-2 shrink-0 rounded-sm bg-red-500" />{' '}
                                 Тоқтатылған: {stats.status_counts.suspended}
                             </span>
                         </div>
                     </div>
-                </div>
+                </section>
 
                 <div className="overflow-hidden rounded-xl">
                     {isSavingOrder && (

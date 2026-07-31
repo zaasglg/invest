@@ -16,7 +16,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
 
     if (variant === 'header') {
         return (
-            <div className="flex min-h-screen w-full flex-col overflow-x-hidden">
+            <div className="app-shell flex min-h-screen w-full flex-col overflow-x-hidden">
                 {children}
                 {showChat && <ChatWidget />}
             </div>

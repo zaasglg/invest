@@ -244,13 +244,13 @@ export default function NotificationsIndex({ notifications }: Props) {
         >
             <Head title="Хабарламалар" />
 
-            <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-6 p-6">
-                <div className="flex items-center justify-between">
+            <div className="page-surface flex max-w-5xl flex-1 flex-col gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f1b3d]">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-navy">
                             <Bell className="h-5 w-5 text-[#c8a44e]" />
                         </div>
-                        <h1 className="text-2xl font-bold text-[#0f1b3d]">
+                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
                             Хабарламалар
                         </h1>
                         {unreadCount > 0 && (
@@ -270,7 +270,7 @@ export default function NotificationsIndex({ notifications }: Props) {
                             Барлығын оқылды деп белгілеу
                         </Button>
                     )}
-                </div>
+                </header>
 
                 {notifications.data.length === 0 ? (
                     <div className="rounded-xl border border-gray-100 bg-white py-16 text-center shadow-sm">

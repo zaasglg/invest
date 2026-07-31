@@ -122,31 +122,31 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    --background: #f3f5f7;
+    --foreground: #132039;
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.35 0.15 260);
+    --primary: #0f1b3d;
     --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
+    --secondary: #eef1f4;
     --secondary-foreground: oklch(0.35 0.15 260);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
+    --muted: #eef1f4;
+    --muted-foreground: #667085;
+    --accent: #f4f1e8;
     --accent-foreground: oklch(0.35 0.15 260);
     --destructive: oklch(0.577 0.245 27.325);
     --destructive-foreground: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.35 0.15 260);
+    --border: #dfe4ea;
+    --input: #dfe4ea;
+    --ring: #c8a44e;
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
     --chart-3: oklch(0.398 0.07 227.392);
     --chart-4: oklch(0.828 0.189 84.429);
     --chart-5: oklch(0.769 0.188 70.08);
-    --radius: 0.625rem;
+    --radius: 0.5rem;
     --sidebar: oklch(0.985 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
     --sidebar-primary: oklch(0.35 0.15 260);
@@ -163,7 +163,114 @@
     }
 
     body {
-        @apply bg-background text-foreground;
+        @apply bg-background text-foreground antialiased;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0;
+    }
+
+    button,
+    a,
+    input,
+    textarea,
+    [role='button'] {
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :focus-visible {
+        outline: none;
+    }
+}
+
+@layer components {
+    .app-shell {
+        background: #f3f5f7;
+    }
+
+    .app-main {
+        position: relative;
+        background:
+            linear-gradient(rgba(15, 27, 61, 0.025) 1px, transparent 1px),
+            linear-gradient(
+                90deg,
+                rgba(15, 27, 61, 0.025) 1px,
+                transparent 1px
+            ),
+            #f3f5f7;
+        background-size: 32px 32px;
+    }
+
+    .app-main::before {
+        position: absolute;
+        inset: 0 0 auto;
+        height: 14rem;
+        content: '';
+        pointer-events: none;
+        background: linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.82),
+            transparent
+        );
+    }
+
+    .app-main > * {
+        position: relative;
+    }
+
+    .app-main h1,
+    .app-main h2,
+    .app-main h3 {
+        letter-spacing: 0 !important;
+        text-wrap: balance;
+    }
+
+    .app-main h1 {
+        color: #0f1b3d;
+    }
+
+    .app-main h1.text-white {
+        color: #fff;
+    }
+
+    .app-main form.rounded-lg,
+    .app-main form.rounded-xl,
+    .app-main > div > .rounded-lg,
+    .app-main > div > .rounded-xl {
+        border-color: rgba(203, 211, 221, 0.82);
+    }
+
+    .page-surface {
+        width: 100%;
+        max-width: 96rem;
+        margin-inline: auto;
+        padding: 1.5rem;
+    }
+
+    .metric-panel {
+        position: relative;
+        min-height: 8.75rem;
+        overflow: hidden;
+        border: 1px solid rgba(203, 211, 221, 0.78);
+        border-radius: 0.5rem;
+        background: rgba(255, 255, 255, 0.94);
+        box-shadow:
+            0 1px 2px rgba(15, 27, 61, 0.03),
+            0 22px 50px -38px rgba(15, 27, 61, 0.55);
+    }
+
+    .metric-panel::after {
+        position: absolute;
+        inset: auto -2rem -3rem auto;
+        width: 7rem;
+        height: 7rem;
+        content: '';
+        border: 1px solid rgba(200, 164, 78, 0.2);
+        border-radius: 50%;
+    }
+}
+
+@media (max-width: 640px) {
+    .page-surface {
+        padding: 1rem;
     }
 }
 /* Invest map atmosphere */

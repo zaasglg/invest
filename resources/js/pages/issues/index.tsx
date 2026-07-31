@@ -1,8 +1,16 @@
 import { Head, Link, router } from '@inertiajs/react';
 import { AlertTriangle, ArrowLeft, ExternalLink, Filter } from 'lucide-react';
+import { useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+    Drawer,
+    DrawerContent,
+    DrawerDescription,
+    DrawerHeader,
+    DrawerTitle,
+} from '@/components/ui/drawer';
 import {
     Select,
     SelectContent,
@@ -102,6 +110,8 @@ export default function IssuesIndex({
     filters,
     sectorLabels,
 }: Props) {
+    const [filtersOpen, setFiltersOpen] = useState(false);
+
     const handleFilterChange = (key: string, value: string | null) => {
         const params: Record<string, string | null> = {
             sector: filters.sector,
@@ -126,8 +136,8 @@ export default function IssuesIndex({
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Проблемалық мәселелер" />
-            <div className="flex h-full flex-1 flex-col gap-4 p-4">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="page-surface flex h-full flex-1 flex-col gap-6">
+                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex items-center gap-3">
                         <Link href={dashboard().url}>
                             <Button variant="ghost" size="icon">
@@ -135,7 +145,7 @@ export default function IssuesIndex({
                             </Button>
                         </Link>
                         <div>
-                            <h1 className="text-2xl font-bold">
+                            <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
                                 Проблемалық мәселелер
                             </h1>
                             <p className="text-sm text-muted-foreground">
@@ -144,19 +154,31 @@ export default function IssuesIndex({
                             </p>
                         </div>
                     </div>
-                </div>
+                    <Button
+                        variant="outline"
+                        onClick={() => setFiltersOpen(true)}
+                    >
+                        <Filter data-icon="inline-start" />
+                        Сүзгілер
+                    </Button>
+                </header>
 
-                {/* Filters */}
-                <Card>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2 text-base">
-                            <Filter className="h-4 w-4" />
-                            Сүзгілер
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="flex flex-wrap gap-4">
-                            <div className="w-full sm:w-48">
+                <Drawer
+                    direction="right"
+                    open={filtersOpen}
+                    onOpenChange={setFiltersOpen}
+                >
+                    <DrawerContent className="w-[min(92vw,32rem)] border-slate-200 bg-[#f7f8fa] sm:max-w-lg">
+                        <DrawerHeader className="border-b border-slate-200 bg-white px-6 py-5">
+                            <DrawerTitle className="text-lg font-extrabold text-navy">
+                                Сүзгілер
+                            </DrawerTitle>
+                            <DrawerDescription>
+                                Мәселелерді сектор және аймақ бойынша нақтылау
+                            </DrawerDescription>
+                        </DrawerHeader>
+                        <div className="flex flex-col gap-5 p-6">
+                            <div className="flex flex-col gap-2">
                                 <Select
                                     value={filters.sector ?? 'all'}
                                     onValueChange={(value) =>
@@ -186,7 +208,7 @@ export default function IssuesIndex({
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="w-full sm:w-56">
+                            <div className="flex flex-col gap-2">
                                 <Select
                                     value={
                                         filters.region_id?.toString() ?? 'all'
@@ -217,8 +239,8 @@ export default function IssuesIndex({
                                 </Select>
                             </div>
                         </div>
-                    </CardContent>
-                </Card>
+                    </DrawerContent>
+                </Drawer>
 
                 {/* Issues List */}
                 <div className="space-y-3">

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\IndustrialZone;
 use App\Models\Region;
+use App\Services\InfrastructureUsageService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -105,8 +106,10 @@ class IndustrialZoneController extends Controller
         return redirect()->route('industrial-zones.index')->with('success', 'ИА құрылды.');
     }
 
-    public function show(IndustrialZone $industrialZone)
-    {
+    public function show(
+        IndustrialZone $industrialZone,
+        InfrastructureUsageService $usageService,
+    ) {
         $user = auth()->user();
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
@@ -128,6 +131,10 @@ class IndustrialZoneController extends Controller
 
         return Inertia::render('industrial-zones/show', [
             'industrialZone' => $industrialZone,
+            'infrastructureUsage' => $usageService->summarize(
+                $industrialZone->infrastructure,
+                $industrialZone->investmentProjects,
+            ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);

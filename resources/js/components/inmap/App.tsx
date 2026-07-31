@@ -805,7 +805,9 @@ function DistrictExplorer({
           aria-label="Аудандардың 3D картасы"
         >
           {!isLanding && (
-            <div className={`district-map-menu${mapMenuOpen ? 'is-open' : ''}`}>
+            <div
+              className={`district-map-menu${mapMenuOpen ? ' is-open' : ''}`}
+            >
               <button
                 type="button"
                 className="district-map-menu__toggle"
@@ -833,7 +835,7 @@ function DistrictExplorer({
                     role="option"
                     aria-selected={selectedDistrictId === null}
                     className={`district-map-menu__item${
-                      selectedDistrictId === null ? 'is-active' : ''
+                      selectedDistrictId === null ? ' is-active' : ''
                     }`}
                     onClick={() => {
                       setSelectedDistrictId(null)
@@ -854,7 +856,9 @@ function DistrictExplorer({
                         role="option"
                         aria-selected={selectedDistrictId === district.id}
                         className={`district-map-menu__item${
-                          selectedDistrictId === district.id ? 'is-active' : ''
+                          selectedDistrictId === district.id
+                            ? ' is-active'
+                            : ''
                         }`}
                         onClick={() => {
                           setSelectedDistrictId(district.id)
