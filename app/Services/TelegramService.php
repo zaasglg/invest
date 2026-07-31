@@ -60,6 +60,28 @@ class TelegramService
      */
     public function formatNotification(string $type, string $message, ?int $projectId = null): string
     {
+        // Named routes use the current request host for web notifications and
+        // APP_URL for scheduled commands. This keeps Telegram links on the
+        // same site and points project notifications to the exact project.
+        $targetUrl = $projectId
+            ? route('investment-projects.show', $projectId)
+            : route('notifications.index');
+
+        return $this->formatNotificationForTarget(
+            $type,
+            $message,
+            $targetUrl
+        );
+    }
+
+    /**
+     * Format a Telegram notification with an explicit destination URL.
+     */
+    public function formatNotificationForTarget(
+        string $type,
+        string $message,
+        string $targetUrl
+    ): string {
         $emoji = match ($type) {
             'task_assigned' => '📋',
             'task_overdue' => '⏰',
@@ -68,13 +90,6 @@ class TelegramService
             'completion_rejected' => '❌',
             default => '🔔',
         };
-
-        // Named routes use the current request host for web notifications and
-        // APP_URL for scheduled commands. This keeps Telegram links on the
-        // same site and points project notifications to the exact project.
-        $targetUrl = $projectId
-            ? route('investment-projects.show', $projectId)
-            : route('notifications.index');
 
         $linkPart = $targetUrl
             ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"

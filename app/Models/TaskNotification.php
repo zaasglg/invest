@@ -91,4 +91,20 @@ class TaskNotification extends Model
     {
         return $this->belongsTo(SubsoilTaskCompletion::class, 'subsoil_completion_id');
     }
+
+    public function telegramProjectId(): ?int
+    {
+        $projectId = $this->task?->project_id
+            ?? $this->completion?->task?->project_id;
+
+        return $projectId !== null ? (int) $projectId : null;
+    }
+
+    public function telegramSubsoilUserId(): ?int
+    {
+        $subsoilUserId = $this->subsoilTask?->subsoil_user_id
+            ?? $this->subsoilCompletion?->task?->subsoil_user_id;
+
+        return $subsoilUserId !== null ? (int) $subsoilUserId : null;
+    }
 }
