@@ -57,7 +57,7 @@ interface Props {
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Статистика',
+        title: 'Басқару тақтасы',
         href: dashboard().url,
     },
 ];
@@ -69,7 +69,7 @@ export default function Dashboard({
 }: Props) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Статистика" />
+            <Head title="Басқару тақтасы" />
             <div className="relative h-[calc(100vh-64px)] w-full overflow-hidden">
                 <InMapApp
                     regions={regions}

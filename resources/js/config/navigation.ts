@@ -61,7 +61,7 @@ export const zoneNavItems: NavItem[] = [
 
 export const projectNavItems: NavItem[] = [
     {
-        title: 'Инвест. жобалар',
+        title: 'Инвестициялық жобалар',
         href: investmentProjects.index.url(),
         icon: Briefcase,
     },
@@ -98,12 +98,12 @@ export const adminNavItems: NavItem[] = [
 export const headerNavItems: NavItem[] = [
     ...mainNavItems,
     {
-        title: 'Инвест. жобалар',
+        title: 'Инвестициялық жобалар',
         href: investmentProjects.index.url(),
         icon: Briefcase,
     },
     ...zoneNavItems,
-    ...projectNavItems.filter((item) => item.title !== 'Инвест. жобалар'),
+    ...projectNavItems.filter((item) => item.title !== 'Инвестициялық жобалар'),
     ...adminNavItems.filter(
         (item) => item.title !== 'Пайдаланушылар' && item.title !== 'Рөлдер',
     ),

@@ -69,27 +69,12 @@ class TelegramService
             default => '🔔',
         };
 
-        // Get the base URL from config (set via APP_URL in .env)
-        $siteUrl = rtrim(config('app.url', ''), '/');
-
-        // Fallback: read APP_URL directly from env if config is empty
-        if (empty($siteUrl)) {
-            $siteUrl = rtrim(env('APP_URL', ''), '/');
-        }
-
-        // Ensure the URL has a scheme (Telegram needs absolute URLs in href).
-        if ($siteUrl !== '' && ! preg_match('#^https?://#i', $siteUrl)) {
-            $siteUrl = 'https://'.ltrim($siteUrl, '/');
-        }
-
-        // Build link to the specific project if available, otherwise to notifications page.
-        if ($siteUrl !== '' && $projectId) {
-            $targetUrl = $siteUrl.'/investment-projects/'.$projectId;
-        } elseif ($siteUrl !== '') {
-            $targetUrl = $siteUrl.'/notifications';
-        } else {
-            $targetUrl = '';
-        }
+        // Named routes use the current request host for web notifications and
+        // APP_URL for scheduled commands. This keeps Telegram links on the
+        // same site and points project notifications to the exact project.
+        $targetUrl = $projectId
+            ? route('investment-projects.show', $projectId)
+            : route('notifications.index');
 
         $linkPart = $targetUrl
             ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"

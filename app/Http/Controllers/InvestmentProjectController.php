@@ -14,6 +14,7 @@ use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\PrivateFileService;
+use App\Services\ProjectPassportSummaryService;
 use App\Services\SortOrderService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -33,6 +34,7 @@ class InvestmentProjectController extends Controller
     public function __construct(
         private readonly PrivateFileService $files,
         private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly ProjectPassportSummaryService $passportSummary,
         private readonly SortOrderService $sortOrder
     ) {}
 
@@ -726,8 +728,28 @@ class InvestmentProjectController extends Controller
             $isOwnDistrict = (int) $project->region_id === (int) $user->region_id;
         }
 
+        $includeOperationalDetails = ! in_array(
+            $roleName,
+            ['ispolnitel', 'investor'],
+            true
+        ) || $isInvolved;
+        $passportSummary = is_object($project)
+            ? $this->passportSummary->build(
+                $project,
+                $includeOperationalDetails
+            )
+            : null;
+
+        if (is_object($project) && ! $includeOperationalDetails) {
+            $project->setAttribute('current_status', null);
+            $project->setRelation('documents', collect());
+            $project->setRelation('issues', collect());
+            $project->setRelation('tasks', collect());
+        }
+
         return Inertia::render('investment-projects/show', [
             'project' => $project,
+            'passportSummary' => $passportSummary,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
             'users' => $assignableUsersQuery->get(),

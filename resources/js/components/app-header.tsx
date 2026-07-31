@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Bell, Menu, MessageCircle, Shield, Tags, Users } from 'lucide-react';
+import { Bell, Menu, MessageCircle, Shield, Users } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -34,11 +35,32 @@ import { filterNavItemsByRole, headerNavItems } from '@/config/navigation';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
-import type { BreadcrumbItem, SharedData } from '@/types';
+import type { BreadcrumbItem, NavItem, SharedData } from '@/types';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
+
+const COMPACT_HEADER_NAV_TITLES = new Set([
+    'Аймақтар',
+    'Компаниялар',
+    'Жоба түрлері',
+    'Рейтинг',
+]);
+
+function HeaderNavIcon({
+    icon,
+    className,
+}: {
+    icon: NavItem['icon'];
+    className: string;
+}) {
+    if (!icon) return null;
+
+    const Icon = icon as LucideIcon;
+
+    return <Icon className={className} />;
+}
 
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage<SharedData>();
@@ -52,11 +74,11 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         headerNavItems,
         auth.user,
     );
-    const projectTypesNavItem = filteredHeaderNavItems.find(
-        (item) => item.title === 'Жоба түрлері',
+    const compactHeaderNavItems = filteredHeaderNavItems.filter((item) =>
+        COMPACT_HEADER_NAV_TITLES.has(item.title),
     );
     const desktopHeaderNavItems = filteredHeaderNavItems.filter(
-        (item) => item.title !== 'Жоба түрлері',
+        (item) => !COMPACT_HEADER_NAV_TITLES.has(item.title),
     );
 
     useEffect(() => {
@@ -160,9 +182,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                     'bg-white/10 text-white',
                                             )}
                                         >
-                                            {item.icon && (
-                                                <item.icon className="h-4 w-4" />
-                                            )}
+                                            <HeaderNavIcon
+                                                icon={item.icon}
+                                                className="h-4 w-4"
+                                            />
                                             <span>{item.title}</span>
                                         </Link>
                                     ))}
@@ -173,7 +196,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     {/* Desktop Navigation */}
                     <div className="ml-2 hidden h-full min-w-0 flex-1 items-center lg:flex">
-                        <div className="w-full overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <div className="w-full overflow-hidden">
                             <NavigationMenu className="flex h-full w-max max-w-none items-stretch justify-start">
                                 <NavigationMenuList className="flex h-full flex-nowrap items-stretch justify-start gap-0.5">
                                     {desktopHeaderNavItems.map(
@@ -192,9 +215,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                         ) && 'text-white',
                                                     )}
                                                 >
-                                                    {item.icon && (
-                                                        <item.icon className="mr-1.5 h-3.5 w-3.5" />
-                                                    )}
+                                                    <HeaderNavIcon
+                                                        icon={item.icon}
+                                                        className="mr-1.5 h-3.5 w-3.5"
+                                                    />
                                                     {item.title}
                                                 </Link>
                                                 {isCurrentUrl(item.href) && (
@@ -210,28 +234,31 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
                     {/* Right side: notifications + avatar */}
                     <div className="ml-auto flex items-center gap-1">
-                        {projectTypesNavItem && (
-                            <TooltipProvider delayDuration={0}>
+                        {compactHeaderNavItems.map((item) => (
+                            <TooltipProvider key={item.title} delayDuration={0}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
                                         <Link
-                                            href={projectTypesNavItem.href}
+                                            href={item.href}
+                                            aria-label={item.title}
                                             className={cn(
                                                 'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
-                                                isCurrentUrl(
-                                                    projectTypesNavItem.href,
-                                                ) && 'bg-white/10 text-white',
+                                                isCurrentUrl(item.href) &&
+                                                    'bg-white/10 text-white',
                                             )}
                                         >
-                                            <Tags className="h-4 w-4" />
+                                            <HeaderNavIcon
+                                                icon={item.icon}
+                                                className="h-4 w-4"
+                                            />
                                         </Link>
                                     </TooltipTrigger>
                                     <TooltipContent>
-                                        Жоба түрлері
+                                        {item.title}
                                     </TooltipContent>
                                 </Tooltip>
                             </TooltipProvider>
-                        )}
+                        ))}
                         {(auth.user?.role_model?.name === 'superadmin' ||
                             auth.user?.role === 'superadmin') && (
                             <>
