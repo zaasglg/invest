@@ -136,7 +136,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
       canvas.height = Math.round(height * ratio);
       const projection = projectionFor(width, height);
       const path = geoPath(projection, context);
-      const morph = smooth(progressRef.current);
+      const morph = smooth(clamp((progressRef.current - 0.36) / 0.64));
       const bordersReveal = smooth(clamp((morph - 0.18) / 0.62));
       const tilt = 0.052 * morph;
       const scaleY = 1 - 0.2 * morph;
@@ -216,7 +216,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
-      const morph = smooth(progressRef.current);
+      const morph = smooth(clamp((progressRef.current - 0.36) / 0.64));
       if (morph < 0.76) return undefined;
       const tilt = 0.052 * morph;
       const scaleY = 1 - 0.2 * morph;
@@ -271,10 +271,11 @@ export function RegionMap3D({ progress }: { progress: number }) {
     };
   }, [regions, hoveredId, selectedId, selected]);
 
-  const layerOpacity = smooth(progress / 0.28);
-  const panelReveal = smooth((progress - 0.45) / 0.42);
-  const mapShift = (1 - panelReveal) * 23;
-  const mapScale = 1 + (1 - panelReveal) * 0.08;
+  const layerOpacity = smooth((progress - 0.08) / 0.32);
+  const mapTravel = smooth((progress - 0.08) / 0.72);
+  const panelReveal = smooth((progress - 0.72) / 0.25);
+  const mapShift = (1 - mapTravel) * 34;
+  const mapScale = 0.56 + mapTravel * 0.44;
 
   return (
     <section

@@ -82,24 +82,34 @@ export function GlobeExperience() {
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
       const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
       const regionFocus = ease(clamp((currentProgress - 0.52) / 0.24));
+      const modelHandoff = ease(clamp((currentProgress - 0.77) / 0.16));
+      const mapTravel = ease(clamp((modelHandoff - 0.08) / 0.72));
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
       const countryScale = 1 + countryFocus * (mobile ? 2.35 : 3.2);
-      const globeScale = baseScale * countryScale * (1 + regionFocus * (mobile ? 1.28 : 1.5));
+      const globeScale =
+        baseScale *
+        countryScale *
+        (1 + regionFocus * (mobile ? 1.28 : 1.5)) *
+        (1 + mapTravel * (mobile ? 0.34 : 0.76));
       const initialX = mobile ? width * 0.5 : width * 0.73;
       const initialY = mobile ? height * 0.64 : height * 0.54;
       const targetX = mobile ? width * 0.5 : width * 0.57;
       const targetY = mobile ? height * 0.51 : height * 0.53;
       const regionX = mobile ? width * 0.52 : width * 0.71;
       const regionY = mobile ? height * 0.47 : height * 0.52;
+      const mapX = mobile ? width * 0.5 : width * 0.367;
+      const mapY = mobile ? height * 0.43 : height * 0.515;
       const drift = reducedMotion ? 0 : time * 0.00155;
       const startLon = 14 + drift;
       const countryLon = startLon + (67 - startLon) * countryFocus;
       const countryLat = 13 + (48 - 13) * countryFocus;
       const viewLon = countryLon + (68.25 - countryLon) * regionFocus;
       const viewLat = countryLat + (43.3 - countryLat) * regionFocus;
-      const globeX = initialX + (targetX - initialX) * countryFocus + (regionX - targetX) * regionFocus;
-      const globeY = initialY + (targetY - initialY) * countryFocus + (regionY - targetY) * regionFocus;
+      const regionGlobeX = initialX + (targetX - initialX) * countryFocus + (regionX - targetX) * regionFocus;
+      const regionGlobeY = initialY + (targetY - initialY) * countryFocus + (regionY - targetY) * regionFocus;
+      const globeX = regionGlobeX + (mapX - regionGlobeX) * mapTravel;
+      const globeY = regionGlobeY + (mapY - regionGlobeY) * mapTravel;
 
       const projection = geoOrthographic()
         .translate([globeX, globeY])
@@ -247,7 +257,7 @@ export function GlobeExperience() {
     ease(clamp((progress - 0.59) / 0.1)) *
     (1 - ease(clamp((progress - 0.77) / 0.09)));
   const modelReveal = ease(clamp((progress - 0.77) / 0.16));
-  const globeFade = 1 - ease(clamp((progress - 0.8) / 0.11));
+  const globeFade = 1 - ease(clamp((progress - 0.835) / 0.095));
 
   const goToKazakhstan = () => {
     const story = storyRef.current;
