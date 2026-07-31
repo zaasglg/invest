@@ -187,6 +187,9 @@ export function RegionMap3D({ progress }: { progress: number }) {
     if (!canvas || !regions) return;
     const context = canvas.getContext("2d");
     if (!context) return;
+    const renderOrder = regions.features
+      .map((region, index) => ({ region, index }))
+      .sort((a, b) => Number(a.region.properties.kind === "city") - Number(b.region.properties.kind === "city"));
 
     let width = canvas.clientWidth;
     let height = canvas.clientHeight;
@@ -256,8 +259,9 @@ export function RegionMap3D({ progress }: { progress: number }) {
       context.restore();
 
       for (let layer = depth; layer >= 1; layer -= 3) {
-        regions.features.forEach((region, index) => {
-          const lift = (liftWeightsRef.current[region.id] || 0) * 11 * bordersReveal;
+        renderOrder.forEach(({ region, index }) => {
+          const cityLift = region.properties.kind === "city" ? 2.5 : 0;
+          const lift = ((liftWeightsRef.current[region.id] || 0) * 11 + cityLift) * bordersReveal;
           context.save();
           context.setTransform(
             ratio,
@@ -276,12 +280,12 @@ export function RegionMap3D({ progress }: { progress: number }) {
         });
       }
 
-      regions.features.forEach((region, index) => {
+      renderOrder.forEach(({ region, index }) => {
         const isHovered = region.id === hoveredIdRef.current;
         const isCity = region.properties.kind === "city";
         const selectedWeight = liftWeightsRef.current[region.id] || 0;
         const isSelected = selectedWeight > 0.001;
-        const lift = selectedWeight * 11 * bordersReveal;
+        const lift = (selectedWeight * 11 + (isCity ? 2.5 : 0)) * bordersReveal;
         context.save();
         context.setTransform(
           ratio,
