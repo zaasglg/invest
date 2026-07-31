@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowRight, MapPin } from "lucide-react";
-import { geoContains, geoMercator, geoPath } from "d3-geo";
+import { geoCentroid, geoContains, geoMercator, geoPath } from "d3-geo";
 
 type RegionFeature = {
   type: "Feature";
@@ -21,6 +21,13 @@ type RegionCollection = {
   type: "FeatureCollection";
   source: string;
   features: RegionFeature[];
+};
+
+type CameraView = {
+  width: number;
+  height: number;
+  scale: number;
+  translate: [number, number];
 };
 
 const REGION_ID = "kz.61";
@@ -65,6 +72,37 @@ function demoStats(id: string) {
   };
 }
 
+function cameraFor(
+  regions: RegionCollection,
+  selectedId: string,
+  width: number,
+  height: number,
+): CameraView {
+  const base = geoMercator().fitExtent(
+    [[width * 0.06, height * 0.025], [width * 0.94, height * 0.91]],
+    regions as never,
+  );
+  const selected = regions.features.find((region) => region.id === selectedId);
+  if (!selected) {
+    return {
+      width,
+      height,
+      scale: base.scale(),
+      translate: base.translate() as [number, number],
+    };
+  }
+
+  const scale = base.scale() * 1.18;
+  const projection = geoMercator().scale(scale).translate([0, 0]);
+  const point = projection(geoCentroid(selected as never)) || [0, 0];
+  return {
+    width,
+    height,
+    scale,
+    translate: [width * 0.5 - point[0], height * 0.47 - point[1]],
+  };
+}
+
 export function RegionMap3D({ progress }: { progress: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(progress);
@@ -73,6 +111,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const selectedIdRef = useRef(REGION_ID);
   const liftWeightsRef = useRef<Record<string, number>>({});
   const liftFrameRef = useRef(0);
+  const cameraViewRef = useRef<CameraView | null>(null);
   const [regions, setRegions] = useState<RegionCollection | null>(null);
   const hoveredIdRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState(REGION_ID);
@@ -99,13 +138,30 @@ export function RegionMap3D({ progress }: { progress: number }) {
     window.cancelAnimationFrame(liftFrameRef.current);
     if (!regions) return;
 
+    const canvas = canvasRef.current;
+    const width = canvas?.clientWidth || 1;
+    const height = canvas?.clientHeight || 1;
     const startedAt = performance.now();
+    const desiredCamera = cameraFor(regions, selectedId, width, height);
+    const currentCamera = cameraViewRef.current;
+    const startCamera = currentCamera && currentCamera.width === width && currentCamera.height === height
+      ? { ...currentCamera, translate: [...currentCamera.translate] as [number, number] }
+      : cameraFor(regions, REGION_ID, width, height);
     const startWeights = Object.fromEntries(
       regions.features.map((region) => [region.id, liftWeightsRef.current[region.id] || 0]),
     );
 
     const animateLift = (now: number) => {
-      const amount = smooth((now - startedAt) / 380);
+      const amount = smooth((now - startedAt) / 480);
+      cameraViewRef.current = {
+        width,
+        height,
+        scale: startCamera.scale + (desiredCamera.scale - startCamera.scale) * amount,
+        translate: [
+          startCamera.translate[0] + (desiredCamera.translate[0] - startCamera.translate[0]) * amount,
+          startCamera.translate[1] + (desiredCamera.translate[1] - startCamera.translate[1]) * amount,
+        ],
+      };
       for (const region of regions.features) {
         const target = region.id === selectedId ? 1 : 0;
         const start = startWeights[region.id] || 0;
@@ -137,7 +193,6 @@ export function RegionMap3D({ progress }: { progress: number }) {
 
     let projectionWidth = -1;
     let projectionHeight = -1;
-    let baseProjection = geoMercator();
     let pathCacheKey = "";
     let cachedPaths: Path2D[] = [];
     let cachedWholePath = new Path2D();
@@ -146,13 +201,11 @@ export function RegionMap3D({ progress }: { progress: number }) {
       if (w !== projectionWidth || h !== projectionHeight) {
         projectionWidth = w;
         projectionHeight = h;
-        baseProjection = geoMercator().fitExtent(
-          [[w * 0.06, h * 0.025], [w * 0.94, h * 0.91]],
-          regions as never,
-        );
+        cameraViewRef.current = cameraFor(regions, selectedIdRef.current, w, h);
         pathCacheKey = "";
       }
-      return baseProjection;
+      const camera = cameraViewRef.current || cameraFor(regions, REGION_ID, w, h);
+      return geoMercator().scale(camera.scale).translate(camera.translate);
     };
 
     const render = () => {
@@ -166,7 +219,10 @@ export function RegionMap3D({ progress }: { progress: number }) {
         canvas.height = pixelHeight;
       }
       const projection = projectionFor(width, height);
-      const nextPathKey = `${width}:${height}`;
+      const camera = cameraViewRef.current;
+      const nextPathKey = camera
+        ? `${width}:${height}:${camera.scale.toFixed(3)}:${camera.translate[0].toFixed(2)}:${camera.translate[1].toFixed(2)}`
+        : `${width}:${height}`;
       if (pathCacheKey !== nextPathKey) {
         const path = geoPath(projection);
         cachedPaths = regions.features.map((region) => new Path2D(path(region as never) || ""));
