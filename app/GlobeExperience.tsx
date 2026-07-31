@@ -81,7 +81,7 @@ export function GlobeExperience() {
     const draw = (time: number) => {
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
       const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
-      const regionFocus = ease(clamp((currentProgress - 0.64) / 0.34));
+      const regionFocus = ease(clamp((currentProgress - 0.52) / 0.24));
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
       const countryScale = 1 + countryFocus * (mobile ? 2.35 : 3.2);
@@ -241,26 +241,33 @@ export function GlobeExperience() {
 
   const heroFade = 1 - ease(clamp((progress - 0.05) / 0.32));
   const countryReveal =
-    ease(clamp((progress - 0.38) / 0.16)) *
-    (1 - ease(clamp((progress - 0.64) / 0.13)));
-  const regionReveal = ease(clamp((progress - 0.78) / 0.18));
+    ease(clamp((progress - 0.3) / 0.14)) *
+    (1 - ease(clamp((progress - 0.55) / 0.11)));
+  const regionReveal =
+    ease(clamp((progress - 0.59) / 0.1)) *
+    (1 - ease(clamp((progress - 0.77) / 0.09)));
+  const modelReveal = ease(clamp((progress - 0.77) / 0.16));
+  const globeFade = 1 - ease(clamp((progress - 0.8) / 0.11));
 
   const goToKazakhstan = () => {
     const story = storyRef.current;
     if (!story) return;
-    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.53;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.45;
     window.scrollTo({ top: target, behavior: "smooth" });
   };
 
   const goToRegion = () => {
     const story = storyRef.current;
     if (!story) return;
-    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.94;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.68;
     window.scrollTo({ top: target, behavior: "smooth" });
   };
 
   const goToRegionMap = () => {
-    document.querySelector("#region-map")?.scrollIntoView({ behavior: "smooth" });
+    const story = storyRef.current;
+    if (!story) return;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.95;
+    window.scrollTo({ top: target, behavior: "smooth" });
   };
 
   return (
@@ -271,6 +278,7 @@ export function GlobeExperience() {
             className="globe-canvas"
             ref={canvasRef}
             role="img"
+            style={{ opacity: globeFade }}
             aria-label="Вращающийся глобус, приближающийся к Казахстану и Туркестанской области при прокрутке"
           />
           <div className="ambient-glow" aria-hidden="true" />
@@ -310,11 +318,13 @@ export function GlobeExperience() {
           </div>
 
           <aside className="side-index" aria-label="Этапы путешествия">
-            <span className={progress < 0.36 ? "active" : ""}>Мир</span>
-            <i><b style={{ height: `${Math.max(5, clamp(progress / 0.5) * 100)}%` }} /></i>
-            <span className={progress >= 0.36 && progress < 0.73 ? "active" : ""}>Казахстан</span>
-            <i><b style={{ height: `${Math.max(0, clamp((progress - 0.5) / 0.5) * 100)}%` }} /></i>
-            <span className={progress >= 0.73 ? "active" : ""}>Туркестан</span>
+            <span className={progress < 0.28 ? "active" : ""}>Мир</span>
+            <i><b style={{ height: `${Math.max(5, clamp(progress / 0.38) * 100)}%` }} /></i>
+            <span className={progress >= 0.28 && progress < 0.56 ? "active" : ""}>Казахстан</span>
+            <i><b style={{ height: `${Math.max(0, clamp((progress - 0.38) / 0.3) * 100)}%` }} /></i>
+            <span className={progress >= 0.56 && progress < 0.8 ? "active" : ""}>Туркестан</span>
+            <i><b style={{ height: `${Math.max(0, clamp((progress - 0.68) / 0.28) * 100)}%` }} /></i>
+            <span className={progress >= 0.8 ? "active" : ""}>Карта</span>
           </aside>
 
           <div
@@ -349,6 +359,8 @@ export function GlobeExperience() {
             <div className="map-source">Границы: © OpenStreetMap contributors</div>
           </div>
 
+          <RegionMap3D progress={modelReveal} />
+
           <button
             className="scroll-hint"
             type="button"
@@ -364,7 +376,6 @@ export function GlobeExperience() {
           </div>
         </div>
       </section>
-      <RegionMap3D />
       <section className="next-chapter" aria-label="Следующий раздел">
         <span>Следующий маршрут</span>
         <strong>Инвестиционный профиль выбранной территории</strong>

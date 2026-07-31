@@ -37,8 +37,8 @@ button {
 
 .story {
   position: relative;
-  height: 360vh;
-  min-height: 2250px;
+  height: 480vh;
+  min-height: 3000px;
 }
 
 .stage {
@@ -447,19 +447,22 @@ button {
 }
 
 .region-explorer {
-  position: relative;
-  min-height: 112vh;
+  position: absolute;
+  z-index: 7;
+  inset: 0;
+  min-height: 0;
+  height: 100%;
   display: grid;
   grid-template-columns: minmax(250px, .8fr) minmax(520px, 1.8fr);
-  grid-template-rows: 1fr auto;
+  grid-template-rows: minmax(0, 1fr) auto;
   align-items: center;
   gap: 30px 44px;
-  padding: 12vh clamp(24px, 7vw, 118px) 8vh;
+  padding: 12vh clamp(24px, 7vw, 118px) 4vh;
   overflow: hidden;
-  border-top: 1px solid var(--line);
   background:
     radial-gradient(circle at 70% 48%, rgba(63, 128, 102, .14), transparent 38%),
     linear-gradient(135deg, #07191a, #061314 68%, #041011);
+  transition: opacity .08s linear;
 }
 
 .explorer-grid {
@@ -482,8 +485,8 @@ button {
 }
 
 .explorer-copy {
-  align-self: start;
-  padding-top: 6vh;
+  align-self: center;
+  padding-top: 2vh;
 }
 
 .explorer-copy h2 {
@@ -543,7 +546,7 @@ button {
 
 .map-model-wrap {
   position: relative;
-  min-height: 660px;
+  min-height: min(64vh, 640px);
   align-self: stretch;
 }
 
@@ -725,14 +728,31 @@ button {
   .side-index { display: none; }
   .region-explorer {
     grid-template-columns: 1fr;
-    padding-top: 10vh;
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 92px 24px 20px;
   }
   .explorer-copy {
     padding-top: 0;
   }
-  .explorer-copy > p { max-width: 600px; }
+  .explorer-copy h2 {
+    display: inline-block;
+    margin: 12px 0 8px;
+    font-size: 44px;
+  }
+  .explorer-copy h2 br { display: none; }
+  .explorer-copy > p {
+    max-width: 660px;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .territory-summary {
+    max-width: 410px;
+    margin-top: 15px;
+  }
+  .territory-summary > div { padding-top: 10px; padding-bottom: 10px; }
   .map-model-wrap {
-    min-height: 610px;
+    min-height: 0;
   }
   .territory-card {
     grid-column: 1;
@@ -741,7 +761,7 @@ button {
 }
 
 @media (max-width: 700px) {
-  .story { height: 330vh; }
+  .story { height: 450vh; }
   .stage { min-height: 620px; }
   .site-header {
     height: 74px;
@@ -797,17 +817,17 @@ button {
     background: rgba(4, 18, 19, .82);
   }
   .region-explorer {
-    min-height: auto;
-    gap: 12px;
-    padding: 88px 20px 64px;
+    gap: 4px;
+    padding: 80px 16px 14px;
   }
   .explorer-copy h2 {
-    margin-top: 18px;
-    font-size: 58px;
+    margin: 7px 0 0;
+    font-size: 34px;
   }
-  .territory-summary { margin-top: 30px; }
+  .explorer-copy > p,
+  .territory-summary { display: none; }
   .map-model-wrap {
-    min-height: 455px;
+    min-height: 0;
   }
   .model-label { left: 0; right: auto; }
   .model-legend {
@@ -827,16 +847,10 @@ button {
   }
   .territory-card select { width: 100%; }
   .territory-card button {
-    grid-column: 1 / 3;
-    grid-row: auto;
-    justify-content: center;
-    margin-top: 8px;
+    display: none;
   }
   .explorer-source {
-    position: relative;
-    right: auto;
-    bottom: auto;
-    margin-top: 20px;
+    display: none;
   }
 }
 

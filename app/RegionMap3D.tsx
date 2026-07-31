@@ -20,6 +20,14 @@ type RegionCollection = {
 
 const CITY_IDS = new Set([5496366, 3407442, 17322798]);
 
+const clamp = (value: number, min = 0, max = 1) =>
+  Math.min(max, Math.max(min, value));
+
+const smooth = (value: number) => {
+  const t = clamp(value);
+  return t * t * (3 - 2 * t);
+};
+
 function territoryName(feature?: RegionFeature) {
   if (!feature) return "Туркестан";
   const id = feature.properties.osm_id;
@@ -38,8 +46,10 @@ function shortName(feature: RegionFeature) {
     .replace("альный", "");
 }
 
-export function RegionMap3D() {
+export function RegionMap3D({ progress }: { progress: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const progressRef = useRef(progress);
+  const drawRef = useRef<() => void>(() => undefined);
   const [regions, setRegions] = useState<RegionCollection | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   const [selectedId, setSelectedId] = useState(5496366);
@@ -59,13 +69,16 @@ export function RegionMap3D() {
   );
 
   useEffect(() => {
+    progressRef.current = progress;
+    drawRef.current();
+  }, [progress]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas || !regions) return;
     const context = canvas.getContext("2d");
     if (!context) return;
 
-    const matrixY = 0.075;
-    const matrixScaleY = 0.73;
     let width = canvas.clientWidth;
     let height = canvas.clientHeight;
 
@@ -83,20 +96,24 @@ export function RegionMap3D() {
       canvas.height = Math.round(height * ratio);
       const projection = projectionFor(width, height);
       const path = geoPath(projection, context);
-      const offsetY = height * 0.095;
-      const depth = Math.max(14, Math.min(25, width * 0.026));
+      const morph = smooth(progressRef.current);
+      const territoriesReveal = smooth(clamp((morph - 0.22) / 0.64));
+      const matrixY = 0.075 * morph;
+      const matrixScaleY = 1 - 0.27 * morph;
+      const offsetY = height * (0.045 + morph * 0.05);
+      const depth = Math.max(14, Math.min(25, width * 0.026)) * morph;
 
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
 
       // Soft shadow under the complete raised model.
       context.save();
-      context.setTransform(ratio, ratio * matrixY, 0, ratio * matrixScaleY, 0, ratio * (offsetY + depth + 10));
+      context.setTransform(ratio, ratio * matrixY, 0, ratio * matrixScaleY, 0, ratio * (offsetY + depth + 10 * morph));
       context.beginPath();
       regions.features.forEach((region) => path(region as never));
-      context.shadowColor = "rgba(0, 0, 0, .55)";
-      context.shadowBlur = 28;
-      context.fillStyle = "rgba(0, 9, 10, .72)";
+      context.shadowColor = `rgba(0, 0, 0, ${0.55 * morph})`;
+      context.shadowBlur = 28 * morph;
+      context.fillStyle = `rgba(0, 9, 10, ${0.72 * morph})`;
       context.fill();
       context.restore();
 
@@ -125,23 +142,27 @@ export function RegionMap3D() {
         const isSelected = id === selectedId;
         context.beginPath();
         path(region as never);
-        if (isSelected) context.fillStyle = "#8ccf78";
-        else if (isHovered) context.fillStyle = "#5f9f6b";
+        if (territoriesReveal < 0.14) context.fillStyle = "#214a42";
+        else if (isSelected && morph > 0.72) context.fillStyle = "#8ccf78";
+        else if (isHovered && morph > 0.82) context.fillStyle = "#5f9f6b";
         else if (CITY_IDS.has(id)) context.fillStyle = "#28594f";
         else context.fillStyle = index % 3 === 0 ? "#173f3b" : index % 3 === 1 ? "#1b4942" : "#214f46";
-        context.shadowColor = isSelected ? "rgba(140, 207, 120, .38)" : "transparent";
-        context.shadowBlur = isSelected ? 18 : 0;
+        context.shadowColor = isSelected && morph > 0.72 ? `rgba(140, 207, 120, ${0.38 * territoriesReveal})` : "transparent";
+        context.shadowBlur = isSelected ? 18 * territoriesReveal : 0;
         context.fill();
         context.shadowBlur = 0;
-        context.strokeStyle = isSelected ? "#e5f8da" : "rgba(190, 225, 211, .58)";
-        context.lineWidth = isSelected ? 1.8 : 0.85;
+        context.strokeStyle = isSelected && morph > 0.72
+          ? `rgba(229, 248, 218, ${territoriesReveal})`
+          : `rgba(190, 225, 211, ${0.05 + territoriesReveal * 0.53})`;
+        context.lineWidth = isSelected && morph > 0.72 ? 1.8 : 0.85;
         context.stroke();
       });
       context.restore();
 
       // Labels stay upright while the model itself is tilted.
-      if (width > 720) {
+      if (width > 720 && morph > 0.62) {
         context.save();
+        context.globalAlpha = smooth((morph - 0.62) / 0.3);
         context.font = "600 9px Manrope, Arial, sans-serif";
         context.textAlign = "center";
         context.textBaseline = "middle";
@@ -158,11 +179,18 @@ export function RegionMap3D() {
       }
     };
 
+    drawRef.current = render;
+
     const featureAt = (event: PointerEvent) => {
       const rect = canvas.getBoundingClientRect();
       const x = event.clientX - rect.left;
       const screenY = event.clientY - rect.top;
-      const y = (screenY - height * 0.095 - matrixY * x) / matrixScaleY;
+      const morph = smooth(progressRef.current);
+      if (morph < 0.82) return undefined;
+      const matrixY = 0.075 * morph;
+      const matrixScaleY = 1 - 0.27 * morph;
+      const offsetY = height * (0.045 + morph * 0.05);
+      const y = (screenY - offsetY - matrixY * x) / matrixScaleY;
       const coordinates = projectionFor(width, height).invert?.([x, y]);
       if (!coordinates) return undefined;
       return regions.features.find((region) => geoContains(region as never, coordinates));
@@ -187,6 +215,7 @@ export function RegionMap3D() {
     canvas.addEventListener("pointerleave", onLeave);
     canvas.addEventListener("click", onClick);
     return () => {
+      drawRef.current = () => undefined;
       observer.disconnect();
       canvas.removeEventListener("pointermove", onMove);
       canvas.removeEventListener("pointerleave", onLeave);
@@ -194,10 +223,20 @@ export function RegionMap3D() {
     };
   }, [regions, hoveredId, selectedId]);
 
+  const layerOpacity = smooth(progress / 0.34);
+  const contentOpacity = smooth((progress - 0.42) / 0.42);
+
   return (
-    <section className="region-explorer" id="region-map">
+    <section
+      className="region-explorer"
+      id="region-map"
+      style={{
+        opacity: layerOpacity,
+        pointerEvents: progress > 0.84 ? "auto" : "none",
+      }}
+    >
       <div className="explorer-grid" aria-hidden="true" />
-      <div className="explorer-copy">
+      <div className="explorer-copy" style={{ opacity: contentOpacity }}>
         <div className="country-kicker"><span>03</span> Карта региона</div>
         <h2>Область<br /><em>в деталях</em></h2>
         <p>
@@ -211,7 +250,7 @@ export function RegionMap3D() {
         </div>
       </div>
 
-      <div className="map-model-wrap">
+      <div className="map-model-wrap" style={{ opacity: smooth(progress / 0.25) }}>
         <div className="model-label"><Box size={15} /> Интерактивная 3D-модель</div>
         <canvas
           ref={canvasRef}
@@ -226,7 +265,7 @@ export function RegionMap3D() {
         </div>
       </div>
 
-      <aside className="territory-card" aria-live="polite">
+      <aside className="territory-card" aria-live="polite" style={{ opacity: contentOpacity }}>
         <div className="territory-card-icon"><MapPin size={18} /></div>
         <span>{selected && CITY_IDS.has(selected.properties.osm_id) ? "Городская администрация" : "Район области"}</span>
         <strong>{territoryName(selected)}</strong>
@@ -243,7 +282,7 @@ export function RegionMap3D() {
         <button type="button">Профиль территории <ArrowUpRight size={16} /></button>
       </aside>
 
-      <div className="explorer-source">Границы: © OpenStreetMap contributors</div>
+      <div className="explorer-source" style={{ opacity: contentOpacity }}>Границы: © OpenStreetMap contributors</div>
     </section>
   );
 }
