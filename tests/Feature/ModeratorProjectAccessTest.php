@@ -57,9 +57,12 @@ function createModeratorScopeRegion(): Region
 function createModeratorScopeProjectDependencies(): array
 {
     $region = createModeratorScopeRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+    $investor = createModeratorScopeUser('investor');
+    $investor->update(['company_id' => $company->id]);
 
     return [
-        'company' => Company::factory()->create(['region_id' => $region->id]),
+        'company' => $company,
         'project_type' => ProjectType::factory()->create(),
         'region' => $region,
     ];

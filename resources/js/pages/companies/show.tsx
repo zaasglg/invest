@@ -40,6 +40,12 @@ interface Company {
     is_profile_complete: boolean;
     region?: { id: number; name: string } | null;
     creator?: { id: number; full_name: string } | null;
+    investor?: {
+        id: number;
+        full_name: string;
+        email: string;
+        phone: string | null;
+    } | null;
 }
 
 interface Project {
@@ -142,17 +148,16 @@ export default function Show({ company, projects, canManage }: Props) {
                     )}
                 </div>
 
-                {!company.is_profile_complete && (
+                {(!company.is_profile_complete || !company.investor) && (
                     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
                         <div>
                             <p className="font-semibold">
-                                Компания карточкасы толық емес
+                                Компанияны толықтыру қажет
                             </p>
                             <p className="mt-1">
-                                Бұл компания бұрынғы жобалардан автоматты
-                                көшірілген. Жаңа жобаға таңдау үшін міндетті
-                                реквизиттерін толықтырыңыз.
+                                Жаңа жобаға таңдау үшін міндетті реквизиттерін
+                                толықтырып, инвестор аккаунтын ашыңыз.
                             </p>
                         </div>
                     </div>
@@ -253,6 +258,30 @@ export default function Show({ company, projects, canManage }: Props) {
                     </div>
 
                     <aside className="space-y-4">
+                        <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
+                            <p className="flex items-center gap-2 font-semibold text-[#0f1b3d]">
+                                <UserRound className="h-5 w-5 text-amber-700" />
+                                Инвестор аккаунты
+                            </p>
+                            {company.investor ? (
+                                <div className="mt-3 space-y-1 text-sm">
+                                    <p className="font-medium text-[#0f1b3d]">
+                                        {company.investor.full_name}
+                                    </p>
+                                    <a
+                                        href={`mailto:${company.investor.email}`}
+                                        className="text-amber-800 hover:underline"
+                                    >
+                                        {company.investor.email}
+                                    </a>
+                                </div>
+                            ) : (
+                                <p className="mt-3 text-sm text-amber-800">
+                                    Аккаунт ашылмаған. Компанияны өңдеп,
+                                    міндетті аккаунтты толтырыңыз.
+                                </p>
+                            )}
+                        </div>
                         <div className="rounded-xl border border-gray-200 bg-white p-5">
                             <div className="flex items-center gap-3">
                                 {company.is_profile_complete ? (

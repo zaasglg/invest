@@ -417,6 +417,7 @@ class InvestmentProjectController extends Controller
             'companies' => Company::query()
                 ->active()
                 ->profileComplete()
+                ->whereHas('investor')
                 ->orderBy('name')
                 ->get(),
         ]);
@@ -514,11 +515,12 @@ class InvestmentProjectController extends Controller
         $company = Company::query()
             ->active()
             ->profileComplete()
+            ->whereHas('investor')
             ->find($validated['company_id']);
 
         if (! $company) {
             throw ValidationException::withMessages([
-                'company_id' => 'Компания белсенді болуы және карточкасы толық толтырылуы керек.',
+                'company_id' => 'Компания белсенді, толық және инвестор аккаунтымен бірге болуы керек.',
             ]);
         }
 
@@ -900,7 +902,8 @@ class InvestmentProjectController extends Controller
                         ->where(function ($availableQuery) {
                             $availableQuery
                                 ->active()
-                                ->profileComplete();
+                                ->profileComplete()
+                                ->whereHas('investor');
                         })
                         ->when(
                             $investmentProject->company_id,
@@ -1156,11 +1159,12 @@ class InvestmentProjectController extends Controller
             === (int) $company?->id;
 
         if (! $company
+            || ! $company->investor()->exists()
             || (! $keepsCurrentCompany
                 && ($company->status !== 'active'
                     || ! $company->is_profile_complete))) {
             throw ValidationException::withMessages([
-                'company_id' => 'Компания белсенді болуы және карточкасы толық толтырылуы керек.',
+                'company_id' => 'Компания белсенді, толық және инвестор аккаунтымен бірге болуы керек.',
             ]);
         }
 

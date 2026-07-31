@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Company;
 use App\Models\InvestmentProject;
 use App\Models\ProjectChatAttachment;
 use App\Models\ProjectChatMessage;
@@ -115,8 +116,12 @@ test('opening a project chat marks its messages as read', function () {
     $curator = createProjectChatUser('invest', 'Оқитын Куратор');
     $investor = createProjectChatUser('investor', 'Тест Инвесторы');
     $project = createProjectChatProject($curator);
+    $company = Company::factory()->create([
+        'region_id' => $project->region_id,
+    ]);
+    $project->update(['company_id' => $company->id]);
+    $investor->update(['company_id' => $company->id]);
     $project->curators()->attach($curator);
-    $project->investors()->attach($investor);
 
     ProjectChatMessage::create([
         'investment_project_id' => $project->id,

@@ -130,4 +130,13 @@ class Company extends Model
     {
         return $this->hasMany(InvestmentProject::class);
     }
+
+    public function investor()
+    {
+        return $this->hasOne(User::class)
+            ->whereHas(
+                'roleModel',
+                fn (Builder $query) => $query->where('name', 'investor')
+            );
+    }
 }

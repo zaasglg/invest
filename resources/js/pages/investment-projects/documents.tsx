@@ -45,7 +45,7 @@ interface Props {
     completedDocuments: ProjectDocument[];
     documents: ProjectDocument[];
     canDownload: boolean;
-    ispolnitelCanWrite?: boolean;
+    participantCanCreate?: boolean;
 }
 
 export default function Documents({
@@ -53,12 +53,12 @@ export default function Documents({
     completedDocuments,
     documents,
     canDownload,
-    ispolnitelCanWrite = false,
+    participantCanCreate = false,
 }: Props) {
     const canModify = useCanModify();
-    const canEdit = canModify || ispolnitelCanWrite;
+    const canEdit = canModify || participantCanCreate;
     const canMarkAsCompleted = canModify;
-    // Ispolnitel can add but cannot delete
+    // Project participants may add documents but cannot delete them.
     const canDelete = canModify;
     const [file, setFile] = useState<File | null>(null);
     const [documentName, setDocumentName] = useState('');

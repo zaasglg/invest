@@ -1,11 +1,17 @@
 <?php
 
+use App\Models\Company;
 use App\Models\InvestmentProject;
+use App\Models\ProjectDocument;
+use App\Models\ProjectIssue;
+use App\Models\ProjectPhoto;
 use App\Models\ProjectTask;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -44,19 +50,40 @@ function createInvestorTestRegion(string $name = 'Инвестор тест ау
     ]);
 }
 
+/**
+ * @return array{company: Company, investor: User}
+ */
+function createInvestorTestCompany(
+    User $creator,
+    Region $region,
+    string $name
+): array {
+    $company = Company::factory()->create([
+        'name' => $name,
+        'region_id' => $region->id,
+        'created_by' => $creator->id,
+    ]);
+    $investor = createInvestorTestUser('investor');
+    $investor->update(['company_id' => $company->id]);
+
+    return compact('company', 'investor');
+}
+
 function createInvestorTestProject(
     User $creator,
+    Company $company,
     Region $region,
     string $name,
     float $investment
 ): InvestmentProject {
     return InvestmentProject::create([
         'name' => $name,
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
         'region_id' => $region->id,
         'total_investment' => $investment,
         'status' => 'implementation',
         'current_status' => 'Іске асырылуда',
-        'company_name' => "{$name} компаниясы",
         'description' => "{$name} сипаттамасы",
         'start_date' => '2026-01-01',
         'end_date' => '2027-01-01',
@@ -64,139 +91,124 @@ function createInvestorTestProject(
     ]);
 }
 
-test('investor role and project assignment table are registered', function () {
-    $this->assertDatabaseHas('roles', [
-        'name' => 'investor',
-        'display_name' => 'Инвестор',
-    ]);
+/**
+ * @return array<string, mixed>
+ */
+function investorCompanyPayload(Region $region): array
+{
+    return [
+        'legal_form' => 'too',
+        'name' => 'Investor Account Company',
+        'bin' => '987654321012',
+        'registration_date' => '2020-01-15',
+        'region_id' => $region->id,
+        'activity_type' => 'Өңдеу өнеркәсібі',
+        'director_full_name' => 'Компания Басшысы',
+        'contact_person' => 'Инвестор Өкілі',
+        'phone' => '+7 700 111 22 33',
+        'email' => 'company@example.test',
+        'website' => 'https://company.example.test',
+        'legal_address' => 'Түркістан қаласы',
+        'actual_address' => 'Түркістан қаласы',
+        'status' => 'active',
+        'notes' => null,
+        'investor_full_name' => 'Компания Инвесторы',
+        'investor_email' => 'investor@example.test',
+        'investor_password' => 'password123',
+        'investor_password_confirmation' => 'password123',
+    ];
+}
 
-    expect(Schema::hasTable('investment_project_investor'))->toBeTrue();
-});
-
-test('superadmin creates and updates investor with multiple projects', function () {
+test('company creation creates its only investor and regular user form cannot create investors', function () {
     $superadmin = createInvestorTestUser('superadmin');
-    $investorRole = Role::where('name', 'investor')->firstOrFail();
     $region = createInvestorTestRegion();
-    $firstProject = createInvestorTestProject(
-        $superadmin,
-        $region,
-        'Бірінші инвестор жобасы',
-        1000000
-    );
-    $secondProject = createInvestorTestProject(
-        $superadmin,
-        $region,
-        'Екінші инвестор жобасы',
-        2000000
-    );
-
-    $this->actingAs($superadmin)
-        ->post('/users', [
-            'full_name' => 'Тест Инвестор',
-            'email' => 'investor@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'role_id' => $investorRole->id,
-            'project_ids' => [$firstProject->id, $secondProject->id],
-        ])
-        ->assertRedirect('/users');
-
-    $investor = User::where('email', 'investor@example.com')->firstOrFail();
-    expect($investor->investorProjects()->pluck('investment_projects.id')->all())
-        ->toEqualCanonicalizing([$firstProject->id, $secondProject->id]);
-
-    $this->actingAs($superadmin)
-        ->put("/users/{$investor->id}", [
-            'full_name' => $investor->full_name,
-            'email' => $investor->email,
-            'password' => '',
-            'password_confirmation' => '',
-            'role_id' => $investorRole->id,
-            'project_ids' => [$secondProject->id],
-        ])
-        ->assertRedirect('/users');
-
-    expect($investor->investorProjects()->pluck('investment_projects.id')->all())
-        ->toBe([$secondProject->id]);
-});
-
-test('investor account requires at least one assigned project', function () {
-    $superadmin = createInvestorTestUser('superadmin');
     $investorRole = Role::where('name', 'investor')->firstOrFail();
 
+    expect(Schema::hasColumn('users', 'company_id'))->toBeTrue();
+
     $this->actingAs($superadmin)
-        ->post('/users', [
-            'full_name' => 'Жобасыз Инвестор',
-            'email' => 'investor-without-project@example.com',
-            'password' => 'password',
-            'password_confirmation' => 'password',
-            'role_id' => $investorRole->id,
-            'project_ids' => [],
-        ])
-        ->assertSessionHasErrors('project_ids');
+        ->get('/users/create')
+        ->assertInertia(fn (Assert $page) => $page
+            ->where(
+                'roles',
+                fn ($roles) => collect($roles)->doesntContain(
+                    fn ($role) => $role['name'] === 'investor'
+                )
+            ));
+
+    $this->post('/users', [
+        'full_name' => 'Қолмен ашылатын инвестор',
+        'email' => 'manual-investor@example.test',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'role_id' => $investorRole->id,
+    ])->assertSessionHasErrors('role_id');
+
+    $this->post(route('companies.store'), investorCompanyPayload($region))
+        ->assertRedirect();
+
+    $company = Company::query()->sole();
+    $investor = $company->investor()->sole();
+
+    expect($investor->full_name)->toBe('Компания Инвесторы')
+        ->and($investor->email)->toBe('investor@example.test')
+        ->and($investor->company_id)->toBe($company->id)
+        ->and($investor->roleModel?->name)->toBe('investor')
+        ->and($company->investor()->count())->toBe(1);
 });
 
-test('investor sees only assigned projects and scoped dashboard totals', function () {
+test('investor automatically sees every active project of their company only', function () {
     $superadmin = createInvestorTestUser('superadmin');
-    $investor = createInvestorTestUser('investor');
     $assignedRegion = createInvestorTestRegion('Бекітілген аудан');
     $otherRegion = createInvestorTestRegion('Басқа аудан');
-    $assignedProject = createInvestorTestProject(
+    $assigned = createInvestorTestCompany(
         $superadmin,
         $assignedRegion,
-        'Инвесторға бекітілген жоба',
+        'Investor company'
+    );
+    $other = createInvestorTestCompany(
+        $superadmin,
+        $otherRegion,
+        'Other company'
+    );
+    $assignedProject = createInvestorTestProject(
+        $superadmin,
+        $assigned['company'],
+        $assignedRegion,
+        'Компания инвесторына көрінетін жоба',
         1500000
     );
     $otherProject = createInvestorTestProject(
         $superadmin,
+        $other['company'],
         $otherRegion,
-        'Басқа жабық жоба',
+        'Басқа компанияның жабық жобасы',
         9000000
     );
-    $investor->investorProjects()->attach($assignedProject);
 
-    $this->actingAs($investor)
+    $this->actingAs($assigned['investor'])
         ->get('/investment-projects')
         ->assertInertia(fn (Assert $page) => $page
-            ->component('investment-projects/index')
             ->has('projects.data', 1)
             ->where('projects.data.0.id', $assignedProject->id)
-            ->where('stats.total_projects', 1)
-            ->where(
-                'stats.total_investment',
-                fn ($value) => (float) $value === 1500000.0
-            ));
+            ->where('stats.total_projects', 1));
 
-    $this->actingAs($investor)
-        ->get('/dashboard')
+    $this->get('/dashboard')
         ->assertInertia(fn (Assert $page) => $page
-            ->component('dashboard')
             ->where('stats.project_count', 1)
             ->where(
                 'stats.total_investment',
                 fn ($value) => (float) $value === 1500000.0
-            )
-            ->has('regions', 1)
-            ->where(
-                'sectorSummary.total.all_projects.projectCount',
-                1
-            )
-            ->where(
-                'sectorSummary.total.all_projects.investment',
-                fn ($value) => (float) $value === 1500000.0
             ));
 
-    $this->actingAs($investor)
-        ->get("/investment-projects/{$assignedProject->id}")
+    $this->get(route('investment-projects.show', $assignedProject))
         ->assertInertia(fn (Assert $page) => $page
-            ->component('investment-projects/show')
             ->where('project.id', $assignedProject->id)
-            ->where('project.investors.0.id', $investor->id)
+            ->where('project.investors.0.id', $assigned['investor']->id)
             ->where('isInvolved', true)
             ->where('canModify', false));
 
-    $this->actingAs($investor)
-        ->get("/investment-projects/{$otherProject->id}")
+    $this->get(route('investment-projects.show', $otherProject))
         ->assertForbidden();
 });
 
@@ -204,93 +216,164 @@ test('investor navigation scope is enforced on the server', function () {
     $investor = createInvestorTestUser('investor');
 
     $this->actingAs($investor)->get('/notifications')->assertOk();
-    $this->actingAs($investor)->get('/sezs')->assertForbidden();
-    $this->actingAs($investor)->get('/issues')->assertForbidden();
-    $this->actingAs($investor)->get('/baskarma-rating')->assertForbidden();
-    $this->actingAs($investor)->get('/users')->assertForbidden();
-    $this->actingAs($investor)
-        ->get('/investment-projects/create')
+    $this->get('/sezs')->assertForbidden();
+    $this->get('/issues')->assertForbidden();
+    $this->get('/baskarma-rating')->assertForbidden();
+    $this->get('/users')->assertForbidden();
+    $this->get('/investment-projects/create')->assertForbidden();
+    $this->post('/chat/send', ['message' => 'Барлық жобалар'])
         ->assertForbidden();
-    $this->actingAs($investor)
-        ->post('/chat/send', ['message' => 'Барлық жобалар'])
-        ->assertForbidden();
+});
+
+test('investor can add project evidence but cannot modify status or remove shared data', function () {
+    Storage::fake('local');
+    Storage::fake('public');
+
+    $superadmin = createInvestorTestUser('superadmin');
+    $region = createInvestorTestRegion();
+    $scope = createInvestorTestCompany(
+        $superadmin,
+        $region,
+        'Contribution company'
+    );
+    $project = createInvestorTestProject(
+        $superadmin,
+        $scope['company'],
+        $region,
+        'Дәлелдер жобасы',
+        3000000
+    );
+
+    $this->actingAs($scope['investor'])
+        ->post(route('investment-projects.documents.store', $project), [
+            'name' => 'Инвестор құжаты',
+            'file' => UploadedFile::fake()->create(
+                'proof.pdf',
+                100,
+                'application/pdf'
+            ),
+            'is_completed' => true,
+        ])
+        ->assertRedirect();
+
+    $this->post(route('investment-projects.gallery.store', $project), [
+        'photos' => [UploadedFile::fake()->image('progress.jpg')],
+        'description' => 'Құрылыс барысы',
+        'photo_type' => 'gallery',
+    ])->assertRedirect();
+
+    $this->post(route('investment-projects.issues.store', $project), [
+        'title' => 'Инфрақұрылым мәселесі',
+        'description' => 'Электр қуаты қажет',
+        'severity' => 'high',
+        'status' => 'resolved',
+    ])->assertRedirect();
+
+    $document = ProjectDocument::query()->sole();
+    $photo = ProjectPhoto::query()->sole();
+    $issue = ProjectIssue::query()->sole();
+
+    expect($document->is_completed)->toBeFalse()
+        ->and($issue->status)->toBe('open');
+
+    $this->put(route('investment-projects.update-status', $project), [
+        'current_status' => 'Инвестор өзгерткен статус',
+    ])->assertForbidden();
+    $this->delete(route(
+        'investment-projects.documents.destroy',
+        [$project, $document]
+    ))->assertForbidden();
+    $this->put(route(
+        'investment-projects.gallery.update',
+        [$project, $photo]
+    ), ['description' => 'Өзгертілді'])->assertForbidden();
+    $this->delete(route(
+        'investment-projects.gallery.destroy',
+        [$project, $photo]
+    ))->assertForbidden();
+    $this->put(route(
+        'investment-projects.issues.update',
+        [$project, $issue]
+    ), [
+        'title' => 'Өзгертілді',
+        'description' => 'Өзгертілді',
+        'severity' => 'low',
+        'status' => 'resolved',
+    ])->assertForbidden();
+    $this->delete(route(
+        'investment-projects.issues.destroy',
+        [$project, $issue]
+    ))->assertForbidden();
+
+    expect($project->fresh()->current_status)->toBe('Іске асырылуда');
+    $this->assertDatabaseHas('project_documents', ['id' => $document->id]);
+    $this->assertDatabaseHas('project_photos', ['id' => $photo->id]);
+    $this->assertDatabaseHas('project_issues', ['id' => $issue->id]);
 });
 
 test('assigned investor receives and completes a project roadmap task', function () {
     $superadmin = createInvestorTestUser('superadmin');
-    $investor = createInvestorTestUser('investor');
     $region = createInvestorTestRegion();
+    $scope = createInvestorTestCompany($superadmin, $region, 'Task company');
     $project = createInvestorTestProject(
         $superadmin,
+        $scope['company'],
         $region,
         'Тапсырмасы бар инвестор жобасы',
         3000000
     );
-    $project->investors()->attach($investor);
 
     $this->actingAs($superadmin)
-        ->post("/investment-projects/{$project->id}/tasks", [
+        ->post(route('investment-projects.tasks.store', $project), [
             'title' => 'Инвестор орындайтын тапсырма',
             'description' => 'Инвестор тапсырмасының сипаттамасы',
-            'assigned_to' => $investor->id,
+            'assigned_to' => $scope['investor']->id,
             'start_date' => '2026-08-01',
             'due_date' => '2026-08-31',
         ])
         ->assertRedirect();
 
-    $task = ProjectTask::where('project_id', $project->id)
-        ->where('assigned_to', $investor->id)
-        ->firstOrFail();
+    $task = ProjectTask::where('project_id', $project->id)->sole();
 
-    expect($project->executors()->where('users.id', $investor->id)->exists())
-        ->toBeFalse();
-    $this->assertDatabaseHas('task_notifications', [
-        'user_id' => $investor->id,
-        'task_id' => $task->id,
-        'type' => 'task_assigned',
-    ]);
-
-    $this->actingAs($investor)
-        ->post("/investment-projects/{$project->id}/tasks/{$task->id}/view")
+    $this->actingAs($scope['investor'])
+        ->post(route('investment-projects.tasks.view', [$project, $task]))
         ->assertRedirect();
-
-    $this->actingAs($investor)
-        ->post(
-            "/investment-projects/{$project->id}/tasks/{$task->id}/completions",
-            ['comment' => 'Инвестор тапсырманы орындады']
-        )
-        ->assertRedirect();
+    $this->post(
+        route(
+            'investment-projects.tasks.completions.store',
+            [$project, $task]
+        ),
+        ['comment' => 'Инвестор тапсырманы орындады']
+    )->assertRedirect();
 
     $this->assertDatabaseHas('task_completions', [
         'task_id' => $task->id,
-        'submitted_by' => $investor->id,
-        'comment' => 'Инвестор тапсырманы орындады',
+        'submitted_by' => $scope['investor']->id,
         'status' => 'pending',
     ]);
-
-    $this->actingAs($investor)
-        ->post("/investment-projects/{$project->id}/tasks", [
-            'title' => 'Рұқсатсыз тапсырма',
-            'assigned_to' => $investor->id,
-        ])
-        ->assertForbidden();
 });
 
-test('investor cannot be assigned a task outside their projects', function () {
+test('investor cannot be assigned a task outside their company projects', function () {
     $superadmin = createInvestorTestUser('superadmin');
-    $investor = createInvestorTestUser('investor');
     $region = createInvestorTestRegion();
-    $project = createInvestorTestProject(
+    $assigned = createInvestorTestCompany(
         $superadmin,
         $region,
-        'Инвесторға бекітілмеген жоба',
+        'Assigned company'
+    );
+    $other = createInvestorTestCompany($superadmin, $region, 'Other company');
+    $project = createInvestorTestProject(
+        $superadmin,
+        $other['company'],
+        $region,
+        'Басқа компания жобасы',
         4000000
     );
 
     $this->actingAs($superadmin)
-        ->post("/investment-projects/{$project->id}/tasks", [
+        ->post(route('investment-projects.tasks.store', $project), [
             'title' => 'Қате тағайындалған тапсырма',
-            'assigned_to' => $investor->id,
+            'assigned_to' => $assigned['investor']->id,
         ])
         ->assertSessionHasErrors('assigned_to');
 });

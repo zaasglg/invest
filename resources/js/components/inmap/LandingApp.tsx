@@ -2920,7 +2920,7 @@ function ContactPage() {
           <span className="contact-channel__index">01</span>
           <div>
             <p>Позвонить</p>
-            <strong>+7 700 000 00 00</strong>
+            <strong>+7 700 310 00 04</strong>
           </div>
           <span className="contact-channel__arrow" aria-hidden="true">
             ↗

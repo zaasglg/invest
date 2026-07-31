@@ -58,7 +58,7 @@ interface Props {
     datedGallery: DatedGallery;
     renderPhotos?: ProjectPhoto[];
     canDownload: boolean;
-    ispolnitelCanWrite?: boolean;
+    participantCanCreate?: boolean;
 }
 
 export default function Gallery({
@@ -67,13 +67,13 @@ export default function Gallery({
     datedGallery,
     renderPhotos = [],
     canDownload,
-    ispolnitelCanWrite = false,
+    participantCanCreate = false,
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
-    const canEdit = canModify || ispolnitelCanWrite;
+    const canEdit = canModify || participantCanCreate;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
-    // Ispolnitel can add but cannot delete
+    // Project participants may add photos but cannot delete them.
     const canDelete = canModify;
     const defaultGalleryDate = new Date().toISOString().split('T')[0];
     const [photos, setPhotos] = useState<FileList | null>(null);

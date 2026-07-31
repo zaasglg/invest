@@ -26,6 +26,8 @@ class CompanyRequest extends FormRequest
             'legal_address',
             'actual_address',
             'notes',
+            'investor_full_name',
+            'investor_email',
         ];
         $normalized = [];
 
@@ -55,6 +57,7 @@ class CompanyRequest extends FormRequest
     public function rules(): array
     {
         $company = $this->route('company');
+        $investorId = $company?->investor()->value('users.id');
 
         return [
             'legal_form' => [
@@ -82,6 +85,20 @@ class CompanyRequest extends FormRequest
                 Rule::in(array_keys(Company::STATUSES)),
             ],
             'notes' => 'nullable|string|max:5000',
+            'investor_full_name' => 'required|string|max:255',
+            'investor_email' => [
+                'required',
+                'email:rfc',
+                'max:255',
+                Rule::unique('users', 'email')->ignore($investorId),
+            ],
+            'investor_password' => [
+                Rule::requiredIf($investorId === null),
+                'nullable',
+                'string',
+                'min:8',
+                'confirmed',
+            ],
         ];
     }
 
@@ -105,6 +122,13 @@ class CompanyRequest extends FormRequest
             'website.url' => 'Сайт адресі http:// немесе https:// арқылы басталуы керек.',
             'legal_address.required' => 'Заңды мекенжайды енгізіңіз.',
             'status.required' => 'Компания статусын таңдаңыз.',
+            'investor_full_name.required' => 'Инвестор аккаунтының аты-жөнін енгізіңіз.',
+            'investor_email.required' => 'Инвестор аккаунтының email адресін енгізіңіз.',
+            'investor_email.email' => 'Инвестор аккаунтының email форматы дұрыс емес.',
+            'investor_email.unique' => 'Бұл email басқа аккаунтқа тіркелген.',
+            'investor_password.required' => 'Инвестор аккаунтына құпия сөз енгізіңіз.',
+            'investor_password.min' => 'Құпия сөз кемінде 8 таңбадан тұруы керек.',
+            'investor_password.confirmed' => 'Құпия сөзді растау сәйкес келмейді.',
         ];
     }
 }

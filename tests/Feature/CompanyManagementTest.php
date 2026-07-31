@@ -40,6 +40,24 @@ function createCompanyManagementRegion(): Region
     ]);
 }
 
+function createCompanyManagementInvestor(
+    Company $company,
+    ?string $email = null
+): User {
+    $role = Role::firstOrCreate(
+        ['name' => 'investor'],
+        ['display_name' => 'Инвестор']
+    );
+
+    return User::factory()->create([
+        'full_name' => 'Компания инвесторы',
+        'email' => $email ?? "company-investor-{$company->id}@example.test",
+        'role' => 'district_user',
+        'role_id' => $role->id,
+        'company_id' => $company->id,
+    ]);
+}
+
 /**
  * @return array<string, mixed>
  */
@@ -61,6 +79,10 @@ function validCompanyPayload(Region $region, array $overrides = []): array
         'actual_address' => 'Түркістан қаласы, Тест көшесі 2',
         'status' => 'active',
         'notes' => 'Тест компания',
+        'investor_full_name' => 'Тест Инвестор',
+        'investor_email' => 'company-investor@example.test',
+        'investor_password' => 'password123',
+        'investor_password_confirmation' => 'password123',
     ], $overrides);
 }
 
@@ -76,7 +98,10 @@ test('superadmin can create and update a complete company card', function () {
 
     expect($company->created_by)->toBe($user->id)
         ->and($company->display_name)->toContain('Turkistan Test Company')
-        ->and($company->is_profile_complete)->toBeTrue();
+        ->and($company->is_profile_complete)->toBeTrue()
+        ->and($company->investor)->not->toBeNull()
+        ->and($company->investor->email)
+        ->toBe('company-investor@example.test');
 
     $this->actingAs($user)
         ->get(route('companies.index'))
@@ -112,6 +137,9 @@ test('superadmin can create and update a complete company card', function () {
             validCompanyPayload($region, [
                 'name' => 'Updated Company',
                 'phone' => '+7 701 999 88 77',
+                'investor_full_name' => 'Жаңартылған Инвестор',
+                'investor_password' => '',
+                'investor_password_confirmation' => '',
             ])
         )
         ->assertRedirect(route('companies.show', $company));
@@ -120,6 +148,11 @@ test('superadmin can create and update a complete company card', function () {
         'id' => $company->id,
         'name' => 'Updated Company',
         'phone' => '+7 701 999 88 77',
+    ]);
+    $this->assertDatabaseHas('users', [
+        'company_id' => $company->id,
+        'full_name' => 'Жаңартылған Инвестор',
+        'email' => 'company-investor@example.test',
     ]);
 });
 
@@ -195,6 +228,7 @@ test('project creation uses an active complete company and syncs its name', func
         'name' => 'Selectable Company',
         'bin' => '111111111111',
     ]);
+    createCompanyManagementInvestor($completeCompany);
     $incompleteCompany = Company::create([
         'legal_form' => 'other',
         'name' => 'Legacy Company',

@@ -151,12 +151,16 @@ class InvestmentProject extends Model
     }
 
     /**
-     * Investor accounts explicitly assigned to this project.
+     * The investor account of the company selected for this project.
      */
     public function investors()
     {
-        return $this->belongsToMany(User::class, 'investment_project_investor')
-            ->withTimestamps();
+        return $this->hasMany(User::class, 'company_id', 'company_id')
+            ->whereNotNull('users.company_id')
+            ->whereHas(
+                'roleModel',
+                fn (Builder $query) => $query->where('name', 'investor')
+            );
     }
 
     // Исполнитель (Executor)

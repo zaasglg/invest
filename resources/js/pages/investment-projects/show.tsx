@@ -1225,7 +1225,8 @@ export default function Show({
                                     currentStatus={project.current_status}
                                     showCurrentStatus={!isRestrictedView}
                                     canEditStatus={
-                                        participantCanWrite || isModerator
+                                        (isIspolnitel && isInvolved) ||
+                                        isModerator
                                     }
                                     projectId={project.id}
                                 />

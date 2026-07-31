@@ -1,5 +1,5 @@
 import { Link, useForm } from '@inertiajs/react';
-import { Building2, Save } from 'lucide-react';
+import { Building2, KeyRound, Save, UserRound } from 'lucide-react';
 import type { FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -30,6 +30,12 @@ export interface CompanyFormValue {
     actual_address?: string | null;
     status?: string;
     notes?: string | null;
+    investor?: {
+        id: number;
+        full_name: string;
+        email: string;
+        phone?: string | null;
+    } | null;
 }
 
 interface Props {
@@ -69,6 +75,10 @@ export default function CompanyForm({
         actual_address: company?.actual_address || '',
         status: company?.status || 'active',
         notes: company?.notes || '',
+        investor_full_name: company?.investor?.full_name || '',
+        investor_email: company?.investor?.email || '',
+        investor_password: '',
+        investor_password_confirmation: '',
     });
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -235,6 +245,100 @@ export default function CompanyForm({
                             placeholder="Мысалы: Электр энергиясын өндіру"
                         />
                         {fieldError('activity_type')}
+                    </div>
+                </div>
+            </section>
+
+            <section className="rounded-xl border border-amber-200 bg-amber-50/40 p-6">
+                <div className="mb-5 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-100">
+                        <UserRound className="h-5 w-5 text-amber-800" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-[#0f1b3d]">
+                            Инвестор аккаунты
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            Әр компанияға бір міндетті аккаунт ашылады. Осы
+                            аккаунт компанияның барлық жобасын автоматты көреді.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                        <Label htmlFor="investor_full_name">
+                            Инвестор өкілінің аты-жөні *
+                        </Label>
+                        <Input
+                            id="investor_full_name"
+                            value={data.investor_full_name}
+                            onChange={(event) =>
+                                setData(
+                                    'investor_full_name',
+                                    event.target.value,
+                                )
+                            }
+                            autoComplete="name"
+                        />
+                        {fieldError('investor_full_name')}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="investor_email">
+                            Жүйеге кіру email-ы *
+                        </Label>
+                        <Input
+                            id="investor_email"
+                            type="email"
+                            value={data.investor_email}
+                            onChange={(event) =>
+                                setData('investor_email', event.target.value)
+                            }
+                            autoComplete="username"
+                            placeholder="investor@company.kz"
+                        />
+                        {fieldError('investor_email')}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="investor_password">
+                            <KeyRound className="mr-1 inline h-4 w-4" />
+                            Құпия сөз {company?.investor ? '' : '*'}
+                        </Label>
+                        <Input
+                            id="investor_password"
+                            type="password"
+                            value={data.investor_password}
+                            onChange={(event) =>
+                                setData('investor_password', event.target.value)
+                            }
+                            autoComplete="new-password"
+                        />
+                        {company?.investor && (
+                            <p className="text-xs text-gray-500">
+                                Өзгертпесеңіз бос қалдырыңыз.
+                            </p>
+                        )}
+                        {fieldError('investor_password')}
+                    </div>
+
+                    <div className="space-y-2">
+                        <Label htmlFor="investor_password_confirmation">
+                            Құпия сөзді растау {company?.investor ? '' : '*'}
+                        </Label>
+                        <Input
+                            id="investor_password_confirmation"
+                            type="password"
+                            value={data.investor_password_confirmation}
+                            onChange={(event) =>
+                                setData(
+                                    'investor_password_confirmation',
+                                    event.target.value,
+                                )
+                            }
+                            autoComplete="new-password"
+                        />
                     </div>
                 </div>
             </section>

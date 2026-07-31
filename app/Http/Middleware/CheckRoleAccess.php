@@ -79,7 +79,7 @@ class CheckRoleAccess
     ];
 
     /**
-     * Project routes available to an investor on explicitly assigned projects.
+     * Project routes available to an investor for their company's projects.
      */
     protected array $investorProjectRoutes = [
         'investment-projects.index',
@@ -89,17 +89,11 @@ class CheckRoleAccess
         'investment-projects.documents.index',
         'investment-projects.documents.store',
         'investment-projects.documents.download',
-        'investment-projects.documents.destroy',
         'investment-projects.gallery.index',
         'investment-projects.gallery.store',
         'investment-projects.gallery.download',
-        'investment-projects.gallery.update',
-        'investment-projects.gallery.destroy',
         'investment-projects.issues.index',
         'investment-projects.issues.store',
-        'investment-projects.issues.update',
-        'investment-projects.issues.destroy',
-        'investment-projects.update-status',
         'investment-projects.tasks.view',
         'investment-projects.tasks.completions.store',
         'investment-projects.tasks.completions.files.preview',
@@ -134,6 +128,11 @@ class CheckRoleAccess
             }
 
             $this->enforceInvestorProjectScope($request, $user, $routeName);
+            $this->blockArchivedProjectAccess(
+                $request,
+                $user,
+                $roleName
+            );
 
             return $next($request);
         }
@@ -374,7 +373,7 @@ class CheckRoleAccess
     }
 
     /**
-     * Investors may only open projects explicitly assigned to their account.
+     * Investors may only open projects belonging to their company.
      */
     protected function enforceInvestorProjectScope(
         Request $request,
@@ -389,10 +388,12 @@ class CheckRoleAccess
             ?? $request->route('investment_project');
         $projectId = is_object($project) ? $project->id : (int) $project;
 
-        if (! $projectId
-            || ! $user->investorProjects()
-                ->where('investment_projects.id', $projectId)
-                ->exists()) {
+        $investmentProject = $project instanceof InvestmentProject
+            ? $project
+            : InvestmentProject::find($projectId);
+
+        if (! $investmentProject
+            || ! $user->isInvolvedInProject($investmentProject)) {
             abort(403, 'Бұл жоба инвестор аккаунтына бекітілмеген.');
         }
     }
