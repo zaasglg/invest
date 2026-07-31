@@ -1,99 +1,49 @@
-# AGENTS.md
+# Repository Guidelines
 
-## Repository Overview
-- Laravel 12 backend with Inertia + React (TypeScript) frontend.
-- Frontend source lives in `resources/js` and `resources/css`.
-- Tests use Pest with Laravel helpers.
-- Styling uses Tailwind CSS with Prettier’s Tailwind plugin.
+## Project Overview & Architecture
+Regional investment-management platform (investment projects, industrial zones,
+SEZs, prom zones, subsoil users, region ratings) built on Laravel 12 with an
+Inertia v2 + React 19 (TypeScript) frontend. UI text is Kazakh/Russian (`lang/kk`).
 
-## Build, Lint, and Test Commands
+- **Backend**: thin controllers in `app/Http/Controllers`; domain logic lives in
+  `app/Services` (chat, issue/completion workflows, Gemini and Telegram
+  integrations, private file access). Auth is Laravel Fortify; routes are in
+  `routes/web.php` and `routes/settings.php`.
+- **Frontend**: Inertia pages in `resources/js/pages` (one folder per domain
+  entity), shared components in `resources/js/components`, Radix-based
+  primitives in `resources/js/components/ui`. Maps use Leaflet; 3D via
+  react-three-fiber. React Compiler is enabled via Babel plugin.
+- **Generated code — do not hand-edit**: `resources/js/actions`,
+  `resources/js/routes`, and `resources/js/wayfinder` are produced by Laravel
+  Wayfinder (Vite plugin). Import routes/actions from these instead of
+  hardcoding URLs.
 
-### Frontend (Node/Vite)
-- Install deps: `npm install`
-- Dev server: `npm run dev`
-- Production build: `npm run build`
-- SSR build: `npm run build:ssr`
-- Type check: `npm run types`
-- Lint (autofix): `npm run lint`
-- Prettier format: `npm run format`
-- Prettier check: `npm run format:check`
+## Build, Test, and Development Commands
+- `composer setup` — full install (composer, .env, migrate, npm, build)
+- `composer dev` — serve + queue + logs (pail) + Vite, concurrently
+- `npm run build` / `npm run build:ssr` — production / SSR build
+- `npm run types` — TypeScript check (strict mode, `@/*` → `resources/js/*`)
+- `npm run lint` / `npm run format` — ESLint autofix / Prettier
+- `composer lint` / `composer test:lint` — Pint fix / check-only
+- `composer test` — clears config, runs Pint check + full Pest suite
+- Single test: `php artisan test --filter DashboardTest` or
+  `./vendor/bin/pest tests/Feature/ExampleTest.php`
 
-### Backend (Laravel/PHP)
-- Install deps: `composer install`
-- App dev server (with queue/logs/vite): `composer dev`
-- Lint PHP (Pint): `composer lint`
-- Lint PHP check-only: `composer test:lint`
-- Full test suite: `composer test`
+## Coding Style & Naming Conventions
+- 4-space indent, LF, final newline (`.editorconfig`); Prettier: single quotes,
+  semicolons, 80-char width, Tailwind class sorting plugin.
+- ESLint enforces import ordering (builtin→external→internal→parent→sibling→index,
+  alphabetized) and separated `type` imports.
+- Pint uses the `laravel` preset. Components/types `PascalCase`, hooks/functions
+  `camelCase`, use `cn`/`cva` for conditional Tailwind classes.
+- Prefer `FormRequest` validation and Eloquent relationships; keep controllers thin.
 
-### Run a Single Test
-- Pest by file: `./vendor/bin/pest tests/Feature/ExampleTest.php`
-- Pest by filter: `./vendor/bin/pest --filter "Dashboard"`
-- Artisan test by filter: `php artisan test --filter DashboardTest`
-- Artisan test by file: `php artisan test tests/Feature/ExampleTest.php`
+## Testing Guidelines
+Pest 4 with Laravel plugin. Feature tests (`tests/Feature`) use `RefreshDatabase`;
+CI runs against Postgres 16 on PHP 8.4 and 8.5.
 
-### Run a Single Lint/Format Target
-- ESLint one file: `npx eslint resources/js/pages/welcome.tsx`
-- Prettier one file: `npx prettier --write resources/js/pages/welcome.tsx`
-- Pint one file: `./vendor/bin/pint app/Models/User.php`
-
-## Code Style Guidelines
-
-### General
-- Use 4-space indentation (per `.editorconfig`).
-- Keep lines at ~80 chars where possible (Prettier `printWidth: 80`).
-- Prefer small, focused changes aligned with existing patterns.
-- Avoid introducing new tools or dependencies unless requested.
-
-### TypeScript / React
-- Use function components and React hooks.
-- TypeScript is strict; avoid `any` unless absolutely necessary.
-- Use `type` imports for types and keep them separate.
-- Prefer explicit return types for exported helpers when helpful.
-- Keep JSX readable; avoid deeply nested ternaries.
-- Avoid prop-types; rely on TypeScript types.
-
-### Import Ordering (ESLint)
-- Groups order: builtin, external, internal, parent, sibling, index.
-- Alphabetize within groups (case-insensitive).
-- Keep `type` imports separated (enforced by ESLint).
-
-### Formatting (Prettier)
-- Single quotes and semicolons are required.
-- Tab width: 4 spaces.
-- Tailwind class order is auto-sorted by Prettier.
-- Use `clsx`, `cn`, or `cva` for conditional class names.
-
-### Aliases and Paths
-- Use `@/` alias for `resources/js` imports when possible.
-- Keep relative imports for same-folder files only.
-
-### Naming Conventions
-- React components: `PascalCase`.
-- Hooks and functions: `camelCase`.
-- Types/interfaces: `PascalCase`.
-- Constants: `UPPER_SNAKE_CASE` when truly constant.
-
-### Error Handling
-- Prefer Laravel validation (`FormRequest` or `request()->validate`) on inputs.
-- Use `abort()` / `abort_if()` for access control failures.
-- Log unexpected errors with `report()` or `logger()` as needed.
-- In frontend, handle server errors via Inertia error props or form helpers.
-
-### PHP / Laravel
-- Follow Laravel conventions for controllers, requests, and policies.
-- Use Eloquent relationships over manual joins where appropriate.
-- Keep controllers thin; move complex logic to services or actions.
-- Use `pint` (Laravel preset) for PHP formatting.
-
-### Testing
-- Place feature tests in `tests/Feature` and unit tests in `tests/Unit`.
-- Prefer Pest style tests consistent with existing files.
-- Use factories and `RefreshDatabase` when touching DB (already enabled for Feature tests).
-
-## Editor and Tooling Notes
-- `.editorconfig` enforces LF, UTF-8, final newline, 4-space indent.
-- Prettier uses `prettier-plugin-tailwindcss`.
-- ESLint config is in `eslint.config.js` (React, hooks, import ordering).
-
-## Cursor / Copilot Rules
-- No `.cursor/rules`, `.cursorrules`, or `.github/copilot-instructions.md` found.
+## Commit & Pull Request Guidelines
+Work merges to `main` via PRs from feature branches. CI must pass: `linter`
+workflow (Pint + Prettier, auto-commits fixes) and `tests` workflow (Pest on
+PHP 8.4/8.5 with Postgres). Git history shows no enforced commit-message
+convention; write descriptive messages anyway.

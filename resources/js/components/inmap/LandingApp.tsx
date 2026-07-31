@@ -1456,35 +1456,31 @@ function HtmlOverlay() {
   return (
     <Scroll html style={{ width: '100%' }}>
       <main className="story w-full text-white">
-        <section className="story-section story-section--hero flex h-screen w-full items-center justify-center px-5 sm:px-8">
-          <div className="story-card story-card--hero w-full max-w-3xl rounded-3xl border border-cyan-300/20 bg-black/40 p-7 text-center shadow-2xl shadow-cyan-950/40 backdrop-blur-md sm:p-12">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.38em] text-cyan-300 sm:text-sm">
-              Реальные геоданные региона
-            </p>
-            <h1 className="text-6xl font-black tracking-tight text-white sm:text-8xl">
-              IN-MAP
-            </h1>
-            <p className="mx-auto mt-6 max-w-2xl text-lg font-medium leading-relaxed text-cyan-50 sm:text-2xl">
+        <section className="story-section story-section--hero">
+          <div className="story-hero">
+            <p className="story-hero__eyebrow">Реальные геоданные региона</p>
+            <h1 className="story-hero__title">IN-MAP</h1>
+            <p className="story-hero__lead">
               Единая цифровая экосистема инвестиций Туркестанской области.
             </p>
-            <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-slate-300 sm:text-base">
+            <p className="story-hero__copy">
               От подбора идеального участка до запуска производства — всё в
               одном управляемом контуре.
             </p>
+            <a href="/login" className="story-hero__cta">
+              Войти в систему
+            </a>
           </div>
         </section>
 
-        <section className="story-section story-section--content flex h-screen w-full items-center px-5 sm:px-10 lg:px-20">
-          <div className="story-card story-card--content w-full max-w-xl rounded-3xl border border-teal-300/20 bg-slate-950/60 p-7 shadow-2xl shadow-black/30 backdrop-blur-md sm:p-10">
-            <span className="mb-5 block h-px w-16 bg-cyan-300" />
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
-              Точный подбор локации
-            </p>
-            <h2 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
+        <section className="story-section story-section--content">
+          <div className="story-panel">
+            <p className="story-panel__eyebrow">Точный подбор локации</p>
+            <h2 className="story-panel__title">
               Умный AI-навигатор{' '}
-              <span className="text-cyan-300">(г. Туркестан)</span>
+              <span>(г. Туркестан)</span>
             </h2>
-            <p className="mt-6 text-base leading-8 text-slate-200 sm:text-lg">
+            <p className="story-panel__copy">
               Система автоматически сопоставляет спутниковые данные (NDVI),
               инфраструктуру, доступность воды и электричества, чтобы предложить
               идеальную зону для инвестиций.
@@ -1492,19 +1488,14 @@ function HtmlOverlay() {
           </div>
         </section>
 
-        <section className="story-section story-section--content flex h-screen w-full items-center px-5 sm:px-10 lg:px-20">
+        <section className="story-section story-section--content">
           <div
             ref={projectCardRef}
-            className="story-card story-card--content w-full max-w-xl rounded-3xl border border-cyan-500/30 bg-slate-900/60 p-7 opacity-0 shadow-2xl shadow-cyan-950/40 backdrop-blur-md will-change-[opacity,transform] sm:p-10"
+            className="story-panel opacity-0 will-change-[opacity,transform]"
           >
-            <span className="mb-5 block h-px w-16 bg-cyan-300" />
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
-              Единый контур управления
-            </p>
-            <h2 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
-              Цифровой паспорт проекта
-            </h2>
-            <p className="mt-6 text-base leading-8 text-slate-200 sm:text-lg">
+            <p className="story-panel__eyebrow">Единый контур управления</p>
+            <h2 className="story-panel__title">Цифровой паспорт проекта</h2>
+            <p className="story-panel__copy">
               Вся жизнь проекта — в одной карточке. Интерактивные дорожные карты,
               контроль сроков и мониторинг строительства прямо на цифровом
               двойнике города.
@@ -1512,16 +1503,13 @@ function HtmlOverlay() {
           </div>
         </section>
 
-        <section className="story-section story-section--content flex h-screen w-full items-center px-5 sm:px-10 lg:px-20">
-          <div className="story-card story-card--content w-full max-w-xl rounded-3xl border border-emerald-300/20 bg-black/40 p-7 shadow-2xl shadow-emerald-950/40 backdrop-blur-md sm:p-10">
-            <span className="mb-5 block h-px w-16 bg-emerald-300" />
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-emerald-300">
-              Проблема → решение
-            </p>
-            <h2 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
+        <section className="story-section story-section--content">
+          <div className="story-panel story-panel--accent-emerald">
+            <p className="story-panel__eyebrow">Проблема → решение</p>
+            <h2 className="story-panel__title">
               Защита инвестора в реальном времени
             </h2>
-            <p className="mt-6 text-base leading-8 text-slate-200 sm:text-lg">
+            <p className="story-panel__copy">
               Прямой прокурорский надзор для оперативного устранения барьеров.
               Жесткий контроль поручений и 100% подтверждение исполнения через
               фото-доказательства.
@@ -1529,22 +1517,15 @@ function HtmlOverlay() {
           </div>
         </section>
 
-        <section className="story-section story-section--analytics flex h-screen w-full items-end justify-center px-5 pb-16 sm:px-10 sm:pb-20 lg:px-20">
-          <div className="story-card story-card--analytics w-full max-w-3xl rounded-3xl border border-cyan-300/20 bg-black/40 p-7 text-center shadow-2xl shadow-cyan-950/50 backdrop-blur-md sm:p-10">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-[0.3em] text-cyan-300">
-              Объективная картина региона
-            </p>
-            <h2 className="text-3xl font-bold leading-tight text-white sm:text-5xl">
-              Аналитика как на ладони
-            </h2>
-            <p className="mx-auto mt-5 max-w-2xl text-base leading-8 text-slate-200 sm:text-lg">
+        <section className="story-section story-section--analytics">
+          <div className="story-panel story-panel--center">
+            <p className="story-panel__eyebrow">Объективная картина региона</p>
+            <h2 className="story-panel__title">Аналитика как на ладони</h2>
+            <p className="story-panel__copy">
               Руководство области видит объективную картину без искажений.
               Сводные дашборды, расчет KPI и генерация презентаций в один клик.
             </p>
-            <a
-              href="/login"
-              className="mt-7 inline-flex rounded-full border border-cyan-200/50 bg-cyan-300 px-7 py-3 text-sm font-bold uppercase tracking-[0.14em] text-slate-950 shadow-lg shadow-cyan-400/30 transition duration-300 hover:-translate-y-0.5 hover:bg-cyan-200 hover:shadow-cyan-300/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-cyan-200"
-            >
+            <a href="/login" className="story-panel__cta">
               Перейти к платформе
             </a>
           </div>
@@ -1554,7 +1535,7 @@ function HtmlOverlay() {
   )
 }
 
-type InfoPage = 'contacts' | 'about'
+type InfoPage = 'contacts'
 
 type NavigationItem =
   | { page: InfoPage; label: string }
@@ -1571,7 +1552,6 @@ const navigationItems: NavigationItem[] = [
     external: true,
   },
   { page: 'contacts', label: 'Контакты' },
-  { page: 'about', label: 'Кто мы' },
 ]
 
 function getDistrictDisplayName(name: string) {
@@ -2255,636 +2235,6 @@ function DistrictExplorer() {
   )
 }
 
-const universityTreePositions = [-1, 1].flatMap((side) =>
-  [3.1, 5.3, 7.5, 9.7].map((z, index) => ({
-    x: side * (3.4 + (index % 2) * 0.55),
-    z,
-    scale: 0.82 + (index % 3) * 0.1,
-  })),
-)
-
-const universityFlagPositions = [-1, 1].flatMap((side) =>
-  [3.4, 5.1, 6.8, 8.5].map((z, index) => ({
-    x: side * 2.25,
-    z,
-    color: (index + (side > 0 ? 1 : 0)) % 2 === 0 ? '#22d3ee' : '#ef4444',
-  })),
-)
-
-function UniversityDome({
-  position,
-  scale = 1,
-}: {
-  position: WorldCoordinate
-  scale?: number
-}) {
-  return (
-    <group position={position} scale={scale}>
-      <mesh castShadow>
-        <sphereGeometry
-          args={[1, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2]}
-        />
-        <meshStandardMaterial
-          color="#1697ad"
-          emissive="#075f72"
-          emissiveIntensity={0.16}
-          metalness={0.48}
-          roughness={0.32}
-        />
-      </mesh>
-      <mesh position-y={-0.02}>
-        <cylinderGeometry args={[1.02, 1.02, 0.12, 32]} />
-        <meshStandardMaterial
-          color="#e0ddd3"
-          metalness={0.18}
-          roughness={0.58}
-        />
-      </mesh>
-      <mesh position-y={0.92} castShadow>
-        <cylinderGeometry args={[0.035, 0.055, 0.34, 12]} />
-        <meshStandardMaterial
-          color="#d7b55c"
-          metalness={0.72}
-          roughness={0.24}
-        />
-      </mesh>
-      <mesh position-y={1.11} castShadow>
-        <sphereGeometry args={[0.065, 14, 10]} />
-        <meshStandardMaterial
-          color="#f5d675"
-          emissive="#8a651c"
-          emissiveIntensity={0.18}
-          metalness={0.75}
-          roughness={0.2}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function UniversityTree({
-  x,
-  z,
-  scale,
-}: {
-  x: number
-  z: number
-  scale: number
-}) {
-  return (
-    <group position={[x, 0, z]} scale={scale}>
-      <mesh position-y={0.52} castShadow>
-        <cylinderGeometry args={[0.06, 0.1, 1.04, 10]} />
-        <meshStandardMaterial color="#164e3f" roughness={0.9} />
-      </mesh>
-      <mesh position-y={1.32} castShadow>
-        <sphereGeometry args={[0.48, 14, 12]} />
-        <meshStandardMaterial
-          color="#2e6a47"
-          roughness={0.86}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function UniversityFlag({
-  x,
-  z,
-  color,
-}: {
-  x: number
-  z: number
-  color: string
-}) {
-  return (
-    <group position={[x, 0, z]}>
-      <mesh position-y={1.22}>
-        <cylinderGeometry args={[0.018, 0.025, 2.44, 10]} />
-        <meshStandardMaterial color="#cbd5e1" metalness={0.65} roughness={0.3} />
-      </mesh>
-      <mesh position={[0.27, 2.12, 0.015]}>
-        <planeGeometry args={[0.52, 0.3]} />
-        <meshStandardMaterial
-          color={color}
-          emissive={color}
-          emissiveIntensity={0.22}
-          side={2}
-        />
-      </mesh>
-    </group>
-  )
-}
-
-function UniversityFacadeWing({ side }: { side: -1 | 1 }) {
-  const tallBayPositions = [2.75, 3.86, 4.97, 6.08, 7.19].map(
-    (x) => side * x,
-  )
-  const topWindowPositions = Array.from(
-    { length: 12 },
-    (_, index) => side * (2.55 + index * 0.45),
-  )
-  const outerWindowColumns = [8.25, 8.72, 9.19].map((x) => side * x)
-  const outerWindowRows = [0.82, 1.28, 1.74, 2.2, 2.66]
-
-  return (
-    <group>
-      <mesh position={[side * 5.02, 1.96, -0.34]} castShadow receiveShadow>
-        <boxGeometry args={[6.25, 3.92, 2.46]} />
-        <meshStandardMaterial
-          color="#d8d5ca"
-          roughness={0.82}
-        />
-      </mesh>
-
-      <mesh position={[side * 8.68, 1.53, -0.42]} castShadow receiveShadow>
-        <boxGeometry args={[1.55, 3.06, 2.28]} />
-        <meshStandardMaterial color="#d4d1c7" roughness={0.84} />
-      </mesh>
-
-      <mesh position={[side * 4.98, 3.26, 0.91]}>
-        <boxGeometry args={[5.18, 0.36, 0.07]} />
-        <meshStandardMaterial
-          color="#216d7c"
-          emissive="#164e63"
-          emissiveIntensity={0.12}
-          metalness={0.44}
-          roughness={0.22}
-        />
-      </mesh>
-
-      {tallBayPositions.map((x) => (
-        <group key={`wing-bay-${side}-${x}`}>
-          <mesh position={[x, 1.69, 0.925]}>
-            <boxGeometry args={[0.72, 2.48, 0.075]} />
-            <meshStandardMaterial
-              color="#256a79"
-              emissive="#164e63"
-              emissiveIntensity={0.14}
-              metalness={0.48}
-              roughness={0.2}
-            />
-          </mesh>
-          {[0.73, 1.34, 1.95, 2.56].map((y) => (
-            <mesh key={`bay-floor-${x}-${y}`} position={[x, y, 0.975]}>
-              <boxGeometry args={[0.77, 0.075, 0.085]} />
-              <meshStandardMaterial color="#c8c8c1" roughness={0.62} />
-            </mesh>
-          ))}
-        </group>
-      ))}
-
-      {topWindowPositions.map((x) => (
-        <mesh key={`top-window-${side}-${x}`} position={[x, 3.72, 0.91]}>
-          <boxGeometry args={[0.22, 0.2, 0.075]} />
-          <meshStandardMaterial
-            color="#296b76"
-            metalness={0.38}
-            roughness={0.22}
-          />
-        </mesh>
-      ))}
-
-      {outerWindowColumns.flatMap((x) =>
-        outerWindowRows.map((y) => (
-          <mesh key={`outer-window-${side}-${x}-${y}`} position={[x, y, 0.74]}>
-            <boxGeometry args={[0.22, 0.2, 0.07]} />
-            <meshStandardMaterial
-              color="#2d6c75"
-              metalness={0.34}
-              roughness={0.24}
-            />
-          </mesh>
-        )),
-      )}
-
-      <mesh position={[side * 5.03, 3.99, -0.28]} castShadow>
-        <boxGeometry args={[6.42, 0.15, 2.52]} />
-        <meshStandardMaterial color="#ebe8df" roughness={0.76} />
-      </mesh>
-    </group>
-  )
-}
-
-function UniversityCentralAtrium() {
-  const mullionAngles = [-80, -64, -48, -32, -16, 0, 16, 32, 48, 64, 80]
-
-  return (
-    <group>
-      <mesh position={[0, 2.4, -0.68]} castShadow receiveShadow>
-        <boxGeometry args={[3.45, 4.8, 1.9]} />
-        <meshStandardMaterial color="#d4d1c7" roughness={0.8} />
-      </mesh>
-
-      {[-1, 1].map((side) => (
-        <mesh
-          key={`atrium-side-${side}`}
-          position={[side * 1.82, 2.63, -0.05]}
-          castShadow
-        >
-          <boxGeometry args={[0.48, 4.34, 1.72]} />
-          <meshStandardMaterial color="#ae8d83" roughness={0.78} />
-        </mesh>
-      ))}
-
-      <mesh position={[0, 2.55, 0.42]} castShadow>
-        <cylinderGeometry args={[1.92, 1.92, 5.1, 56, 1, false]} />
-        <meshStandardMaterial
-          color="#176779"
-          emissive="#0e4b5a"
-          emissiveIntensity={0.14}
-          metalness={0.56}
-          roughness={0.18}
-        />
-      </mesh>
-
-      {mullionAngles.map((degrees) => {
-        const angle = MathUtils.degToRad(degrees)
-        return (
-          <mesh
-            key={`atrium-mullion-${degrees}`}
-            position={[
-              Math.sin(angle) * 1.94,
-              2.55,
-              Math.cos(angle) * 1.94 + 0.42,
-            ]}
-            rotation-y={angle}
-          >
-            <boxGeometry args={[0.055, 4.82, 0.08]} />
-            <meshStandardMaterial
-              color="#b8c5c4"
-              metalness={0.58}
-              roughness={0.3}
-            />
-          </mesh>
-        )
-      })}
-
-      {[0.48, 1.26, 2.04, 2.82, 3.6, 4.38].map((y) => (
-        <mesh
-          key={`atrium-ring-${y}`}
-          position={[0, y, 0.42]}
-          rotation-x={Math.PI / 2}
-        >
-          <torusGeometry args={[1.94, 0.045, 8, 56]} />
-          <meshStandardMaterial
-            color="#c6cfcc"
-            metalness={0.56}
-            roughness={0.3}
-          />
-        </mesh>
-      ))}
-
-      <mesh position={[0, 5.18, 0.42]} castShadow>
-        <cylinderGeometry args={[1.55, 1.75, 0.52, 48]} />
-        <meshStandardMaterial color="#e0ddd3" roughness={0.68} />
-      </mesh>
-      <UniversityDome position={[0, 5.46, 0.42]} scale={1.48} />
-    </group>
-  )
-}
-
-function UniversityCampusModel({
-  scrollProgress,
-}: {
-  scrollProgress: MutableRefObject<number>
-}) {
-  const leftDoorRef = useRef<Mesh>(null)
-  const rightDoorRef = useRef<Mesh>(null)
-  const entranceLightRef = useRef<PointLight>(null)
-
-  useFrame((_, delta) => {
-    const entranceProgress = MathUtils.smoothstep(
-      MathUtils.clamp((scrollProgress.current - 0.72) / 0.28, 0, 1),
-      0,
-      1,
-    )
-
-    if (leftDoorRef.current) {
-      leftDoorRef.current.position.x = MathUtils.damp(
-        leftDoorRef.current.position.x,
-        -0.43 - entranceProgress * 0.28,
-        5,
-        delta,
-      )
-    }
-
-    if (rightDoorRef.current) {
-      rightDoorRef.current.position.x = MathUtils.damp(
-        rightDoorRef.current.position.x,
-        0.43 + entranceProgress * 0.28,
-        5,
-        delta,
-      )
-    }
-
-    if (entranceLightRef.current) {
-      entranceLightRef.current.intensity = MathUtils.lerp(
-        0.4,
-        4.2,
-        entranceProgress,
-      )
-    }
-  })
-
-  return (
-    <group position-y={-0.08}>
-      <mesh position-y={-0.18} receiveShadow>
-        <boxGeometry args={[28, 0.34, 24]} />
-        <meshStandardMaterial color="#53665d" roughness={0.96} />
-      </mesh>
-
-      <mesh position={[0, 0.015, 6.2]} receiveShadow>
-        <boxGeometry args={[3.4, 0.08, 12.5]} />
-        <meshStandardMaterial color="#a5a49a" roughness={0.88} />
-      </mesh>
-
-      <mesh position={[0, 0.025, 1.35]} receiveShadow>
-        <cylinderGeometry args={[4.2, 4.2, 0.07, 48]} />
-        <meshStandardMaterial color="#b7b1a3" roughness={0.86} />
-      </mesh>
-
-      <mesh position={[0, 0.068, 1.35]} receiveShadow>
-        <ringGeometry args={[2.7, 3.12, 48]} />
-        <meshStandardMaterial
-          color="#d3c9b4"
-          roughness={0.82}
-          side={2}
-        />
-      </mesh>
-
-      <mesh position={[-5.2, 0.01, 6]} receiveShadow>
-        <boxGeometry args={[5.8, 0.06, 11.5]} />
-        <meshStandardMaterial color="#315f48" roughness={1} />
-      </mesh>
-      <mesh position={[5.2, 0.01, 6]} receiveShadow>
-        <boxGeometry args={[5.8, 0.06, 11.5]} />
-        <meshStandardMaterial color="#315f48" roughness={1} />
-      </mesh>
-
-      <UniversityFacadeWing side={-1} />
-      <UniversityFacadeWing side={1} />
-      <UniversityCentralAtrium />
-
-      <mesh position={[0, 1.49, 1.58]} scale={[2.42, 1, 1.08]} castShadow>
-        <cylinderGeometry args={[1, 1, 0.25, 48]} />
-        <meshStandardMaterial
-          color="#b9998c"
-          roughness={0.7}
-        />
-      </mesh>
-
-      {[-68, -40, -13, 13, 40, 68].map((degrees) => {
-        const angle = MathUtils.degToRad(degrees)
-        return (
-          <mesh
-            key={`entrance-column-${degrees}`}
-            position={[
-              Math.sin(angle) * 2.13,
-              0.75,
-              Math.cos(angle) * 0.92 + 1.58,
-            ]}
-            castShadow
-          >
-            <cylinderGeometry args={[0.085, 0.105, 1.5, 18]} />
-            <meshStandardMaterial color="#c4a99d" roughness={0.68} />
-          </mesh>
-        )
-      })}
-
-      <Html
-        position={[0, 1.52, 2.67]}
-        center
-        transform
-        distanceFactor={7.4}
-        occlude={false}
-      >
-        <div className="university-model-sign">
-          AHMET YESEVİ ÜNİVERSİTESİ
-        </div>
-      </Html>
-
-      <mesh ref={leftDoorRef} position={[-0.43, 0.61, 2.34]}>
-        <boxGeometry args={[0.72, 1.22, 0.075]} />
-        <meshStandardMaterial
-          color="#124f61"
-          emissive="#0e7490"
-          emissiveIntensity={0.48}
-          metalness={0.55}
-          roughness={0.2}
-        />
-      </mesh>
-      <mesh ref={rightDoorRef} position={[0.43, 0.61, 2.34]}>
-        <boxGeometry args={[0.72, 1.22, 0.075]} />
-        <meshStandardMaterial
-          color="#124f61"
-          emissive="#0e7490"
-          emissiveIntensity={0.48}
-          metalness={0.55}
-          roughness={0.2}
-        />
-      </mesh>
-
-      {[0, 1, 2, 3].map((step) => (
-        <mesh
-          key={`entrance-step-${step}`}
-          position={[0, 0.035 + step * 0.04, 3.07 - step * 0.27]}
-          receiveShadow
-        >
-          <boxGeometry args={[3.65 - step * 0.22, 0.08, 0.54]} />
-          <meshStandardMaterial color="#9a998d" roughness={0.84} />
-        </mesh>
-      ))}
-
-      {universityTreePositions.map((tree, index) => (
-        <UniversityTree key={`campus-tree-${index}`} {...tree} />
-      ))}
-      {universityFlagPositions.map((flag, index) => (
-        <UniversityFlag key={`campus-flag-${index}`} {...flag} />
-      ))}
-
-      <pointLight
-        ref={entranceLightRef}
-        position={[0, 1.1, 2.7]}
-        color="#67e8f9"
-        intensity={0.4}
-        distance={6}
-      />
-    </group>
-  )
-}
-
-function UniversitySceneCamera({
-  scrollProgress,
-}: {
-  scrollProgress: MutableRefObject<number>
-}) {
-  const { camera, size } = useThree()
-  const positionDestinationRef = useRef(new Vector3())
-  const targetDestinationRef = useRef(new Vector3())
-  const currentTargetRef = useRef(new Vector3(0, 1.1, 0))
-  const overviewPositionRef = useRef(new Vector3())
-  const entrancePosition = useMemo(() => new Vector3(0, 2.15, 7.2), [])
-  const overviewTarget = useMemo(() => new Vector3(0, 1.72, 0.45), [])
-  const entranceTarget = useMemo(() => new Vector3(0, 1.02, 2.28), [])
-
-  useEffect(() => {
-    overviewPositionRef.current.set(
-      size.width < 640 ? 11.4 : 10.8,
-      size.width < 640 ? 10.4 : 8.9,
-      size.width < 640 ? 19.8 : 18.2,
-    )
-    camera.position.copy(overviewPositionRef.current)
-    camera.lookAt(overviewTarget)
-  }, [camera, overviewTarget, size.width])
-
-  useFrame((_, delta) => {
-    const progress = MathUtils.smootherstep(
-      MathUtils.clamp(scrollProgress.current, 0, 1),
-      0,
-      1,
-    )
-    const positionDestination = positionDestinationRef.current
-    const targetDestination = targetDestinationRef.current
-
-    positionDestination.lerpVectors(
-      overviewPositionRef.current,
-      entrancePosition,
-      progress,
-    )
-    targetDestination.lerpVectors(
-      overviewTarget,
-      entranceTarget,
-      progress,
-    )
-
-    const damping = 1 - Math.exp(-delta * 4)
-    camera.position.lerp(positionDestination, damping)
-    currentTargetRef.current.lerp(targetDestination, damping)
-    camera.lookAt(currentTargetRef.current)
-  })
-
-  return null
-}
-
-function UniversityExperience() {
-  const sectionRef = useRef<HTMLElement>(null)
-  const scrollProgressRef = useRef(0)
-
-  useEffect(() => {
-    const section = sectionRef.current
-    const scrollContainer = section?.closest('.info-page') as HTMLElement | null
-
-    if (!section || !scrollContainer) return
-
-    scrollContainer.scrollTop = 0
-
-    const updateProgress = () => {
-      const sectionRect = section.getBoundingClientRect()
-      const scrollDistance = Math.max(
-        1,
-        section.offsetHeight - window.innerHeight,
-      )
-      scrollProgressRef.current = MathUtils.clamp(
-        -sectionRect.top / scrollDistance,
-        0,
-        1,
-      )
-    }
-
-    updateProgress()
-    scrollContainer.addEventListener('scroll', updateProgress, {
-      passive: true,
-    })
-    window.addEventListener('resize', updateProgress)
-
-    return () => {
-      scrollContainer.removeEventListener('scroll', updateProgress)
-      window.removeEventListener('resize', updateProgress)
-    }
-  }, [])
-
-  return (
-    <section className="university-experience" ref={sectionRef}>
-      <div className="university-experience__stage" aria-hidden="true">
-        <Canvas
-          shadows
-          camera={{ fov: 44, near: 0.1, far: 90 }}
-          dpr={[1, 1.5]}
-          gl={{
-            antialias: true,
-            alpha: true,
-            powerPreference: 'high-performance',
-          }}
-        >
-          <color attach="background" args={['#8caaba']} />
-          <fog attach="fog" args={['#8caaba', 22, 48]} />
-          <ambientLight intensity={0.72} />
-          <hemisphereLight args={['#e5f4ff', '#53624e', 1.7]} />
-          <directionalLight
-            castShadow
-            color="#fff6df"
-            intensity={3.8}
-            position={[8, 13, 9]}
-            shadow-mapSize={[1024, 1024]}
-          />
-          <directionalLight
-            color="#7dd3fc"
-            intensity={0.85}
-            position={[-9, 4, -7]}
-          />
-          <UniversitySceneCamera scrollProgress={scrollProgressRef} />
-          <UniversityCampusModel scrollProgress={scrollProgressRef} />
-        </Canvas>
-      </div>
-
-      <div className="university-experience__vignette" aria-hidden="true" />
-
-      <div className="university-experience__chapters">
-        <article className="university-chapter university-chapter--overview">
-          <div>
-            <p>Кто мы · 01</p>
-            <h1>
-              Технологии рождаются
-              <br />
-              там, где есть знания<span>.</span>
-            </h1>
-            <strong>
-              Международный казахско-турецкий университет имени Ходжи Ахмеда
-              Ясави
-            </strong>
-          </div>
-          <div className="university-scroll-cue">
-            <i />
-            <span>Прокрутите, чтобы приблизиться</span>
-          </div>
-        </article>
-
-        <article className="university-chapter university-chapter--entrance">
-          <div>
-            <p>Точка входа · 02</p>
-            <h2>
-              Здесь начинается
-              <br />
-              IN-MAP<span>.</span>
-            </h2>
-            <strong>
-              Входим в пространство, где геоданные, исследования и цифровые
-              решения работают на развитие Туркестанской области.
-            </strong>
-          </div>
-        </article>
-      </div>
-
-      <div className="university-experience__rail" aria-hidden="true">
-        <span>01</span>
-        <i />
-        <span>02</span>
-      </div>
-    </section>
-  )
-}
-
 function ContactPage() {
   return (
     <div className="contact-page">
@@ -3003,7 +2353,7 @@ function PageContent({ page }: { page: InfoPage }) {
     return <ContactPage />
   }
 
-  return <UniversityExperience />
+  return null
 }
 
 function SiteNavigation() {
@@ -3069,11 +2419,7 @@ function SiteNavigation() {
               На главную
             </button>
           </header>
-          <div
-            className={`info-page__content${
-              activePage === 'about' ? ' info-page__content--about' : ''
-            }`}
-          >
+          <div className="info-page__content">
             <PageContent page={activePage} />
           </div>
         </section>
@@ -3111,9 +2457,13 @@ function SiteNavigation() {
           {navigationItems.map((item, index) => {
             const itemContent = (
               <>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                {item.label}
-                <strong aria-hidden="true">↗</strong>
+                <span className="site-menu__index">
+                  {String(index + 1).padStart(2, '0')}
+                </span>
+                <span className="site-menu__label">{item.label}</span>
+                <strong className="site-menu__arrow" aria-hidden="true">
+                  ↗
+                </strong>
               </>
             )
 
@@ -3122,6 +2472,7 @@ function SiteNavigation() {
                 <button
                   key={item.page}
                   type="button"
+                  className="site-menu__item"
                   onClick={() => openPage(item.page)}
                   tabIndex={isMenuOpen ? 0 : -1}
                 >
@@ -3134,6 +2485,7 @@ function SiteNavigation() {
               <a
                 key={item.label}
                 href={item.href}
+                className="site-menu__item"
                 target={item.external ? '_blank' : undefined}
                 rel={item.external ? 'noreferrer' : undefined}
                 aria-disabled={item.href === '#'}
@@ -3150,6 +2502,18 @@ function SiteNavigation() {
               </a>
             )
           })}
+
+          <a
+            href="/login"
+            className="site-menu__login"
+            tabIndex={isMenuOpen ? 0 : -1}
+            onClick={() => setIsMenuOpen(false)}
+          >
+            <span className="site-menu__login-label">Войти в систему</span>
+            <span className="site-menu__login-arrow" aria-hidden="true">
+              →
+            </span>
+          </a>
         </div>
       </nav>
     </>
