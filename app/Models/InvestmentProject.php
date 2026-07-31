@@ -72,10 +72,10 @@ class InvestmentProject extends Model
     ): Builder {
         $user->loadMissing('roleModel');
 
+        $query->active();
+
         if ($user->roleModel?->name === 'moderator') {
-            return $query
-                ->active()
-                ->curatedByTurkistanInvest();
+            return $query->curatedByTurkistanInvest();
         }
 
         return $query->where(function (Builder $participantQuery) use ($user) {
@@ -224,12 +224,15 @@ class InvestmentProject extends Model
     {
         $user->loadMissing('roleModel');
 
+        if ($this->is_archived) {
+            return false;
+        }
+
         if ($user->roleModel?->name === 'moderator') {
-            return ! $this->is_archived
-                && self::query()
-                    ->whereKey($this->id)
-                    ->curatedByTurkistanInvest()
-                    ->exists();
+            return self::query()
+                ->whereKey($this->id)
+                ->curatedByTurkistanInvest()
+                ->exists();
         }
 
         if ($this->curators()->whereKey($user->id)->exists()
