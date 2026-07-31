@@ -92,7 +92,7 @@ export function GlobeExperience() {
       globeCleared = false;
       const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
       const regionFocus = ease(clamp((currentProgress - 0.52) / 0.24));
-      const modelHandoff = ease(clamp((currentProgress - 0.77) / 0.16));
+      const modelHandoff = ease(clamp((currentProgress - 0.74) / 0.22));
       const mapTravel = ease(clamp((modelHandoff - 0.08) / 0.72));
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
@@ -265,9 +265,9 @@ export function GlobeExperience() {
     (1 - ease(clamp((progress - 0.55) / 0.11)));
   const regionReveal =
     ease(clamp((progress - 0.59) / 0.1)) *
-    (1 - ease(clamp((progress - 0.77) / 0.09)));
-  const modelReveal = ease(clamp((progress - 0.77) / 0.16));
-  const globeFade = 1 - ease(clamp((progress - 0.835) / 0.095));
+    (1 - ease(clamp((progress - 0.79) / 0.12)));
+  const modelReveal = ease(clamp((progress - 0.74) / 0.22));
+  const globeFade = 1 - ease(clamp((progress - 0.86) / 0.11));
 
   const goToKazakhstan = () => {
     const story = storyRef.current;
@@ -286,7 +286,7 @@ export function GlobeExperience() {
   const goToRegionMap = () => {
     const story = storyRef.current;
     if (!story) return;
-    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.95;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.97;
     window.scrollTo({ top: target, behavior: "smooth" });
   };
 
