@@ -11,12 +11,20 @@ class PromZoneController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isModerator = $user?->loadMissing('roleModel')
+            ->roleModel?->name === 'moderator';
+
         $query = PromZone::with('region')
-            ->withSum(['investmentProjects' => function ($q) {
+            ->withSum(['investmentProjects' => function ($q) use (
+                $isModerator
+            ) {
                 $q->where('is_archived', false);
+                if ($isModerator) {
+                    $q->curatedByTurkistanInvest();
+                }
             }], 'total_investment');
 
-        $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
             $query->where('region_id', $user->region_id);
         }
@@ -99,8 +107,17 @@ class PromZoneController extends Controller
 
     public function show(PromZone $promZone)
     {
-        $promZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) {
-            $q->where('is_archived', false)->with('region');
+        $user = auth()->user();
+        $isModerator = $user?->loadMissing('roleModel')
+            ->roleModel?->name === 'moderator';
+
+        $promZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
+            $q->where('is_archived', false)
+                ->when(
+                    $isModerator,
+                    fn ($query) => $query->curatedByTurkistanInvest()
+                )
+                ->with('region');
         }])->loadCount('photos');
 
         $mainGalleryPhotos = $promZone->photos()

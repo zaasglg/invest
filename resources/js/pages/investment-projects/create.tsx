@@ -88,7 +88,8 @@ interface Props {
     promZones: PromZone[];
     isDistrictScoped?: boolean;
     userRegionId?: number | null;
-    isSuperAdmin?: boolean;
+    canSelectCurators?: boolean;
+    requiresCuratorSelection?: boolean;
     investUsers?: InvestUser[];
     investSubRole?: string | null;
     restrictedSectorType?: 'sez' | 'industrial_zone' | 'prom_zone' | null;
@@ -104,7 +105,8 @@ export default function Create({
     promZones,
     isDistrictScoped,
     userRegionId,
-    isSuperAdmin,
+    canSelectCurators = false,
+    requiresCuratorSelection = false,
     investUsers = [],
     restrictedSectorType = null,
 }: Props) {
@@ -358,6 +360,9 @@ export default function Create({
         if (!data.company_id) {
             errors.company_id = 'Компанияны таңдаңыз';
         }
+        if (requiresCuratorSelection && data.curator_ids.length === 0) {
+            errors.curator_ids = 'Turkistan Invest кураторын таңдаңыз';
+        }
 
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
@@ -523,81 +528,114 @@ export default function Create({
                                     />
                                 </div>
 
-                                {isSuperAdmin && investUsers.length > 0 && (
-                                    <div className="flex flex-col gap-2">
-                                        <Label className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                            Кураторлар{' '}
-                                            <span className="text-xs font-normal text-gray-400 normal-case">
-                                                (бір немесе бірнеше)
-                                            </span>
-                                        </Label>
-                                        <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-4">
-                                            {investUsers.map((u) => {
-                                                const value = u.id.toString();
-                                                const checked =
-                                                    data.curator_ids.includes(
-                                                        value,
-                                                    );
-                                                return (
-                                                    <div
-                                                        key={u.id}
-                                                        className="flex items-center space-x-2"
-                                                    >
-                                                        <Checkbox
-                                                            id={`curator-${u.id}`}
-                                                            checked={checked}
-                                                            onCheckedChange={(
-                                                                isChecked,
-                                                            ) => {
-                                                                if (isChecked) {
-                                                                    setData(
-                                                                        'curator_ids',
-                                                                        [
-                                                                            ...data.curator_ids,
-                                                                            value,
-                                                                        ],
-                                                                    );
-                                                                } else {
-                                                                    setData(
-                                                                        'curator_ids',
-                                                                        data.curator_ids.filter(
-                                                                            (
-                                                                                id,
-                                                                            ) =>
-                                                                                id !==
-                                                                                value,
-                                                                        ),
-                                                                    );
-                                                                }
-                                                            }}
-                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                        />
-                                                        <Label
-                                                            htmlFor={`curator-${u.id}`}
-                                                            className="cursor-pointer font-normal"
+                                {canSelectCurators &&
+                                    (investUsers.length > 0 ||
+                                        requiresCuratorSelection) && (
+                                        <div className="flex flex-col gap-2">
+                                            <Label className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                Кураторлар{' '}
+                                                {requiresCuratorSelection && (
+                                                    <span className="text-red-500">
+                                                        *
+                                                    </span>
+                                                )}{' '}
+                                                <span className="text-xs font-normal text-gray-400 normal-case">
+                                                    (бір немесе бірнеше)
+                                                </span>
+                                            </Label>
+                                            <div className="max-h-40 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-4">
+                                                {investUsers.length === 0 && (
+                                                    <p className="text-sm text-amber-700">
+                                                        Turkistan Invest
+                                                        кураторы табылмады.
+                                                    </p>
+                                                )}
+                                                {investUsers.map((u) => {
+                                                    const value =
+                                                        u.id.toString();
+                                                    const checked =
+                                                        data.curator_ids.includes(
+                                                            value,
+                                                        );
+                                                    return (
+                                                        <div
+                                                            key={u.id}
+                                                            className="flex items-center space-x-2"
                                                         >
-                                                            {u.full_name}
-                                                            {u.invest_sub_role && (
-                                                                <span className="ml-1 text-xs text-gray-400">
-                                                                    (
-                                                                    {
-                                                                        u.invest_sub_role
+                                                            <Checkbox
+                                                                id={`curator-${u.id}`}
+                                                                checked={
+                                                                    checked
+                                                                }
+                                                                onCheckedChange={(
+                                                                    isChecked,
+                                                                ) => {
+                                                                    if (
+                                                                        validationErrors.curator_ids
+                                                                    ) {
+                                                                        setValidationErrors(
+                                                                            (
+                                                                                previous,
+                                                                            ) => ({
+                                                                                ...previous,
+                                                                                curator_ids:
+                                                                                    '',
+                                                                            }),
+                                                                        );
                                                                     }
-                                                                    )
-                                                                </span>
-                                                            )}
-                                                        </Label>
-                                                    </div>
-                                                );
-                                            })}
+                                                                    if (
+                                                                        isChecked
+                                                                    ) {
+                                                                        setData(
+                                                                            'curator_ids',
+                                                                            [
+                                                                                ...data.curator_ids,
+                                                                                value,
+                                                                            ],
+                                                                        );
+                                                                    } else {
+                                                                        setData(
+                                                                            'curator_ids',
+                                                                            data.curator_ids.filter(
+                                                                                (
+                                                                                    id,
+                                                                                ) =>
+                                                                                    id !==
+                                                                                    value,
+                                                                            ),
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                            />
+                                                            <Label
+                                                                htmlFor={`curator-${u.id}`}
+                                                                className="cursor-pointer font-normal"
+                                                            >
+                                                                {u.full_name}
+                                                                {u.invest_sub_role && (
+                                                                    <span className="ml-1 text-xs text-gray-400">
+                                                                        (
+                                                                        {
+                                                                            u.invest_sub_role
+                                                                        }
+                                                                        )
+                                                                    </span>
+                                                                )}
+                                                            </Label>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                            {(errors.curator_ids ||
+                                                validationErrors.curator_ids) && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.curator_ids ||
+                                                        validationErrors.curator_ids}
+                                                </span>
+                                            )}
                                         </div>
-                                        {errors.curator_ids && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.curator_ids}
-                                            </span>
-                                        )}
-                                    </div>
-                                )}
+                                    )}
 
                                 {/* Облыс және Аудан - 2 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">

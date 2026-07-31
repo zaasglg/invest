@@ -41,11 +41,12 @@ class ProjectTaskController extends Controller
         $validated['status'] = 'new';
         $validated['created_by'] = Auth::id();
 
-        $isTurkistanInvest = ($creatorRole === 'invest' && $user?->invest_sub_role === 'turkistan_invest');
+        $requiresModeratorApproval = $creatorRole === 'invest'
+            && $user?->invest_sub_role === 'turkistan_invest';
 
-        // Tasks created by superadmin or users from other directions are auto-approved;
-        // only turkistan_invest must wait for a moderator's review.
-        if ($creatorRole === 'superadmin' || ! $isTurkistanInvest) {
+        // Only tasks issued by Turkistan Invest wait for moderator review.
+        // Every other direction sends its task straight to the assignee.
+        if (! $requiresModeratorApproval) {
             $validated['approval_status'] = 'approved';
             $validated['approved_by'] = Auth::id();
             $validated['approved_at'] = now();
@@ -61,13 +62,13 @@ class ProjectTaskController extends Controller
             'type' => 'created',
         ]);
 
-        // If superadmin auto-approved, also log the approval event so the
-        // timeline reflects the approved state.
+        // A direct dispatch is not a moderator approval. Keep it as a
+        // distinct event so the timeline never claims a moderator acted.
         if ($task->approval_status === 'approved') {
             ProjectTaskEvent::create([
                 'task_id' => $task->id,
                 'user_id' => Auth::id(),
-                'type' => 'approved',
+                'type' => 'dispatched',
             ]);
         }
 
@@ -148,8 +149,23 @@ class ProjectTaskController extends Controller
             abort(403, 'Сізде тапсырманы растау құқығы жоқ.');
         }
 
+        abort_unless(
+            $task->approval_status === 'pending',
+            409,
+            'Бұл тапсырма бойынша шешім бұрын қабылданған.'
+        );
+        abort_unless(
+            $task->requiresModeratorApproval(),
+            409,
+            'Бұл тапсырма модератордың растауын қажет етпейді.'
+        );
+
         $request->validate([
-            'approval_comment' => 'nullable|string|max:2000',
+            'approval_comment' => [
+                $decision === 'rejected' ? 'required' : 'nullable',
+                'string',
+                'max:2000',
+            ],
         ]);
 
         $task->update([
@@ -274,14 +290,11 @@ class ProjectTaskController extends Controller
             ->except('status')
             ->isNotEmpty();
 
-        $user = Auth::user();
-        $isTurkistanInvest = ($editorRole === 'invest' && $user?->invest_sub_role === 'turkistan_invest');
-
-        // If a previously rejected task is edited by invest (not superadmin),
-        // resubmit it for moderator approval if they are turkistan_invest.
-        // Otherwise, auto-approve it.
-        if ($wasRejected && $contentEdit && $editorRole !== 'superadmin') {
-            if ($isTurkistanInvest) {
+        // The original task author determines its moderation path. Editing a
+        // Turkistan Invest task from another account must not bypass review.
+        if ($wasRejected && $contentEdit) {
+            if ($task->requiresModeratorApproval()
+                && $editorRole !== 'superadmin') {
                 $validated['approval_status'] = 'pending';
                 $validated['approval_comment'] = null;
                 $validated['approved_by'] = null;

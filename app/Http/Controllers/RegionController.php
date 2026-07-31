@@ -157,15 +157,8 @@ class RegionController extends Controller
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
 
-        // Invest sub-role scope: only show projects where at least one curator
-        // has the same invest_sub_role as the current user.
-        if ($user
-            && $user->load('roleModel')->roleModel?->name === 'invest'
-            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)) {
-            $subRole = $user->invest_sub_role;
-            $projectsQuery->whereHas('curators', function ($query) use ($subRole) {
-                $query->where('users.invest_sub_role', $subRole);
-            });
+        if ($user) {
+            $this->projectAccess->scopeVisible($projectsQuery, $user);
         }
 
         $projects = $projectsQuery->get();

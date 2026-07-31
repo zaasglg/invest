@@ -71,4 +71,12 @@ class ProjectTask extends Model
     {
         return $this->hasMany(ProjectTaskEvent::class, 'task_id');
     }
+
+    public function requiresModeratorApproval(): bool
+    {
+        $this->loadMissing('creator.roleModel');
+
+        return $this->creator?->roleModel?->name === 'invest'
+            && $this->creator?->invest_sub_role === 'turkistan_invest';
+    }
 }

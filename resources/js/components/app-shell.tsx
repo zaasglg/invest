@@ -11,7 +11,8 @@ type Props = {
 
 export function AppShell({ children, variant = 'header' }: Props) {
     const { auth, sidebarOpen: isOpen } = usePage<SharedData>().props;
-    const showChat = auth.user?.role_model?.name !== 'investor';
+    const roleName = auth.user?.role_model?.name;
+    const showChat = roleName !== 'investor' && roleName !== 'moderator';
 
     if (variant === 'header') {
         return (

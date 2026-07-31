@@ -11,12 +11,20 @@ class SezController extends Controller
 {
     public function index(Request $request)
     {
+        $user = auth()->user();
+        $isModerator = $user?->loadMissing('roleModel')
+            ->roleModel?->name === 'moderator';
+
         $query = Sez::with('region')
-            ->withSum(['investmentProjects' => function ($q) {
+            ->withSum(['investmentProjects' => function ($q) use (
+                $isModerator
+            ) {
                 $q->where('is_archived', false);
+                if ($isModerator) {
+                    $q->curatedByTurkistanInvest();
+                }
             }], 'total_investment');
 
-        $user = auth()->user();
         if ($user && $user->isDistrictScoped()) {
             $query->where('region_id', $user->region_id);
         }
@@ -108,8 +116,16 @@ class SezController extends Controller
             ->get();
         $renderPhotos = $sez->photos()->renderPhotos()->latest()->get();
 
+        $user = auth()->user();
+        $isModerator = $user?->loadMissing('roleModel')
+            ->roleModel?->name === 'moderator';
+
         $investmentProjects = $sez->investmentProjects()
             ->where('is_archived', false)
+            ->when(
+                $isModerator,
+                fn ($query) => $query->curatedByTurkistanInvest()
+            )
             ->with('region')
             ->latest()
             ->paginate(10)

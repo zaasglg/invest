@@ -14,6 +14,7 @@ class BaskarmaRatingController extends Controller
         $currentUser = $request->user();
         $currentUser->load('roleModel');
         $roleName = $currentUser->roleModel?->name;
+        $isModerator = $roleName === 'moderator';
 
         // Get all ispolnitel users with their region
         $ispolnitelUsers = User::whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
@@ -23,8 +24,22 @@ class BaskarmaRatingController extends Controller
         $now = now()->startOfDay();
 
         // Get task stats for each ispolnitel user
-        $ratings = $ispolnitelUsers->map(function (User $user) use ($now) {
-            $tasks = ProjectTask::where('assigned_to', $user->id)->get();
+        $ratings = $ispolnitelUsers->map(function (User $user) use (
+            $isModerator,
+            $now
+        ) {
+            $tasks = ProjectTask::query()
+                ->where('assigned_to', $user->id)
+                ->when(
+                    $isModerator,
+                    fn ($query) => $query->whereHas(
+                        'project',
+                        fn ($project) => $project
+                            ->active()
+                            ->curatedByTurkistanInvest()
+                    )
+                )
+                ->get();
 
             // Count distinct projects this ispolnitel is assigned to
             $projectCount = $tasks->pluck('project_id')->unique()->count();
@@ -110,6 +125,7 @@ class BaskarmaRatingController extends Controller
         $currentUser = request()->user();
         $currentUser->load('roleModel');
         $roleName = $currentUser->roleModel?->name;
+        $isModerator = $roleName === 'moderator';
 
         // Ispolnitel can only see their own page
         if ($roleName === 'ispolnitel' && $currentUser->id !== $user->id) {
@@ -130,6 +146,15 @@ class BaskarmaRatingController extends Controller
         $now = now()->startOfDay();
 
         $tasks = ProjectTask::where('assigned_to', $user->id)
+            ->when(
+                $isModerator,
+                fn ($query) => $query->whereHas(
+                    'project',
+                    fn ($project) => $project
+                        ->active()
+                        ->curatedByTurkistanInvest()
+                )
+            )
             ->with(['project:id,name,region_id', 'project.region:id,name', 'latestCompletion'])
             ->get();
 

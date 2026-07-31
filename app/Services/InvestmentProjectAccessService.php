@@ -21,6 +21,12 @@ class InvestmentProjectAccessService
             );
         }
 
+        if ($roleName === 'moderator') {
+            $query
+                ->active()
+                ->curatedByTurkistanInvest();
+        }
+
         if ($user->isDistrictScoped()) {
             $query->where('region_id', $user->region_id);
         } elseif ($user->isOblastScopedAkim()) {
