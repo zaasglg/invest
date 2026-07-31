@@ -108,7 +108,7 @@ export function GlobeExperience() {
       const targetY = mobile ? height * 0.51 : height * 0.53;
       const regionX = mobile ? width * 0.52 : width * 0.71;
       const regionY = mobile ? height * 0.47 : height * 0.52;
-      const mapX = mobile ? width * 0.5 : width * 0.367;
+      const mapX = mobile ? width * 0.5 : width * 0.347;
       const mapY = mobile ? height * 0.43 : height * 0.515;
       const drift = reducedMotion ? 0 : time * 0.00155;
       const startLon = 14 + drift;

@@ -377,7 +377,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const layerOpacity = smooth((progress - 0.08) / 0.32);
   const mapTravel = smooth((progress - 0.08) / 0.72);
   const panelReveal = smooth((progress - 0.72) / 0.25);
-  const mapShift = (1 - mapTravel) * 34;
+  const mapShift = (1 - mapTravel) * 36;
   const mapScale = 0.56 + mapTravel * 0.44;
 
   return (

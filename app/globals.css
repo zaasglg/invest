@@ -453,7 +453,7 @@ button {
   min-height: 0;
   height: 100%;
   display: grid;
-  grid-template-columns: minmax(500px, 1fr) minmax(360px, 30vw);
+  grid-template-columns: minmax(0, 1fr) minmax(400px, 34vw);
   align-items: center;
   gap: 0;
   padding: 92px 0 0 clamp(24px, 3.5vw, 64px);
