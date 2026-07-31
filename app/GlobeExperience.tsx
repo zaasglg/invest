@@ -5,6 +5,7 @@ import { ArrowDown, ArrowUpRight, LogIn } from "lucide-react";
 import { geoGraticule10, geoOrthographic, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
+import { RegionMap3D } from "./RegionMap3D";
 
 const KAZAKHSTAN_ID = "398";
 
@@ -84,12 +85,12 @@ export function GlobeExperience() {
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
       const countryScale = 1 + countryFocus * (mobile ? 2.35 : 3.2);
-      const globeScale = baseScale * countryScale * (1 + regionFocus * (mobile ? 1.72 : 2.08));
+      const globeScale = baseScale * countryScale * (1 + regionFocus * (mobile ? 1.28 : 1.5));
       const initialX = mobile ? width * 0.5 : width * 0.73;
       const initialY = mobile ? height * 0.64 : height * 0.54;
       const targetX = mobile ? width * 0.5 : width * 0.57;
       const targetY = mobile ? height * 0.51 : height * 0.53;
-      const regionX = mobile ? width * 0.52 : width * 0.66;
+      const regionX = mobile ? width * 0.52 : width * 0.71;
       const regionY = mobile ? height * 0.47 : height * 0.52;
       const drift = reducedMotion ? 0 : time * 0.00155;
       const startLon = 14 + drift;
@@ -169,12 +170,12 @@ export function GlobeExperience() {
         context.save();
         context.beginPath();
         path(kazakhstan as never);
-        context.fillStyle = `rgba(159, 239, 78, ${0.26 + countryFocus * 0.74 - regionFocus * 0.56})`;
-        context.shadowColor = `rgba(166, 255, 90, ${countryFocus * 0.8})`;
-        context.shadowBlur = 18 + countryFocus * 28;
+        context.fillStyle = `rgba(159, 239, 78, ${0.2 + countryFocus * 0.72 - regionFocus * 0.72})`;
+        context.shadowColor = `rgba(166, 255, 90, ${countryFocus * 0.5 * (1 - regionFocus * 0.85)})`;
+        context.shadowBlur = 12 + countryFocus * 20;
         context.fill();
         context.shadowBlur = 0;
-        context.strokeStyle = `rgba(218, 255, 178, ${0.35 + countryFocus * 0.65 - regionFocus * 0.42})`;
+        context.strokeStyle = `rgba(218, 255, 178, ${0.3 + countryFocus * 0.66 - regionFocus * 0.66})`;
         context.lineWidth = 1.2 + countryFocus * 0.6;
         context.stroke();
         context.restore();
@@ -184,13 +185,13 @@ export function GlobeExperience() {
         context.save();
         context.beginPath();
         path(turkestanRegion.features[0] as never);
-        context.fillStyle = `rgba(165, 239, 82, ${regionFocus * 0.94})`;
-        context.shadowColor = `rgba(165, 239, 82, ${regionFocus * 0.9})`;
-        context.shadowBlur = 12 + regionFocus * 32;
+        context.fillStyle = `rgba(116, 178, 105, ${regionFocus * 0.44})`;
+        context.shadowColor = `rgba(131, 204, 116, ${regionFocus * 0.24})`;
+        context.shadowBlur = 6 + regionFocus * 14;
         context.fill();
         context.shadowBlur = 0;
-        context.strokeStyle = `rgba(239, 255, 222, ${regionFocus})`;
-        context.lineWidth = 1.15 + regionFocus * 0.7;
+        context.strokeStyle = `rgba(224, 247, 214, ${regionFocus * 0.82})`;
+        context.lineWidth = 1 + regionFocus * 0.5;
         context.stroke();
         context.restore();
       }
@@ -256,6 +257,10 @@ export function GlobeExperience() {
     if (!story) return;
     const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.94;
     window.scrollTo({ top: target, behavior: "smooth" });
+  };
+
+  const goToRegionMap = () => {
+    document.querySelector("#region-map")?.scrollIntoView({ behavior: "smooth" });
   };
 
   return (
@@ -338,6 +343,9 @@ export function GlobeExperience() {
               и точки развития Туркестанской области.
             </p>
             <div className="coordinate">43.3000° N&nbsp;&nbsp; 68.2500° E</div>
+            <button className="continue-region" type="button" onClick={goToRegionMap}>
+              К карте районов <ArrowDown size={15} />
+            </button>
             <div className="map-source">Границы: © OpenStreetMap contributors</div>
           </div>
 
@@ -356,9 +364,10 @@ export function GlobeExperience() {
           </div>
         </div>
       </section>
+      <RegionMap3D />
       <section className="next-chapter" aria-label="Следующий раздел">
         <span>Следующий маршрут</span>
-        <strong>Детальная карта районов и городов области</strong>
+        <strong>Инвестиционный профиль выбранной территории</strong>
         <i>Скоро</i>
       </section>
     </main>
