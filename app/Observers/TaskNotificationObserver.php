@@ -24,17 +24,25 @@ class TaskNotificationObserver
         try {
             $telegram = app(TelegramService::class);
 
-            // Determine link: investment project or subsoil user
-            $projectId = $notification->task?->project_id;
-            $subsoilTaskId = $notification->subsoil_task_id;
+            $notification->loadMissing([
+                'task:id,project_id',
+                'completion:id,task_id',
+                'completion.task:id,project_id',
+                'subsoilTask:id,subsoil_user_id',
+                'subsoilCompletion:id,task_id',
+                'subsoilCompletion.task:id,subsoil_user_id',
+            ]);
 
-            if ($subsoilTaskId) {
-                $subsoilTask = $notification->subsoilTask;
-                $subsoilUserId = $subsoilTask?->subsoil_user_id;
-                $siteUrl = rtrim(config('app.url', ''), '/');
-                $targetUrl = $siteUrl && $subsoilUserId
-                    ? $siteUrl.'/subsoil-users/'.$subsoilUserId
-                    : ($siteUrl ? $siteUrl.'/notifications' : '');
+            // Resolve the destination from the task that actually owns this
+            // notification. Completion relations cover older notifications
+            // where only a completion ID was stored.
+            $projectId = $notification->task?->project_id
+                ?? $notification->completion?->task?->project_id;
+            $subsoilUserId = $notification->subsoilTask?->subsoil_user_id
+                ?? $notification->subsoilCompletion?->task?->subsoil_user_id;
+
+            if ($subsoilUserId) {
+                $targetUrl = route('subsoil-users.show', $subsoilUserId);
                 $linkPart = $targetUrl
                     ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"
                     : '🔗 Сайтқа өту';
