@@ -137,6 +137,29 @@ class ProjectChatService
             );
         }
 
+        $hasModeratorAccess = ! $project->is_archived
+            && InvestmentProject::query()
+                ->whereKey($project->id)
+                ->curatedByTurkistanInvest()
+                ->exists();
+
+        if ($hasModeratorAccess) {
+            $moderators = User::query()
+                ->whereHas(
+                    'roleModel',
+                    fn (Builder $role) => $role->where('name', 'moderator')
+                )
+                ->get(['id', 'full_name', 'avatar', 'position']);
+
+            foreach ($moderators as $moderator) {
+                $this->addParticipant(
+                    $participants,
+                    $moderator,
+                    'Модератор'
+                );
+            }
+        }
+
         return $participants->values();
     }
 

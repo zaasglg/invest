@@ -2,13 +2,19 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\InvestmentProject;
 use App\Models\ProjectTask;
 use App\Models\User;
+use App\Services\InvestmentProjectAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class BaskarmaRatingController extends Controller
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess
+    ) {}
+
     public function index(Request $request)
     {
         $currentUser = $request->user();
@@ -24,7 +30,9 @@ class BaskarmaRatingController extends Controller
 
         // Get task stats for each ispolnitel user
         $ratings = $ispolnitelUsers->map(function (User $user) use ($now) {
-            $tasks = ProjectTask::where('assigned_to', $user->id)->get();
+            $tasks = ProjectTask::query()
+                ->where('assigned_to', $user->id)
+                ->get();
 
             // Count distinct projects this ispolnitel is assigned to
             $projectCount = $tasks->pluck('project_id')->unique()->count();
@@ -132,6 +140,13 @@ class BaskarmaRatingController extends Controller
         $tasks = ProjectTask::where('assigned_to', $user->id)
             ->with(['project:id,name,region_id', 'project.region:id,name', 'latestCompletion'])
             ->get();
+        $visibleProjectIds = array_fill_keys(
+            $this->visibleProjectIds(
+                $currentUser,
+                $tasks->pluck('project_id')->all()
+            ),
+            true
+        );
 
         $completedTasks = [];
         $activeTasks = [];
@@ -143,6 +158,9 @@ class BaskarmaRatingController extends Controller
                 'title' => $task->title,
                 'project_name' => $task->project?->name,
                 'project_id' => $task->project_id,
+                'can_view_project' => isset(
+                    $visibleProjectIds[(int) $task->project_id]
+                ),
                 'region' => $task->project?->region?->name,
                 'start_date' => $task->start_date?->toDateString(),
                 'due_date' => $task->due_date?->toDateString(),
@@ -180,5 +198,28 @@ class BaskarmaRatingController extends Controller
             'activeTasks' => $activeTasks,
             'overdueTasks' => $overdueTasks,
         ]);
+    }
+
+    /**
+     * @param  array<int, int|string>  $projectIds
+     * @return array<int, int>
+     */
+    private function visibleProjectIds(User $user, array $projectIds): array
+    {
+        $query = InvestmentProject::query()->whereIn('id', $projectIds);
+        $this->projectAccess->scopeVisible($query, $user);
+
+        if (! in_array(
+            $user->roleModel?->name,
+            ['superadmin', 'invest', 'prokuror'],
+            true
+        )) {
+            $query->active();
+        }
+
+        return $query
+            ->pluck('id')
+            ->map(static fn ($id): int => (int) $id)
+            ->all();
     }
 }

@@ -182,6 +182,7 @@ interface ProjectTaskItem {
         id: number;
         type:
             | 'created'
+            | 'dispatched'
             | 'approved'
             | 'rejected'
             | 'viewed'
@@ -362,7 +363,6 @@ export default function Show({
     const isProkuror = currentRoleName === 'prokuror';
     const canViewCompanyDetails = [
         'superadmin',
-        'invest',
         'prokuror',
         'akim',
         'zamakim',
@@ -370,6 +370,7 @@ export default function Show({
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;
     const canCreateTasks = canManageTasks || isProkuror;
+    const canEditProject = canModify || isModerator;
     const isExecutorParticipant = isIspolnitel || isInvestor;
     const isRestrictedView = isExecutorParticipant && !isInvolved;
     // Ispolnitel and investor have the same project-interior permissions.
@@ -926,7 +927,7 @@ export default function Show({
                             'Жоба түрі көрсетілмеген',
                     }}
                     summary={effectivePassportSummary}
-                    canEdit={canModify}
+                    canEdit={canEditProject}
                     canDownload={
                         canDownload &&
                         ((!isRestrictedView && !isExecutorParticipant) ||
@@ -1223,7 +1224,9 @@ export default function Show({
                                     description={project.description}
                                     currentStatus={project.current_status}
                                     showCurrentStatus={!isRestrictedView}
-                                    canEditStatus={participantCanWrite}
+                                    canEditStatus={
+                                        participantCanWrite || isModerator
+                                    }
                                     projectId={project.id}
                                 />
                             </div>
@@ -2048,7 +2051,7 @@ export default function Show({
                                             бөлім толтырылмаған
                                         </p>
                                     )}
-                                    {canModify && (
+                                    {canEditProject && (
                                         <Link
                                             href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
                                             className="mt-4 block"
@@ -2077,7 +2080,7 @@ export default function Show({
                                 </CardTitle>
                             </CardHeader>
                             <CardContent className="flex flex-col gap-3 p-4">
-                                {canModify && (
+                                {canEditProject && (
                                     <Link
                                         href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
                                         className="w-full"
@@ -2093,7 +2096,8 @@ export default function Show({
                                 )}
                                 {(canModify ||
                                     participantCanWrite ||
-                                    isAkim) && (
+                                    isAkim ||
+                                    isModerator) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/documents`}
                                         className="w-full"
@@ -2119,7 +2123,8 @@ export default function Show({
                                 )}
                                 {(canModify ||
                                     participantCanWrite ||
-                                    isAkim) && (
+                                    isAkim ||
+                                    isModerator) && (
                                     <Link
                                         href={`/investment-projects/${project.id}/gallery`}
                                         className="w-full"
@@ -2955,6 +2960,8 @@ export default function Show({
                                                     > = {
                                                         created:
                                                             'Тапсырма берілді',
+                                                        dispatched:
+                                                            'Орындаушыға тікелей жіберілді',
                                                         approved:
                                                             'Модератор қабылдады',
                                                         rejected:
@@ -2973,6 +2980,8 @@ export default function Show({
                                                         string
                                                     > = {
                                                         created: 'bg-blue-500',
+                                                        dispatched:
+                                                            'bg-cyan-500',
                                                         approved:
                                                             'bg-emerald-500',
                                                         rejected: 'bg-red-500',
@@ -2999,11 +3008,26 @@ export default function Show({
                                                                             className={`absolute top-1.5 -left-[21px] h-3 w-3 rounded-full ring-2 ring-white ${dotMap[ev.type] || 'bg-gray-400'}`}
                                                                         />
                                                                         <p className="text-sm font-medium text-[#0f1b3d]">
-                                                                            {labelMap[
-                                                                                ev
-                                                                                    .type
-                                                                            ] ||
-                                                                                ev.type}
+                                                                            {ev.type ===
+                                                                                'approved' &&
+                                                                            ev
+                                                                                .user
+                                                                                ?.id ===
+                                                                                t
+                                                                                    .creator
+                                                                                    ?.id &&
+                                                                            t
+                                                                                .approver
+                                                                                ?.id ===
+                                                                                t
+                                                                                    .creator
+                                                                                    ?.id
+                                                                                ? 'Орындаушыға тікелей жіберілді'
+                                                                                : labelMap[
+                                                                                      ev
+                                                                                          .type
+                                                                                  ] ||
+                                                                                  ev.type}
                                                                         </p>
                                                                         <p className="text-xs text-gray-500">
                                                                             {fmtDateTime(

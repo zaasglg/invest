@@ -15,8 +15,10 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
-function createRemainingSecurityUser(string $roleName): User
-{
+function createRemainingSecurityUser(
+    string $roleName,
+    ?string $investSubRole = null
+): User {
     $role = Role::firstOrCreate(
         ['name' => $roleName],
         ['display_name' => ucfirst($roleName)]
@@ -25,6 +27,7 @@ function createRemainingSecurityUser(string $roleName): User
     return User::factory()->create([
         'role_id' => $role->id,
         'role' => $roleName === 'superadmin' ? 'admin' : 'district_user',
+        'invest_sub_role' => $investSubRole,
     ]);
 }
 
@@ -72,6 +75,10 @@ test('unsupported roles cannot enter shared crm routes', function () {
 test('moderator can review tasks but cannot mutate project data', function () {
     $admin = createRemainingSecurityUser('superadmin');
     $moderator = createRemainingSecurityUser('moderator');
+    $turkistanInvest = createRemainingSecurityUser(
+        'invest',
+        'turkistan_invest'
+    );
     $executor = createRemainingSecurityUser('ispolnitel');
     $region = createRemainingSecurityRegion('Moderator security region');
     $project = createRemainingSecurityProject(
@@ -79,11 +86,12 @@ test('moderator can review tasks but cannot mutate project data', function () {
         $region,
         'Moderator security project'
     );
+    $project->curators()->attach($turkistanInvest);
     $task = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Moderator review task',
         'assigned_to' => $executor->id,
-        'created_by' => $admin->id,
+        'created_by' => $turkistanInvest->id,
         'status' => 'new',
         'approval_status' => 'pending',
     ]);

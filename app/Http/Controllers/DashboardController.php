@@ -21,6 +21,8 @@ use Inertia\Inertia;
 
 class DashboardController extends Controller
 {
+    private bool $moderatorProjectScope = false;
+
     /**
      * Handle the incoming request.
      */
@@ -33,19 +35,27 @@ class DashboardController extends Controller
             ? $user->invest_sub_role
             : null;
         $investorId = $roleName === 'investor' ? $user->id : null;
+        $this->moderatorProjectScope = $roleName === 'moderator';
+        $hasScopedProjects = (bool) (
+            $investSubRole
+            || $investorId
+            || $this->moderatorProjectScope
+        );
 
-        // For invest sub-role users: compute fresh scoped data (no cache).
-        // For all others: serve from shared cache.
-        $stats = $investSubRole || $investorId
+        // Scoped roles must never consume or populate the shared global cache.
+        $stats = $hasScopedProjects
             ? $this->buildStats($investSubRole, $investorId)
             : Cache::remember('dashboard.stats', 300, fn () => $this->buildStats(null));
 
         // Investment by sector (including SEZ and IZ)
-        $buildInvestmentsBySector = function () use ($investorId) {
+        $buildInvestmentsBySector = function () use (
+            $investSubRole,
+            $investorId
+        ) {
             $data = [];
 
             // Projects linked to SEZ
-            $sezProjectsInvestment = $this->projects(null, $investorId)->whereHas('sezs')
+            $sezProjectsInvestment = $this->projects($investSubRole, $investorId)->whereHas('sezs')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($sezProjectsInvestment > 0) {
@@ -53,7 +63,7 @@ class DashboardController extends Controller
             }
 
             // Projects linked to Industrial Zones
-            $izProjectsInvestment = $this->projects(null, $investorId)->whereHas('industrialZones')
+            $izProjectsInvestment = $this->projects($investSubRole, $investorId)->whereHas('industrialZones')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($izProjectsInvestment > 0) {
@@ -61,7 +71,7 @@ class DashboardController extends Controller
             }
 
             // Projects linked to Subsoil Users
-            $subsoilProjectsInvestment = $this->projects(null, $investorId)->whereHas('subsoilUsers')
+            $subsoilProjectsInvestment = $this->projects($investSubRole, $investorId)->whereHas('subsoilUsers')
                 ->where('total_investment', '>', 0)
                 ->sum('total_investment');
             if ($subsoilProjectsInvestment > 0) {
@@ -69,7 +79,7 @@ class DashboardController extends Controller
             }
 
             // Other projects (not linked to any entity)
-            $otherProjectsInvestment = $this->projects(null, $investorId)->whereDoesntHave('sezs')
+            $otherProjectsInvestment = $this->projects($investSubRole, $investorId)->whereDoesntHave('sezs')
                 ->whereDoesntHave('industrialZones')
                 ->whereDoesntHave('subsoilUsers')
                 ->where('total_investment', '>', 0)
@@ -83,7 +93,7 @@ class DashboardController extends Controller
 
             return array_slice($data, 0, 10);
         };
-        $investmentsBySector = $investorId
+        $investmentsBySector = $hasScopedProjects
             ? $buildInvestmentsBySector()
             : Cache::remember(
                 'dashboard.investments_by_sector',
@@ -92,15 +102,18 @@ class DashboardController extends Controller
             );
 
         // Projects by status
-        $buildProjectsByStatus = function () use ($investorId) {
+        $buildProjectsByStatus = function () use (
+            $investSubRole,
+            $investorId
+        ) {
             return [
-                ['name' => 'Жоспарлау', 'value' => $this->projects(null, $investorId)->where('status', 'plan')->count()],
-                ['name' => 'Іске асыру', 'value' => $this->projects(null, $investorId)->where('status', 'implementation')->count()],
-                ['name' => 'Іске қосылған', 'value' => $this->projects(null, $investorId)->where('status', 'launched')->count()],
-                ['name' => 'Тоқтатылған', 'value' => $this->projects(null, $investorId)->where('status', 'suspended')->count()],
+                ['name' => 'Жоспарлау', 'value' => $this->projects($investSubRole, $investorId)->where('status', 'plan')->count()],
+                ['name' => 'Іске асыру', 'value' => $this->projects($investSubRole, $investorId)->where('status', 'implementation')->count()],
+                ['name' => 'Іске қосылған', 'value' => $this->projects($investSubRole, $investorId)->where('status', 'launched')->count()],
+                ['name' => 'Тоқтатылған', 'value' => $this->projects($investSubRole, $investorId)->where('status', 'suspended')->count()],
             ];
         };
-        $projectsByStatus = $investorId
+        $projectsByStatus = $hasScopedProjects
             ? $buildProjectsByStatus()
             : Cache::remember(
                 'dashboard.projects_by_status',
@@ -109,13 +122,16 @@ class DashboardController extends Controller
             );
 
         // Monthly investment trend (last 6 months)
-        $buildInvestmentTrend = function () use ($investorId) {
+        $buildInvestmentTrend = function () use (
+            $investSubRole,
+            $investorId
+        ) {
             $months = [];
             for ($i = 5; $i >= 0; $i--) {
                 $date = now()->subMonths($i);
                 $months[] = [
                     'name' => $date->format('M.Y'),
-                    'value' => $this->projects(null, $investorId)->whereMonth('created_at', $date->month)
+                    'value' => $this->projects($investSubRole, $investorId)->whereMonth('created_at', $date->month)
                         ->whereYear('created_at', $date->year)
                         ->sum('total_investment'),
                 ];
@@ -123,7 +139,7 @@ class DashboardController extends Controller
 
             return $months;
         };
-        $investmentTrend = $investorId
+        $investmentTrend = $hasScopedProjects
             ? $buildInvestmentTrend()
             : Cache::remember(
                 'dashboard.investment_trend',
@@ -150,11 +166,11 @@ class DashboardController extends Controller
             ->get();
         // dd($regions);
 
-        $regionStats = $investSubRole || $investorId
+        $regionStats = $hasScopedProjects
             ? $this->buildRegionStats($investSubRole, $investorId)
             : Cache::remember('dashboard.region_stats', 300, fn () => $this->buildRegionStats(null));
 
-        $regionYearly = $investSubRole || $investorId
+        $regionYearly = $hasScopedProjects
             ? $this->buildRegionYearlyStats($investSubRole, $investorId)
             : Cache::remember(
                 'dashboard.region_yearly',
@@ -185,6 +201,10 @@ class DashboardController extends Controller
         ?int $investorId = null
     ): Builder {
         return InvestmentProject::active()
+            ->when(
+                $this->moderatorProjectScope,
+                fn ($query) => $query->curatedByTurkistanInvest()
+            )
             ->when(
                 $subRole,
                 fn ($q) => $q->whereHas(
@@ -381,7 +401,7 @@ class DashboardController extends Controller
         ?string $subRole,
         ?int $investorId = null
     ): array {
-        if ($subRole || $investorId) {
+        if ($subRole || $investorId || $this->moderatorProjectScope) {
             return $this->computeSectorSummary($subRole, $investorId);
         }
 

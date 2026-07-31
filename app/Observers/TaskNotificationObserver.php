@@ -5,8 +5,9 @@ namespace App\Observers;
 use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\TelegramService;
+use Illuminate\Contracts\Events\ShouldHandleEventsAfterCommit;
 
-class TaskNotificationObserver
+class TaskNotificationObserver implements ShouldHandleEventsAfterCommit
 {
     /**
      * Handle the TaskNotification "created" event.
@@ -36,26 +37,16 @@ class TaskNotificationObserver
             // Resolve the destination from the task that actually owns this
             // notification. Completion relations cover older notifications
             // where only a completion ID was stored.
-            $projectId = $notification->task?->project_id
-                ?? $notification->completion?->task?->project_id;
-            $subsoilUserId = $notification->subsoilTask?->subsoil_user_id
-                ?? $notification->subsoilCompletion?->task?->subsoil_user_id;
+            $projectId = $notification->telegramProjectId();
+            $subsoilUserId = $notification->telegramSubsoilUserId();
 
             if ($subsoilUserId) {
                 $targetUrl = route('subsoil-users.show', $subsoilUserId);
-                $linkPart = $targetUrl
-                    ? "🔗 <a href=\"{$targetUrl}\">Сайтқа өту</a>"
-                    : '🔗 Сайтқа өту';
-
-                $emoji = match ($notification->type) {
-                    'task_assigned' => '📋',
-                    'task_overdue' => '⏰',
-                    default => '🔔',
-                };
-
-                $formattedMessage = "{$emoji} <b>Хабарлама</b>\n\n"
-                    .$notification->message."\n\n"
-                    .$linkPart;
+                $formattedMessage = $telegram->formatNotificationForTarget(
+                    $notification->type,
+                    $notification->message,
+                    $targetUrl
+                );
             } else {
                 $formattedMessage = $telegram->formatNotification(
                     $notification->type,

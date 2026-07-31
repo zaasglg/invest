@@ -21,6 +21,7 @@ class IssuesController extends Controller
             && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
             ? $user->invest_sub_role
             : null;
+        $isModerator = $roleName === 'moderator';
 
         // Determine which sections are accessible for this user.
         $canSeeSez = ! $investSubRole || in_array($investSubRole, ['aea', 'turkistan_invest'], true);
@@ -50,6 +51,14 @@ class IssuesController extends Controller
         // Get issues based on sector filter
         if ($sector === 'all_projects' || $sector === 'invest' || ! $sector) {
             $query = ProjectIssue::with(['project.region', 'creator:id,full_name']);
+            if ($isModerator) {
+                $query->whereHas(
+                    'project',
+                    fn ($project) => $project
+                        ->active()
+                        ->curatedByTurkistanInvest()
+                );
+            }
             if ($regionId) {
                 $query->whereHas('project', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);

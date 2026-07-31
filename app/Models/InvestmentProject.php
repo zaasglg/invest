@@ -53,10 +53,31 @@ class InvestmentProject extends Model
         return $query->where('is_archived', true);
     }
 
+    public function scopeCuratedByTurkistanInvest(Builder $query): Builder
+    {
+        return $query->whereHas(
+            'curators',
+            fn (Builder $curator) => $curator
+                ->where('users.invest_sub_role', 'turkistan_invest')
+                ->whereHas(
+                    'roleModel',
+                    fn (Builder $role) => $role->where('name', 'invest')
+                )
+        );
+    }
+
     public function scopeWhereChatParticipant(
         Builder $query,
         User $user
     ): Builder {
+        $user->loadMissing('roleModel');
+
+        if ($user->roleModel?->name === 'moderator') {
+            return $query
+                ->active()
+                ->curatedByTurkistanInvest();
+        }
+
         return $query->where(function (Builder $participantQuery) use ($user) {
             $participantQuery
                 ->whereHas(
@@ -201,6 +222,16 @@ class InvestmentProject extends Model
 
     public function isChatParticipant(User $user): bool
     {
+        $user->loadMissing('roleModel');
+
+        if ($user->roleModel?->name === 'moderator') {
+            return ! $this->is_archived
+                && self::query()
+                    ->whereKey($this->id)
+                    ->curatedByTurkistanInvest()
+                    ->exists();
+        }
+
         if ($this->curators()->whereKey($user->id)->exists()
             || $this->investors()->whereKey($user->id)->exists()
             || $this->executors()->whereKey($user->id)->exists()) {

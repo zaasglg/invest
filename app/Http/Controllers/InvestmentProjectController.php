@@ -377,12 +377,23 @@ class InvestmentProjectController extends Controller
 
         $restrictedSectorType = $user?->restrictedSectorType();
 
-        // Get invest-role users for curator selection (superadmin only)
-        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
+        // Superadmin can select any invest curator. A moderator must select a
+        // Turkistan Invest curator so the new project stays inside their scope.
+        $roleName = $user?->roleModel?->name;
+        $isSuperAdmin = $roleName === 'superadmin';
+        $isModerator = $roleName === 'moderator';
+        $canSelectCurators = $isSuperAdmin || $isModerator;
         $investUsers = [];
-        if ($isSuperAdmin) {
+        if ($canSelectCurators) {
             $investUsers = User::with('roleModel:id,name,display_name')
                 ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
+                ->when(
+                    $isModerator,
+                    fn ($query) => $query->where(
+                        'invest_sub_role',
+                        'turkistan_invest'
+                    )
+                )
                 ->select('id', 'full_name', 'region_id', 'invest_sub_role')
                 ->orderBy('full_name')
                 ->get();
@@ -398,6 +409,8 @@ class InvestmentProjectController extends Controller
             'industrialZones' => $industrialZones,
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
+            'canSelectCurators' => $canSelectCurators,
+            'requiresCuratorSelection' => $isModerator,
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
@@ -412,6 +425,10 @@ class InvestmentProjectController extends Controller
     public function store(Request $request)
     {
         $user = auth()->user();
+        $roleName = $user?->roleModel?->name;
+        $isSuperAdmin = $roleName === 'superadmin';
+        $isModerator = $roleName === 'moderator';
+        $canSelectCurators = $isSuperAdmin || $isModerator;
         $isDistrictScoped = $user && $user->isDistrictScoped();
         $restrictedSectorType = $user?->restrictedSectorType();
 
@@ -481,7 +498,11 @@ class InvestmentProjectController extends Controller
             'infrastructure.water' => 'nullable|array',
             'infrastructure.electricity' => 'nullable|array',
             'infrastructure.land' => 'nullable|array',
-            'curator_ids' => 'nullable|array',
+            'curator_ids' => [
+                $isModerator ? 'required' : 'nullable',
+                'array',
+                $isModerator ? 'min:1' : 'max:100',
+            ],
             'curator_ids.*' => 'exists:users,id',
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
@@ -503,12 +524,34 @@ class InvestmentProjectController extends Controller
 
         $validated['company_name'] = $company->display_name;
 
-        $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
-        $curatorIds = $isSuperAdmin ? ($validated['curator_ids'] ?? []) : [];
+        $curatorIds = $canSelectCurators
+            ? ($validated['curator_ids'] ?? [])
+            : [];
         unset($validated['curator_ids']);
 
-        // Non-admin creators are always curators of their own project
-        if (! $isSuperAdmin) {
+        if ($isModerator) {
+            $uniqueCuratorIds = array_values(array_unique(array_map(
+                'intval',
+                $curatorIds
+            )));
+            $validCuratorCount = User::query()
+                ->whereIn('id', $uniqueCuratorIds)
+                ->where('invest_sub_role', 'turkistan_invest')
+                ->whereHas(
+                    'roleModel',
+                    fn ($query) => $query->where('name', 'invest')
+                )
+                ->count();
+
+            if ($validCuratorCount !== count($uniqueCuratorIds)) {
+                throw ValidationException::withMessages([
+                    'curator_ids' => 'Модератор тек Turkistan Invest кураторын таңдай алады.',
+                ]);
+            }
+
+            $curatorIds = $uniqueCuratorIds;
+        } elseif (! $isSuperAdmin) {
+            // Regular non-admin creators curate their own projects.
             $curatorIds = [auth()->id()];
         } elseif (empty($curatorIds)) {
             // Superadmin created a project without picking curators; fall back to self
@@ -1898,6 +1941,15 @@ class InvestmentProjectController extends Controller
 
         if (! $user) {
             return;
+        }
+
+        $user->loadMissing('roleModel');
+        if ($user->roleModel?->name === 'moderator'
+            && ! $this->projectAccess->canView($user, $project)) {
+            abort(
+                403,
+                'Модераторға бұл жобаға қол жеткізуге рұқсат жоқ.'
+            );
         }
 
         // Use the helper method

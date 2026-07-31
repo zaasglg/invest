@@ -2,12 +2,18 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\InvestmentProject;
+use App\Services\InvestmentProjectAccessService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckRoleAccess
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess
+    ) {}
+
     /**
      * Routes that read-only roles (akim/zamakim) are NOT allowed to access.
      */
@@ -142,7 +148,6 @@ class CheckRoleAccess
         if ($routeName && str_starts_with($routeName, 'companies.')) {
             $companyReadRoles = [
                 'superadmin',
-                'invest',
                 'prokuror',
                 'akim',
                 'zamakim',
@@ -153,7 +158,7 @@ class CheckRoleAccess
             }
 
             if ($this->isWriteAction($request)
-                && ! in_array($roleName, ['superadmin', 'invest'], true)) {
+                && $roleName !== 'superadmin') {
                 abort(403, 'Сізде компания мәліметтерін өзгерту құқығы жоқ.');
             }
         }
@@ -206,20 +211,34 @@ class CheckRoleAccess
                 }
             }
 
-            // Moderator has read access and may only approve/reject project
-            // tasks through the dedicated review endpoints.
+            // Moderator can manage Turkistan Invest project cards and review
+            // their tasks. Other resources remain read-only.
             if ($roleName === 'moderator') {
                 if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
                 }
 
+                $this->enforceModeratorProjectScope(
+                    $request,
+                    $user,
+                    $routeName
+                );
+
                 $moderatorWriteRoutes = [
+                    'investment-projects.create',
+                    'investment-projects.store',
+                    'investment-projects.edit',
+                    'investment-projects.update',
+                    'investment-projects.update-status',
                     'investment-projects.tasks.approve',
                     'investment-projects.tasks.reject',
                 ];
                 if ($this->isWriteAction($request)
                     && ! in_array($routeName, $moderatorWriteRoutes, true)) {
-                    abort(403, 'Модератор тек тапсырманы мақұлдай немесе қайтара алады.');
+                    abort(
+                        403,
+                        'Модератор Turkistan Invest жобасының негізгі деректерін ғана өзгерте алады.'
+                    );
                 }
             }
 
@@ -456,6 +475,49 @@ class CheckRoleAccess
             if (! $user->isInvolvedInProject($project)) {
                 abort(403, 'Сіз бұл жобаға қатыспайсыз.');
             }
+        }
+    }
+
+    /**
+     * Moderators may only access projects curated by Turkistan Invest.
+     */
+    protected function enforceModeratorProjectScope(
+        Request $request,
+        $user,
+        ?string $routeName
+    ): void {
+        if (! $routeName
+            || ! str_starts_with($routeName, 'investment-projects.')) {
+            return;
+        }
+
+        $routesWithoutProject = [
+            'investment-projects.index',
+            'investment-projects.create',
+            'investment-projects.store',
+            'investment-projects.reorder',
+            'investment-projects.archived',
+            'investment-projects.bulk-presentation',
+        ];
+
+        if (in_array($routeName, $routesWithoutProject, true)) {
+            return;
+        }
+
+        $projectOrId = $request->route('investmentProject')
+            ?? $request->route('investment_project')
+            ?? $request->route('id');
+
+        $project = is_object($projectOrId)
+            ? $projectOrId
+            : InvestmentProject::find((int) $projectOrId);
+
+        if (! $project
+            || ! $this->projectAccess->canView($user, $project)) {
+            abort(
+                403,
+                'Модераторға бұл жобаға қол жеткізуге рұқсат жоқ.'
+            );
         }
     }
 

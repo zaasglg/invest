@@ -124,7 +124,7 @@ test('superadmin can create and update a complete company card', function () {
 });
 
 test('company bin must contain twelve digits and be unique', function () {
-    $user = createCompanyManagementUser('invest');
+    $user = createCompanyManagementUser('superadmin');
     $region = createCompanyManagementRegion();
     Company::factory()->create([
         'region_id' => $region->id,
@@ -147,6 +147,7 @@ test('company access follows read and write role boundaries', function () {
     $region = createCompanyManagementRegion();
     $company = Company::factory()->create(['region_id' => $region->id]);
     $prokuror = createCompanyManagementUser('prokuror');
+    $invest = createCompanyManagementUser('invest');
     $ispolnitel = createCompanyManagementUser('ispolnitel');
 
     $this->actingAs($prokuror)
@@ -155,6 +156,29 @@ test('company access follows read and write role boundaries', function () {
 
     $this->actingAs($prokuror)
         ->get(route('companies.create'))
+        ->assertForbidden();
+
+    $this->actingAs($invest)
+        ->get(route('companies.index'))
+        ->assertForbidden();
+
+    $this->actingAs($invest)
+        ->get(route('companies.show', $company))
+        ->assertForbidden();
+
+    $this->actingAs($invest)
+        ->post(route('companies.store'), validCompanyPayload($region))
+        ->assertForbidden();
+
+    $this->actingAs($invest)
+        ->put(
+            route('companies.update', $company),
+            validCompanyPayload($region, ['bin' => $company->bin])
+        )
+        ->assertForbidden();
+
+    $this->actingAs($invest)
+        ->delete(route('companies.destroy', $company))
         ->assertForbidden();
 
     $this->actingAs($ispolnitel)

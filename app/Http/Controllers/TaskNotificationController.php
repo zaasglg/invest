@@ -10,7 +10,8 @@ class TaskNotificationController extends Controller
 {
     public function index()
     {
-        $notifications = TaskNotification::where('user_id', Auth::id())
+        $notifications = TaskNotification::query()
+            ->visibleTo(Auth::user())
             ->with([
                 'task.project',
                 'task.assignee',
@@ -32,7 +33,10 @@ class TaskNotificationController extends Controller
 
     public function markAsRead(TaskNotification $notification)
     {
-        if ($notification->user_id !== Auth::id()) {
+        if (! TaskNotification::query()
+            ->visibleTo(Auth::user())
+            ->whereKey($notification->id)
+            ->exists()) {
             abort(403);
         }
 
@@ -43,7 +47,8 @@ class TaskNotificationController extends Controller
 
     public function markAllAsRead()
     {
-        TaskNotification::where('user_id', Auth::id())
+        TaskNotification::query()
+            ->visibleTo(Auth::user())
             ->where('is_read', false)
             ->update(['is_read' => true]);
 
@@ -55,7 +60,8 @@ class TaskNotificationController extends Controller
      */
     public function unreadCount()
     {
-        $count = TaskNotification::where('user_id', Auth::id())
+        $count = TaskNotification::query()
+            ->visibleTo(Auth::user())
             ->where('is_read', false)
             ->count();
 

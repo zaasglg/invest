@@ -228,7 +228,10 @@ export default function Index({
     const { auth } = usePage<SharedData>().props;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
+    const isModerator = auth.user?.role_model?.name === 'moderator';
     const isProkuror = auth.user?.role_model?.name === 'prokuror';
+    const canCreateProject = canModify || isModerator;
+    const canEditProject = canModify || isModerator;
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -545,7 +548,7 @@ export default function Index({
                                 </Button>
                             </Link>
                         )}
-                        {canModify && (
+                        {canCreateProject && (
                             <Link href={investmentProjectsRoutes.create.url()}>
                                 <Button className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]">
                                     <Plus className="mr-2 h-4 w-4" />
@@ -1101,7 +1104,7 @@ export default function Index({
                                                                 <Eye className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
-                                                        {canModify && (
+                                                        {canEditProject && (
                                                             <>
                                                                 <Button
                                                                     variant="ghost"
@@ -1116,19 +1119,21 @@ export default function Index({
                                                                         <Pencil className="h-4 w-4" />
                                                                     </Link>
                                                                 </Button>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                                    onClick={() =>
-                                                                        handleDelete(
-                                                                            project.id,
-                                                                        )
-                                                                    }
-                                                                    title="Жою"
-                                                                >
-                                                                    <Trash2 className="h-4 w-4" />
-                                                                </Button>
+                                                                {canModify && (
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                                        onClick={() =>
+                                                                            handleDelete(
+                                                                                project.id,
+                                                                            )
+                                                                        }
+                                                                        title="Жою"
+                                                                    >
+                                                                        <Trash2 className="h-4 w-4" />
+                                                                    </Button>
+                                                                )}
                                                             </>
                                                         )}
                                                     </div>

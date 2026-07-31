@@ -516,7 +516,11 @@ class CompletionWorkflowService
             ];
         })->all();
 
-        TaskNotification::query()->insert($rows);
+        // Create each notification through Eloquent so the notification
+        // observer can send the corresponding Telegram message.
+        foreach ($rows as $row) {
+            TaskNotification::create($row);
+        }
     }
 
     private function notifyReview(

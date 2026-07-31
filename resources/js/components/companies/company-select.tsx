@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+import { Link, usePage } from '@inertiajs/react';
 import { Building2, Plus, Search } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Input } from '@/components/ui/input';
@@ -10,6 +10,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import type { SharedData } from '@/types';
 
 export interface CompanyOption {
     id: number;
@@ -35,6 +36,8 @@ export default function CompanySelect({
     onValueChange,
     error,
 }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const canCreateCompany = auth.user?.role_model?.name === 'superadmin';
     const [search, setSearch] = useState('');
     const selectedCompany = companies.find(
         (company) => company.id.toString() === value,
@@ -62,13 +65,15 @@ export default function CompanySelect({
                 >
                     Компания <span className="text-red-500">*</span>
                 </Label>
-                <Link
-                    href="/companies/create"
-                    className="inline-flex items-center gap-1 text-xs font-medium text-[#a9842f] hover:underline"
-                >
-                    <Plus className="h-3.5 w-3.5" />
-                    Жаңа компания
-                </Link>
+                {canCreateCompany && (
+                    <Link
+                        href="/companies/create"
+                        className="inline-flex items-center gap-1 text-xs font-medium text-[#a9842f] hover:underline"
+                    >
+                        <Plus className="h-3.5 w-3.5" />
+                        Жаңа компания
+                    </Link>
+                )}
             </div>
 
             {companies.length > 8 && (
