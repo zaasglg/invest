@@ -1,6 +1,14 @@
 import type { LucideIcon } from 'lucide-react';
 import { Car, Droplets, Flame, TrainFront, Wifi, Zap } from 'lucide-react';
+import { useState } from 'react';
 
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 
 export interface InfrastructureDetails {
@@ -19,7 +27,20 @@ export interface InfrastructureData {
     internet?: InfrastructureDetails;
 }
 
-type UsageEntry = { total?: number; used?: number; remaining?: number };
+type InfrastructureConsumer = {
+    id: number | null;
+    name: string;
+    capacity: string | null;
+    value: number;
+    status: string | null;
+};
+
+type UsageEntry = {
+    total?: number;
+    used?: number;
+    remaining?: number;
+    consumers?: InfrastructureConsumer[];
+};
 
 type Props = {
     infrastructure: InfrastructureData;
@@ -28,6 +49,13 @@ type Props = {
 };
 
 type MeteredResource = 'electricity' | 'gas' | 'water';
+
+type InfrastructureItem = {
+    key: keyof InfrastructureData;
+    name: string;
+    icon: LucideIcon;
+    details: InfrastructureDetails;
+};
 
 const INFRA_ITEMS: {
     key: keyof InfrastructureData;
@@ -50,6 +78,45 @@ const RESOURCE_UNITS: Record<MeteredResource, string> = {
     water: 'м³/тәу',
 };
 
+const RESOURCE_STYLES: Record<
+    MeteredResource,
+    { line: string; glow: string; icon: string }
+> = {
+    electricity: {
+        line: '#d8b84e',
+        glow: 'rgba(216, 184, 78, 0.34)',
+        icon: 'bg-amber-300/10 text-amber-300',
+    },
+    gas: {
+        line: '#71c98d',
+        glow: 'rgba(113, 201, 141, 0.34)',
+        icon: 'bg-emerald-300/10 text-emerald-300',
+    },
+    water: {
+        line: '#63b8e8',
+        glow: 'rgba(99, 184, 232, 0.34)',
+        icon: 'bg-sky-300/10 text-sky-300',
+    },
+};
+
+const SIMPLE_RESOURCE_STYLES: Record<
+    'roads' | 'railway' | 'internet',
+    { line: string; icon: string }
+> = {
+    roads: {
+        line: '#aeb8c7',
+        icon: 'bg-slate-300/10 text-slate-300',
+    },
+    railway: {
+        line: '#8f87ef',
+        icon: 'bg-indigo-300/10 text-indigo-300',
+    },
+    internet: {
+        line: '#65c8db',
+        icon: 'bg-cyan-300/10 text-cyan-300',
+    },
+};
+
 function parseCapacity(capacity: string | undefined, key: MeteredResource) {
     if (!capacity) return 0;
 
@@ -65,30 +132,107 @@ function formatAmount(value: number, unit: string) {
     return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)} ${unit}`;
 }
 
-function getLoadColor(percentage: number) {
-    if (percentage >= 85) return 'bg-red-400';
-    if (percentage >= 60) return 'bg-gold';
-    return 'bg-emerald-500';
-}
+function UsageLineChart({
+    color,
+    glow,
+    resourceKey,
+    used,
+    unit,
+}: {
+    color: string;
+    glow: string;
+    resourceKey: MeteredResource;
+    used: number;
+    unit: string;
+}) {
+    const chartPaths: Record<MeteredResource, string> = {
+        electricity:
+            'M4 91 C20 44 36 46 54 55 C77 68 88 70 102 38 C116 8 131 24 145 50 C161 78 176 69 185 25 C190 9 199 6 212 3',
+        gas: 'M4 78 C22 67 34 30 54 47 C75 65 84 81 103 51 C121 22 133 31 146 45 C161 61 174 58 184 24 C191 6 200 8 212 12',
+        water: 'M4 84 C24 78 34 54 55 58 C76 61 87 35 104 39 C124 45 133 77 151 59 C169 42 177 18 190 26 C199 31 204 17 212 8',
+    };
+    const markers: Record<MeteredResource, { x: number; y: number }> = {
+        electricity: { x: 122, y: 22 },
+        gas: { x: 112, y: 38 },
+        water: { x: 151, y: 59 },
+    };
+    const marker = markers[resourceKey];
 
-function AvailabilityBadge({ available }: { available?: boolean }) {
     return (
-        <span
-            className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold',
-                available
-                    ? 'bg-emerald-50 text-emerald-700'
-                    : 'bg-amber-50 text-amber-700',
-            )}
+        <div
+            aria-label={`Қолданылған қуат: ${formatAmount(used, unit)}`}
+            className="relative h-28 w-full"
+            role="img"
         >
+            <svg
+                aria-hidden="true"
+                className="size-full overflow-visible"
+                preserveAspectRatio="none"
+                viewBox="0 0 216 104"
+            >
+                <defs>
+                    <linearGradient
+                        id={`usage-fade-${resourceKey}`}
+                        x1="0"
+                        x2="0"
+                        y1="0"
+                        y2="1"
+                    >
+                        <stop offset="0" stopColor={color} stopOpacity="0.22" />
+                        <stop offset="1" stopColor={color} stopOpacity="0" />
+                    </linearGradient>
+                    <filter id={`usage-glow-${resourceKey}`}>
+                        <feGaussianBlur result="blur" stdDeviation="2.4" />
+                    </filter>
+                </defs>
+                <path
+                    className="infrastructure-widget-area"
+                    d={`${chartPaths[resourceKey]} L212 104 L4 104 Z`}
+                    fill={`url(#usage-fade-${resourceKey})`}
+                />
+                <path
+                    d={chartPaths[resourceKey]}
+                    fill="none"
+                    filter={`url(#usage-glow-${resourceKey})`}
+                    stroke={glow}
+                    strokeWidth="7"
+                />
+                <path
+                    className="infrastructure-widget-line"
+                    d={chartPaths[resourceKey]}
+                    fill="none"
+                    pathLength="1"
+                    stroke={color}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2.5"
+                />
+            </svg>
             <span
-                className={cn(
-                    'size-1.5 rounded-full',
-                    available ? 'bg-emerald-500' : 'bg-amber-500',
-                )}
-            />
-            {available ? 'Қолжетімді' : 'Жоқ'}
-        </span>
+                aria-hidden="true"
+                className="absolute -translate-x-1/2 -translate-y-1/2"
+                style={{
+                    left: `${(marker.x / 216) * 100}%`,
+                    top: `${(marker.y / 104) * 100}%`,
+                }}
+            >
+                <span className="infrastructure-widget-marker relative block size-3.5 rounded-full border-[3px] border-white bg-[#181a1d] shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+                    <span
+                        className="absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                        style={{ backgroundColor: color }}
+                    />
+                </span>
+            </span>
+            <div
+                className="infrastructure-widget-tooltip absolute -translate-x-1/2 rounded-full border border-white/10 bg-white/15 px-2 py-1 text-[8px] font-bold whitespace-nowrap text-white/80 shadow-lg backdrop-blur-md"
+                style={{
+                    left: `${(marker.x / 216) * 100}%`,
+                    top: `${Math.min(78, (marker.y / 104) * 100 + 12)}%`,
+                }}
+            >
+                {formatAmount(used, unit)}
+            </div>
+        </div>
     );
 }
 
@@ -103,60 +247,239 @@ function CapacityMeter({
 }) {
     const unit = RESOURCE_UNITS[resourceKey];
     const parsedTotal = parseCapacity(details.capacity, resourceKey);
-    const total =
-        parsedTotal || (usage?.used ?? 0) + (usage?.remaining ?? 0) || 0;
+    const total = Math.max(
+        parsedTotal,
+        usage?.total ?? 0,
+        (usage?.used ?? 0) + (usage?.remaining ?? 0),
+    );
     const used = Math.max(
         0,
         usage?.used ??
             (usage?.remaining !== undefined ? total - usage.remaining : 0),
     );
     const remaining = Math.max(0, usage?.remaining ?? total - used);
-    const percentage = total > 0 ? Math.round((used / total) * 100) : 0;
+    const rawPercentage = total > 0 ? Math.round((used / total) * 100) : 0;
+    const percentage = Math.min(100, rawPercentage);
+    const styles = RESOURCE_STYLES[resourceKey];
 
     return (
         <div>
-            <div className="mb-2.5 flex items-end justify-between gap-3">
+            <UsageLineChart
+                color={styles.line}
+                glow={styles.glow}
+                resourceKey={resourceKey}
+                unit={unit}
+                used={used}
+            />
+            <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        Жалпы қуат
+                    <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
+                        Жүктеме
                     </p>
-                    <p className="mt-0.5 text-sm font-bold text-navy tabular-nums">
-                        {formatAmount(total, unit)}
+                    <p className="mt-1 text-5xl leading-none font-medium tracking-[-0.06em] text-white tabular-nums">
+                        {rawPercentage > 100 ? '100+' : percentage}
+                        <span className="ml-0.5 text-2xl text-white/55">%</span>
                     </p>
                 </div>
-                <p className="text-2xl font-extrabold text-navy tabular-nums">
-                    {percentage}
-                    <span className="ml-0.5 text-sm text-slate-400">%</span>
-                </p>
-            </div>
-            <div className="h-1.5 overflow-hidden rounded-sm bg-slate-100">
-                <div
-                    className={cn(
-                        'h-full rounded-sm transition-[width] duration-700 ease-out',
-                        getLoadColor(percentage),
-                    )}
-                    style={{ width: `${Math.min(100, percentage)}%` }}
-                />
-            </div>
-            <dl className="mt-4 grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 pt-3">
-                <div className="pr-3">
-                    <dt className="text-[10px] font-bold text-slate-400 uppercase">
-                        Қолданылды
-                    </dt>
-                    <dd className="mt-1 text-sm font-bold whitespace-nowrap text-amber-700 tabular-nums">
-                        {formatAmount(used, unit)}
-                    </dd>
-                </div>
-                <div className="pl-3">
-                    <dt className="text-[10px] font-bold text-slate-400 uppercase">
+                <div className="mb-1 text-right">
+                    <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
                         Қалды
-                    </dt>
-                    <dd className="mt-1 text-sm font-bold whitespace-nowrap text-emerald-700 tabular-nums">
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-white/80 tabular-nums">
                         {formatAmount(remaining, unit)}
-                    </dd>
+                    </p>
                 </div>
-            </dl>
+            </div>
         </div>
+    );
+}
+
+function InfrastructureConsumersDialog({
+    item,
+    usage,
+    open,
+    onOpenChange,
+}: {
+    item: InfrastructureItem | null;
+    usage?: UsageEntry;
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}) {
+    if (!item) return null;
+
+    const consumers = usage?.consumers ?? [];
+    const isMetered = METERED_KEYS.includes(item.key as MeteredResource);
+    const resourceKey = isMetered ? (item.key as MeteredResource) : null;
+    const accent = resourceKey
+        ? RESOURCE_STYLES[resourceKey].line
+        : (SIMPLE_RESOURCE_STYLES[
+              item.key as keyof typeof SIMPLE_RESOURCE_STYLES
+          ]?.line ?? '#aeb8c7');
+    const total = usage?.total ?? 0;
+
+    return (
+        <Dialog onOpenChange={onOpenChange} open={open}>
+            <DialogContent className="max-h-[90vh] gap-0 overflow-hidden rounded-[32px] border border-white/80 bg-white/95 p-0 shadow-[0_50px_140px_-32px_rgba(15,23,42,0.5)] backdrop-blur-2xl lg:max-w-5xl [&>button]:top-7 [&>button]:right-7 [&>button]:flex [&>button]:size-9 [&>button]:items-center [&>button]:justify-center [&>button]:rounded-full [&>button]:bg-slate-100/80 [&>button]:text-slate-500 [&>button]:opacity-100 [&>button]:transition-colors [&>button]:hover:bg-slate-200 [&>button]:focus:ring-0 [&>button]:focus:ring-offset-0">
+                <DialogHeader className="relative overflow-hidden border-b border-slate-200/70 px-7 pt-8 pb-7 text-left sm:px-10 sm:pt-10 sm:pb-8">
+                    <div
+                        className="pointer-events-none absolute -top-32 -left-20 size-72 rounded-full opacity-[0.09] blur-3xl"
+                        style={{ backgroundColor: accent }}
+                    />
+                    <div className="relative max-w-3xl pr-12">
+                        <div
+                            className="mb-4 h-0.5 w-10 rounded-full"
+                            style={{ backgroundColor: accent }}
+                        />
+                        <div className="min-w-0">
+                            <p className="text-[10px] font-bold tracking-[0.18em] text-slate-400 uppercase">
+                                Инфрақұрылымды пайдаланатын жобалар
+                            </p>
+                            <DialogTitle className="mt-2 text-3xl leading-none font-extrabold tracking-[-0.04em] text-navy sm:text-4xl">
+                                {item.name}
+                            </DialogTitle>
+                            <DialogDescription className="mt-3 text-sm leading-relaxed text-slate-500">
+                                {consumers.length > 0
+                                    ? `${consumers.length} жоба осы инфрақұрылымға қосылған`
+                                    : 'Бұл инфрақұрылымды пайдаланатын жоба жоқ'}
+                            </DialogDescription>
+                        </div>
+                    </div>
+                </DialogHeader>
+
+                <div className="grid grid-cols-3 divide-x divide-slate-200/70 border-b border-slate-200/70 bg-slate-50/60">
+                    <div className="px-7 py-5 sm:px-10 sm:py-6">
+                        <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                            Жобалар
+                        </p>
+                        <p className="mt-2 text-2xl font-extrabold tracking-tight text-navy tabular-nums">
+                            {consumers.length}
+                        </p>
+                    </div>
+                    <div className="px-7 py-5 sm:px-10 sm:py-6">
+                        <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                            {resourceKey ? 'Қолданылды' : 'Желі күйі'}
+                        </p>
+                        <p className="mt-2 truncate text-lg font-extrabold tracking-tight text-navy">
+                            {resourceKey
+                                ? formatAmount(
+                                      usage?.used ?? 0,
+                                      RESOURCE_UNITS[resourceKey],
+                                  )
+                                : item.details.available
+                                  ? 'Белсенді'
+                                  : 'Қолжетімсіз'}
+                        </p>
+                    </div>
+                    <div className="px-7 py-5 sm:px-10 sm:py-6">
+                        <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
+                            Қолжетімді
+                        </p>
+                        <p className="mt-2 truncate text-lg font-extrabold tracking-tight text-emerald-700">
+                            {resourceKey
+                                ? formatAmount(
+                                      usage?.remaining ?? 0,
+                                      RESOURCE_UNITS[resourceKey],
+                                  )
+                                : item.details.available
+                                  ? 'Иә'
+                                  : 'Жоқ'}
+                        </p>
+                    </div>
+                </div>
+
+                <div className="max-h-[52vh] overflow-auto p-5 sm:p-8">
+                    {consumers.length > 0 ? (
+                        <div className="min-w-[720px] overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[0_18px_45px_-38px_rgba(15,23,42,0.5)]">
+                            <table className="w-full border-collapse text-left">
+                                <thead>
+                                    <tr className="border-b border-slate-200/80 bg-slate-50/80">
+                                        <th className="px-6 py-4 text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                            Жоба
+                                        </th>
+                                        <th className="px-6 py-4 text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                            Қажетті қуат
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                            Үлесі
+                                        </th>
+                                        <th className="px-6 py-4 text-right text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                            Күйі
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-100">
+                                    {consumers.map((consumer, index) => {
+                                        const percentage =
+                                            total > 0
+                                                ? Math.min(
+                                                      100,
+                                                      Math.round(
+                                                          (consumer.value /
+                                                              total) *
+                                                              100,
+                                                      ),
+                                                  )
+                                                : null;
+
+                                        return (
+                                            <tr
+                                                key={
+                                                    consumer.id ??
+                                                    `${consumer.name}-${index}`
+                                                }
+                                                className="transition-colors hover:bg-slate-50/80"
+                                            >
+                                                <td className="px-6 py-5">
+                                                    <div className="min-w-0">
+                                                        <p className="max-w-sm truncate text-base font-bold tracking-tight text-navy">
+                                                            {consumer.name}
+                                                        </p>
+                                                        <p className="mt-1 text-[10px] font-semibold tracking-wide text-slate-400 tabular-nums">
+                                                            ЖОБА №
+                                                            {consumer.id ?? '—'}
+                                                        </p>
+                                                    </div>
+                                                </td>
+                                                <td className="px-6 py-5 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
+                                                    {consumer.capacity || '—'}
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    {percentage !== null ? (
+                                                        <span className="inline-flex min-w-11 justify-center rounded-lg bg-slate-100 px-2 py-1 text-xs font-bold text-navy tabular-nums">
+                                                            {percentage}%
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-300">
+                                                            —
+                                                        </span>
+                                                    )}
+                                                </td>
+                                                <td className="px-6 py-5 text-right">
+                                                    <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
+                                                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                                                        Пайдаланады
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    ) : (
+                        <div className="flex min-h-64 flex-col items-center justify-center rounded-[20px] border border-dashed border-slate-300 bg-white/70 px-6 text-center">
+                            <p className="text-base font-extrabold text-navy">
+                                Жобалар табылмады
+                            </p>
+                            <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                                Қазір бұл инфрақұрылымды пайдаланатын жоба
+                                тіркелмеген.
+                            </p>
+                        </div>
+                    )}
+                </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 
@@ -170,6 +493,9 @@ export default function InfrastructureList({
     usage = {},
     className,
 }: Props) {
+    const [selectedItem, setSelectedItem] = useState<InfrastructureItem | null>(
+        null,
+    );
     const items = INFRA_ITEMS.map((item) => ({
         ...item,
         details: infrastructure[item.key],
@@ -192,7 +518,9 @@ export default function InfrastructureList({
     const simple = items.filter((item) => !metered.includes(item));
 
     return (
-        <section className={className}>
+        <section
+            className={cn('rounded-lg bg-slate-50/90 p-4 sm:p-5', className)}
+        >
             <div className="mb-3 flex items-end justify-between gap-4">
                 <div>
                     <p className="text-[11px] font-bold text-gold-dark uppercase">
@@ -208,72 +536,155 @@ export default function InfrastructureList({
                 </span>
             </div>
 
-            <div className="grid overflow-hidden rounded-lg border border-slate-200/80 bg-white md:grid-cols-3">
-                {metered.map((item) => (
-                    <article
-                        key={item.key}
-                        className="min-w-0 border-b border-slate-100 p-5 transition-colors hover:bg-slate-50/60 md:border-r md:border-b-0 md:last:border-r-0"
-                    >
-                        <div className="mb-5 flex min-w-0 items-center gap-3">
-                            <span className="flex size-10 shrink-0 items-center justify-center rounded-md bg-slate-100 text-navy">
-                                <item.icon className="size-[18px]" />
-                            </span>
-                            <div className="min-w-0">
-                                <h4 className="text-sm leading-snug font-bold text-navy">
-                                    {item.name}
-                                </h4>
-                                <p className="mt-1 flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
-                                    <span className="size-1.5 rounded-full bg-emerald-500" />
-                                    Қолжетімді
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {metered.map((item) => {
+                    const resourceKey = item.key as MeteredResource;
+                    const styles = RESOURCE_STYLES[resourceKey];
+                    const total = Math.max(
+                        parseCapacity(item.details.capacity, resourceKey),
+                        usage[item.key]?.total ?? 0,
+                        (usage[item.key]?.used ?? 0) +
+                            (usage[item.key]?.remaining ?? 0),
+                    );
+
+                    return (
+                        <button
+                            aria-haspopup="dialog"
+                            key={item.key}
+                            className="group relative min-h-[330px] min-w-0 cursor-pointer overflow-hidden rounded-[28px] border border-white/5 bg-[#1c1d1f] p-6 text-left shadow-[0_24px_48px_-30px_rgba(8,14,32,0.8)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-32px_rgba(8,14,32,0.9)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
+                            onClick={() => setSelectedItem(item)}
+                            type="button"
+                        >
+                            <div className="relative z-10 flex min-w-0 items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
+                                        Жалпы қуат ·{' '}
+                                        {formatAmount(
+                                            total,
+                                            RESOURCE_UNITS[resourceKey],
+                                        )}
+                                    </p>
+                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-white">
+                                        {item.name}
+                                    </h4>
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400/80">
+                                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                                        Қолжетімді
+                                    </p>
+                                </div>
+                                <span
+                                    className={cn(
+                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/5',
+                                        styles.icon,
+                                    )}
+                                >
+                                    <item.icon className="size-[18px]" />
+                                </span>
+                            </div>
+                            <div className="relative z-10 mt-4">
+                                <CapacityMeter
+                                    resourceKey={resourceKey}
+                                    details={item.details}
+                                    usage={usage[item.key]}
+                                />
+                            </div>
+                            <div
+                                className="pointer-events-none absolute -right-12 -bottom-14 size-44 rounded-full opacity-15 blur-3xl"
+                                style={{ backgroundColor: styles.line }}
+                            />
+                        </button>
+                    );
+                })}
+
+                {simple.map((item) => {
+                    const detail =
+                        item.details.capacity ||
+                        item.details.type ||
+                        item.details.distance ||
+                        '';
+                    const styles =
+                        SIMPLE_RESOURCE_STYLES[
+                            item.key as keyof typeof SIMPLE_RESOURCE_STYLES
+                        ];
+
+                    return (
+                        <button
+                            aria-haspopup="dialog"
+                            key={item.key}
+                            className="group relative min-h-[330px] min-w-0 cursor-pointer overflow-hidden rounded-[28px] border border-white/5 bg-[#1c1d1f] p-6 text-left shadow-[0_24px_48px_-30px_rgba(8,14,32,0.8)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-32px_rgba(8,14,32,0.9)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
+                            onClick={() => setSelectedItem(item)}
+                            type="button"
+                        >
+                            <div className="relative z-10 flex items-start justify-between gap-4">
+                                <div className="min-w-0">
+                                    <p className="text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
+                                        Желі күйі
+                                    </p>
+                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-white">
+                                        {item.name}
+                                    </h4>
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400/80">
+                                        <span className="size-1.5 rounded-full bg-emerald-500" />
+                                        {item.details.available
+                                            ? 'Қолжетімді'
+                                            : 'Жоқ'}
+                                    </p>
+                                </div>
+                                <span
+                                    className={cn(
+                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/5',
+                                        styles?.icon ??
+                                            'bg-white/10 text-white/70',
+                                    )}
+                                >
+                                    <item.icon className="size-[18px]" />
+                                </span>
+                            </div>
+                            <div className="relative z-10 mt-16">
+                                <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
+                                    Сипаттамасы
+                                </p>
+                                <p className="mt-2 truncate text-4xl font-medium tracking-[-0.05em] text-white">
+                                    {detail || 'Көрсетілмеген'}
                                 </p>
                             </div>
-                        </div>
-                        <CapacityMeter
-                            resourceKey={item.key as MeteredResource}
-                            details={item.details}
-                            usage={usage[item.key]}
-                        />
-                    </article>
-                ))}
-
-                {simple.length > 0 && (
-                    <div className="grid border-t border-slate-100 sm:grid-cols-3 md:col-span-3">
-                        {simple.map((item) => {
-                            const detail =
-                                item.details.capacity ||
-                                item.details.type ||
-                                item.details.distance ||
-                                '';
-
-                            return (
-                                <article
-                                    key={item.key}
-                                    className="flex min-w-0 items-center justify-between gap-3 border-b border-slate-100 p-4 last:border-b-0 sm:border-r sm:border-b-0 sm:last:border-r-0"
-                                >
-                                    <span className="flex min-w-0 items-center gap-3">
-                                        <span className="flex size-9 shrink-0 items-center justify-center rounded-md bg-slate-100 text-navy">
-                                            <item.icon className="size-4" />
-                                        </span>
-                                        <span>
-                                            <span className="block truncate text-sm font-bold text-navy">
-                                                {item.name}
-                                            </span>
-                                            {detail && (
-                                                <span className="mt-0.5 block text-xs text-slate-400">
-                                                    {detail}
-                                                </span>
-                                            )}
-                                        </span>
-                                    </span>
-                                    <AvailabilityBadge
-                                        available={item.details.available}
+                            <div className="absolute inset-x-6 bottom-6 z-10 flex items-center justify-between border-t border-white/8 pt-4">
+                                <span className="text-[9px] font-bold tracking-[0.1em] text-white/30 uppercase">
+                                    Инфрақұрылым
+                                </span>
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/6 px-2.5 py-1 text-[9px] font-semibold text-white/60">
+                                    <span
+                                        className={cn(
+                                            'size-1.5 rounded-full',
+                                            item.details.available
+                                                ? 'bg-emerald-400'
+                                                : 'bg-amber-400',
+                                        )}
                                     />
-                                </article>
-                            );
-                        })}
-                    </div>
-                )}
+                                    {item.details.available
+                                        ? 'Белсенді'
+                                        : 'Қолжетімсіз'}
+                                </span>
+                            </div>
+                            <item.icon className="pointer-events-none absolute right-6 bottom-14 size-24 opacity-[0.025]" />
+                            <div
+                                className="pointer-events-none absolute -right-12 -bottom-14 size-44 rounded-full opacity-15 blur-3xl"
+                                style={{
+                                    backgroundColor: styles?.line ?? '#aeb8c7',
+                                }}
+                            />
+                        </button>
+                    );
+                })}
             </div>
+            <InfrastructureConsumersDialog
+                item={selectedItem}
+                onOpenChange={(open) => {
+                    if (!open) setSelectedItem(null);
+                }}
+                open={selectedItem !== null}
+                usage={selectedItem ? usage[selectedItem.key] : undefined}
+            />
         </section>
     );
 }

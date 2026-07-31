@@ -10,7 +10,6 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import React from 'react';
-import InfrastructureAnalytics from '@/components/infrastructure-analytics';
 import InfrastructureList from '@/components/infrastructure-list';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -295,9 +294,6 @@ export default function Show({
                                         usage={infrastructureUsage}
                                     />
                                 )}
-                                <InfrastructureAnalytics
-                                    usage={infrastructureUsage}
-                                />
                             </CardContent>
 
                             {/* Description */}
