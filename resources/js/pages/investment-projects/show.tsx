@@ -363,11 +363,9 @@ export default function Show({
     const isProkuror = currentRoleName === 'prokuror';
     const canViewCompanyDetails = [
         'superadmin',
-        'invest',
         'prokuror',
         'akim',
         'zamakim',
-        'moderator',
     ].includes(currentRoleName);
     const canApproveTasks = isModerator || isSuperAdmin;
     const canManageTasks = isSuperAdmin || isInvest;

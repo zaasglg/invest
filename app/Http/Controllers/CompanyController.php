@@ -191,7 +191,7 @@ class CompanyController extends Controller
         abort_unless(
             in_array(
                 $request->user()?->roleModel?->name,
-                ['superadmin', 'invest', 'prokuror', 'akim', 'zamakim'],
+                ['superadmin', 'prokuror', 'akim', 'zamakim'],
                 true
             ),
             403
@@ -200,10 +200,6 @@ class CompanyController extends Controller
 
     private function canManage(Request $request): bool
     {
-        return in_array(
-            $request->user()?->roleModel?->name,
-            ['superadmin', 'invest'],
-            true
-        );
+        return $request->user()?->roleModel?->name === 'superadmin';
     }
 }

@@ -220,6 +220,12 @@ export const filterNavItemsByRole = (
     const roleKey = getRoleKey(user);
     if (!roleKey) return filteredItems;
 
+    if (roleKey === 'invest') {
+        filteredItems = filteredItems.filter(
+            (item) => item.href !== '/companies',
+        );
+    }
+
     const hidden = HIDDEN_NAV_TITLES_BY_ROLE[roleKey];
     if (hidden) {
         filteredItems = filteredItems.filter((item) => !hidden.has(item.title));

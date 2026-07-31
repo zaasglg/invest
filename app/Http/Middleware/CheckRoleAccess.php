@@ -148,7 +148,6 @@ class CheckRoleAccess
         if ($routeName && str_starts_with($routeName, 'companies.')) {
             $companyReadRoles = [
                 'superadmin',
-                'invest',
                 'prokuror',
                 'akim',
                 'zamakim',
@@ -159,7 +158,7 @@ class CheckRoleAccess
             }
 
             if ($this->isWriteAction($request)
-                && ! in_array($roleName, ['superadmin', 'invest'], true)) {
+                && $roleName !== 'superadmin') {
                 abort(403, 'Сізде компания мәліметтерін өзгерту құқығы жоқ.');
             }
         }

@@ -27,6 +27,7 @@ interface TaskItem {
     title: string;
     project_name?: string;
     project_id: number;
+    can_view_project: boolean;
     region?: string;
     start_date?: string;
     due_date?: string;
@@ -132,12 +133,14 @@ function TaskTable({
                                         {formatDate(task.due_date)}
                                     </TableCell>
                                     <TableCell>
-                                        <Link
-                                            href={`/investment-projects/${task.project_id}`}
-                                            className="text-gray-400 hover:text-gray-700"
-                                        >
-                                            <ExternalLink className="h-4 w-4" />
-                                        </Link>
+                                        {task.can_view_project && (
+                                            <Link
+                                                href={`/investment-projects/${task.project_id}`}
+                                                className="text-gray-400 hover:text-gray-700"
+                                            >
+                                                <ExternalLink className="h-4 w-4" />
+                                            </Link>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))}

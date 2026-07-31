@@ -400,3 +400,84 @@ test('only turkistan invest tasks require moderator approval', function () {
         'approval_comment' => 'Қайтару себебі',
     ])->assertForbidden();
 });
+
+test('rating stays global while project links follow viewer access', function () {
+    $moderator = createModeratorScopeUser('moderator');
+    $turkistanInvest = createModeratorScopeUser(
+        'invest',
+        'turkistan_invest'
+    );
+    $aeaInvest = createModeratorScopeUser('invest', 'aea');
+    $executor = createModeratorScopeUser('ispolnitel');
+    $executor->update(['baskarma_type' => 'district']);
+    $dependencies = createModeratorScopeProjectDependencies();
+
+    $turkistanProject = createModeratorScopeProject(
+        $turkistanInvest,
+        $dependencies,
+        'Turkistan Invest rating project'
+    );
+    $aeaProject = createModeratorScopeProject(
+        $aeaInvest,
+        $dependencies,
+        'AEA rating project'
+    );
+
+    $turkistanTask = ProjectTask::create([
+        'project_id' => $turkistanProject->id,
+        'title' => 'Turkistan Invest rating task',
+        'assigned_to' => $executor->id,
+        'created_by' => $turkistanInvest->id,
+        'start_date' => now()->toDateString(),
+        'due_date' => now()->addWeek()->toDateString(),
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+    $aeaTask = ProjectTask::create([
+        'project_id' => $aeaProject->id,
+        'title' => 'AEA rating task',
+        'assigned_to' => $executor->id,
+        'created_by' => $aeaInvest->id,
+        'start_date' => now()->toDateString(),
+        'due_date' => now()->addWeek()->toDateString(),
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+
+    $this->actingAs($moderator)
+        ->get(route('baskarma-rating'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('districtRatings', 1)
+            ->where('districtRatings.0.id', $executor->id)
+            ->where('districtRatings.0.total', 2));
+
+    $this->get(route('baskarma-rating.show', $executor))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activeTasks', function ($tasks) use (
+                $turkistanTask,
+                $aeaTask
+            ) {
+                $tasksById = collect($tasks)->keyBy('id');
+
+                return $tasksById->count() === 2
+                    && $tasksById[$turkistanTask->id]['can_view_project']
+                    && ! $tasksById[$aeaTask->id]['can_view_project'];
+            }));
+
+    $this->actingAs($aeaInvest)
+        ->get(route('baskarma-rating.show', $executor))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activeTasks', function ($tasks) use (
+                $turkistanTask,
+                $aeaTask
+            ) {
+                $tasksById = collect($tasks)->keyBy('id');
+
+                return $tasksById->count() === 2
+                    && ! $tasksById[$turkistanTask->id]['can_view_project']
+                    && $tasksById[$aeaTask->id]['can_view_project'];
+            }));
+});

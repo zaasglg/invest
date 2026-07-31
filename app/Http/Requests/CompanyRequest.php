@@ -10,11 +10,7 @@ class CompanyRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return in_array(
-            $this->user()?->roleModel?->name,
-            ['superadmin', 'invest'],
-            true
-        );
+        return $this->user()?->roleModel?->name === 'superadmin';
     }
 
     protected function prepareForValidation(): void
