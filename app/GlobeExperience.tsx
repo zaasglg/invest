@@ -356,7 +356,7 @@ export function GlobeExperience() {
             <button className="continue-region" type="button" onClick={goToRegionMap}>
               К карте районов <ArrowDown size={15} />
             </button>
-            <div className="map-source">Границы: © OpenStreetMap contributors</div>
+            <div className="map-source">Границы: официальный геопортал Туркестанской области</div>
           </div>
 
           <RegionMap3D progress={modelReveal} />
