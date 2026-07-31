@@ -69,8 +69,9 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const progressRef = useRef(progress);
   const drawRef = useRef<() => void>(() => undefined);
+  const drawFrameRef = useRef(0);
   const [regions, setRegions] = useState<RegionCollection | null>(null);
-  const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const hoveredIdRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState(REGION_ID);
 
   useEffect(() => {
@@ -92,7 +93,9 @@ export function RegionMap3D({ progress }: { progress: number }) {
 
   useEffect(() => {
     progressRef.current = progress;
-    drawRef.current();
+    window.cancelAnimationFrame(drawFrameRef.current);
+    drawFrameRef.current = window.requestAnimationFrame(() => drawRef.current());
+    return () => window.cancelAnimationFrame(drawFrameRef.current);
   }, [progress]);
 
   useEffect(() => {
@@ -106,22 +109,36 @@ export function RegionMap3D({ progress }: { progress: number }) {
 
     let viewProgress = 0;
     let zoomFrame = 0;
+    let projectionWidth = -1;
+    let projectionHeight = -1;
+    let baseProjection = geoMercator();
+    let targetProjection = geoMercator();
+    let pathCacheKey = "";
+    let cachedPaths: Path2D[] = [];
+    let cachedWholePath = new Path2D();
 
     const projectionFor = (w: number, h: number) => {
-      const base = geoMercator().fitExtent(
-        [[w * 0.06, h * 0.025], [w * 0.94, h * 0.91]],
-        regions as never,
-      );
-      if (!selected || selectedId === REGION_ID) return base;
-      const target = geoMercator().fitExtent(
-        [[w * 0.06, h * 0.06], [w * 0.94, h * 0.88]],
-        selected as never,
-      );
+      if (w !== projectionWidth || h !== projectionHeight) {
+        projectionWidth = w;
+        projectionHeight = h;
+        baseProjection = geoMercator().fitExtent(
+          [[w * 0.06, h * 0.025], [w * 0.94, h * 0.91]],
+          regions as never,
+        );
+        if (selected && selectedId !== REGION_ID) {
+          targetProjection = geoMercator().fitExtent(
+            [[w * 0.06, h * 0.06], [w * 0.94, h * 0.88]],
+            selected as never,
+          );
+        }
+        pathCacheKey = "";
+      }
+      if (!selected || selectedId === REGION_ID) return baseProjection;
       const amount = smooth(viewProgress);
-      const baseTranslate = base.translate();
-      const targetTranslate = target.translate();
+      const baseTranslate = baseProjection.translate();
+      const targetTranslate = targetProjection.translate();
       return geoMercator()
-        .scale(base.scale() + (target.scale() - base.scale()) * amount)
+        .scale(baseProjection.scale() + (targetProjection.scale() - baseProjection.scale()) * amount)
         .translate([
           baseTranslate[0] + (targetTranslate[0] - baseTranslate[0]) * amount,
           baseTranslate[1] + (targetTranslate[1] - baseTranslate[1]) * amount,
@@ -131,11 +148,22 @@ export function RegionMap3D({ progress }: { progress: number }) {
     const render = () => {
       width = canvas.clientWidth;
       height = canvas.clientHeight;
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
-      canvas.width = Math.round(width * ratio);
-      canvas.height = Math.round(height * ratio);
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
+      const pixelWidth = Math.round(width * ratio);
+      const pixelHeight = Math.round(height * ratio);
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
       const projection = projectionFor(width, height);
-      const path = geoPath(projection, context);
+      const nextPathKey = `${width}:${height}:${selectedId}:${viewProgress.toFixed(3)}`;
+      if (pathCacheKey !== nextPathKey) {
+        const path = geoPath(projection);
+        cachedPaths = regions.features.map((region) => new Path2D(path(region as never) || ""));
+        cachedWholePath = new Path2D();
+        cachedPaths.forEach((featurePath) => cachedWholePath.addPath(featurePath));
+        pathCacheKey = nextPathKey;
+      }
       const morph = smooth(clamp((progressRef.current - 0.36) / 0.64));
       const bordersReveal = smooth(clamp((morph - 0.18) / 0.62));
       const tilt = 0.052 * morph;
@@ -155,15 +183,13 @@ export function RegionMap3D({ progress }: { progress: number }) {
         0,
         ratio * (offsetY + depth + 9 * morph),
       );
-      context.beginPath();
-      regions.features.forEach((region) => path(region as never));
       context.shadowColor = `rgba(0, 0, 0, ${0.58 * morph})`;
       context.shadowBlur = 30 * morph;
       context.fillStyle = `rgba(0, 8, 10, ${0.72 * morph})`;
-      context.fill();
+      context.fill(cachedWholePath);
       context.restore();
 
-      for (let layer = depth; layer >= 1; layer -= 2) {
+      for (let layer = depth; layer >= 1; layer -= 3) {
         context.save();
         context.setTransform(
           ratio,
@@ -173,14 +199,12 @@ export function RegionMap3D({ progress }: { progress: number }) {
           0,
           ratio * (offsetY + layer),
         );
-        regions.features.forEach((region, index) => {
-          context.beginPath();
-          path(region as never);
+        regions.features.forEach((_, index) => {
           context.fillStyle = index % 2 === 0 ? "#092b2f" : "#0d3538";
-          context.fill();
+          context.fill(cachedPaths[index]);
           context.strokeStyle = "rgba(3, 18, 20, .72)";
           context.lineWidth = 0.7;
-          context.stroke();
+          context.stroke(cachedPaths[index]);
         });
         context.restore();
       }
@@ -188,24 +212,22 @@ export function RegionMap3D({ progress }: { progress: number }) {
       context.save();
       context.setTransform(ratio, ratio * tilt, 0, ratio * scaleY, 0, ratio * offsetY);
       regions.features.forEach((region, index) => {
-        const isHovered = region.id === hoveredId;
+        const isHovered = region.id === hoveredIdRef.current;
         const isSelected = region.id === selectedId;
         const isCity = region.properties.kind === "city";
-        context.beginPath();
-        path(region as never);
         if (isSelected && morph > 0.68) context.fillStyle = "#a5ef52";
         else if (isHovered && morph > 0.76) context.fillStyle = "#67aa78";
         else if (isCity) context.fillStyle = "#2d6764";
         else context.fillStyle = index % 3 === 0 ? "#184a48" : index % 3 === 1 ? "#1c5350" : "#225b55";
         context.shadowColor = isSelected ? `rgba(165, 239, 82, ${0.28 * bordersReveal})` : "transparent";
         context.shadowBlur = isSelected ? 18 * bordersReveal : 0;
-        context.fill();
+        context.fill(cachedPaths[index]);
         context.shadowBlur = 0;
         context.strokeStyle = isSelected
           ? `rgba(239, 255, 222, ${bordersReveal})`
           : `rgba(196, 231, 224, ${0.08 + bordersReveal * 0.62})`;
         context.lineWidth = isSelected ? 1.8 : 0.9;
-        context.stroke();
+        context.stroke(cachedPaths[index]);
       });
       context.restore();
     };
@@ -236,10 +258,18 @@ export function RegionMap3D({ progress }: { progress: number }) {
     const onMove = (event: PointerEvent) => {
       const region = featureAt(event);
       const nextId = region?.id ?? null;
-      setHoveredId((current) => current === nextId ? current : nextId);
+      if (hoveredIdRef.current !== nextId) {
+        hoveredIdRef.current = nextId;
+        render();
+      }
       canvas.style.cursor = region ? "pointer" : "default";
     };
-    const onLeave = () => setHoveredId(null);
+    const onLeave = () => {
+      if (hoveredIdRef.current !== null) {
+        hoveredIdRef.current = null;
+        render();
+      }
+    };
     const onClick = (event: PointerEvent) => {
       const region = featureAt(event);
       if (region) setSelectedId(region.id);
@@ -269,7 +299,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
       canvas.removeEventListener("pointerleave", onLeave);
       canvas.removeEventListener("click", onClick);
     };
-  }, [regions, hoveredId, selectedId, selected]);
+  }, [regions, selectedId, selected]);
 
   const layerOpacity = smooth((progress - 0.08) / 0.32);
   const mapTravel = smooth((progress - 0.08) / 0.72);

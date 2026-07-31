@@ -59,11 +59,12 @@ export function GlobeExperience() {
     let height = window.innerHeight;
     let currentProgress = 0;
     let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let globeCleared = false;
 
     const resize = () => {
       width = window.innerWidth;
       height = window.innerHeight;
-      const ratio = Math.min(window.devicePixelRatio || 1, 2);
+      const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
       canvas.width = width * ratio;
       canvas.height = height * ratio;
       canvas.style.width = `${width}px`;
@@ -80,6 +81,15 @@ export function GlobeExperience() {
 
     const draw = (time: number) => {
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
+      if (currentProgress > 0.945 && progressRef.current > 0.945) {
+        if (!globeCleared) {
+          context.clearRect(0, 0, width, height);
+          globeCleared = true;
+        }
+        frame = window.requestAnimationFrame(draw);
+        return;
+      }
+      globeCleared = false;
       const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
       const regionFocus = ease(clamp((currentProgress - 0.52) / 0.24));
       const modelHandoff = ease(clamp((currentProgress - 0.77) / 0.16));
