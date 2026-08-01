@@ -792,11 +792,6 @@ export function GlobeExperience() {
           </div>
         </div>
       </section>
-      <section className="next-chapter" aria-label="Следующий раздел">
-        <span>Следующий маршрут</span>
-        <strong>Инвестиционный профиль выбранной территории</strong>
-        <i>Скоро</i>
-      </section>
     </main>
   );
 }
