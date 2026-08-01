@@ -65,6 +65,9 @@ button {
   position: absolute;
   inset: 0;
   z-index: 1;
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
 }
 
 .ambient-glow {

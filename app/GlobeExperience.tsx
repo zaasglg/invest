@@ -138,6 +138,16 @@ export function GlobeExperience() {
     let currentProgress = 0;
     let reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let globeCleared = false;
+    let globeLongitude = 14;
+    let globeLatitude = 13;
+    let longitudeVelocity = 0;
+    let latitudeVelocity = 0;
+    let lastFrameTime = 0;
+    let lastInteractionTime = Number.NEGATIVE_INFINITY;
+    let lastPointerTime = 0;
+    let lastPointerX = 0;
+    let lastPointerY = 0;
+    let activePointerId: number | null = null;
 
     const resize = () => {
       width = window.innerWidth;
@@ -157,7 +167,62 @@ export function GlobeExperience() {
       setProgress(next);
     };
 
+    const onPointerDown = (event: PointerEvent) => {
+      if (progressRef.current > 0.24 || event.button > 0) return;
+      activePointerId = event.pointerId;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      lastPointerTime = performance.now();
+      lastInteractionTime = lastPointerTime;
+      longitudeVelocity = 0;
+      latitudeVelocity = 0;
+      canvas.setPointerCapture(event.pointerId);
+      canvas.style.cursor = "grabbing";
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      event.preventDefault();
+      const now = performance.now();
+      const elapsed = Math.max(8, now - lastPointerTime);
+      const longitudeDelta = -(event.clientX - lastPointerX) * 0.22;
+      const latitudeDelta = (event.clientY - lastPointerY) * 0.16;
+      globeLongitude += longitudeDelta;
+      globeLatitude = clamp(globeLatitude + latitudeDelta, -38, 62);
+      longitudeVelocity = longitudeDelta / elapsed;
+      latitudeVelocity = latitudeDelta / elapsed;
+      lastPointerX = event.clientX;
+      lastPointerY = event.clientY;
+      lastPointerTime = now;
+      lastInteractionTime = now;
+    };
+
+    const finishPointerDrag = (event: PointerEvent) => {
+      if (activePointerId !== event.pointerId) return;
+      activePointerId = null;
+      lastInteractionTime = performance.now();
+      if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
+      canvas.style.cursor = progressRef.current < 0.24 ? "grab" : "default";
+    };
+
     const draw = (time: number) => {
+      const frameDelta = lastFrameTime ? Math.min(34, time - lastFrameTime) : 16;
+      lastFrameTime = time;
+      if (activePointerId === null) {
+        globeLongitude += longitudeVelocity * frameDelta;
+        globeLatitude = clamp(globeLatitude + latitudeVelocity * frameDelta, -38, 62);
+        const inertiaDecay = Math.pow(0.9, frameDelta / 16);
+        longitudeVelocity *= inertiaDecay;
+        latitudeVelocity *= inertiaDecay;
+        const autoRotation = reducedMotion
+          ? 0
+          : ease(clamp((time - lastInteractionTime - 650) / 1250));
+        globeLongitude += frameDelta * 0.00155 * autoRotation;
+      }
+      if (Math.abs(globeLongitude) > 540) globeLongitude %= 360;
+      if (canvas.style.cursor !== "grabbing") {
+        canvas.style.cursor = currentProgress < 0.24 ? "grab" : "default";
+      }
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
       if (currentProgress > 0.945 && progressRef.current > 0.945) {
         if (!globeCleared) {
@@ -188,10 +253,9 @@ export function GlobeExperience() {
       const regionY = mobile ? height * 0.47 : height * 0.52;
       const mapX = mobile ? width * 0.5 : width * 0.347;
       const mapY = mobile ? height * 0.43 : height * 0.515;
-      const drift = reducedMotion ? 0 : time * 0.00155;
-      const startLon = 14 + drift;
+      const startLon = globeLongitude;
       const countryLon = startLon + (67 - startLon) * countryFocus;
-      const countryLat = 13 + (48 - 13) * countryFocus;
+      const countryLat = globeLatitude + (48 - globeLatitude) * countryFocus;
       const viewLon = countryLon + (68.25 - countryLon) * regionFocus;
       const viewLat = countryLat + (43.3 - countryLat) * regionFocus;
       const regionGlobeX = initialX + (targetX - initialX) * countryFocus + (regionX - targetX) * regionFocus;
@@ -402,6 +466,10 @@ export function GlobeExperience() {
     updateProgress();
     window.addEventListener("resize", resize);
     window.addEventListener("scroll", updateProgress, { passive: true });
+    canvas.addEventListener("pointerdown", onPointerDown);
+    canvas.addEventListener("pointermove", onPointerMove);
+    canvas.addEventListener("pointerup", finishPointerDrag);
+    canvas.addEventListener("pointercancel", finishPointerDrag);
     motionQuery.addEventListener("change", updateMotion);
     frame = window.requestAnimationFrame(draw);
 
@@ -409,6 +477,10 @@ export function GlobeExperience() {
       window.cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", updateProgress);
+      canvas.removeEventListener("pointerdown", onPointerDown);
+      canvas.removeEventListener("pointermove", onPointerMove);
+      canvas.removeEventListener("pointerup", finishPointerDrag);
+      canvas.removeEventListener("pointercancel", finishPointerDrag);
       motionQuery.removeEventListener("change", updateMotion);
       regionController.abort();
     };
@@ -459,7 +531,7 @@ export function GlobeExperience() {
             ref={canvasRef}
             role="img"
             style={{ opacity: globeFade }}
-            aria-label="Вращающийся глобус, приближающийся к Казахстану и Туркестанской области при прокрутке"
+            aria-label="Интерактивный вращающийся глобус: перетащите его, чтобы изменить направление обзора"
           />
           <div className="ambient-glow" aria-hidden="true" />
 
@@ -502,7 +574,7 @@ export function GlobeExperience() {
               <div className="trade-route-legend">
                 <span><i className="export" /> Экспорт</span>
                 <span><i className="import" /> Импорт</span>
-                <b>Нажмите на страну</b>
+                <b>Вращайте глобус · нажмите на страну</b>
               </div>
             </div>
             <div className="hero-actions">
