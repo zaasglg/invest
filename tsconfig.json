@@ -112,5 +112,8 @@
         },
         "jsx": "react-jsx"
     },
-    "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"]
+    "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"],
+    // Standalone Next.js/Cloudflare source of the landing page — ported into
+    // resources/js/components/inmap-landing, not built by this app.
+    "exclude": ["resources/js/inmap-web-new"]
 }

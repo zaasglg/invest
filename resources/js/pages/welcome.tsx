@@ -1,9 +1,13 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { useEffect } from 'react';
 
-import LandingApp from '@/components/inmap/LandingApp';
+import InmapLanding from '@/components/inmap-landing/InmapLanding';
 import { dashboard } from '@/routes';
 import type { SharedData } from '@/types';
+
+const TITLE = 'IN-MAP — карта инвестиционных возможностей';
+const DESCRIPTION =
+    'Единая цифровая платформа инвестиционного потенциала Казахстана и Туркестанской области.';
 
 export default function Welcome() {
     const { auth } = usePage<SharedData>().props;
@@ -21,16 +25,16 @@ export default function Welcome() {
 
     return (
         <>
-            <Head title="IN-MAP — Туркестанская область">
-                <meta
-                    name="description"
-                    content="Единая цифровая экосистема инвестиций Туркестанской области."
-                />
+            <Head title={TITLE}>
+                <meta name="description" content={DESCRIPTION} />
+                <meta property="og:title" content={TITLE} />
+                <meta property="og:description" content={DESCRIPTION} />
+                <meta property="og:image" content="/og.jpg" />
+                <meta name="twitter:card" content="summary_large_image" />
+                <meta name="twitter:image" content="/og.jpg" />
             </Head>
 
-            <div className="inmap-page">
-                <LandingApp />
-            </div>
+            <InmapLanding />
         </>
     );
 }
