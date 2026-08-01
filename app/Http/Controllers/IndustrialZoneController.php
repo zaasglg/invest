@@ -135,6 +135,10 @@ class IndustrialZoneController extends Controller
                 $industrialZone->infrastructure,
                 $industrialZone->investmentProjects,
             ),
+            'areaUsage' => $usageService->summarizeArea(
+                $industrialZone->total_area,
+                $industrialZone->investmentProjects,
+            ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);

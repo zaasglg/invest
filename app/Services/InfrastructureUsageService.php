@@ -7,6 +7,47 @@ use Illuminate\Support\Collection;
 class InfrastructureUsageService
 {
     /**
+     * @param  Collection<int, object>  $projects
+     * @return array{
+     *     total: float,
+     *     occupied: float,
+     *     available: float,
+     *     consumers: array<int, array{id: int|null, name: string, area: float, capacity: string|null}>
+     * }
+     */
+    public function summarizeArea(mixed $totalArea, Collection $projects): array
+    {
+        $total = $this->parseCapacity($totalArea, 'land');
+        $consumers = $projects
+            ->filter(function ($project): bool {
+                $land = data_get($project->infrastructure, 'land');
+
+                return is_array($land) && ($land['needed'] ?? false);
+            })
+            ->map(function ($project): array {
+                $capacity = data_get($project->infrastructure, 'land.capacity');
+
+                return [
+                    'id' => isset($project->id) ? (int) $project->id : null,
+                    'name' => (string) ($project->name ?? 'Атаусыз жоба'),
+                    'area' => $this->parseCapacity($capacity, 'land'),
+                    'capacity' => is_scalar($capacity) ? (string) $capacity : null,
+                ];
+            })
+            ->filter(fn (array $consumer): bool => $consumer['area'] > 0)
+            ->sortByDesc('area')
+            ->values();
+        $occupied = (float) $consumers->sum('area');
+
+        return [
+            'total' => $total,
+            'occupied' => $occupied,
+            'available' => max(0, $total - $occupied),
+            'consumers' => $consumers->all(),
+        ];
+    }
+
+    /**
      * @param  array<string, mixed>|null  $infrastructure
      * @param  Collection<int, object>  $projects
      * @return array<string, array{

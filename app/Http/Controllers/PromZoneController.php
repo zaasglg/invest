@@ -135,6 +135,10 @@ class PromZoneController extends Controller
                 $promZone->infrastructure,
                 $promZone->investmentProjects,
             ),
+            'areaUsage' => $usageService->summarizeArea(
+                $promZone->total_area,
+                $promZone->investmentProjects,
+            ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,
         ]);

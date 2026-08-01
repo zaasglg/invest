@@ -10,6 +10,8 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import React from 'react';
+import AreaOccupancyCard from '@/components/area-occupancy-card';
+import type { AreaUsage } from '@/components/area-occupancy-card';
 import InfrastructureList from '@/components/infrastructure-list';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -98,6 +100,7 @@ interface Photo {
 
 interface Props {
     sez: Sez;
+    areaUsage: AreaUsage;
     infrastructureUsage?: Record<
         string,
         { total: number; used: number; remaining: number }
@@ -109,6 +112,7 @@ interface Props {
 
 export default function Show({
     sez,
+    areaUsage,
     infrastructureUsage = {},
     investmentProjects,
     mainGallery = [],
@@ -475,6 +479,8 @@ export default function Show({
                                 </Link>
                             </CardContent>
                         </Card>
+
+                        <AreaOccupancyCard usage={areaUsage} />
 
                         {/* Issues */}
                         <Card className="shadow-none">

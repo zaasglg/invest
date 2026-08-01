@@ -140,6 +140,10 @@ class SezController extends Controller
                 $sez->infrastructure,
                 $usageProjects,
             ),
+            'areaUsage' => $usageService->summarizeArea(
+                $sez->total_area,
+                $usageProjects,
+            ),
             'investmentProjects' => $investmentProjects,
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,

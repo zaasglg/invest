@@ -88,3 +88,51 @@ it('calculates infrastructure usage from project requirements', function () {
         ],
     ]);
 });
+
+it('calculates occupied and available land area', function () {
+    $projects = new Collection([
+        (object) [
+            'id' => 1,
+            'name' => 'Зауыт',
+            'infrastructure' => [
+                'land' => ['needed' => true, 'capacity' => '12.5 га'],
+            ],
+        ],
+        (object) [
+            'id' => 2,
+            'name' => 'Қойма',
+            'infrastructure' => [
+                'land' => ['needed' => true, 'capacity' => '7,5 га'],
+            ],
+        ],
+        (object) [
+            'id' => 3,
+            'name' => 'Кеңсе',
+            'infrastructure' => [
+                'land' => ['needed' => false, 'capacity' => '2 га'],
+            ],
+        ],
+    ]);
+
+    $summary = app(InfrastructureUsageService::class)->summarizeArea(50, $projects);
+
+    expect($summary)->toBe([
+        'total' => 50.0,
+        'occupied' => 20.0,
+        'available' => 30.0,
+        'consumers' => [
+            [
+                'id' => 1,
+                'name' => 'Зауыт',
+                'area' => 12.5,
+                'capacity' => '12.5 га',
+            ],
+            [
+                'id' => 2,
+                'name' => 'Қойма',
+                'area' => 7.5,
+                'capacity' => '7,5 га',
+            ],
+        ],
+    ]);
+});

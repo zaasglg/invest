@@ -10,6 +10,8 @@ import {
     AlertTriangle,
 } from 'lucide-react';
 import React from 'react';
+import AreaOccupancyCard from '@/components/area-occupancy-card';
+import type { AreaUsage } from '@/components/area-occupancy-card';
 import InfrastructureList from '@/components/infrastructure-list';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -96,6 +98,7 @@ interface Photo {
 
 interface Props {
     promZone: PromZone;
+    areaUsage: AreaUsage;
     infrastructureUsage?: Record<
         string,
         { total: number; used: number; remaining: number }
@@ -106,6 +109,7 @@ interface Props {
 
 export default function Show({
     promZone,
+    areaUsage,
     infrastructureUsage = {},
     mainGallery = [],
     renderPhotos = [],
@@ -464,6 +468,8 @@ export default function Show({
                                 </Link>
                             </CardContent>
                         </Card>
+
+                        <AreaOccupancyCard usage={areaUsage} />
 
                         {/* Issues */}
                         <Card className="shadow-none">
