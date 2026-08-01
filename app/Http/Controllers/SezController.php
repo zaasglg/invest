@@ -136,6 +136,21 @@ class SezController extends Controller
 
         return Inertia::render('sezs/show', [
             'sez' => $sez,
+            'mapProjects' => $usageProjects
+                ->whereNotNull('geometry')
+                ->values()
+                ->map(fn ($project) => [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'company_name' => $project->company_name,
+                    'total_investment' => $project->total_investment,
+                    'status' => $project->status,
+                    'geometry' => $project->geometry,
+                    'sezs' => [[
+                        'id' => $sez->id,
+                        'name' => $sez->name,
+                    ]],
+                ]),
             'infrastructureUsage' => $usageService->summarize(
                 $sez->infrastructure,
                 $usageProjects,

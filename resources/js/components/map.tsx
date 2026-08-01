@@ -172,6 +172,7 @@ const MAX_REGION_ICON_SIZE = 32;
 const DEFAULT_REGION_ICON_SIZE = 28;
 
 type Props = {
+    'aria-label'?: string;
     className?: string;
     center?: [number, number];
     zoom?: number;
@@ -590,6 +591,7 @@ function getRegionIconCenter(
 }
 
 export default function Map({
+    'aria-label': ariaLabel,
     className,
     center = [51.505, -0.09],
     zoom = 13,
@@ -912,7 +914,7 @@ export default function Map({
                         project.subsoil_users?.map((s) => s.name) ?? [],
                 };
             })
-            .filter((plot) => plot.geometry.length >= 3);
+            .filter((plot) => plot.geometry.length > 0);
 
         setPlots(projectPlots);
     }, [regions, activeTab, projects]);
@@ -955,7 +957,11 @@ export default function Map({
     }
 
     return (
-        <div className={cx(className, 'invest-map-shell relative')}>
+        <div
+            aria-label={ariaLabel}
+            className={cx(className, 'invest-map-shell relative')}
+            role={ariaLabel ? 'region' : undefined}
+        >
             <MapContainer
                 center={center}
                 zoom={zoom}
@@ -1529,6 +1535,26 @@ export default function Map({
                         // Only mute if there is an active plot and this is not it
                         // const shouldMute = Boolean(activePlot) && !isSelected;
                         const shouldMute = false; // Disable muting per user request to keep all projects visible
+
+                        if (plot.geometry.length < 3) {
+                            return (
+                                <Marker
+                                    key={plot.id}
+                                    position={plot.geometry[0]}
+                                    eventHandlers={{
+                                        click: () => {
+                                            setActivePlot(plot);
+                                            setActiveRegion(null);
+                                            onProjectSelect?.(plot.id);
+                                        },
+                                    }}
+                                >
+                                    <Tooltip direction="top" offset={[0, -32]}>
+                                        {plot.name || 'Инвестициялық жоба'}
+                                    </Tooltip>
+                                </Marker>
+                            );
+                        }
 
                         return (
                             <React.Fragment key={plot.id}>

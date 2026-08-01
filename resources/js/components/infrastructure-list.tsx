@@ -523,12 +523,9 @@ export default function InfrastructureList({
         <section
             className={cn('rounded-lg bg-slate-50/90 p-4 sm:p-5', className)}
         >
-            <div className="mb-3 flex items-end justify-between gap-4">
+            <div className="mb-5 flex items-end justify-between gap-4">
                 <div>
-                    <p className="text-[11px] font-bold text-gold-dark uppercase">
-                        Қуат және қолжетімділік
-                    </p>
-                    <h3 className="mt-1 text-base font-extrabold text-navy">
+                    <h3 className="mt-1 text-3xl font-extrabold text-navy">
                         Инфрақұрылым
                     </h3>
                 </div>
