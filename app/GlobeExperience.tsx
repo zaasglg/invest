@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, ExternalLink, LogIn, X } from "lucide-react";
 import { geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath, type GeoProjection } from "d3-geo";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
-import { RegionMap3D } from "./RegionMap3D";
+
+const LazyRegionMap3D = lazy(() =>
+  import("./RegionMap3D").then((module) => ({ default: module.RegionMap3D })),
+);
 
 const KAZAKHSTAN_ID = "398";
 const KAZAKHSTAN_COORDINATES: [number, number] = [66.9237, 48.0196];
@@ -88,6 +91,7 @@ export function GlobeExperience() {
   const [tradeDirection, setTradeDirection] = useState<TradeDirection>("export");
 
   const selectedTrade = TRADE_PARTNERS.find((partner) => partner.id === selectedTradeId);
+  const regionMapRequested = progress > 0.58;
 
   useEffect(() => {
     if (!selectedTradeId) return;
@@ -141,6 +145,8 @@ export function GlobeExperience() {
       });
 
     let frame = 0;
+    let scrollFrame = 0;
+    let lastRenderedProgress = -1;
     let width = window.innerWidth;
     let height = window.innerHeight;
     let currentProgress = 0;
@@ -177,7 +183,16 @@ export function GlobeExperience() {
       const total = Math.max(story.offsetHeight - window.innerHeight, 1);
       const next = clamp((window.scrollY - story.offsetTop) / total);
       progressRef.current = next;
-      setProgress(next);
+      if (scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = 0;
+        const latest = progressRef.current;
+        if (Math.abs(latest - lastRenderedProgress) > 0.0005) {
+          lastRenderedProgress = latest;
+          setProgress(latest);
+        }
+        if (!frame && !document.hidden) frame = window.requestAnimationFrame(draw);
+      });
     };
 
     const partnerAtPosition = (point: [number, number]) => {
@@ -268,6 +283,8 @@ export function GlobeExperience() {
     };
 
     const draw = (time: number) => {
+      frame = 0;
+      if (document.hidden) return;
       const frameDelta = lastFrameTime ? Math.min(34, time - lastFrameTime) : 16;
       lastFrameTime = time;
       if (activePointerId === null) {
@@ -291,7 +308,6 @@ export function GlobeExperience() {
           context.clearRect(0, 0, width, height);
           globeCleared = true;
         }
-        frame = window.requestAnimationFrame(draw);
         return;
       }
       globeCleared = false;
@@ -535,6 +551,16 @@ export function GlobeExperience() {
     const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
     const updateMotion = () => {
       reducedMotion = motionQuery.matches;
+      if (!frame && !document.hidden) frame = window.requestAnimationFrame(draw);
+    };
+    const updateVisibility = () => {
+      if (document.hidden) {
+        window.cancelAnimationFrame(frame);
+        frame = 0;
+        return;
+      }
+      lastFrameTime = 0;
+      updateProgress();
     };
     resize();
     updateProgress();
@@ -546,10 +572,11 @@ export function GlobeExperience() {
     canvas.addEventListener("pointercancel", finishPointerDrag);
     canvas.addEventListener("pointerleave", onPointerLeave);
     motionQuery.addEventListener("change", updateMotion);
-    frame = window.requestAnimationFrame(draw);
+    document.addEventListener("visibilitychange", updateVisibility);
 
     return () => {
       window.cancelAnimationFrame(frame);
+      window.cancelAnimationFrame(scrollFrame);
       window.removeEventListener("resize", resize);
       window.removeEventListener("scroll", updateProgress);
       canvas.removeEventListener("pointerdown", onPointerDown);
@@ -558,6 +585,7 @@ export function GlobeExperience() {
       canvas.removeEventListener("pointercancel", finishPointerDrag);
       canvas.removeEventListener("pointerleave", onPointerLeave);
       motionQuery.removeEventListener("change", updateMotion);
+      document.removeEventListener("visibilitychange", updateVisibility);
       regionController.abort();
     };
   }, []);
@@ -727,7 +755,11 @@ export function GlobeExperience() {
             <div className="map-source">Границы: официальный геопортал Туркестанской области</div>
           </div>
 
-          <RegionMap3D progress={modelReveal} />
+          {regionMapRequested && (
+            <Suspense fallback={null}>
+              <LazyRegionMap3D progress={modelReveal} />
+            </Suspense>
+          )}
 
           {selectedTrade && (
             <div className="trade-modal-backdrop" role="presentation" onMouseDown={() => setSelectedTradeId(null)}>

@@ -623,17 +623,28 @@ export function RegionMap3D({ progress }: { progress: number }) {
 
     let projectionWidth = -1;
     let projectionHeight = -1;
-    let pathCacheKey = "";
+    let baseCamera: CameraView | null = null;
     let cachedPaths: Path2D[] = [];
     let cachedWholePath = new Path2D();
 
-    const projectionFor = (w: number, h: number) => {
+    const ensureGeometry = (w: number, h: number) => {
       if (w !== projectionWidth || h !== projectionHeight) {
         projectionWidth = w;
         projectionHeight = h;
+        baseCamera = cameraFor(regions, REGION_ID, w, h);
         cameraViewRef.current = cameraFor(regions, selectedIdRef.current, w, h);
-        pathCacheKey = "";
+        const baseProjection = geoMercator()
+          .scale(baseCamera.scale)
+          .translate(baseCamera.translate);
+        const path = geoPath(baseProjection);
+        cachedPaths = regions.features.map((region) => new Path2D(path(region as never) || ""));
+        cachedWholePath = new Path2D();
+        cachedPaths.forEach((featurePath) => cachedWholePath.addPath(featurePath));
       }
+    };
+
+    const projectionFor = (w: number, h: number) => {
+      ensureGeometry(w, h);
       const camera = cameraViewRef.current || cameraFor(regions, REGION_ID, w, h);
       return geoMercator().scale(camera.scale).translate(camera.translate);
     };
@@ -648,37 +659,34 @@ export function RegionMap3D({ progress }: { progress: number }) {
         canvas.width = pixelWidth;
         canvas.height = pixelHeight;
       }
-      const projection = projectionFor(width, height);
-      const camera = cameraViewRef.current;
-      const nextPathKey = camera
-        ? `${width}:${height}:${camera.scale.toFixed(3)}:${camera.translate[0].toFixed(2)}:${camera.translate[1].toFixed(2)}`
-        : `${width}:${height}`;
-      if (pathCacheKey !== nextPathKey) {
-        const path = geoPath(projection);
-        cachedPaths = regions.features.map((region) => new Path2D(path(region as never) || ""));
-        cachedWholePath = new Path2D();
-        cachedPaths.forEach((featurePath) => cachedWholePath.addPath(featurePath));
-        pathCacheKey = nextPathKey;
-      }
+      ensureGeometry(width, height);
+      const camera = cameraViewRef.current || cameraFor(regions, REGION_ID, width, height);
+      const geometryCamera = baseCamera || cameraFor(regions, REGION_ID, width, height);
       const morph = smooth(clamp((progressRef.current - 0.36) / 0.64));
       const bordersReveal = smooth(clamp((morph - 0.18) / 0.62));
       const tilt = 0.052 * morph;
       const scaleY = 1 - 0.2 * morph;
       const offsetY = height * (0.025 + morph * 0.045);
       const depth = Math.max(12, Math.min(23, width * 0.025)) * morph;
+      const mapZoom = camera.scale / geometryCamera.scale;
+      const mapX = camera.translate[0] - geometryCamera.translate[0] * mapZoom;
+      const mapY = camera.translate[1] - geometryCamera.translate[1] * mapZoom;
+      const setMapTransform = (verticalOffset: number) => {
+        context.setTransform(
+          ratio * mapZoom,
+          ratio * tilt * mapZoom,
+          0,
+          ratio * scaleY * mapZoom,
+          ratio * mapX,
+          ratio * (tilt * mapX + scaleY * mapY + verticalOffset),
+        );
+      };
 
       context.setTransform(ratio, 0, 0, ratio, 0, 0);
       context.clearRect(0, 0, width, height);
 
       context.save();
-      context.setTransform(
-        ratio,
-        ratio * tilt,
-        0,
-        ratio * scaleY,
-        0,
-        ratio * (offsetY + depth + 9 * morph),
-      );
+      setMapTransform(offsetY + depth + 9 * morph);
       context.shadowColor = `rgba(0, 0, 0, ${0.58 * morph})`;
       context.shadowBlur = 30 * morph;
       context.fillStyle = `rgba(0, 8, 10, ${0.72 * morph})`;
@@ -690,14 +698,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
           const cityLift = region.properties.kind === "city" ? 2.5 : 0;
           const lift = ((liftWeightsRef.current[region.id] || 0) * 11 + cityLift) * bordersReveal;
           context.save();
-          context.setTransform(
-            ratio,
-            ratio * tilt,
-            0,
-            ratio * scaleY,
-            0,
-            ratio * (offsetY + layer - lift),
-          );
+          setMapTransform(offsetY + layer - lift);
           context.fillStyle = index % 2 === 0 ? "#092b2f" : "#0d3538";
           context.fill(cachedPaths[index]);
           context.strokeStyle = "rgba(3, 18, 20, .72)";
@@ -714,14 +715,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
         const isSelected = selectedWeight > 0.001;
         const lift = (selectedWeight * 11 + (isCity ? 2.5 : 0)) * bordersReveal;
         context.save();
-        context.setTransform(
-          ratio,
-          ratio * tilt,
-          0,
-          ratio * scaleY,
-          0,
-          ratio * (offsetY - lift),
-        );
+        setMapTransform(offsetY - lift);
         if (isHovered && morph > 0.76) context.fillStyle = "#67aa78";
         else if (isCity) context.fillStyle = "#2d6764";
         else context.fillStyle = index % 3 === 0 ? "#184a48" : index % 3 === 1 ? "#1c5350" : "#225b55";
