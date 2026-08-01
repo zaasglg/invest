@@ -85,17 +85,17 @@ const RESOURCE_STYLES: Record<
     electricity: {
         line: '#d8b84e',
         glow: 'rgba(216, 184, 78, 0.34)',
-        icon: 'bg-amber-300/10 text-amber-300',
+        icon: 'bg-amber-100 text-amber-700',
     },
     gas: {
         line: '#71c98d',
         glow: 'rgba(113, 201, 141, 0.34)',
-        icon: 'bg-emerald-300/10 text-emerald-300',
+        icon: 'bg-emerald-100 text-emerald-700',
     },
     water: {
         line: '#63b8e8',
         glow: 'rgba(99, 184, 232, 0.34)',
-        icon: 'bg-sky-300/10 text-sky-300',
+        icon: 'bg-sky-100 text-sky-700',
     },
 };
 
@@ -105,15 +105,15 @@ const SIMPLE_RESOURCE_STYLES: Record<
 > = {
     roads: {
         line: '#aeb8c7',
-        icon: 'bg-slate-300/10 text-slate-300',
+        icon: 'bg-slate-200 text-slate-600',
     },
     railway: {
         line: '#8f87ef',
-        icon: 'bg-indigo-300/10 text-indigo-300',
+        icon: 'bg-indigo-100 text-indigo-700',
     },
     internet: {
         line: '#65c8db',
-        icon: 'bg-cyan-300/10 text-cyan-300',
+        icon: 'bg-cyan-100 text-cyan-700',
     },
 };
 
@@ -161,7 +161,7 @@ function UsageLineChart({
     return (
         <div
             aria-label={`Қолданылған қуат: ${formatAmount(used, unit)}`}
-            className="relative h-28 w-full"
+            className="relative h-24 w-full"
             role="img"
         >
             <svg
@@ -216,7 +216,7 @@ function UsageLineChart({
                     top: `${(marker.y / 104) * 100}%`,
                 }}
             >
-                <span className="infrastructure-widget-marker relative block size-3.5 rounded-full border-[3px] border-white bg-[#181a1d] shadow-[0_0_0_1px_rgba(0,0,0,0.25)]">
+                <span className="infrastructure-widget-marker relative block size-3.5 rounded-full border-[3px] border-white bg-slate-100 shadow-[0_0_0_1px_rgba(15,23,42,0.2)]">
                     <span
                         className="absolute top-1/2 left-1/2 size-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full"
                         style={{ backgroundColor: color }}
@@ -224,7 +224,7 @@ function UsageLineChart({
                 </span>
             </span>
             <div
-                className="infrastructure-widget-tooltip absolute -translate-x-1/2 rounded-full border border-white/10 bg-white/15 px-2 py-1 text-[8px] font-bold whitespace-nowrap text-white/80 shadow-lg backdrop-blur-md"
+                className="infrastructure-widget-tooltip absolute -translate-x-1/2 rounded-full border border-slate-200 bg-white/90 px-2 py-1 text-[8px] font-bold whitespace-nowrap text-slate-700 shadow-sm backdrop-blur-md"
                 style={{
                     left: `${(marker.x / 216) * 100}%`,
                     top: `${Math.min(78, (marker.y / 104) * 100 + 12)}%`,
@@ -273,19 +273,21 @@ function CapacityMeter({
             />
             <div className="mt-3 flex items-end justify-between gap-3">
                 <div>
-                    <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
+                    <p className="text-[9px] font-bold tracking-[0.08em] text-slate-400 uppercase">
                         Жүктеме
                     </p>
-                    <p className="mt-1 text-5xl leading-none font-medium tracking-[-0.06em] text-white tabular-nums">
+                    <p className="mt-1 text-5xl leading-none font-medium tracking-[-0.06em] text-navy tabular-nums">
                         {rawPercentage > 100 ? '100+' : percentage}
-                        <span className="ml-0.5 text-2xl text-white/55">%</span>
+                        <span className="ml-0.5 text-2xl text-slate-400">
+                            %
+                        </span>
                     </p>
                 </div>
                 <div className="mb-1 text-right">
-                    <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
+                    <p className="text-[9px] font-bold tracking-[0.08em] text-slate-400 uppercase">
                         Қалды
                     </p>
-                    <p className="mt-1 text-xs font-bold text-white/80 tabular-nums">
+                    <p className="mt-1 text-xs font-bold text-slate-700 tabular-nums">
                         {formatAmount(remaining, unit)}
                     </p>
                 </div>
@@ -551,47 +553,43 @@ export default function InfrastructureList({
                         <button
                             aria-haspopup="dialog"
                             key={item.key}
-                            className="group relative min-h-[330px] min-w-0 cursor-pointer overflow-hidden rounded-[28px] border border-white/5 bg-[#1c1d1f] p-6 text-left shadow-[0_24px_48px_-30px_rgba(8,14,32,0.8)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-32px_rgba(8,14,32,0.9)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
+                            className="group relative min-h-[290px] min-w-0 cursor-pointer overflow-hidden rounded-[26px] border border-slate-200/80 bg-[#f8f9fb] p-5 text-left shadow-[0_18px_42px_-32px_rgba(15,23,42,0.28)] transition-[transform,box-shadow,background-color] duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_50px_-30px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
                             onClick={() => setSelectedItem(item)}
                             type="button"
                         >
                             <div className="relative z-10 flex min-w-0 items-start justify-between gap-3">
                                 <div className="min-w-0">
-                                    <p className="text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
+                                    <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">
                                         Жалпы қуат ·{' '}
                                         {formatAmount(
                                             total,
                                             RESOURCE_UNITS[resourceKey],
                                         )}
                                     </p>
-                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-white">
+                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-navy">
                                         {item.name}
                                     </h4>
-                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400/80">
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
                                         <span className="size-1.5 rounded-full bg-emerald-500" />
                                         Қолжетімді
                                     </p>
                                 </div>
                                 <span
                                     className={cn(
-                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/5',
+                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/80',
                                         styles.icon,
                                     )}
                                 >
                                     <item.icon className="size-[18px]" />
                                 </span>
                             </div>
-                            <div className="relative z-10 mt-4">
+                            <div className="relative z-10 mt-2.5">
                                 <CapacityMeter
                                     resourceKey={resourceKey}
                                     details={item.details}
                                     usage={usage[item.key]}
                                 />
                             </div>
-                            <div
-                                className="pointer-events-none absolute -right-12 -bottom-14 size-44 rounded-full opacity-15 blur-3xl"
-                                style={{ backgroundColor: styles.line }}
-                            />
                         </button>
                     );
                 })}
@@ -611,19 +609,19 @@ export default function InfrastructureList({
                         <button
                             aria-haspopup="dialog"
                             key={item.key}
-                            className="group relative min-h-[330px] min-w-0 cursor-pointer overflow-hidden rounded-[28px] border border-white/5 bg-[#1c1d1f] p-6 text-left shadow-[0_24px_48px_-30px_rgba(8,14,32,0.8)] transition-[transform,box-shadow] duration-300 hover:-translate-y-1 hover:shadow-[0_30px_60px_-32px_rgba(8,14,32,0.9)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
+                            className="group relative min-h-[250px] min-w-0 cursor-pointer overflow-hidden rounded-[26px] border border-slate-200/80 bg-[#f8f9fb] p-5 text-left shadow-[0_18px_42px_-32px_rgba(15,23,42,0.28)] transition-[transform,box-shadow,background-color] duration-300 hover:-translate-y-1 hover:bg-white hover:shadow-[0_24px_50px_-30px_rgba(15,23,42,0.32)] focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2 focus-visible:outline-none active:translate-y-0"
                             onClick={() => setSelectedItem(item)}
                             type="button"
                         >
                             <div className="relative z-10 flex items-start justify-between gap-4">
                                 <div className="min-w-0">
-                                    <p className="text-[9px] font-bold tracking-[0.12em] text-white/35 uppercase">
+                                    <p className="text-[9px] font-bold tracking-[0.12em] text-slate-400 uppercase">
                                         Желі күйі
                                     </p>
-                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-white">
+                                    <h4 className="mt-1.5 text-lg leading-snug font-bold tracking-tight text-navy">
                                         {item.name}
                                     </h4>
-                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-400/80">
+                                    <p className="mt-1.5 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-700">
                                         <span className="size-1.5 rounded-full bg-emerald-500" />
                                         {item.details.available
                                             ? 'Қолжетімді'
@@ -632,27 +630,27 @@ export default function InfrastructureList({
                                 </div>
                                 <span
                                     className={cn(
-                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/5',
+                                        'flex size-10 shrink-0 items-center justify-center rounded-full border border-white/80',
                                         styles?.icon ??
-                                            'bg-white/10 text-white/70',
+                                            'bg-slate-200 text-slate-600',
                                     )}
                                 >
                                     <item.icon className="size-[18px]" />
                                 </span>
                             </div>
-                            <div className="relative z-10 mt-16">
-                                <p className="text-[9px] font-bold tracking-[0.08em] text-white/35 uppercase">
+                            <div className="relative z-10 mt-10">
+                                <p className="text-[9px] font-bold tracking-[0.08em] text-slate-400 uppercase">
                                     Сипаттамасы
                                 </p>
-                                <p className="mt-2 truncate text-4xl font-medium tracking-[-0.05em] text-white">
+                                <p className="mt-2 truncate text-4xl font-medium tracking-[-0.05em] text-navy">
                                     {detail || 'Көрсетілмеген'}
                                 </p>
                             </div>
-                            <div className="absolute inset-x-6 bottom-6 z-10 flex items-center justify-between border-t border-white/8 pt-4">
-                                <span className="text-[9px] font-bold tracking-[0.1em] text-white/30 uppercase">
+                            <div className="absolute inset-x-5 bottom-5 z-10 flex items-center justify-between border-t border-slate-200 pt-3">
+                                <span className="text-[9px] font-bold tracking-[0.1em] text-slate-400 uppercase">
                                     Инфрақұрылым
                                 </span>
-                                <span className="inline-flex items-center gap-1.5 rounded-full bg-white/6 px-2.5 py-1 text-[9px] font-semibold text-white/60">
+                                <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[9px] font-semibold text-slate-600 shadow-sm ring-1 ring-slate-200/80">
                                     <span
                                         className={cn(
                                             'size-1.5 rounded-full',
@@ -666,13 +664,7 @@ export default function InfrastructureList({
                                         : 'Қолжетімсіз'}
                                 </span>
                             </div>
-                            <item.icon className="pointer-events-none absolute right-6 bottom-14 size-24 opacity-[0.025]" />
-                            <div
-                                className="pointer-events-none absolute -right-12 -bottom-14 size-44 rounded-full opacity-15 blur-3xl"
-                                style={{
-                                    backgroundColor: styles?.line ?? '#aeb8c7',
-                                }}
-                            />
+                            <item.icon className="pointer-events-none absolute right-5 bottom-12 size-20 opacity-[0.025]" />
                         </button>
                     );
                 })}

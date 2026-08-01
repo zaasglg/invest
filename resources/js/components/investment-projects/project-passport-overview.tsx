@@ -464,24 +464,6 @@ export default function ProjectPassportOverview({
                     )}
                 </div>
             </div>
-
-            <nav className="flex gap-1 overflow-x-auto border-t border-slate-200 px-4 py-2 print:hidden">
-                {[
-                    ['#project-details', 'Жалпы мәлімет'],
-                    ['#project-description', 'Сипаттама'],
-                    ['#project-roadmap', 'Жол картасы'],
-                    ['#project-team', 'Команда'],
-                    ['#project-actions', 'Құжаттар мен әрекеттер'],
-                ].map(([href, label]) => (
-                    <a
-                        key={href}
-                        href={href}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-100 hover:text-[#0f1b3d]"
-                    >
-                        {label}
-                    </a>
-                ))}
-            </nav>
         </section>
     );
 }

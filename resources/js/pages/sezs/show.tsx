@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
-import { formatMoneyCompact } from '@/lib/utils';
+import { cn, formatMoneyCompact } from '@/lib/utils';
 import type { PaginatedData } from '@/types';
 
 interface Region {
@@ -174,6 +174,10 @@ export default function Show({
     };
 
     const projects = investmentProjects.data ?? [];
+    const totalInvestment = projects.reduce(
+        (sum, project) => sum + Number(project.total_investment || 0),
+        0,
+    );
     const issues = sez.issues ?? [];
     const photosCount =
         typeof sez.photos_count === 'number' ? sez.photos_count : 0;
@@ -233,60 +237,63 @@ export default function Show({
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-3 md:col-span-3">
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Аудан
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {sez.region?.name ||
-                                                    'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Activity className="h-3.5 w-3.5" />{' '}
-                                                Күйі
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {statusMap[sez.status]?.label ||
-                                                    sez.status}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Аумағы
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {sez.total_area
+                                    <div className="grid grid-cols-2 overflow-hidden rounded-[22px] border border-slate-200 bg-slate-50/60 md:col-span-3">
+                                        {[
+                                            {
+                                                label: 'Аудан',
+                                                value:
+                                                    sez.region?.name ||
+                                                    'Көрсетілмеген',
+                                                icon: MapPin,
+                                            },
+                                            {
+                                                label: 'Күйі',
+                                                value:
+                                                    statusMap[sez.status]
+                                                        ?.label || sez.status,
+                                                icon: Activity,
+                                            },
+                                            {
+                                                label: 'Аумағы',
+                                                value: sez.total_area
                                                     ? `${sez.total_area} га`
-                                                    : 'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Building2 className="h-3.5 w-3.5" />{' '}
-                                                Инвестиция көлемі
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {(() => {
-                                                    const sum = projects.reduce(
-                                                        (acc, p) =>
-                                                            acc +
-                                                            Number(
-                                                                p.total_investment ||
-                                                                    0,
-                                                            ),
-                                                        0,
-                                                    );
-                                                    return sum > 0
-                                                        ? formatCurrency(sum)
-                                                        : 'Көрсетілмеген';
-                                                })()}
-                                            </p>
-                                        </div>
+                                                    : 'Көрсетілмеген',
+                                                icon: MapPin,
+                                            },
+                                            {
+                                                label: 'Инвестиция көлемі',
+                                                value:
+                                                    totalInvestment > 0
+                                                        ? formatCurrency(
+                                                              totalInvestment,
+                                                          )
+                                                        : 'Көрсетілмеген',
+                                                icon: Building2,
+                                            },
+                                        ].map((metric, index) => (
+                                            <div
+                                                key={metric.label}
+                                                className={cn(
+                                                    'group relative min-h-32 p-5 sm:p-6',
+                                                    index % 2 === 0 &&
+                                                        'border-r border-slate-200',
+                                                    index < 2 &&
+                                                        'border-b border-slate-200',
+                                                    index === 3 &&
+                                                        'bg-amber-50/55',
+                                                )}
+                                            >
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <p className="text-[10px] font-bold tracking-[0.1em] text-slate-400 uppercase">
+                                                        {metric.label}
+                                                    </p>
+                                                    <metric.icon className="size-4 text-gold-dark/70 transition-transform duration-200 group-hover:scale-110" />
+                                                </div>
+                                                <p className="mt-5 text-lg leading-tight font-extrabold tracking-tight text-navy sm:text-xl">
+                                                    {metric.value}
+                                                </p>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
 

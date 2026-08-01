@@ -66,9 +66,24 @@ export default function ProjectGallerySlider({
 
     if (photos.length === 0) {
         return (
-            <div className="mb-4 overflow-hidden rounded-lg bg-gray-100">
-                <div className="flex aspect-video items-center justify-center">
-                    <p className="text-gray-400">Фотосуреттер жоқ</p>
+            <div className="relative h-full min-h-64 overflow-hidden rounded-[22px] border border-slate-200/80 bg-[#f8f9fb] shadow-[0_18px_42px_-32px_rgba(15,23,42,0.28)]">
+                <div className="absolute inset-4 rounded-[16px] border border-slate-200/90 bg-white/70" />
+                <div className="relative flex h-full min-h-64 flex-col justify-between p-7">
+                    <div className="flex items-center justify-between">
+                        <span className="text-[9px] font-bold tracking-[0.16em] text-slate-400 uppercase">
+                            Нысан галереясы
+                        </span>
+                        <span className="size-1.5 rounded-full bg-gold" />
+                    </div>
+                    <div>
+                        <div className="mb-4 h-px w-10 bg-gold" />
+                        <p className="text-xl font-bold tracking-tight text-navy">
+                            Фотосуреттер жоқ
+                        </p>
+                        <p className="mt-2 max-w-52 text-xs leading-relaxed text-slate-500">
+                            Нысанның фотоматериалдары кейінірек қосылады
+                        </p>
+                    </div>
                 </div>
             </div>
         );
