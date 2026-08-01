@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowUpRight, LogIn, X } from "lucide-react";
+import { ArrowDown, ArrowUpRight, ExternalLink, LogIn, X } from "lucide-react";
 import { geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath, type GeoProjection } from "d3-geo";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
@@ -67,6 +67,8 @@ const TRADE_PARTNERS: TradePartner[] = [
 ];
 
 const TRADE_TOTALS = { turnover: 44.9, export: 24, import: 20.9 };
+const REGION_MAP_TRANSITION_START = 0.7;
+const REGION_MAP_TRANSITION_LENGTH = 0.295;
 
 const clamp = (value: number, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
@@ -284,7 +286,7 @@ export function GlobeExperience() {
         canvas.style.cursor = currentProgress < 0.24 ? "grab" : "default";
       }
       currentProgress += (progressRef.current - currentProgress) * (reducedMotion ? 1 : 0.075);
-      if (currentProgress > 0.945 && progressRef.current > 0.945) {
+      if (currentProgress > 0.995 && progressRef.current > 0.995) {
         if (!globeCleared) {
           context.clearRect(0, 0, width, height);
           globeCleared = true;
@@ -295,7 +297,9 @@ export function GlobeExperience() {
       globeCleared = false;
       const countryFocus = ease(clamp((currentProgress - 0.12) / 0.48));
       const regionFocus = ease(clamp((currentProgress - 0.52) / 0.24));
-      const modelHandoff = ease(clamp((currentProgress - 0.74) / 0.22));
+      const modelHandoff = ease(clamp(
+        (currentProgress - REGION_MAP_TRANSITION_START) / REGION_MAP_TRANSITION_LENGTH,
+      ));
       const mapTravel = ease(clamp((modelHandoff - 0.08) / 0.72));
       const mobile = width < 760;
       const baseScale = Math.min(width, height) * (mobile ? 0.34 : 0.39);
@@ -564,9 +568,11 @@ export function GlobeExperience() {
     (1 - ease(clamp((progress - 0.55) / 0.11)));
   const regionReveal =
     ease(clamp((progress - 0.59) / 0.1)) *
-    (1 - ease(clamp((progress - 0.79) / 0.12)));
-  const modelReveal = ease(clamp((progress - 0.74) / 0.22));
-  const globeFade = 1 - ease(clamp((progress - 0.86) / 0.11));
+    (1 - ease(clamp((progress - 0.82) / 0.145)));
+  const modelReveal = ease(clamp(
+    (progress - REGION_MAP_TRANSITION_START) / REGION_MAP_TRANSITION_LENGTH,
+  ));
+  const globeFade = 1 - ease(clamp((progress - 0.88) / 0.115));
 
   const goToKazakhstan = () => {
     const story = storyRef.current;
@@ -585,7 +591,7 @@ export function GlobeExperience() {
   const goToRegionMap = () => {
     const story = storyRef.current;
     if (!story) return;
-    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.97;
+    const target = story.offsetTop + (story.offsetHeight - window.innerHeight) * 0.995;
     window.scrollTo({ top: target, behavior: "smooth" });
   };
 
@@ -613,13 +619,23 @@ export function GlobeExperience() {
               <span>in-map</span>
             </a>
             <nav aria-label="Главная навигация">
-              <button type="button">О платформе</button>
-              <button type="button" onClick={goToKazakhstan}>Возможности</button>
-              <button type="button" onClick={goToRegion}>Регион</button>
+              <button type="button" onClick={goToKazakhstan}>Казахстан</button>
+              <button type="button" onClick={goToRegionMap}>Регион</button>
+              <a
+                className="project-analysis-link"
+                href="https://www.google.com/"
+                target="_blank"
+                rel="noreferrer"
+                aria-label="Открыть анализ проекта в новой вкладке"
+              >
+                Анализ проекта <ExternalLink size={13} />
+              </a>
             </nav>
             <div className="header-actions">
               <button className="lang" type="button" aria-label="Выбрать язык">RU <span>⌄</span></button>
-              <button className="login" type="button"><LogIn size={16} /> Войти</button>
+              <button className="login" type="button" aria-label="Войти в систему">
+                <LogIn size={16} /> <span>Войти</span>
+              </button>
             </div>
           </header>
 

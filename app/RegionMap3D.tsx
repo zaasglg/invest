@@ -43,6 +43,37 @@ type RegionMetric = {
   facts?: Array<{ value: string; label: string }>;
 };
 
+type PanelView = "summary" | "sectors" | "infrastructure";
+
+type SectorReport = {
+  id: string;
+  label: string;
+  short: string;
+  volume: number;
+  unit: string;
+  decimals: number;
+  growth: number;
+  period: string;
+  exportValue: number;
+  importValue: number;
+  rawBase: string;
+  products: Array<{ name: string; value: string; share: number }>;
+  opportunities: string[];
+  test?: boolean;
+};
+
+type InfrastructureItem = {
+  id: string;
+  label: string;
+  value: number;
+  unit: string;
+  decimals: number;
+  readiness: number;
+  detail: string;
+  scalable?: boolean;
+  test?: boolean;
+};
+
 const REGION_ID = "kz.61";
 const SINGLE_CONTOUR_CITIES = new Set(["kz.61.10", "kz.61.20"]);
 
@@ -217,6 +248,144 @@ const REGION_METRICS: RegionMetric[] = [
   },
 ];
 
+const REGION_SECTORS: SectorReport[] = [
+  {
+    id: "agriculture",
+    label: "Агропромышленный комплекс",
+    short: "АПК",
+    volume: 1.154,
+    unit: "трлн ₸",
+    decimals: 3,
+    growth: 20.3,
+    period: "11 месяцев 2025",
+    exportValue: 355.5,
+    importValue: 118,
+    rawBase: "1 715 га теплиц",
+    products: [
+      { name: "Тепличные овощи", value: "1 715 га", share: 92 },
+      { name: "Картофель", value: "≈920 тыс. т", share: 74 },
+      { name: "Хлопок", value: "≈365 тыс. т", share: 61 },
+      { name: "Бахчевые", value: "≈1,1 млн т", share: 82 },
+    ],
+    opportunities: ["глубокая переработка", "холодная логистика", "текстильный кластер"],
+    test: true,
+  },
+  {
+    id: "manufacturing",
+    label: "Промышленность и переработка",
+    short: "Промышленность",
+    volume: 873.3,
+    unit: "млрд ₸",
+    decimals: 1,
+    growth: 32.4,
+    period: "январь–июнь 2026",
+    exportValue: 112,
+    importValue: 160,
+    rawBase: "сырьё АПК и минералы",
+    products: [
+      { name: "Пищевая продукция", value: "34%", share: 82 },
+      { name: "Трансформаторы", value: "24%", share: 63 },
+      { name: "Текстиль", value: "22%", share: 57 },
+      { name: "Стройматериалы", value: "20%", share: 52 },
+    ],
+    opportunities: ["локализация импорта", "контрактное производство", "экспорт в ЦА"],
+    test: true,
+  },
+  {
+    id: "mining",
+    label: "Добывающая отрасль",
+    short: "Добыча",
+    volume: 142,
+    unit: "млрд ₸",
+    decimals: 0,
+    growth: 19,
+    period: "январь–июнь 2026",
+    exportValue: 85,
+    importValue: 12,
+    rawBase: "уран, полиметаллы, известняк",
+    products: [
+      { name: "Урановое сырьё", value: "41%", share: 88 },
+      { name: "Полиметаллы", value: "25%", share: 61 },
+      { name: "Известняк", value: "20%", share: 49 },
+      { name: "Нерудные материалы", value: "14%", share: 37 },
+    ],
+    opportunities: ["обогащение сырья", "сервис для недропользования", "стройматериалы"],
+    test: true,
+  },
+  {
+    id: "logistics",
+    label: "Транспорт и логистика",
+    short: "Логистика",
+    volume: 334.9,
+    unit: "млрд ₸",
+    decimals: 1,
+    growth: 26.3,
+    period: "2025–2026",
+    exportValue: 189.3,
+    importValue: 130.1,
+    rawBase: "коридоры ЕАЭС — Узбекистан",
+    products: [
+      { name: "Автоперевозки", value: "43%", share: 86 },
+      { name: "Железная дорога", value: "31%", share: 69 },
+      { name: "Складская логистика", value: "18%", share: 52 },
+      { name: "Холодная цепь", value: "8%", share: 29 },
+    ],
+    opportunities: ["приграничные хабы", "фулфилмент", "холодная цепь"],
+    test: true,
+  },
+  {
+    id: "construction",
+    label: "Строительство",
+    short: "Строительство",
+    volume: 306.7,
+    unit: "млрд ₸",
+    decimals: 1,
+    growth: 18.4,
+    period: "январь–сентябрь 2025",
+    exportValue: 24,
+    importValue: 71,
+    rawBase: "камень, песок, известняк",
+    products: [
+      { name: "Жилищное строительство", value: "38%", share: 82 },
+      { name: "Инфраструктурные объекты", value: "29%", share: 66 },
+      { name: "Цемент и ЖБИ", value: "21%", share: 51 },
+      { name: "Отделочные материалы", value: "12%", share: 34 },
+    ],
+    opportunities: ["местные стройматериалы", "инженерные сети", "промышленные здания"],
+    test: true,
+  },
+  {
+    id: "tourism",
+    label: "Туризм и гостеприимство",
+    short: "Туризм",
+    volume: 500,
+    unit: "тыс. гостей",
+    decimals: 0,
+    growth: 15.9,
+    period: "2025",
+    exportValue: 36.3,
+    importValue: 14,
+    rawBase: "история, экотуризм, паломничество",
+    products: [
+      { name: "Культурный туризм", value: "46%", share: 88 },
+      { name: "Паломнические маршруты", value: "27%", share: 62 },
+      { name: "Экотуризм", value: "17%", share: 44 },
+      { name: "MICE и события", value: "10%", share: 31 },
+    ],
+    opportunities: ["гостиницы", "туроператоры", "придорожный сервис"],
+    test: true,
+  },
+];
+
+const REGION_INFRASTRUCTURE: InfrastructureItem[] = [
+  { id: "roads", label: "Автодороги", value: 17692, unit: "км", decimals: 0, readiness: 95, detail: "1 181 км в работах · 283 объекта", scalable: true },
+  { id: "rail", label: "Железная дорога", value: 915.6, unit: "км", decimals: 1, readiness: 76, detail: "выход на Узбекистан и магистрали РК", scalable: true, test: true },
+  { id: "power", label: "Электросети", value: 27189.4, unit: "км", decimals: 0, readiness: 88, detail: "7 630 подстанций и трансформаторов", scalable: true },
+  { id: "gas", label: "Газификация", value: 85.5, unit: "% населения", decimals: 1, readiness: 85.5, detail: "87 проектов начато в 2025 году" },
+  { id: "sites", label: "Промплощадки", value: 29, unit: "площадок", decimals: 0, readiness: 82, detail: "275 готовых производственных зданий", scalable: true, test: true },
+  { id: "utilities", label: "Коммунальные проекты", value: 257, unit: "объектов", decimals: 0, readiness: 49, detail: "126 объектов уже завершено", scalable: true },
+];
+
 const clamp = (value: number, min = 0, max = 1) =>
   Math.min(max, Math.max(min, value));
 
@@ -251,6 +420,48 @@ function metricsFor(id: string): RegionMetric[] {
       target: Number((series.at(-1)! * (1.14 + metricIndex * 0.015)).toFixed(metric.decimals + 1)),
       test: true,
       facts: undefined,
+    };
+  });
+}
+
+function territoryCoefficient(id: string) {
+  const seed = id
+    .split("")
+    .reduce((sum, character) => sum + character.charCodeAt(0), 0);
+  return { seed, coefficient: 0.045 + (seed % 7) * 0.008 };
+}
+
+function sectorsFor(id: string): SectorReport[] {
+  if (id === REGION_ID) return REGION_SECTORS;
+  const { coefficient } = territoryCoefficient(id);
+  return REGION_SECTORS.map((sector) => ({
+    ...sector,
+    volume: Number((sector.volume * coefficient).toFixed(sector.decimals + 1)),
+    exportValue: Number((sector.exportValue * coefficient).toFixed(1)),
+    importValue: Number((sector.importValue * coefficient).toFixed(1)),
+    period: "тестовый профиль территории",
+    rawBase: "локальная сырьевая база · оценка",
+    products: sector.products.map((product) => ({
+      ...product,
+      value: `${product.share}% профиля`,
+    })),
+    test: true,
+  }));
+}
+
+function infrastructureFor(id: string): InfrastructureItem[] {
+  if (id === REGION_ID) return REGION_INFRASTRUCTURE;
+  const { seed, coefficient } = territoryCoefficient(id);
+  return REGION_INFRASTRUCTURE.map((item, index) => {
+    const readiness = Math.min(96, Math.max(42, Math.round(item.readiness + ((seed + index * 7) % 17) - 8)));
+    return {
+      ...item,
+      value: item.scalable
+        ? Number((item.value * coefficient).toFixed(item.decimals))
+        : readiness,
+      readiness,
+      detail: "расчётный показатель территории",
+      test: true,
     };
   });
 }
@@ -306,6 +517,8 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const hoveredIdRef = useRef<string | null>(null);
   const [selectedId, setSelectedId] = useState(REGION_ID);
   const [activeMetricId, setActiveMetricId] = useState("investment");
+  const [panelView, setPanelView] = useState<PanelView>("summary");
+  const [activeSectorId, setActiveSectorId] = useState("agriculture");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -328,6 +541,24 @@ export function RegionMap3D({ progress }: { progress: number }) {
   const metricGrowth = Math.round((currentMetricValue / activeMetric.series[0] - 1) * 100);
   const metricProgress = Math.min(100, Math.round((currentMetricValue / activeMetric.target) * 100));
   const metricChartMax = Math.max(activeMetric.target, ...activeMetric.series);
+  const sectors = useMemo(() => sectorsFor(selectedId), [selectedId]);
+  const activeSector = sectors.find((sector) => sector.id === activeSectorId) || sectors[0];
+  const infrastructure = useMemo(() => infrastructureFor(selectedId), [selectedId]);
+
+  const openSectorFromMetric = (metricId: string) => {
+    setActiveMetricId(metricId);
+    const sectorId = ({
+      agriculture: "agriculture",
+      industry: "manufacturing",
+      trade: "logistics",
+      tourism: "tourism",
+    } as Record<string, string>)[metricId];
+    if (sectorId) {
+      setActiveSectorId(sectorId);
+      setPanelView("sectors");
+      return;
+    }
+  };
 
   useEffect(() => {
     selectedIdRef.current = selectedId;
@@ -570,9 +801,9 @@ export function RegionMap3D({ progress }: { progress: number }) {
     };
   }, [regions]);
 
-  const layerOpacity = smooth((progress - 0.08) / 0.32);
-  const mapTravel = smooth((progress - 0.08) / 0.72);
-  const panelReveal = smooth((progress - 0.72) / 0.25);
+  const layerOpacity = smooth((progress - 0.08) / 0.48);
+  const mapTravel = smooth((progress - 0.06) / 0.84);
+  const panelReveal = smooth((progress - 0.78) / 0.2);
   const mapShift = (1 - mapTravel) * 36;
   const mapScale = 0.56 + mapTravel * 0.44;
 
@@ -616,7 +847,7 @@ export function RegionMap3D({ progress }: { progress: number }) {
         }}
       >
         <div className="data-panel-topline">
-          <span>{isWholeRegion ? "Сводка по региону" : "Профиль территории"}</span>
+          <span>{panelView === "summary" ? (isWholeRegion ? "Сводка по региону" : "Профиль территории") : panelView === "sectors" ? "Отчёт по отраслям" : "Инфраструктура"}</span>
           <b>{isWholeRegion ? "Факт + оценка" : "Тестовые данные"}</b>
         </div>
         <div className="data-panel-heading">
@@ -638,67 +869,163 @@ export function RegionMap3D({ progress }: { progress: number }) {
           </select>
         </label>
 
-        <div className="region-metric-grid">
-          {metrics.map((metric) => {
-            const current = metric.series.at(-1)!;
-            const growth = Math.round((current / metric.series[0] - 1) * 100);
-            return (
-              <button
-                key={metric.id}
-                className={activeMetric.id === metric.id ? "active" : ""}
-                type="button"
-                aria-pressed={activeMetric.id === metric.id}
-                onClick={() => setActiveMetricId(metric.id)}
-              >
-                <span>{metric.label}</span>
-                <strong>{formatMetric(current, metric.decimals)}</strong>
-                <small>{metric.unit}</small>
-                <em>+{growth}%</em>
-                {metric.test && <i>{isWholeRegion && metric.id !== "spaces" ? "Оценка" : "Тест"}</i>}
-              </button>
-            );
-          })}
+        <div className="region-data-tabs" role="tablist" aria-label="Раздел данных">
+          {([
+            ["summary", "Сводка"],
+            ["sectors", "Отрасли"],
+            ["infrastructure", "Инфраструктура"],
+          ] as Array<[PanelView, string]>).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              aria-selected={panelView === id}
+              className={panelView === id ? "active" : ""}
+              onClick={() => setPanelView(id)}
+            >
+              {label}
+            </button>
+          ))}
         </div>
 
-        <div className="region-chart-section">
-          <div className="chart-period"><span>{activeMetric.period}</span><strong>+{metricGrowth}%</strong></div>
-          <h3>{activeMetric.label}</h3>
-
-          <div className="metric-target">
-            <div className="metric-target-head"><span>Выполнение цели</span><strong>{metricProgress}%</strong></div>
-            <div className="metric-target-track"><i style={{ width: `${metricProgress}%` }} /></div>
-            <div className="metric-target-values">
-              <span>Факт <b>{formatMetric(currentMetricValue, activeMetric.decimals)}</b></span>
-              <span>Ориентир <b>{formatMetric(activeMetric.target, activeMetric.decimals)} {activeMetric.unit}</b></span>
+        {panelView === "summary" && (
+          <>
+            <div className="region-metric-grid">
+              {metrics.map((metric) => {
+                const current = metric.series.at(-1)!;
+                const growth = Math.round((current / metric.series[0] - 1) * 100);
+                return (
+                  <button
+                    key={metric.id}
+                    className={activeMetric.id === metric.id ? "active" : ""}
+                    type="button"
+                    aria-pressed={activeMetric.id === metric.id}
+                    onClick={() => openSectorFromMetric(metric.id)}
+                  >
+                    <span>{metric.label}</span>
+                    <strong>{formatMetric(current, metric.decimals)}</strong>
+                    <small>{metric.unit}</small>
+                    <em>+{growth}%</em>
+                    {metric.test && <i>{isWholeRegion && metric.id !== "spaces" ? "Оценка" : "Тест"}</i>}
+                  </button>
+                );
+              })}
             </div>
-          </div>
 
-          {activeMetric.facts && (
-            <div className="metric-facts">
-              {activeMetric.facts.map((fact) => (
-                <div key={fact.label}><strong>{fact.value}</strong><span>{fact.label}</span></div>
+            <div className="region-chart-section">
+              <div className="chart-period"><span>{activeMetric.period}</span><strong>+{metricGrowth}%</strong></div>
+              <h3>{activeMetric.label}</h3>
+
+              <div className="metric-target">
+                <div className="metric-target-head"><span>Выполнение цели</span><strong>{metricProgress}%</strong></div>
+                <div className="metric-target-track"><i style={{ width: `${metricProgress}%` }} /></div>
+                <div className="metric-target-values">
+                  <span>Факт <b>{formatMetric(currentMetricValue, activeMetric.decimals)}</b></span>
+                  <span>Ориентир <b>{formatMetric(activeMetric.target, activeMetric.decimals)} {activeMetric.unit}</b></span>
+                </div>
+              </div>
+
+              {activeMetric.facts && (
+                <div className="metric-facts">
+                  {activeMetric.facts.map((fact) => (
+                    <div key={fact.label}><strong>{fact.value}</strong><span>{fact.label}</span></div>
+                  ))}
+                </div>
+              )}
+
+              <div className="region-bars" aria-label={`Динамика показателя ${activeMetric.label}`}>
+                {[...activeMetric.series, activeMetric.target].map((value, index) => (
+                  <div key={index} className={index === activeMetric.series.length ? "target" : ""}>
+                    <b>{formatMetric(value, activeMetric.decimals)}</b>
+                    <i style={{ height: `${Math.max(8, (value / metricChartMax) * 82)}%` }} />
+                    <span>{index === activeMetric.series.length ? "Цель" : activeMetric.years[index]}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </>
+        )}
+
+        {panelView === "sectors" && (
+          <div className="sector-report-view">
+            <div className="sector-picker" role="tablist" aria-label="Отрасли">
+              {sectors.map((sector) => (
+                <button
+                  key={sector.id}
+                  type="button"
+                  role="tab"
+                  className={activeSector.id === sector.id ? "active" : ""}
+                  aria-selected={activeSector.id === sector.id}
+                  onClick={() => setActiveSectorId(sector.id)}
+                >
+                  <span>{sector.short}</span>
+                  <strong>{formatMetric(sector.volume, sector.decimals)}</strong>
+                  <small>{sector.unit}</small>
+                </button>
               ))}
             </div>
-          )}
 
-          <div className="region-bars" aria-label={`Динамика показателя ${activeMetric.label}`}>
-            {[...activeMetric.series, activeMetric.target].map((value, index) => (
-              <div key={index} className={index === activeMetric.series.length ? "target" : ""}>
-                <b>{formatMetric(value, activeMetric.decimals)}</b>
-                <i style={{ height: `${Math.max(8, (value / metricChartMax) * 82)}%` }} />
-                <span>{index === activeMetric.series.length ? "Цель" : activeMetric.years[index]}</span>
+            <div className="sector-detail">
+              <div className="sector-detail-heading">
+                <div><span>{activeSector.period}</span><h3>{activeSector.label}</h3></div>
+                <strong>+{activeSector.growth}%</strong>
               </div>
-            ))}
-          </div>
-        </div>
+              <div className="sector-kpis">
+                <div><span>Объём отрасли</span><strong>{formatMetric(activeSector.volume, activeSector.decimals)} <small>{activeSector.unit}</small></strong></div>
+                <div><span>Экспорт</span><strong>${formatMetric(activeSector.exportValue, 1)} <small>млн</small></strong></div>
+                <div><span>Импорт</span><strong>${formatMetric(activeSector.importValue, 1)} <small>млн</small></strong></div>
+                <div><span>Сырьё / база</span><strong>{activeSector.rawBase}</strong></div>
+              </div>
 
-        {!isWholeRegion && (
+              <div className="sector-products-head">
+                <span>Структура продукции</span>
+                <b>{activeSector.test || !isWholeRegion ? "Оценка" : "Профиль"}</b>
+              </div>
+              <div className="sector-products">
+                {activeSector.products.map((product) => (
+                  <div key={product.name}>
+                    <span>{product.name}</span>
+                    <i><b style={{ width: `${product.share}%` }} /></i>
+                    <strong>{product.value}</strong>
+                  </div>
+                ))}
+              </div>
+              <div className="sector-opportunities">
+                <span>Точки роста:</span>
+                {activeSector.opportunities.map((item) => <b key={item}>{item}</b>)}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {panelView === "infrastructure" && (
+          <div className="infrastructure-view">
+            <div className="infrastructure-heading">
+              <div><span>Готовность площадки</span><h3>Инфраструктура для инвестора</h3></div>
+              <b>{isWholeRegion ? "Регион" : "Оценка"}</b>
+            </div>
+            <div className="infrastructure-grid">
+              {infrastructure.map((item) => (
+                <article key={item.id}>
+                  <div className="infrastructure-card-head"><span>{item.label}</span>{item.test && <i>Тест</i>}</div>
+                  <strong>{formatMetric(item.value, item.decimals)} <small>{item.unit}</small></strong>
+                  <p>{item.detail}</p>
+                  <div className="infrastructure-progress"><i style={{ width: `${item.readiness}%` }} /></div>
+                  <footer><span>готовность / охват</span><b>{Math.round(item.readiness)}%</b></footer>
+                </article>
+              ))}
+            </div>
+            <div className="infrastructure-note">Дороги · железная дорога · энергия · газ · промплощадки · коммунальные сети</div>
+          </div>
+        )}
+
+        {!isWholeRegion && panelView === "summary" && (
           <button className="open-territory" type="button">Открыть профиль <ArrowRight size={16} /></button>
         )}
       </aside>
 
       <div className="explorer-source" style={{ opacity: panelReveal }}>
-        Границы: официальный геопортал Туркестанской области
+        Границы: геопортал области · Показатели: БНС и gov.kz · Оценочные данные отмечены
       </div>
     </section>
   );
