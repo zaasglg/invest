@@ -330,62 +330,37 @@ button {
 .trade-route-legend i.export { background: var(--acid); }
 .trade-route-legend i.import { background: #62c8e0; }
 
-.trade-route-legend b {
+.trade-route-legend select {
   margin-left: auto;
+  padding: 3px 19px 3px 6px;
+  border: 1px solid rgba(197, 230, 215, .14);
+  border-radius: 4px;
+  outline: none;
+  background: #0a2526;
   color: #b4c5be;
-  font-weight: 650;
+  font: 650 7px var(--font-manrope), Arial, sans-serif;
+  text-transform: uppercase;
 }
 
-.trade-node-layer {
+.trade-hover-tooltip {
   position: absolute;
   z-index: 6;
-  inset: 0;
-  pointer-events: none;
-}
-
-.trade-node-layer > button {
-  position: absolute;
-  display: grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  column-gap: 6px;
-  min-width: max-content;
-  padding: 5px 7px;
-  border: 1px solid rgba(165, 239, 82, .28);
+  top: 0;
+  left: 0;
+  max-width: 190px;
+  padding: 7px 9px;
+  border: 1px solid rgba(165, 239, 82, .38);
   border-radius: 5px;
-  background: rgba(4, 18, 20, .82);
-  color: #e9f5ee;
-  cursor: pointer;
-  opacity: 0;
-  transform: translate(-50%, -50%);
-  box-shadow: 0 8px 22px rgba(0, 0, 0, .22);
-  backdrop-filter: blur(7px);
-  transition: border-color .2s ease, background .2s ease;
-}
-
-.trade-node-layer > button:hover {
-  z-index: 2;
-  border-color: var(--acid);
-  background: rgba(16, 47, 41, .94);
-}
-
-.trade-node-layer > button > i {
-  grid-row: 1 / 3;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--acid);
-  box-shadow: 0 0 9px rgba(165, 239, 82, .8);
-}
-
-.trade-node-layer span {
+  background: rgba(4, 18, 20, .9);
+  color: #edf7f1;
   font-size: 8px;
   font-weight: 700;
-}
-
-.trade-node-layer small {
-  color: #6f8980;
-  font-size: 6px;
+  letter-spacing: .015em;
+  opacity: 0;
+  pointer-events: none;
+  backdrop-filter: blur(7px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+  transition: opacity .12s ease;
 }
 
 .trade-modal-backdrop {
@@ -1413,15 +1388,7 @@ button {
   }
   .hero-actions { margin-top: 24px; }
   .trade-overview { display: none; }
-  .trade-node-layer > button {
-    min-width: 18px;
-    width: 18px;
-    height: 18px;
-    padding: 5px;
-    border-radius: 50%;
-  }
-  .trade-node-layer span,
-  .trade-node-layer small { display: none; }
+  .trade-hover-tooltip { display: none; }
   .trade-modal-backdrop { padding: 78px 12px 12px; }
   .trade-modal {
     max-height: calc(100vh - 90px);

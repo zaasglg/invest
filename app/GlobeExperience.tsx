@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUpRight, LogIn, X } from "lucide-react";
-import { geoDistance, geoGraticule10, geoOrthographic, geoPath } from "d3-geo";
+import { geoContains, geoDistance, geoGraticule10, geoOrthographic, geoPath, type GeoProjection } from "d3-geo";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
 import { RegionMap3D } from "./RegionMap3D";
@@ -79,7 +79,7 @@ const ease = (value: number) => {
 export function GlobeExperience() {
   const storyRef = useRef<HTMLElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const tradeNodeRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  const tradeTooltipRef = useRef<HTMLDivElement>(null);
   const progressRef = useRef(0);
   const [progress, setProgress] = useState(0);
   const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
@@ -121,6 +121,12 @@ export function GlobeExperience() {
     const kazakhstan = countries.features.find(
       (country) => String(country.id).padStart(3, "0") === KAZAKHSTAN_ID,
     );
+    const tradeCountries = TRADE_PARTNERS.flatMap((partner) => {
+      const country = countries.features.find(
+        (featureItem) => String(featureItem.id).padStart(3, "0") === partner.id,
+      );
+      return country ? [{ partner, country }] : [];
+    });
     let turkestanRegion: { type: string; features: Array<{ type: string }> } | null = null;
     const regionController = new AbortController();
     fetch("/data/turkestan-region.json", { signal: regionController.signal })
@@ -148,6 +154,11 @@ export function GlobeExperience() {
     let lastPointerX = 0;
     let lastPointerY = 0;
     let activePointerId: number | null = null;
+    let dragDistance = 0;
+    let hoverPointer: [number, number] | null = null;
+    let hoveredTradeId: string | null = null;
+    let hitProjection: GeoProjection | null = null;
+    let hitGlobe = { x: 0, y: 0, radius: 0 };
 
     const resize = () => {
       width = window.innerWidth;
@@ -167,6 +178,32 @@ export function GlobeExperience() {
       setProgress(next);
     };
 
+    const partnerAtPosition = (point: [number, number]) => {
+      if (!hitProjection || progressRef.current > 0.24) return undefined;
+      if (Math.hypot(point[0] - hitGlobe.x, point[1] - hitGlobe.y) > hitGlobe.radius) return undefined;
+      const coordinates = hitProjection.invert?.(point);
+      if (!coordinates) return undefined;
+      return tradeCountries.find(({ country }) => geoContains(country as never, coordinates));
+    };
+
+    const updateHoveredPartner = (point: [number, number] | null) => {
+      const match = point ? partnerAtPosition(point) : undefined;
+      hoveredTradeId = match?.partner.id || null;
+      const tooltip = tradeTooltipRef.current;
+      if (tooltip && point && match) {
+        tooltip.textContent = `${match.partner.name} · $${match.partner.turnover.toFixed(1)} млрд`;
+        tooltip.style.left = `${Math.min(width - 190, point[0] + 16)}px`;
+        tooltip.style.top = `${Math.max(104, point[1] - 8)}px`;
+        tooltip.style.opacity = "1";
+      } else if (tooltip) {
+        tooltip.style.opacity = "0";
+      }
+      if (activePointerId === null) {
+        canvas.style.cursor = match ? "pointer" : progressRef.current < 0.24 ? "grab" : "default";
+      }
+      return match;
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       if (progressRef.current > 0.24 || event.button > 0) return;
       activePointerId = event.pointerId;
@@ -174,6 +211,9 @@ export function GlobeExperience() {
       lastPointerY = event.clientY;
       lastPointerTime = performance.now();
       lastInteractionTime = lastPointerTime;
+      dragDistance = 0;
+      hoverPointer = null;
+      updateHoveredPartner(null);
       longitudeVelocity = 0;
       latitudeVelocity = 0;
       canvas.setPointerCapture(event.pointerId);
@@ -181,12 +221,19 @@ export function GlobeExperience() {
     };
 
     const onPointerMove = (event: PointerEvent) => {
+      if (activePointerId === null) {
+        const rect = canvas.getBoundingClientRect();
+        hoverPointer = [event.clientX - rect.left, event.clientY - rect.top];
+        updateHoveredPartner(hoverPointer);
+        return;
+      }
       if (activePointerId !== event.pointerId) return;
       event.preventDefault();
       const now = performance.now();
       const elapsed = Math.max(8, now - lastPointerTime);
       const longitudeDelta = -(event.clientX - lastPointerX) * 0.22;
       const latitudeDelta = (event.clientY - lastPointerY) * 0.16;
+      dragDistance += Math.abs(event.clientX - lastPointerX) + Math.abs(event.clientY - lastPointerY);
       globeLongitude += longitudeDelta;
       globeLatitude = clamp(globeLatitude + latitudeDelta, -38, 62);
       longitudeVelocity = longitudeDelta / elapsed;
@@ -199,10 +246,23 @@ export function GlobeExperience() {
 
     const finishPointerDrag = (event: PointerEvent) => {
       if (activePointerId !== event.pointerId) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickPoint: [number, number] = [event.clientX - rect.left, event.clientY - rect.top];
       activePointerId = null;
       lastInteractionTime = performance.now();
       if (canvas.hasPointerCapture(event.pointerId)) canvas.releasePointerCapture(event.pointerId);
-      canvas.style.cursor = progressRef.current < 0.24 ? "grab" : "default";
+      hoverPointer = clickPoint;
+      const match = updateHoveredPartner(clickPoint);
+      if (dragDistance < 7 && match) {
+        setTradeDirection("export");
+        setSelectedTradeId(match.partner.id);
+      }
+    };
+
+    const onPointerLeave = () => {
+      if (activePointerId !== null) return;
+      hoverPointer = null;
+      updateHoveredPartner(null);
     };
 
     const draw = (time: number) => {
@@ -274,21 +334,9 @@ export function GlobeExperience() {
       const viewCenter: [number, number] = [viewLon, viewLat];
       const kazakhstanPoint = projection(KAZAKHSTAN_COORDINATES);
       const kazakhstanVisible = geoDistance(viewCenter, KAZAKHSTAN_COORDINATES) < Math.PI * 0.49;
-
-      TRADE_PARTNERS.forEach((partner) => {
-        const node = tradeNodeRefs.current[partner.id];
-        if (!node) return;
-        const point = projection(partner.coordinates);
-        const visible = Boolean(
-          point && kazakhstanVisible &&
-          geoDistance(viewCenter, partner.coordinates) < Math.PI * 0.49 &&
-          tradeVisibility > 0.02,
-        );
-        node.style.left = `${point?.[0] || 0}px`;
-        node.style.top = `${point?.[1] || 0}px`;
-        node.style.opacity = visible ? String(tradeVisibility) : "0";
-        node.style.pointerEvents = visible ? "auto" : "none";
-      });
+      hitProjection = projection;
+      hitGlobe = { x: globeX, y: globeY, radius: globeScale };
+      if (activePointerId === null && hoverPointer) updateHoveredPartner(hoverPointer);
 
       context.clearRect(0, 0, width, height);
 
@@ -346,6 +394,27 @@ export function GlobeExperience() {
       context.strokeStyle = "rgba(175, 213, 195, .22)";
       context.lineWidth = Math.max(0.25, 0.72 - countryFocus * 0.25 - regionFocus * 0.18);
       context.stroke();
+
+      if (tradeVisibility > 0.01) {
+        tradeCountries.forEach(({ partner, country }) => {
+          const isHovered = partner.id === hoveredTradeId;
+          context.save();
+          context.beginPath();
+          path(country as never);
+          context.fillStyle = isHovered
+            ? `rgba(165, 239, 82, ${0.42 * tradeVisibility})`
+            : `rgba(98, 200, 224, ${0.11 * tradeVisibility})`;
+          context.fill();
+          context.shadowColor = isHovered ? "rgba(165, 239, 82, .7)" : "transparent";
+          context.shadowBlur = isHovered ? 18 : 0;
+          context.strokeStyle = isHovered
+            ? `rgba(224, 255, 190, ${0.95 * tradeVisibility})`
+            : `rgba(132, 220, 229, ${0.5 * tradeVisibility})`;
+          context.lineWidth = isHovered ? 1.8 : 0.8;
+          context.stroke();
+          context.restore();
+        });
+      }
 
       if (kazakhstan) {
         context.save();
@@ -408,13 +477,14 @@ export function GlobeExperience() {
           const controlX = (start[0] + end[0]) * 0.5 - (dy / distance) * curve;
           const controlY = (start[1] + end[1]) * 0.5 + (dx / distance) * curve;
           const color = direction === "export" ? "165, 239, 82" : "98, 200, 224";
+          const emphasis = !hoveredTradeId || hoveredTradeId === partner.id ? 1 : 0.12;
 
           context.save();
           context.beginPath();
           context.moveTo(start[0], start[1]);
           context.quadraticCurveTo(controlX, controlY, end[0], end[1]);
-          context.strokeStyle = `rgba(${color}, ${0.48 * tradeVisibility})`;
-          context.lineWidth = direction === "export" ? 1.25 : 1.05;
+          context.strokeStyle = `rgba(${color}, ${0.48 * tradeVisibility * emphasis})`;
+          context.lineWidth = (direction === "export" ? 1.25 : 1.05) * (hoveredTradeId === partner.id ? 1.5 : 1);
           context.setLineDash(direction === "export" ? [7, 6] : [2, 6]);
           context.stroke();
 
@@ -426,7 +496,7 @@ export function GlobeExperience() {
           context.setLineDash([]);
           context.shadowColor = `rgba(${color}, .8)`;
           context.shadowBlur = 10;
-          context.fillStyle = `rgba(${color}, ${tradeVisibility})`;
+          context.fillStyle = `rgba(${color}, ${tradeVisibility * emphasis})`;
           context.beginPath();
           context.arc(pointX, pointY, 2.5, 0, Math.PI * 2);
           context.fill();
@@ -470,6 +540,7 @@ export function GlobeExperience() {
     canvas.addEventListener("pointermove", onPointerMove);
     canvas.addEventListener("pointerup", finishPointerDrag);
     canvas.addEventListener("pointercancel", finishPointerDrag);
+    canvas.addEventListener("pointerleave", onPointerLeave);
     motionQuery.addEventListener("change", updateMotion);
     frame = window.requestAnimationFrame(draw);
 
@@ -481,6 +552,7 @@ export function GlobeExperience() {
       canvas.removeEventListener("pointermove", onPointerMove);
       canvas.removeEventListener("pointerup", finishPointerDrag);
       canvas.removeEventListener("pointercancel", finishPointerDrag);
+      canvas.removeEventListener("pointerleave", onPointerLeave);
       motionQuery.removeEventListener("change", updateMotion);
       regionController.abort();
     };
@@ -574,7 +646,17 @@ export function GlobeExperience() {
               <div className="trade-route-legend">
                 <span><i className="export" /> Экспорт</span>
                 <span><i className="import" /> Импорт</span>
-                <b>Вращайте глобус · нажмите на страну</b>
+                <select
+                  aria-label="Открыть торговый профиль страны"
+                  value=""
+                  onChange={(event) => {
+                    setTradeDirection("export");
+                    setSelectedTradeId(event.target.value);
+                  }}
+                >
+                  <option value="" disabled>Выбрать страну</option>
+                  {TRADE_PARTNERS.map((partner) => <option key={partner.id} value={partner.id}>{partner.name}</option>)}
+                </select>
               </div>
             </div>
             <div className="hero-actions">
@@ -585,24 +667,7 @@ export function GlobeExperience() {
             </div>
           </div>
 
-          <div className="trade-node-layer" aria-label="Ключевые торговые партнёры Казахстана">
-            {TRADE_PARTNERS.map((partner) => (
-              <button
-                key={partner.id}
-                ref={(node) => { tradeNodeRefs.current[partner.id] = node; }}
-                type="button"
-                onClick={() => {
-                  setTradeDirection("export");
-                  setSelectedTradeId(partner.id);
-                }}
-                aria-label={`Открыть торговый профиль: ${partner.name}`}
-              >
-                <i />
-                <span>{partner.name}</span>
-                <small>${partner.turnover.toFixed(1)} млрд</small>
-              </button>
-            ))}
-          </div>
+          <div ref={tradeTooltipRef} className="trade-hover-tooltip" aria-hidden="true" />
 
           <aside className="side-index" aria-label="Этапы путешествия">
             <span className={progress < 0.28 ? "active" : ""}>Мир</span>
