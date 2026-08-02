@@ -206,8 +206,8 @@ class CompanyController extends Controller
         return [
             'regions' => Region::query()
                 ->select('id', 'name', 'type', 'parent_id')
-                ->orderBy('sort_order')
                 ->where('type', 'district')
+                ->orderBy('sort_order')
                 ->get(),
             'legalForms' => Company::LEGAL_FORMS,
             'statuses' => Company::STATUSES,
