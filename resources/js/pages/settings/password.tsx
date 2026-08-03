@@ -1,8 +1,9 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head } from '@inertiajs/react';
+import { CheckCircle2, KeyRound, LockKeyhole, Save } from 'lucide-react';
 import { useRef } from 'react';
+
 import PasswordController from '@/actions/App/Http/Controllers/Settings/PasswordController';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import type { BreadcrumbItem } from '@/types';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Құпия сөз баптаулары',
+        title: 'Құпия сөз параметрлері',
         href: edit().url,
     },
 ];
@@ -25,23 +26,30 @@ export default function Password() {
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Құпия сөз баптаулары" />
-
-            <h1 className="sr-only">Құпия сөз баптаулары</h1>
+            <Head title="Құпия сөз параметрлері" />
 
             <SettingsLayout>
-                <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <Heading
-                        variant="small"
-                        title="Құпия сөзді өзгерту"
-                        description="Аккаунт қауіпсіздігі үшін ұзын күрделі құпия сөз қолданыңыз"
-                    />
+                <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_-28px_rgba(15,27,61,0.7)]">
+                    <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+                        <div className="flex items-center gap-3">
+                            <span className="flex size-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
+                                <KeyRound className="size-5" />
+                            </span>
+                            <div>
+                                <h2 className="font-bold text-navy">
+                                    Құпия сөзді өзгерту
+                                </h2>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Аккаунтыңыз үшін жаңа қауіпсіз құпия сөз
+                                    орнатыңыз.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <Form
                         {...PasswordController.update.form()}
-                        options={{
-                            preserveScroll: true,
-                        }}
+                        options={{ preserveScroll: true }}
                         resetOnError={[
                             'password',
                             'password_confirmation',
@@ -57,11 +65,24 @@ export default function Password() {
                                 currentPasswordInput.current?.focus();
                             }
                         }}
-                        className="mt-4 space-y-5"
+                        className="space-y-6 p-6"
                     >
                         {({ errors, processing, recentlySuccessful }) => (
                             <>
-                                <div className="grid gap-1.5">
+                                <div className="rounded-xl border border-blue-100 bg-blue-50/60 p-4">
+                                    <div className="flex gap-3">
+                                        <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-blue-100 text-blue-700">
+                                            <LockKeyhole className="size-4" />
+                                        </span>
+                                        <p className="text-sm leading-6 text-blue-800">
+                                            Кемінде 8 таңба қолданыңыз. Басқа
+                                            сервистерде қолданылмайтын құпия сөз
+                                            таңдаған дұрыс.
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-2">
                                     <Label htmlFor="current_password">
                                         Ағымдағы құпия сөз
                                     </Label>
@@ -70,7 +91,7 @@ export default function Password() {
                                         ref={currentPasswordInput}
                                         name="current_password"
                                         type="password"
-                                        className="block w-full"
+                                        required
                                         autoComplete="current-password"
                                         placeholder="Ағымдағы құпия сөзді енгізіңіз"
                                     />
@@ -79,64 +100,72 @@ export default function Password() {
                                     />
                                 </div>
 
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="password">
-                                        Жаңа құпия сөз
-                                    </Label>
-                                    <Input
-                                        id="password"
-                                        ref={passwordInput}
-                                        name="password"
-                                        type="password"
-                                        className="block w-full"
-                                        autoComplete="new-password"
-                                        placeholder="Жаңа құпия сөзді енгізіңіз"
-                                    />
-                                    <InputError message={errors.password} />
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password">
+                                            Жаңа құпия сөз
+                                        </Label>
+                                        <Input
+                                            id="password"
+                                            ref={passwordInput}
+                                            name="password"
+                                            type="password"
+                                            required
+                                            autoComplete="new-password"
+                                            placeholder="Жаңа құпия сөз"
+                                        />
+                                        <InputError message={errors.password} />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="password_confirmation">
+                                            Құпия сөзді растау
+                                        </Label>
+                                        <Input
+                                            id="password_confirmation"
+                                            name="password_confirmation"
+                                            type="password"
+                                            required
+                                            autoComplete="new-password"
+                                            placeholder="Қайта енгізіңіз"
+                                        />
+                                        <InputError
+                                            message={
+                                                errors.password_confirmation
+                                            }
+                                        />
+                                    </div>
                                 </div>
 
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="password_confirmation">
-                                        Құпия сөзді растаңыз
-                                    </Label>
-                                    <Input
-                                        id="password_confirmation"
-                                        name="password_confirmation"
-                                        type="password"
-                                        className="block w-full"
-                                        autoComplete="new-password"
-                                        placeholder="Жаңа құпия сөзді қайталаңыз"
-                                    />
-                                    <InputError
-                                        message={errors.password_confirmation}
-                                    />
-                                </div>
-
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-wrap items-center gap-4 border-t border-slate-100 pt-5">
                                     <Button
+                                        type="submit"
                                         disabled={processing}
                                         data-test="update-password-button"
-                                        className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
-                                        Құпия сөзді сақтау
+                                        <Save className="size-4" />
+                                        {processing
+                                            ? 'Сақталуда...'
+                                            : 'Құпия сөзді сақтау'}
                                     </Button>
 
                                     <Transition
                                         show={recentlySuccessful}
                                         enter="transition ease-in-out"
-                                        enterFrom="opacity-0"
+                                        enterFrom="translate-y-1 opacity-0"
                                         leave="transition ease-in-out"
-                                        leaveTo="opacity-0"
+                                        leaveTo="translate-y-1 opacity-0"
                                     >
-                                        <p className="text-sm text-green-600">
-                                            Сақталды
+                                        <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                                            <CheckCircle2 className="size-4" />
+                                            Құпия сөз сақталды
                                         </p>
                                     </Transition>
                                 </div>
                             </>
                         )}
                     </Form>
-                </div>
+                </section>
             </SettingsLayout>
         </AppLayout>
     );

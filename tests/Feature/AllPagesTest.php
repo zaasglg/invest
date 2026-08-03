@@ -582,12 +582,12 @@ test('settings password page loads', function () {
     $response->assertStatus(200);
 });
 
-test('settings two-factor page redirects to password confirm', function () {
+test('removed settings two-factor page is unavailable', function () {
     $user = createAdminUser();
 
     $response = $this->actingAs($user)->get('/settings/two-factor');
 
-    $response->assertRedirect();
+    $response->assertNotFound();
 });
 
 // ===================== AUTH PAGES =====================

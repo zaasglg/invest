@@ -21,7 +21,9 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        return Inertia::render('settings/profile');
+        return Inertia::render('settings/profile', [
+            'telegramBotUrl' => config('services.telegram.bot_url'),
+        ]);
     }
 
     /**
