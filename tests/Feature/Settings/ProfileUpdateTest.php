@@ -93,36 +93,13 @@ test('user can remove their telegram id', function () {
     expect($user->refresh()->telegram_chat_id)->toBeNull();
 });
 
-test('user can delete their account', function () {
+test('user cannot delete their own account', function () {
     $user = User::factory()->create();
 
-    $response = $this
-        ->actingAs($user)
-        ->delete(route('profile.destroy'), [
-            'password' => 'password',
-        ]);
+    $this->actingAs($user)
+        ->delete('/settings/profile')
+        ->assertMethodNotAllowed();
 
-    $response
-        ->assertSessionHasNoErrors()
-        ->assertRedirect(route('home'));
-
-    $this->assertGuest();
-    expect($user->fresh())->toBeNull();
-});
-
-test('correct password must be provided to delete account', function () {
-    $user = User::factory()->create();
-
-    $response = $this
-        ->actingAs($user)
-        ->from(route('profile.edit'))
-        ->delete(route('profile.destroy'), [
-            'password' => 'wrong-password',
-        ]);
-
-    $response
-        ->assertSessionHasErrors('password')
-        ->assertRedirect(route('profile.edit'));
-
+    $this->assertAuthenticatedAs($user);
     expect($user->fresh())->not->toBeNull();
 });

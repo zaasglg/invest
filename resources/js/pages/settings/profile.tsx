@@ -14,7 +14,6 @@ import type { ChangeEvent } from 'react';
 
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarCropper from '@/components/avatar-cropper';
-import DeleteUser from '@/components/delete-user';
 import InputError from '@/components/input-error';
 import TelegramIdHelpDialog from '@/components/telegram-id-help-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -24,8 +23,8 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { edit } from '@/routes/profile';
 import type { BreadcrumbItem, SharedData } from '@/types';
+import { edit } from '@/routes/profile';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -326,8 +325,6 @@ export default function Profile({ telegramBotUrl }: ProfileProps) {
                         )}
                     </Form>
                 </section>
-
-                {auth.user.role_model?.name !== 'investor' && <DeleteUser />}
 
                 {rawImageSrc && (
                     <AvatarCropper
