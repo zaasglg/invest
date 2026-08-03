@@ -26,6 +26,7 @@ import {
     MoveRight,
     Pencil,
     Plus,
+    Search,
     SlidersHorizontal,
     Trash2,
     Waypoints,
@@ -594,14 +595,25 @@ export default function Index({
                 >
                     <div className="space-y-1.5">
                         <Label htmlFor="search">Іздеу</Label>
-                        <Input
-                            id="search"
-                            value={data.search}
-                            onChange={(event) =>
-                                setData('search', event.target.value)
-                            }
-                            placeholder="Атауы немесе компания"
-                        />
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
+                            <Input
+                                id="search"
+                                name="search"
+                                type="search"
+                                value={data.search}
+                                onChange={(event) =>
+                                    setData('search', event.target.value)
+                                }
+                                autoComplete="off"
+                                placeholder="Жоба атауы, компания немесе БИН"
+                                className="pl-10"
+                            />
+                        </div>
+                        <p className="text-xs leading-5 text-slate-400">
+                            Жоба атауы, компания атауы немесе 12 таңбалы БИН
+                            бойынша іздеңіз.
+                        </p>
                     </div>
                     <div className="space-y-1.5">
                         <Label>Аймақ</Label>

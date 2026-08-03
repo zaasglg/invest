@@ -76,14 +76,16 @@ class InvestmentProjectController extends Controller
         $this->projectAccess->scopeVisible($projectsQuery, $user);
 
         if (! empty($filters['search'])) {
-            $search = $filters['search'];
+            $search = trim((string) $filters['search']);
+            $filters['search'] = $search;
+
             $projectsQuery->where(function ($query) use ($search) {
-                $query->where('name', 'like', "%{$search}%")
-                    ->orWhere('company_name', 'like', "%{$search}%")
+                $query->whereLike('name', "%{$search}%")
+                    ->orWhereLike('company_name', "%{$search}%")
                     ->orWhereHas('company', function ($companyQuery) use ($search) {
                         $companyQuery
-                            ->where('name', 'like', "%{$search}%")
-                            ->orWhere('bin', 'like', "%{$search}%");
+                            ->whereLike('name', "%{$search}%")
+                            ->orWhereLike('bin', "%{$search}%");
                     });
             });
         }
