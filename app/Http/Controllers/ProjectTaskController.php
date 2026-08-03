@@ -8,12 +8,17 @@ use App\Models\ProjectTask;
 use App\Models\ProjectTaskEvent;
 use App\Models\TaskNotification;
 use App\Models\User;
+use App\Services\ProjectExecutorAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 
 class ProjectTaskController extends Controller
 {
+    public function __construct(
+        private readonly ProjectExecutorAssignmentService $projectExecutors
+    ) {}
+
     public function store(Request $request, InvestmentProject $investmentProject)
     {
         $user = Auth::user();
@@ -509,15 +514,10 @@ class ProjectTaskController extends Controller
         InvestmentProject $project,
         int $userId
     ): bool {
-        return User::query()
-            ->whereKey($userId)
-            ->where('region_id', $project->region_id)
-            ->where('baskarma_type', 'district')
-            ->whereHas(
-                'roleModel',
-                fn ($query) => $query->where('name', 'ispolnitel')
-            )
-            ->exists();
+        return $this->projectExecutors->isAutomaticDistrictExecutor(
+            $project,
+            $userId
+        );
     }
 
     private function validatedAssignee(

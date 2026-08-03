@@ -14,6 +14,7 @@ use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\PrivateFileService;
+use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
 use App\Services\SortOrderService;
 use Illuminate\Http\Request;
@@ -35,7 +36,8 @@ class InvestmentProjectController extends Controller
         private readonly PrivateFileService $files,
         private readonly InvestmentProjectAccessService $projectAccess,
         private readonly ProjectPassportSummaryService $passportSummary,
-        private readonly SortOrderService $sortOrder
+        private readonly SortOrderService $sortOrder,
+        private readonly ProjectExecutorAssignmentService $projectExecutors
     ) {}
 
     public function index(Request $request)
@@ -1987,33 +1989,11 @@ class InvestmentProjectController extends Controller
     }
 
     /**
-     * Аудандағы барлық исполнитель пайдаланушылардың ID-ларын алу.
-     * Бұл пайдаланушылар жобаға автоматты түрде қосылады және алынбайды.
-     */
-    protected function getDistrictIspolnitelIds(?int $regionId): array
-    {
-        if (! $regionId) {
-            return [];
-        }
-
-        return User::where('region_id', $regionId)
-            ->where('baskarma_type', 'district')
-            ->whereHas('roleModel', fn ($q) => $q->where('name', 'ispolnitel'))
-            ->pluck('id')
-            ->toArray();
-    }
-
-    /**
      * Исполнитель пайдаланушыларды жобаға қосу (sync кезінде олар алынбайды).
      */
     protected function syncExecutorsWithIspolnitel(InvestmentProject $project, array $executorIds): void
     {
-        $districtIspolnitelIds = $this->getDistrictIspolnitelIds($project->region_id);
-
-        // Merge: always include district ispolnitel users
-        $mergedIds = array_unique(array_merge($executorIds, $districtIspolnitelIds));
-
-        $project->executors()->sync($mergedIds);
+        $this->projectExecutors->syncProject($project, $executorIds);
     }
 
     protected function isProjectParticipant(InvestmentProject $project, ?int $userId): bool

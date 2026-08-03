@@ -257,7 +257,13 @@ test('investor can add project evidence but cannot modify status or remove share
         ->assertRedirect();
 
     $this->post(route('investment-projects.gallery.store', $project), [
-        'photos' => [UploadedFile::fake()->image('progress.jpg')],
+        'photos' => [UploadedFile::fake()->createWithContent(
+            'progress.png',
+            base64_decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+                .'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+            )
+        )],
         'description' => 'Құрылыс барысы',
         'photo_type' => 'gallery',
     ])->assertRedirect();

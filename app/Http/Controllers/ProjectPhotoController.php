@@ -136,6 +136,7 @@ class ProjectPhotoController extends Controller
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
                 'description' => $validated['description'] ?? null,
+                'uploaded_by' => $user->id,
             ]);
             $createdPhotoIds[] = $createdPhoto->id;
         }
