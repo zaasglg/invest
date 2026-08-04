@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import IssuesWorkspace, {
     type IssueRecord,
 } from '@/components/issues-workspace';
@@ -7,6 +7,7 @@ import AppLayout from '@/layouts/app-layout';
 import { show as projectShow } from '@/routes/investment-projects';
 import { destroy, store, update } from '@/routes/investment-projects/issues';
 import { show as regionShow } from '@/routes/regions';
+import type { SharedData } from '@/types';
 
 const severityOptions = [
     { value: 'low', label: 'Төмен' },
@@ -44,6 +45,9 @@ export default function Issues({
     participantCanCreate = false,
 }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
+    const canManageProject =
+        canModify || auth.user?.role_model?.name === 'moderator';
 
     return (
         <AppLayout
@@ -67,9 +71,9 @@ export default function Issues({
                 backLabel="Жобаға қайту"
                 backUrl={projectShow.url(project.id)}
                 issues={issues}
-                canCreate={canModify || participantCanCreate}
-                canUpdate={canModify}
-                canDelete={canModify}
+                canCreate={canManageProject || participantCanCreate}
+                canUpdate={canManageProject}
+                canDelete={canManageProject}
                 showTitle
                 showCategory
                 severityOptions={severityOptions}

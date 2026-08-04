@@ -8,6 +8,7 @@ use App\Models\ProjectTask;
 use App\Models\ProjectTaskEvent;
 use App\Models\TaskNotification;
 use App\Models\User;
+use App\Services\InvestmentProjectAccessService;
 use App\Services\ProjectExecutorAssignmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -16,7 +17,8 @@ use Illuminate\Validation\ValidationException;
 class ProjectTaskController extends Controller
 {
     public function __construct(
-        private readonly ProjectExecutorAssignmentService $projectExecutors
+        private readonly ProjectExecutorAssignmentService $projectExecutors,
+        private readonly InvestmentProjectAccessService $projectAccess
     ) {}
 
     public function store(Request $request, InvestmentProject $investmentProject)
@@ -554,8 +556,8 @@ class ProjectTaskController extends Controller
     ): void {
         $roleName = Auth::user()?->roleModel?->name;
         $allowedRoles = $allowProkuror
-            ? ['superadmin', 'invest', 'prokuror']
-            : ['superadmin', 'invest'];
+            ? ['superadmin', 'invest', 'moderator', 'prokuror']
+            : ['superadmin', 'invest', 'moderator'];
 
         abort_unless(
             in_array($roleName, $allowedRoles, true),
@@ -564,6 +566,14 @@ class ProjectTaskController extends Controller
         );
 
         $user = Auth::user();
+        if ($roleName === 'moderator') {
+            abort_unless(
+                $this->projectAccess->canView($user, $project),
+                403,
+                'Модераторға бұл жобаға қол жеткізуге рұқсат жоқ.'
+            );
+        }
+
         if ($user?->isDistrictScoped()
             && $project->region_id !== $user->region_id) {
             abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');

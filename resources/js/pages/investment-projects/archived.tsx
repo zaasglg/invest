@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Eye, RotateCcw, Search } from 'lucide-react';
 import { type FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -18,7 +18,7 @@ import AppLayout from '@/layouts/app-layout';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -56,6 +56,9 @@ interface Props {
 
 export default function Archived({ projects, filters }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
+    const canUnarchive =
+        canModify || auth.user?.role_model?.name === 'moderator';
     const { data, setData, get } = useForm({
         search: filters.search ?? '',
     });
@@ -229,7 +232,7 @@ export default function Archived({ projects, filters }: Props) {
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
-                                                {canModify && (
+                                                {canUnarchive && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

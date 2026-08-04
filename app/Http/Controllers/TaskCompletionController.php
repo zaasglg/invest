@@ -139,7 +139,7 @@ class TaskCompletionController extends Controller
         abort_unless(
             in_array(
                 $user?->roleModel?->name,
-                ['superadmin', 'invest'],
+                ['superadmin', 'invest', 'moderator'],
                 true
             ),
             403,

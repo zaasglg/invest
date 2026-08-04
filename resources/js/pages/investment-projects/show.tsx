@@ -372,7 +372,7 @@ export default function Show({
         'zamakim',
     ].includes(currentRoleName);
     const canApproveTasks = isModerator || isSuperAdmin;
-    const canManageTasks = isSuperAdmin || isInvest;
+    const canManageTasks = isSuperAdmin || isInvest || isModerator;
     const canCreateTasks = canManageTasks || isProkuror;
     const canEditProject = canModify || isModerator;
     const isExecutorParticipant = isIspolnitel || isInvestor;
@@ -1400,7 +1400,8 @@ export default function Show({
                                             </div>
                                             {(canModify ||
                                                 participantCanWrite ||
-                                                isAkim) && (
+                                                isAkim ||
+                                                isModerator) && (
                                                 <Link
                                                     href={`/investment-projects/${project.id}/issues`}
                                                     className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
@@ -1742,9 +1743,8 @@ export default function Show({
                                                                     </Button>
                                                                 )}
                                                             {/* Invest: review pending completion */}
-                                                            {canModify &&
+                                                            {canManageTasks &&
                                                                 !isExecutorParticipant &&
-                                                                !isModerator &&
                                                                 pendingCompletion && (
                                                                     <Button
                                                                         variant="outline"
@@ -2226,7 +2226,7 @@ export default function Show({
                                         </Button>
                                     </a>
                                 )}
-                                {(isSuperAdmin || isInvest) && (
+                                {(isSuperAdmin || isInvest || isModerator) && (
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"

@@ -63,7 +63,9 @@ function createModeratorScopeProjectDependencies(): array
 
     return [
         'company' => $company,
-        'project_type' => ProjectType::factory()->create(),
+        'project_type' => ProjectType::create([
+            'name' => 'Moderator scope project type',
+        ]),
         'region' => $region,
     ];
 }
@@ -111,7 +113,7 @@ function moderatorProjectPayload(array $dependencies): array
     ];
 }
 
-test('moderator only sees active projects curated by turkistan invest', function () {
+test('moderator sees the active and archived turkistan invest project scope', function () {
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
@@ -158,10 +160,17 @@ test('moderator only sees active projects curated by turkistan invest', function
     $this->get(route('investment-projects.show', $foreignProject))
         ->assertForbidden();
     $this->get(route('investment-projects.show', $archivedProject))
-        ->assertForbidden();
+        ->assertOk();
+
+    $this->get(route('investment-projects.archived'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/archived')
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $archivedProject->id));
 });
 
-test('moderator can create a project with a turkistan invest curator', function () {
+test('moderator creates a turkistan invest project as its curator', function () {
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
@@ -174,13 +183,11 @@ test('moderator can create a project with a turkistan invest curator', function 
         ->get(route('investment-projects.create'))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('canSelectCurators', true)
-            ->where('requiresCuratorSelection', true)
-            ->has('investUsers', 1)
-            ->where('investUsers.0.id', $turkistanInvest->id));
+            ->where('canSelectCurators', false)
+            ->where('requiresCuratorSelection', false)
+            ->has('investUsers', 0));
 
     $payload = moderatorProjectPayload($dependencies);
-    $payload['curator_ids'] = [$turkistanInvest->id];
 
     $this->post(route('investment-projects.store'), $payload)
         ->assertRedirect(route('investment-projects.index'));
@@ -190,16 +197,17 @@ test('moderator can create a project with a turkistan invest curator', function 
         'Moderator басқаратын жаңа жоба'
     )->firstOrFail();
 
-    expect($project->created_by)->toBe($turkistanInvest->id)
+    expect($project->created_by)->toBe($moderator->id)
         ->and($project->curators()->pluck('users.id')->all())
-        ->toBe([$turkistanInvest->id]);
+        ->toBe([$moderator->id]);
 
-    $invalidPayload = moderatorProjectPayload($dependencies);
-    $invalidPayload['name'] = 'Қате куратор жобасы';
-    $invalidPayload['curator_ids'] = [$otherInvest->id];
+    $this->actingAs($turkistanInvest)
+        ->get(route('investment-projects.show', $project))
+        ->assertOk();
 
-    $this->post(route('investment-projects.store'), $invalidPayload)
-        ->assertSessionHasErrors('curator_ids');
+    $this->actingAs($otherInvest)
+        ->get(route('investment-projects.show', $project))
+        ->assertForbidden();
 });
 
 test('moderator can edit scoped projects but cannot mutate other resources', function () {
@@ -234,6 +242,20 @@ test('moderator can edit scoped projects but cannot mutate other resources', fun
     )->assertRedirect(route('investment-projects.show', $visibleProject));
 
     expect($visibleProject->fresh()->name)->toBe('Moderator өңдеген жоба');
+
+    $this->post(route('investment-projects.archive', $visibleProject))
+        ->assertRedirect();
+    expect($visibleProject->fresh()->is_archived)->toBeTrue();
+
+    $this->get(route('investment-projects.archived'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $visibleProject->id));
+
+    $this->post(route('investment-projects.unarchive', $visibleProject))
+        ->assertRedirect();
+    expect($visibleProject->fresh()->is_archived)->toBeFalse();
 
     $this->get(route('investment-projects.edit', $foreignProject))
         ->assertForbidden();
@@ -270,8 +292,9 @@ test('moderator joins only turkistan invest project chats', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->where('selectedChat.id', $visibleProject->id)
             ->where(
-                'selectedChat.participants.1.id',
-                $moderator->id
+                'selectedChat.participants',
+                fn ($participants) => collect($participants)
+                    ->contains('id', $moderator->id)
             ));
 
     $this->post(route('chats.messages.store', $visibleProject), [
@@ -367,7 +390,7 @@ test('only turkistan invest tasks require moderator approval', function () {
         'due_date' => '2026-08-10',
     ];
 
-    $this->actingAs($otherInvest)
+    $this->actingAs($moderator)
         ->post(route(
             'investment-projects.tasks.store',
             $visibleProject
@@ -380,7 +403,7 @@ test('only turkistan invest tasks require moderator approval', function () {
     )->firstOrFail();
 
     expect($directTask->approval_status)->toBe('approved')
-        ->and($directTask->approved_by)->toBe($otherInvest->id)
+        ->and($directTask->approved_by)->toBe($moderator->id)
         ->and($directTask->events()->orderBy('id')->pluck('type')->all())
         ->toBe(['created', 'dispatched']);
 

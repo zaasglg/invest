@@ -226,7 +226,10 @@ class InvestmentProjectController extends Controller
         $user = $request->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
 
-        abort_unless(in_array($roleName, ['superadmin', 'invest'], true), 403);
+        abort_unless(
+            in_array($roleName, ['superadmin', 'invest', 'moderator'], true),
+            403
+        );
         abort_unless($this->projectAccess->canView($user, $investmentProject), 403);
 
         $validated = $request->validate([
@@ -288,7 +291,7 @@ class InvestmentProjectController extends Controller
         $user = $request->user();
         $role = $user?->load('roleModel')->roleModel?->name;
 
-        if (! in_array($role, ['superadmin', 'invest'])) {
+        if (! in_array($role, ['superadmin', 'invest', 'moderator'], true)) {
             abort(403);
         }
 
@@ -390,23 +393,15 @@ class InvestmentProjectController extends Controller
 
         $restrictedSectorType = $user?->restrictedSectorType();
 
-        // Superadmin can select any invest curator. A moderator must select a
-        // Turkistan Invest curator so the new project stays inside their scope.
+        // A moderator automatically becomes the curator of every project they
+        // create. Moderator curatorship marks the project as Turkistan Invest.
         $roleName = $user?->roleModel?->name;
         $isSuperAdmin = $roleName === 'superadmin';
-        $isModerator = $roleName === 'moderator';
-        $canSelectCurators = $isSuperAdmin || $isModerator;
+        $canSelectCurators = $isSuperAdmin;
         $investUsers = [];
         if ($canSelectCurators) {
             $investUsers = User::with('roleModel:id,name,display_name')
                 ->whereHas('roleModel', fn ($q) => $q->where('name', 'invest'))
-                ->when(
-                    $isModerator,
-                    fn ($query) => $query->where(
-                        'invest_sub_role',
-                        'turkistan_invest'
-                    )
-                )
                 ->select('id', 'full_name', 'region_id', 'invest_sub_role')
                 ->orderBy('full_name')
                 ->get();
@@ -423,7 +418,7 @@ class InvestmentProjectController extends Controller
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'canSelectCurators' => $canSelectCurators,
-            'requiresCuratorSelection' => $isModerator,
+            'requiresCuratorSelection' => false,
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
@@ -442,7 +437,7 @@ class InvestmentProjectController extends Controller
         $roleName = $user?->roleModel?->name;
         $isSuperAdmin = $roleName === 'superadmin';
         $isModerator = $roleName === 'moderator';
-        $canSelectCurators = $isSuperAdmin || $isModerator;
+        $canSelectCurators = $isSuperAdmin;
         $isDistrictScoped = $user && $user->isDistrictScoped();
         $restrictedSectorType = $user?->restrictedSectorType();
 
@@ -510,11 +505,7 @@ class InvestmentProjectController extends Controller
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
-            'curator_ids' => [
-                $isModerator ? 'required' : 'nullable',
-                'array',
-                $isModerator ? 'min:1' : 'max:100',
-            ],
+            'curator_ids' => 'nullable|array|max:100',
             'curator_ids.*' => 'exists:users,id',
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
@@ -550,26 +541,7 @@ class InvestmentProjectController extends Controller
         unset($validated['curator_ids']);
 
         if ($isModerator) {
-            $uniqueCuratorIds = array_values(array_unique(array_map(
-                'intval',
-                $curatorIds
-            )));
-            $validCuratorCount = User::query()
-                ->whereIn('id', $uniqueCuratorIds)
-                ->where('invest_sub_role', 'turkistan_invest')
-                ->whereHas(
-                    'roleModel',
-                    fn ($query) => $query->where('name', 'invest')
-                )
-                ->count();
-
-            if ($validCuratorCount !== count($uniqueCuratorIds)) {
-                throw ValidationException::withMessages([
-                    'curator_ids' => 'Модератор тек Turkistan Invest кураторын таңдай алады.',
-                ]);
-            }
-
-            $curatorIds = $uniqueCuratorIds;
+            $curatorIds = [(int) $user->id];
         } elseif (! $isSuperAdmin) {
             // Regular non-admin creators curate their own projects.
             $curatorIds = [auth()->id()];
@@ -690,7 +662,11 @@ class InvestmentProjectController extends Controller
             if ($project->is_archived) {
                 $user = request()->user();
                 $archiveRole = $user?->load('roleModel')->roleModel?->name;
-                if (! in_array($archiveRole, ['superadmin', 'invest', 'prokuror'], true)) {
+                if (! in_array(
+                    $archiveRole,
+                    ['superadmin', 'invest', 'moderator', 'prokuror'],
+                    true
+                )) {
                     abort(403, 'Бұл жоба архивтелген. Қол жеткізу мүмкін емес.');
                 }
             }
@@ -1544,6 +1520,12 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
+        abort_if(
+            request()->user()?->load('roleModel')->roleModel?->name === 'moderator',
+            403,
+            'Модератор жобаны жоя алмайды.'
+        );
+
         KpiLog::activity(
             projectId: $investmentProject->id,
             event: 'project.deleted',
@@ -2092,9 +2074,15 @@ class InvestmentProjectController extends Controller
     {
         $user = request()->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
-        if (! in_array($roleName, ['superadmin', 'invest'])) {
+        if (! in_array(
+            $roleName,
+            ['superadmin', 'invest', 'moderator'],
+            true
+        )) {
             abort(403);
         }
+
+        $this->authorizeDistrictAccess($investmentProject);
 
         $investmentProject->update(['is_archived' => true]);
 
@@ -2116,9 +2104,15 @@ class InvestmentProjectController extends Controller
     {
         $user = request()->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
-        if (! in_array($roleName, ['superadmin', 'invest'])) {
+        if (! in_array(
+            $roleName,
+            ['superadmin', 'invest', 'moderator'],
+            true
+        )) {
             abort(403);
         }
+
+        $this->authorizeDistrictAccess($investmentProject);
 
         $investmentProject->update(['is_archived' => false]);
 
@@ -2140,7 +2134,11 @@ class InvestmentProjectController extends Controller
     {
         $user = $request->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
-        if (! in_array($roleName, ['superadmin', 'invest', 'prokuror'], true)) {
+        if (! in_array(
+            $roleName,
+            ['superadmin', 'invest', 'moderator', 'prokuror'],
+            true
+        )) {
             abort(403);
         }
 

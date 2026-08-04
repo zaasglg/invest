@@ -55,15 +55,23 @@ class InvestmentProject extends Model
 
     public function scopeCuratedByTurkistanInvest(Builder $query): Builder
     {
-        return $query->whereHas(
-            'curators',
-            fn (Builder $curator) => $curator
-                ->where('users.invest_sub_role', 'turkistan_invest')
-                ->whereHas(
-                    'roleModel',
-                    fn (Builder $role) => $role->where('name', 'invest')
-                )
-        );
+        return $query->whereHas('curators', function (Builder $curator) {
+            $curator->where(function (Builder $turkistanInvest) {
+                $turkistanInvest
+                    ->where(function (Builder $invest) {
+                        $invest
+                            ->where('users.invest_sub_role', 'turkistan_invest')
+                            ->whereHas(
+                                'roleModel',
+                                fn (Builder $role) => $role->where('name', 'invest')
+                            );
+                    })
+                    ->orWhereHas(
+                        'roleModel',
+                        fn (Builder $role) => $role->where('name', 'moderator')
+                    );
+            });
+        });
     }
 
     public function scopeWhereChatParticipant(

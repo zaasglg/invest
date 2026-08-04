@@ -1,4 +1,4 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import DocumentWorkspace, {
     type WorkspaceDocument,
 } from '@/components/document-workspace';
@@ -13,6 +13,7 @@ import {
     store,
 } from '@/routes/investment-projects/documents';
 import { show as regionShow } from '@/routes/regions';
+import type { SharedData } from '@/types';
 
 interface ProjectType {
     id: number;
@@ -54,7 +55,10 @@ export default function Documents({
     deletedDocumentsCount,
 }: Props) {
     const canModify = useCanModify();
-    const canEdit = canModify || participantCanCreate;
+    const { auth } = usePage<SharedData>().props;
+    const canManageProject =
+        canModify || auth.user?.role_model?.name === 'moderator';
+    const canEdit = canManageProject || participantCanCreate;
 
     return (
         <AppLayout
@@ -81,7 +85,7 @@ export default function Documents({
                 completedDocuments={completedDocuments}
                 documents={documents}
                 canEdit={canEdit}
-                canDelete={canModify}
+                canDelete={canManageProject}
                 canDownload={canDownload}
                 canMarkAsCompleted={canMarkAsCompleted}
                 canViewDeleted={canViewDeleted}

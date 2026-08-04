@@ -72,7 +72,7 @@ test('unsupported roles cannot enter shared crm routes', function () {
         ->assertForbidden();
 });
 
-test('moderator can review tasks but cannot mutate project data', function () {
+test('moderator can manage turkistan invest projects but cannot delete them', function () {
     $admin = createRemainingSecurityUser('superadmin');
     $moderator = createRemainingSecurityUser('moderator');
     $turkistanInvest = createRemainingSecurityUser(
@@ -98,19 +98,22 @@ test('moderator can review tasks but cannot mutate project data', function () {
 
     $this->actingAs($moderator)
         ->post(route('investment-projects.issues.store', $project), [
-            'title' => 'Forbidden issue',
-            'description' => 'Moderator must not create this issue.',
+            'title' => 'Moderator issue',
+            'description' => 'Moderator manages this project issue.',
             'severity' => 'high',
             'status' => 'open',
         ])
-        ->assertForbidden();
+        ->assertRedirect();
 
     $this->post(route(
         'investment-projects.tasks.approve',
         [$project, $task]
     ))->assertRedirect();
 
-    expect($project->issues()->count())->toBe(0)
+    $this->delete(route('investment-projects.destroy', $project))
+        ->assertForbidden();
+
+    expect($project->issues()->count())->toBe(1)
         ->and($task->fresh()->approval_status)->toBe('approved');
 });
 

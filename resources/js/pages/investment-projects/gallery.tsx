@@ -40,7 +40,9 @@ export default function Gallery({
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
-    const canEdit = canModify || participantCanCreate;
+    const isModerator = auth.user?.role_model?.name === 'moderator';
+    const canManageProject = canModify || isModerator;
+    const canEdit = canManageProject || participantCanCreate;
     const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
 
     return (
@@ -69,7 +71,7 @@ export default function Gallery({
                 datedGallery={datedGallery}
                 renderPhotos={renderPhotos}
                 canEdit={canEdit}
-                canDelete={canModify}
+                canDelete={canManageProject}
                 canDownload={canDownload}
                 canChooseGalleryDate={isSuperadmin}
                 defaultDateToToday
