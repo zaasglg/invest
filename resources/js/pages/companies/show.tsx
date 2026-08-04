@@ -6,7 +6,9 @@ import {
     Building2,
     CalendarDays,
     CheckCircle2,
+    Download,
     ExternalLink,
+    FileText,
     Mail,
     MapPin,
     Pencil,
@@ -36,6 +38,8 @@ interface Company {
     website: string | null;
     legal_address: string | null;
     actual_address: string | null;
+    licenses_and_regulatory_documents: string | null;
+    documents: CompanyDocument[];
     status_label: string;
     notes: string | null;
     is_profile_complete: boolean;
@@ -47,6 +51,14 @@ interface Company {
         email: string;
         phone: string | null;
     } | null;
+}
+
+interface CompanyDocument {
+    id: number;
+    name: string;
+    type: string | null;
+    size: number | null;
+    created_at: string;
 }
 
 interface Project {
@@ -78,11 +90,23 @@ function Value({ label, value }: { label: string; value?: string | null }) {
             <p className="text-xs font-medium tracking-wide text-gray-400 uppercase">
                 {label}
             </p>
-            <p className="mt-1.5 text-sm font-medium text-[#0f1b3d]">
+            <p className="mt-1.5 text-sm font-medium whitespace-pre-wrap text-[#0f1b3d]">
                 {value || 'Көрсетілмеген'}
             </p>
         </div>
     );
+}
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+        return `${bytes} Б`;
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(1)} КБ`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
 export default function Show({ company, projects, canManage }: Props) {
@@ -202,6 +226,65 @@ export default function Show({ company, projects, canManage }: Props) {
                                 />
                             </div>
                         </section>
+
+                        {(company.licenses_and_regulatory_documents ||
+                            company.documents.length > 0) && (
+                            <section className="rounded-xl border border-gray-200 bg-white p-6">
+                                <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">
+                                    <FileText className="h-5 w-5 text-[#b18b35]" />
+                                    Лицензии и нормативные документы
+                                </h2>
+                                {company.licenses_and_regulatory_documents && (
+                                    <Value
+                                        label="Құжаттар туралы мәлімет"
+                                        value={
+                                            company.licenses_and_regulatory_documents
+                                        }
+                                    />
+                                )}
+                                {company.documents.length > 0 && (
+                                    <div
+                                        className={
+                                            company.licenses_and_regulatory_documents
+                                                ? 'mt-6 border-t border-gray-100 pt-5'
+                                                : ''
+                                        }
+                                    >
+                                        <p className="mb-3 text-xs font-medium tracking-wide text-gray-400 uppercase">
+                                            Жүктелген құжаттар
+                                        </p>
+                                        <div className="space-y-2">
+                                            {company.documents.map(
+                                                (document) => (
+                                                    <a
+                                                        key={document.id}
+                                                        href={`/companies/${company.id}/documents/${document.id}/download`}
+                                                        className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 transition hover:border-[#c8a44e]/60 hover:bg-amber-50/40"
+                                                    >
+                                                        <FileText className="h-5 w-5 shrink-0 text-[#b18b35]" />
+                                                        <div className="min-w-0 flex-1">
+                                                            <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                                                {document.name}
+                                                            </p>
+                                                            <p className="text-xs text-gray-500">
+                                                                {(
+                                                                    document.type ||
+                                                                    'file'
+                                                                ).toUpperCase()}
+                                                                {document.size
+                                                                    ? ` · ${formatFileSize(document.size)}`
+                                                                    : ''}
+                                                            </p>
+                                                        </div>
+                                                        <Download className="h-4 w-4 shrink-0 text-gray-500" />
+                                                    </a>
+                                                ),
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+                            </section>
+                        )}
 
                         <section className="rounded-xl border border-gray-200 bg-white p-6">
                             <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">

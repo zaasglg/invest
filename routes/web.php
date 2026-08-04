@@ -17,6 +17,14 @@ Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::cl
 Route::resource('companies', \App\Http\Controllers\CompanyController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::get('companies/{company}/documents/{companyDocument}/download', [\App\Http\Controllers\CompanyDocumentController::class, 'download'])
+    ->middleware(['auth', 'role.access'])
+    ->name('companies.documents.download');
+
+Route::delete('companies/{company}/documents/{companyDocument}', [\App\Http\Controllers\CompanyDocumentController::class, 'destroy'])
+    ->middleware(['auth', 'role.access'])
+    ->name('companies.documents.destroy');
+
 Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, 'reorder'])
     ->middleware(['auth', 'role.access'])
     ->name('regions.reorder');
