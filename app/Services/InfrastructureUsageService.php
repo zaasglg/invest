@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\InfrastructureValidationRules;
 use Illuminate\Support\Collection;
 
 class InfrastructureUsageService
@@ -12,26 +13,36 @@ class InfrastructureUsageService
      *     total: float,
      *     occupied: float,
      *     available: float,
-     *     consumers: array<int, array{id: int|null, name: string, area: float, capacity: string|null}>
+     *     overused: float,
+     *     consumers: array<int, array{
+     *         id: int|null,
+     *         name: string,
+     *         area: float,
+     *         capacity: string|null,
+     *         required_capacity: string|null
+     *     }>
      * }
      */
     public function summarizeArea(mixed $totalArea, Collection $projects): array
     {
         $total = $this->parseCapacity($totalArea, 'land');
         $consumers = $projects
-            ->filter(function ($project): bool {
-                $land = data_get($project->infrastructure, 'land');
-
-                return is_array($land) && ($land['needed'] ?? false);
-            })
+            ->filter(fn ($project): bool => $this->isNeeded($project, 'land'))
             ->map(function ($project): array {
-                $capacity = data_get($project->infrastructure, 'land.capacity');
+                $usedCapacity = data_get(
+                    $project->infrastructure,
+                    'land.used_capacity'
+                );
+                $requiredCapacity = $this->requiredCapacity($project, 'land');
 
                 return [
                     'id' => isset($project->id) ? (int) $project->id : null,
                     'name' => (string) ($project->name ?? 'Атаусыз жоба'),
-                    'area' => $this->parseCapacity($capacity, 'land'),
-                    'capacity' => is_scalar($capacity) ? (string) $capacity : null,
+                    'area' => $this->parseCapacity($usedCapacity, 'land'),
+                    'capacity' => $this->scalarString($usedCapacity),
+                    'required_capacity' => $this->scalarString(
+                        $requiredCapacity
+                    ),
                 ];
             })
             ->filter(fn (array $consumer): bool => $consumer['area'] > 0)
@@ -42,7 +53,8 @@ class InfrastructureUsageService
         return [
             'total' => $total,
             'occupied' => $occupied,
-            'available' => max(0, $total - $occupied),
+            'available' => max(0.0, $total - $occupied),
+            'overused' => max(0.0, $occupied - $total),
             'consumers' => $consumers->all(),
         ];
     }
@@ -51,66 +63,116 @@ class InfrastructureUsageService
      * @param  array<string, mixed>|null  $infrastructure
      * @param  Collection<int, object>  $projects
      * @return array<string, array{
-     *     total?: float,
-     *     used?: float,
-     *     remaining?: float,
+     *     total: float,
+     *     used: float,
+     *     remaining: float,
+     *     overused: float,
      *     consumers: array<int, array{
      *         id: int|null,
      *         name: string,
      *         capacity: string|null,
+     *         required_capacity: string|null,
      *         value: float,
      *         status: string|null
      *     }>
      * }>
      */
-    public function summarize(?array $infrastructure, Collection $projects): array
-    {
+    public function summarize(
+        ?array $infrastructure,
+        Collection $projects
+    ): array {
         $summary = [];
 
-        foreach (['electricity', 'gas', 'water', 'roads', 'railway', 'internet'] as $resource) {
+        foreach (InfrastructureValidationRules::ZONE_RESOURCES as $resource) {
             $total = $this->parseCapacity(
-                data_get($infrastructure, "{$resource}.capacity"),
+                $this->zoneCapacity($infrastructure, $resource),
                 $resource,
             );
             $consumers = $projects
-                ->filter(function ($project) use ($resource): bool {
-                    $requirement = data_get($project->infrastructure, $resource);
-
-                    return is_array($requirement) && ($requirement['needed'] ?? false);
-                })
+                ->filter(
+                    fn ($project): bool => $this->isNeeded(
+                        $project,
+                        $resource
+                    )
+                )
                 ->map(function ($project) use ($resource): array {
-                    $capacity = data_get($project->infrastructure, "{$resource}.capacity");
+                    $usedCapacity = data_get(
+                        $project->infrastructure,
+                        "{$resource}.used_capacity"
+                    );
+                    $requiredCapacity = $this->requiredCapacity(
+                        $project,
+                        $resource
+                    );
 
                     return [
-                        'id' => isset($project->id) ? (int) $project->id : null,
+                        'id' => isset($project->id)
+                            ? (int) $project->id
+                            : null,
                         'name' => (string) ($project->name ?? 'Атаусыз жоба'),
-                        'capacity' => is_scalar($capacity) ? (string) $capacity : null,
-                        'value' => $this->parseCapacity($capacity, $resource),
-                        'status' => isset($project->status) ? (string) $project->status : null,
+                        'capacity' => $this->scalarString($usedCapacity),
+                        'required_capacity' => $this->scalarString(
+                            $requiredCapacity
+                        ),
+                        'value' => $this->parseCapacity(
+                            $usedCapacity,
+                            $resource
+                        ),
+                        'status' => isset($project->status)
+                            ? (string) $project->status
+                            : null,
                     ];
                 })
                 ->values();
-            $used = $consumers->sum(function (array $consumer): float {
-                return $consumer['value'];
-            });
-
-            if (in_array($resource, ['electricity', 'gas', 'water'], true) && $total > 0) {
-                $summary[$resource] = [
-                    'total' => $total,
-                    'used' => $used,
-                    'remaining' => max(0, $total - $used),
-                    'consumers' => $consumers->all(),
-                ];
-
-                continue;
-            }
+            $used = (float) $consumers->sum('value');
 
             $summary[$resource] = [
+                'total' => $total,
+                'used' => $used,
+                'remaining' => max(0.0, $total - $used),
+                'overused' => max(0.0, $used - $total),
                 'consumers' => $consumers->all(),
             ];
         }
 
         return $summary;
+    }
+
+    private function isNeeded(object $project, string $resource): bool
+    {
+        $requirement = data_get($project->infrastructure, $resource);
+
+        return is_array($requirement) && ($requirement['needed'] ?? false);
+    }
+
+    private function requiredCapacity(object $project, string $resource): mixed
+    {
+        return data_get(
+            $project->infrastructure,
+            "{$resource}.required_capacity",
+            data_get($project->infrastructure, "{$resource}.capacity")
+        );
+    }
+
+    /** @param array<string, mixed>|null $infrastructure */
+    private function zoneCapacity(
+        ?array $infrastructure,
+        string $resource
+    ): mixed {
+        return data_get(
+            $infrastructure,
+            "{$resource}.capacity",
+            data_get(
+                $infrastructure,
+                "{$resource}.distance",
+                data_get($infrastructure, "{$resource}.type")
+            )
+        );
+    }
+
+    private function scalarString(mixed $value): ?string
+    {
+        return is_scalar($value) ? (string) $value : null;
     }
 
     private function parseCapacity(mixed $capacity, string $resource): float
@@ -125,6 +187,10 @@ class InfrastructureUsageService
         $parsed = (float) $number;
 
         if ($resource === 'electricity' && preg_match('/мвт/iu', $value)) {
+            return $parsed * 1000;
+        }
+
+        if ($resource === 'internet' && preg_match('/(гбит|gbps)/iu', $value)) {
             return $parsed * 1000;
         }
 

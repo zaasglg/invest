@@ -14,6 +14,7 @@ import { useState, useMemo, useEffect, useRef } from 'react';
 import CompanySelect from '@/components/companies/company-select';
 import type { CompanyOption } from '@/components/companies/company-select';
 import LocationPicker from '@/components/location-picker';
+import ProjectInfrastructureForm from '@/components/project-infrastructure-form';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -27,6 +28,10 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
+import {
+    normalizeProjectInfrastructure,
+    PROJECT_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjects from '@/routes/investment-projects';
 import * as documentsRoutes from '@/routes/investment-projects/documents';
@@ -92,10 +97,7 @@ interface InvestmentProject {
     end_date: string | null;
     executors?: User[];
     geometry?: { lat: number; lng: number }[];
-    infrastructure?: Record<
-        string,
-        { needed: boolean; capacity: string }
-    > | null;
+    infrastructure?: Record<string, Record<string, unknown>> | null;
     documents?: Array<{
         id: number;
         name: string;
@@ -166,12 +168,7 @@ export default function Edit({
         end_date: project.end_date || '',
         executor_ids: project.executors?.map((u) => u.id.toString()) || [],
         geometry: project.geometry || [],
-        infrastructure: project.infrastructure || {
-            gas: { needed: false, capacity: '' },
-            water: { needed: false, capacity: '' },
-            electricity: { needed: false, capacity: '' },
-            land: { needed: false, capacity: '' },
-        },
+        infrastructure: normalizeProjectInfrastructure(project.infrastructure),
         created_by: project.created_by?.toString() || '',
         curator_ids: (project.curator_ids || []).map((id) => id.toString()),
         return_to: returnUrl || '',
@@ -1247,101 +1244,15 @@ export default function Edit({
                                         </h3>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        {[
-                                            { key: 'gas', label: 'Газ' },
-                                            {
-                                                key: 'water',
-                                                label: 'Су (Сумен қамтамасыз ету)',
-                                            },
-                                            {
-                                                key: 'electricity',
-                                                label: 'Электр қуаты',
-                                            },
-                                            {
-                                                key: 'land',
-                                                label: 'Жер учаскесі',
-                                            },
-                                        ].map((item) => (
-                                            <div
-                                                key={item.key}
-                                                className="flex items-center gap-4"
-                                            >
-                                                <div className="flex w-48 items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`infra-${item.key}`}
-                                                        checked={
-                                                            data.infrastructure[
-                                                                item.key
-                                                            ]?.needed || false
-                                                        }
-                                                        onCheckedChange={(
-                                                            checked,
-                                                        ) => {
-                                                            setData(
-                                                                'infrastructure',
-                                                                {
-                                                                    ...data.infrastructure,
-                                                                    [item.key]:
-                                                                        {
-                                                                            ...data
-                                                                                .infrastructure[
-                                                                                item
-                                                                                    .key
-                                                                            ],
-                                                                            needed: checked as boolean,
-                                                                        },
-                                                                },
-                                                            );
-                                                        }}
-                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                    />
-                                                    <Label
-                                                        htmlFor={`infra-${item.key}`}
-                                                        className="cursor-pointer font-normal"
-                                                    >
-                                                        {item.label}
-                                                    </Label>
-                                                </div>
-                                                {data.infrastructure[item.key]
-                                                    ?.needed && (
-                                                    <div className="flex flex-1 items-center gap-2">
-                                                        <Input
-                                                            value={
-                                                                data
-                                                                    .infrastructure[
-                                                                    item.key
-                                                                ]?.capacity ||
-                                                                ''
-                                                            }
-                                                            onChange={(e) => {
-                                                                setData(
-                                                                    'infrastructure',
-                                                                    {
-                                                                        ...data.infrastructure,
-                                                                        [item.key]:
-                                                                            {
-                                                                                ...data
-                                                                                    .infrastructure[
-                                                                                    item
-                                                                                        .key
-                                                                                ],
-                                                                                capacity:
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                            },
-                                                                    },
-                                                                );
-                                                            }}
-                                                            className="h-9 max-w-[200px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                            placeholder="Көлемі"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <ProjectInfrastructureForm
+                                        onChange={(infrastructure) =>
+                                            setData(
+                                                'infrastructure',
+                                                infrastructure,
+                                            )
+                                        }
+                                        value={data.infrastructure}
+                                    />
                                 </div>
 
                                 {/* Құжаттар */}
@@ -1552,20 +1463,17 @@ export default function Edit({
                                         Инфрақұрылым
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {Object.entries(data.infrastructure)
-                                            .filter(([, val]) => val.needed)
-                                            .map(([key]) => (
-                                                <span
-                                                    key={key}
-                                                    className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
-                                                >
-                                                    {key === 'gas' && 'Газ'}
-                                                    {key === 'water' && 'Су'}
-                                                    {key === 'electricity' &&
-                                                        'Электр'}
-                                                    {key === 'land' && 'Жер'}
-                                                </span>
-                                            ))}
+                                        {PROJECT_INFRASTRUCTURE_FIELDS.filter(
+                                            ({ key }) =>
+                                                data.infrastructure[key].needed,
+                                        ).map((field) => (
+                                            <span
+                                                key={field.key}
+                                                className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
+                                            >
+                                                {field.label}
+                                            </span>
+                                        ))}
                                         {Object.values(
                                             data.infrastructure,
                                         ).every((v) => !v.needed) && (

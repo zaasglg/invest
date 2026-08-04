@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
 import InfrastructureForm, {
-    getEmptyInfrastructure,
+    normalizeZoneInfrastructure,
 } from '@/components/infrastructure-form';
 import type { InfrastructureData } from '@/components/infrastructure-form';
 import LocationPicker from '@/components/location-picker';
@@ -58,8 +58,7 @@ export default function Edit({ sez, regions, isDistrictScoped }: Props) {
         status: sez.status || 'developing',
         description: sez.description || '',
         location: sez.location || [],
-        infrastructure: (sez.infrastructure ||
-            getEmptyInfrastructure()) as InfrastructureData,
+        infrastructure: normalizeZoneInfrastructure(sez.infrastructure),
     });
 
     const initialRegion = regions.find((r) => r.id === sez.region_id);

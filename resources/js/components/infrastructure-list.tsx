@@ -9,28 +9,23 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import {
+    formatInfrastructureValue,
+    normalizeStandardNumber,
+    ZONE_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
+import type {
+    InfrastructureData,
+    InfrastructureDetails,
+    ZoneInfrastructureKey,
+} from '@/lib/infrastructure';
 import { cn } from '@/lib/utils';
-
-export interface InfrastructureDetails {
-    available?: boolean;
-    capacity?: string;
-    type?: string;
-    distance?: string;
-}
-
-export interface InfrastructureData {
-    electricity?: InfrastructureDetails;
-    gas?: InfrastructureDetails;
-    water?: InfrastructureDetails;
-    roads?: InfrastructureDetails;
-    railway?: InfrastructureDetails;
-    internet?: InfrastructureDetails;
-}
 
 type InfrastructureConsumer = {
     id: number | null;
     name: string;
     capacity: string | null;
+    required_capacity: string | null;
     value: number;
     status: string | null;
 };
@@ -39,6 +34,7 @@ type UsageEntry = {
     total?: number;
     used?: number;
     remaining?: number;
+    overused?: number;
     consumers?: InfrastructureConsumer[];
 };
 
@@ -48,17 +44,17 @@ type Props = {
     className?: string;
 };
 
-type MeteredResource = 'electricity' | 'gas' | 'water';
+type MeteredResource = ZoneInfrastructureKey;
 
 type InfrastructureItem = {
-    key: keyof InfrastructureData;
+    key: ZoneInfrastructureKey;
     name: string;
     icon: LucideIcon;
     details: InfrastructureDetails;
 };
 
 const INFRA_ITEMS: {
-    key: keyof InfrastructureData;
+    key: ZoneInfrastructureKey;
     name: string;
     icon: LucideIcon;
 }[] = [
@@ -70,63 +66,53 @@ const INFRA_ITEMS: {
     { key: 'internet', name: 'Интернет', icon: Wifi },
 ];
 
-const METERED_KEYS: MeteredResource[] = ['electricity', 'gas', 'water'];
+const METERED_KEYS: MeteredResource[] = ZONE_INFRASTRUCTURE_FIELDS.map(
+    ({ key }) => key,
+);
 
 const RESOURCE_UNITS: Record<MeteredResource, string> = {
     electricity: 'кВт',
     gas: 'м³/сағ',
     water: 'м³/тәу',
+    roads: 'км',
+    railway: 'км',
+    internet: 'Мбит/с',
 };
 
-const RESOURCE_STYLES: Record<
-    MeteredResource,
-    { line: string; icon: string }
-> = {
-    electricity: {
-        line: '#d8b84e',
-        icon: 'bg-amber-50 text-amber-700',
-    },
-    gas: {
-        line: '#71c98d',
-        icon: 'bg-emerald-50 text-emerald-700',
-    },
-    water: {
-        line: '#63b8e8',
-        icon: 'bg-sky-50 text-sky-700',
-    },
-};
-
-const SIMPLE_RESOURCE_STYLES: Record<
-    'roads' | 'railway' | 'internet',
-    { line: string; icon: string }
-> = {
-    roads: {
-        line: '#aeb8c7',
-        icon: 'bg-slate-200 text-slate-600',
-    },
-    railway: {
-        line: '#8f87ef',
-        icon: 'bg-indigo-100 text-indigo-700',
-    },
-    internet: {
-        line: '#65c8db',
-        icon: 'bg-cyan-100 text-cyan-700',
-    },
-};
+const RESOURCE_STYLES: Record<MeteredResource, { line: string; icon: string }> =
+    {
+        electricity: {
+            line: '#d8b84e',
+            icon: 'bg-amber-50 text-amber-700',
+        },
+        gas: {
+            line: '#71c98d',
+            icon: 'bg-emerald-50 text-emerald-700',
+        },
+        water: {
+            line: '#63b8e8',
+            icon: 'bg-sky-50 text-sky-700',
+        },
+        roads: {
+            line: '#aeb8c7',
+            icon: 'bg-slate-200 text-slate-600',
+        },
+        railway: {
+            line: '#8f87ef',
+            icon: 'bg-indigo-100 text-indigo-700',
+        },
+        internet: {
+            line: '#65c8db',
+            icon: 'bg-cyan-100 text-cyan-700',
+        },
+    };
 
 function parseCapacity(capacity: string | undefined, key: MeteredResource) {
-    if (!capacity) return 0;
-
-    const value = Number(capacity.replace(',', '.').match(/[\d.]+/)?.[0] ?? 0);
-    if (!Number.isFinite(value)) return 0;
-
-    return key === 'electricity' && /мвт/i.test(capacity)
-        ? value * 1000
-        : value;
+    return Number(normalizeStandardNumber(capacity, key)) || 0;
 }
 
 function formatAmount(value: number, unit: string) {
-    return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(value)} ${unit}`;
+    return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)} ${unit}`;
 }
 
 function UsageLineChart({
@@ -145,11 +131,19 @@ function UsageLineChart({
             'M4 91 C20 44 36 46 54 55 C77 68 88 70 102 38 C116 8 131 24 145 50 C161 78 176 69 185 25 C190 9 199 6 212 3',
         gas: 'M4 78 C22 67 34 30 54 47 C75 65 84 81 103 51 C121 22 133 31 146 45 C161 61 174 58 184 24 C191 6 200 8 212 12',
         water: 'M4 84 C24 78 34 54 55 58 C76 61 87 35 104 39 C124 45 133 77 151 59 C169 42 177 18 190 26 C199 31 204 17 212 8',
+        roads: 'M4 86 C25 72 40 76 58 56 C78 34 95 61 112 44 C132 23 145 48 162 35 C179 22 194 28 212 12',
+        railway:
+            'M4 90 C28 84 39 48 60 58 C82 69 91 31 113 40 C136 50 151 24 171 33 C188 41 199 18 212 9',
+        internet:
+            'M4 92 C22 61 38 77 58 48 C77 21 96 66 115 35 C133 6 151 55 171 29 C188 8 201 21 212 4',
     };
     const markers: Record<MeteredResource, { x: number; y: number }> = {
         electricity: { x: 122, y: 22 },
         gas: { x: 112, y: 38 },
         water: { x: 151, y: 59 },
+        roads: { x: 145, y: 48 },
+        railway: { x: 151, y: 24 },
+        internet: { x: 171, y: 29 },
     };
     const marker = markers[resourceKey];
 
@@ -232,17 +226,14 @@ function CapacityMeter({
 }) {
     const unit = RESOURCE_UNITS[resourceKey];
     const parsedTotal = parseCapacity(details.capacity, resourceKey);
-    const total = Math.max(
-        parsedTotal,
-        usage?.total ?? 0,
-        (usage?.used ?? 0) + (usage?.remaining ?? 0),
-    );
+    const total = Math.max(0, usage?.total ?? parsedTotal);
     const used = Math.max(
         0,
         usage?.used ??
             (usage?.remaining !== undefined ? total - usage.remaining : 0),
     );
     const remaining = Math.max(0, usage?.remaining ?? total - used);
+    const overused = Math.max(0, usage?.overused ?? used - total);
     const rawPercentage = total > 0 ? Math.round((used / total) * 100) : 0;
     const percentage = Math.min(100, rawPercentage);
     const styles = RESOURCE_STYLES[resourceKey];
@@ -274,20 +265,28 @@ function CapacityMeter({
                     />
                 </div>
                 <div className="mt-4 grid grid-cols-2 border-t border-slate-100">
-                    <div className="pr-4 pt-4">
+                    <div className="pt-4 pr-4">
                         <p className="text-xs font-medium text-slate-500">
                             Жүктеме
                         </p>
                         <p className="mt-1 text-3xl font-bold tracking-[-0.04em] text-navy tabular-nums">
-                            {rawPercentage > 100 ? '100+' : percentage}%
+                            {rawPercentage}%
                         </p>
                     </div>
-                    <div className="border-l border-slate-100 pl-4 pt-4">
+                    <div className="border-l border-slate-100 pt-4 pl-4">
                         <p className="text-xs font-medium text-slate-500">
-                            Қалды
+                            {overused > 0 ? 'Артық жүктеме' : 'Қалды'}
                         </p>
-                        <p className="mt-1.5 text-base font-bold text-navy tabular-nums">
-                            {formatAmount(remaining, unit)}
+                        <p
+                            className={cn(
+                                'mt-1.5 text-base font-bold tabular-nums',
+                                overused > 0 ? 'text-red-600' : 'text-navy',
+                            )}
+                        >
+                            {formatAmount(
+                                overused > 0 ? overused : remaining,
+                                unit,
+                            )}
                         </p>
                     </div>
                 </div>
@@ -310,14 +309,10 @@ function InfrastructureConsumersDialog({
     if (!item) return null;
 
     const consumers = usage?.consumers ?? [];
-    const isMetered = METERED_KEYS.includes(item.key as MeteredResource);
-    const resourceKey = isMetered ? (item.key as MeteredResource) : null;
-    const accent = resourceKey
-        ? RESOURCE_STYLES[resourceKey].line
-        : (SIMPLE_RESOURCE_STYLES[
-              item.key as keyof typeof SIMPLE_RESOURCE_STYLES
-          ]?.line ?? '#aeb8c7');
+    const resourceKey = item.key;
+    const accent = RESOURCE_STYLES[resourceKey].line;
     const total = usage?.total ?? 0;
+    const overused = usage?.overused ?? 0;
 
     return (
         <Dialog onOpenChange={onOpenChange} open={open}>
@@ -359,32 +354,33 @@ function InfrastructureConsumersDialog({
                     </div>
                     <div className="px-7 py-5 sm:px-10 sm:py-6">
                         <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
-                            {resourceKey ? 'Қолданылды' : 'Желі күйі'}
+                            Пайдалануда
                         </p>
                         <p className="mt-2 truncate text-lg font-extrabold tracking-tight text-navy">
-                            {resourceKey
-                                ? formatAmount(
-                                      usage?.used ?? 0,
-                                      RESOURCE_UNITS[resourceKey],
-                                  )
-                                : item.details.available
-                                  ? 'Белсенді'
-                                  : 'Қолжетімсіз'}
+                            {formatAmount(
+                                usage?.used ?? 0,
+                                RESOURCE_UNITS[resourceKey],
+                            )}
                         </p>
                     </div>
                     <div className="px-7 py-5 sm:px-10 sm:py-6">
                         <p className="text-[9px] font-bold tracking-wider text-slate-400 uppercase">
-                            Қолжетімді
+                            {overused > 0 ? 'Артық жүктеме' : 'Қолжетімді'}
                         </p>
-                        <p className="mt-2 truncate text-lg font-extrabold tracking-tight text-emerald-700">
-                            {resourceKey
-                                ? formatAmount(
-                                      usage?.remaining ?? 0,
-                                      RESOURCE_UNITS[resourceKey],
-                                  )
-                                : item.details.available
-                                  ? 'Иә'
-                                  : 'Жоқ'}
+                        <p
+                            className={cn(
+                                'mt-2 truncate text-lg font-extrabold tracking-tight',
+                                overused > 0
+                                    ? 'text-red-600'
+                                    : 'text-emerald-700',
+                            )}
+                        >
+                            {formatAmount(
+                                overused > 0
+                                    ? overused
+                                    : (usage?.remaining ?? 0),
+                                RESOURCE_UNITS[resourceKey],
+                            )}
                         </p>
                     </div>
                 </div>
@@ -399,7 +395,10 @@ function InfrastructureConsumersDialog({
                                             Жоба
                                         </th>
                                         <th className="px-6 py-4 text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
-                                            Қажетті қуат
+                                            Қажетті
+                                        </th>
+                                        <th className="px-6 py-4 text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                            Пайдалануда
                                         </th>
                                         <th className="px-6 py-4 text-right text-[9px] font-bold tracking-[0.14em] text-slate-400 uppercase">
                                             Үлесі
@@ -413,13 +412,9 @@ function InfrastructureConsumersDialog({
                                     {consumers.map((consumer, index) => {
                                         const percentage =
                                             total > 0
-                                                ? Math.min(
-                                                      100,
-                                                      Math.round(
-                                                          (consumer.value /
-                                                              total) *
-                                                              100,
-                                                      ),
+                                                ? Math.round(
+                                                      (consumer.value / total) *
+                                                          100,
                                                   )
                                                 : null;
 
@@ -443,7 +438,16 @@ function InfrastructureConsumersDialog({
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
-                                                    {consumer.capacity || '—'}
+                                                    {formatInfrastructureValue(
+                                                        consumer.required_capacity,
+                                                        resourceKey,
+                                                    ) || '—'}
+                                                </td>
+                                                <td className="px-6 py-5 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
+                                                    {formatInfrastructureValue(
+                                                        consumer.capacity,
+                                                        resourceKey,
+                                                    ) || '—'}
                                                 </td>
                                                 <td className="px-6 py-5 text-right">
                                                     {percentage !== null ? (
@@ -459,7 +463,9 @@ function InfrastructureConsumersDialog({
                                                 <td className="px-6 py-5 text-right">
                                                     <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
                                                         <span className="size-1.5 rounded-full bg-emerald-500" />
-                                                        Пайдаланады
+                                                        {consumer.value > 0
+                                                            ? 'Пайдалануда'
+                                                            : 'Қажетті'}
                                                     </span>
                                                 </td>
                                             </tr>
@@ -487,8 +493,7 @@ function InfrastructureConsumersDialog({
 
 /**
  * Unified infrastructure summary for SEZ / industrial / prom zone pages:
- * metered utilities (electricity, gas, water) render an inline load meter,
- * the rest render as compact availability cards.
+ * every available standardized resource renders an inline load meter.
  */
 export default function InfrastructureList({
     infrastructure,
@@ -504,7 +509,7 @@ export default function InfrastructureList({
     })).filter(
         (item) => item.details && item.details.available !== undefined,
     ) as {
-        key: keyof InfrastructureData;
+        key: ZoneInfrastructureKey;
         name: string;
         icon: LucideIcon;
         details: InfrastructureDetails;
@@ -514,8 +519,12 @@ export default function InfrastructureList({
 
     const metered = items.filter(
         (item) =>
-            METERED_KEYS.includes(item.key as MeteredResource) &&
-            item.details.available,
+            METERED_KEYS.includes(item.key) &&
+            item.details.available &&
+            normalizeStandardNumber(
+                item.details.capacity ?? item.details.distance,
+                item.key,
+            ) !== '',
     );
     const simple = items.filter((item) => !metered.includes(item));
 
@@ -539,13 +548,12 @@ export default function InfrastructureList({
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
                 {metered.map((item) => {
-                    const resourceKey = item.key as MeteredResource;
+                    const resourceKey = item.key;
                     const styles = RESOURCE_STYLES[resourceKey];
                     const total = Math.max(
-                        parseCapacity(item.details.capacity, resourceKey),
-                        usage[item.key]?.total ?? 0,
-                        (usage[item.key]?.used ?? 0) +
-                            (usage[item.key]?.remaining ?? 0),
+                        0,
+                        usage[item.key]?.total ??
+                            parseCapacity(item.details.capacity, resourceKey),
                     );
 
                     return (
@@ -601,10 +609,9 @@ export default function InfrastructureList({
                         item.details.type ||
                         item.details.distance ||
                         '';
-                    const styles =
-                        SIMPLE_RESOURCE_STYLES[
-                            item.key as keyof typeof SIMPLE_RESOURCE_STYLES
-                        ];
+                    const styles = RESOURCE_STYLES[item.key];
+                    const formattedDetail =
+                        formatInfrastructureValue(detail, item.key) || detail;
 
                     return (
                         <button
@@ -652,7 +659,7 @@ export default function InfrastructureList({
                                     Сипаттамасы
                                 </p>
                                 <p className="mt-1.5 truncate text-2xl font-bold tracking-[-0.03em] text-navy">
-                                    {detail || 'Көрсетілмеген'}
+                                    {formattedDetail || 'Көрсетілмеген'}
                                 </p>
                                 <div className="mt-4 flex items-center justify-between gap-3">
                                     <span className="text-xs font-medium text-slate-500">

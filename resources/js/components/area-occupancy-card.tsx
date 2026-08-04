@@ -1,14 +1,17 @@
+import { normalizeStandardNumber } from '@/lib/infrastructure';
 import { cn } from '@/lib/utils';
 
 export type AreaUsage = {
     total: number;
     occupied: number;
     available: number;
+    overused?: number;
     consumers: {
         id: number | null;
         name: string;
         area: number;
         capacity: string | null;
+        required_capacity?: string | null;
     }[];
 };
 
@@ -152,7 +155,7 @@ export default function AreaOccupancyCard({
                     </div>
 
                     <div className="mt-4 grid grid-cols-2 border-t border-slate-100">
-                        <div className="pr-4 pt-4">
+                        <div className="pt-4 pr-4">
                             <p className="text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
                                 Бос
                             </p>
@@ -160,7 +163,7 @@ export default function AreaOccupancyCard({
                                 {formatArea(usage.available)}
                             </p>
                         </div>
-                        <div className="border-l border-slate-100 pl-4 pt-4">
+                        <div className="border-l border-slate-100 pt-4 pl-4">
                             <p className="text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
                                 Бос емес
                             </p>
@@ -172,6 +175,12 @@ export default function AreaOccupancyCard({
                 </div>
 
                 <div className="mt-6 border-t border-slate-100 pt-4">
+                    {(usage.overused ?? 0) > 0 && (
+                        <div className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                            Артық пайдаланылған:{' '}
+                            {formatArea(usage.overused ?? 0)}
+                        </div>
+                    )}
                     <div className="mb-3 flex items-center justify-between gap-3">
                         <p className="text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
                             Аумақты алып жатқан жобалар
@@ -205,9 +214,25 @@ export default function AreaOccupancyCard({
                                             <p className="min-w-0 truncate text-sm text-navy">
                                                 {consumer.name}
                                             </p>
-                                            <span className="shrink-0 text-xs font-medium text-slate-500 tabular-nums">
-                                                {formatArea(consumer.area)}
-                                            </span>
+                                            <div className="shrink-0 text-right text-xs tabular-nums">
+                                                <p className="font-medium text-slate-500">
+                                                    Пайдалануда:{' '}
+                                                    {formatArea(consumer.area)}
+                                                </p>
+                                                <p className="mt-0.5 text-slate-400">
+                                                    Қажетті:{' '}
+                                                    {consumer.required_capacity
+                                                        ? formatArea(
+                                                              Number(
+                                                                  normalizeStandardNumber(
+                                                                      consumer.required_capacity,
+                                                                      'land',
+                                                                  ),
+                                                              ),
+                                                          )
+                                                        : '—'}
+                                                </p>
+                                            </div>
                                         </div>
                                         <div className="mt-2 h-px overflow-hidden bg-slate-100">
                                             <div

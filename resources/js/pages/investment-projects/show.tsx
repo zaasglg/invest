@@ -43,6 +43,11 @@ import {
 } from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import {
+    formatInfrastructureValue,
+    normalizeProjectInfrastructure,
+    PROJECT_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
@@ -126,10 +131,7 @@ interface InvestmentProject {
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
-    infrastructure?: Record<
-        string,
-        { needed: boolean; capacity: string }
-    > | null;
+    infrastructure?: Record<string, Record<string, unknown>> | null;
     created_at: string;
     updated_at?: string;
 }
@@ -380,6 +382,9 @@ export default function Show({
             ? project.photos_count
             : // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (project.photos_count as any)?.photos_count || 0;
+    const projectInfrastructure = normalizeProjectInfrastructure(
+        project.infrastructure,
+    );
 
     const statusMap: Record<string, { label: string; color: string }> = {
         plan: { label: 'Жоспарлау', color: 'bg-blue-100 text-blue-800' },
@@ -1169,35 +1174,23 @@ export default function Show({
                             )}
 
                             {/* Инфрақұрылымға қажеттілік */}
-                            {project.infrastructure &&
-                                Object.values(project.infrastructure).some(
-                                    (v: Record<string, unknown>) => v?.needed,
-                                ) && (
-                                    <div className="border-t border-gray-200 px-6 py-5">
-                                        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                            <Building2 className="h-5 w-5 text-gray-500" />
-                                            Инфрақұрылымға қажеттілік
-                                        </h2>
-                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                            {[
-                                                { key: 'gas', label: 'Газ' },
-                                                { key: 'water', label: 'Су' },
-                                                {
-                                                    key: 'electricity',
-                                                    label: 'Электр қуаты',
-                                                },
-                                                {
-                                                    key: 'land',
-                                                    label: 'Жер учаскесі',
-                                                },
-                                            ].map((item) => {
-                                                const infra = (
-                                                    project.infrastructure as Record<
-                                                        string,
-                                                        Record<string, unknown>
-                                                    >
-                                                )?.[item.key];
-                                                if (!infra?.needed) return null;
+                            {PROJECT_INFRASTRUCTURE_FIELDS.some(
+                                ({ key }) => projectInfrastructure[key].needed,
+                            ) && (
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                        <Building2 className="h-5 w-5 text-gray-500" />
+                                        Инфрақұрылымға қажеттілік
+                                    </h2>
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        {PROJECT_INFRASTRUCTURE_FIELDS.map(
+                                            (item) => {
+                                                const infra =
+                                                    projectInfrastructure[
+                                                        item.key
+                                                    ];
+                                                if (!infra.needed) return null;
+
                                                 return (
                                                     <div
                                                         key={item.key}
@@ -1206,17 +1199,37 @@ export default function Show({
                                                         <p className="mb-1 text-xs font-medium text-gray-500">
                                                             {item.label}
                                                         </p>
-                                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                                            {infra.capacity
-                                                                ? `${infra.capacity}`
-                                                                : 'Қажет'}
-                                                        </p>
+                                                        <div className="mt-2 grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                    Қажетті
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-bold text-[#0f1b3d]">
+                                                                    {formatInfrastructureValue(
+                                                                        infra.required_capacity,
+                                                                        item.key,
+                                                                    ) || '—'}
+                                                                </p>
+                                                            </div>
+                                                            <div className="border-l border-gray-100 pl-3">
+                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                    Пайдалануда
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-bold text-emerald-700">
+                                                                    {formatInfrastructureValue(
+                                                                        infra.used_capacity,
+                                                                        item.key,
+                                                                    ) || '—'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 );
-                                            })}
-                                        </div>
+                                            },
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
                             {/* Description & Current Status Tabs */}
                             <div className="border-t border-gray-200 px-6 py-5">

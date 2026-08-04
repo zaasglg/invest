@@ -17,6 +17,7 @@ use App\Services\PrivateFileService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
 use App\Services\SortOrderService;
+use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -498,11 +499,7 @@ class InvestmentProjectController extends Controller
             'executor_ids' => 'nullable|array',
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
-            'infrastructure' => 'nullable|array',
-            'infrastructure.gas' => 'nullable|array',
-            'infrastructure.water' => 'nullable|array',
-            'infrastructure.electricity' => 'nullable|array',
-            'infrastructure.land' => 'nullable|array',
+            ...InfrastructureValidationRules::project(),
             'curator_ids' => [
                 $isModerator ? 'required' : 'nullable',
                 'array',
@@ -1143,11 +1140,7 @@ class InvestmentProjectController extends Controller
             'executor_ids' => 'nullable|array',
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
-            'infrastructure' => 'nullable|array',
-            'infrastructure.gas' => 'nullable|array',
-            'infrastructure.water' => 'nullable|array',
-            'infrastructure.electricity' => 'nullable|array',
-            'infrastructure.land' => 'nullable|array',
+            ...InfrastructureValidationRules::project(),
             'curator_ids' => 'nullable|array',
             'curator_ids.*' => 'exists:users,id',
             'return_to' => 'nullable|string',
@@ -1806,10 +1799,13 @@ class InvestmentProjectController extends Controller
         $yLeft += 28;
 
         $infraItems = [
-            ['key' => 'gas',         'label' => 'Газ'],
-            ['key' => 'water',       'label' => 'Су'],
-            ['key' => 'electricity', 'label' => 'Электр қуаты'],
-            ['key' => 'land',        'label' => 'Жер телімі'],
+            ['key' => 'electricity', 'label' => 'Электр', 'unit' => 'кВт'],
+            ['key' => 'water', 'label' => 'Су', 'unit' => 'м³/тәу'],
+            ['key' => 'gas', 'label' => 'Газ', 'unit' => 'м³/сағ'],
+            ['key' => 'roads', 'label' => 'Автожол', 'unit' => 'км'],
+            ['key' => 'railway', 'label' => 'Теміржол', 'unit' => 'км'],
+            ['key' => 'internet', 'label' => 'Интернет', 'unit' => 'Мбит/с'],
+            ['key' => 'land', 'label' => 'Жер', 'unit' => 'га'],
         ];
 
         $colCount = count($infraItems);
@@ -1838,8 +1834,23 @@ class InvestmentProjectController extends Controller
                 ->setVertical(Alignment::VERTICAL_CENTER);
 
             if ($isNeeded) {
-                // If capacity is empty, it means needed but capacity not stated properly, we fallback to image text
-                $addText($valueCell, ($val['capacity'] ?? '') ?: 'Қажет', 10, $darkGray, false);
+                $required = $val['required_capacity']
+                    ?? $val['capacity']
+                    ?? '';
+                $used = $val['used_capacity'] ?? '';
+                $formatValue = fn ($value) => $value === ''
+                    ? '—'
+                    : (is_numeric($value)
+                        ? $value.' '.$item['unit']
+                        : $value);
+                $addText(
+                    $valueCell,
+                    'Қ: '.$formatValue($required)
+                        ."\nП: ".$formatValue($used),
+                    8,
+                    $darkGray,
+                    false
+                );
             } else {
                 $addText($valueCell, 'Қажет етпейді', 10, $darkGray, false);
             }
