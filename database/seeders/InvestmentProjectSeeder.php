@@ -313,7 +313,7 @@ class InvestmentProjectSeeder extends Seeder
                 ]
             );
 
-            InvestmentProject::updateOrCreate(
+            $project = InvestmentProject::updateOrCreate(
                 ['name' => $data['name']],
                 [
                     'company_id' => $company->id,
@@ -331,6 +331,10 @@ class InvestmentProjectSeeder extends Seeder
                     'created_at' => now(),
                     'updated_at' => now(),
                 ]
+            );
+
+            $project->projectTypes()->sync(
+                $projectType ? [$projectType->id] : []
             );
 
             $this->command->info("Project '{$data['name']}' created/updated for region '{$data['region']}'.");

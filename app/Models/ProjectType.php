@@ -12,6 +12,14 @@ class ProjectType extends Model
 
     public function projects()
     {
+        return $this->belongsToMany(
+            InvestmentProject::class,
+            'investment_project_project_type'
+        )->withTimestamps();
+    }
+
+    public function primaryProjects()
+    {
         return $this->hasMany(InvestmentProject::class);
     }
 }

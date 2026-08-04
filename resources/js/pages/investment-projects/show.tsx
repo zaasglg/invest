@@ -49,6 +49,7 @@ import {
     PROJECT_INFRASTRUCTURE_FIELDS,
 } from '@/lib/infrastructure';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -105,6 +106,7 @@ interface InvestmentProject {
     region?: Region;
     project_type_id: number;
     project_type?: ProjectType;
+    project_types?: ProjectType[];
     sezs?: SectorEntity[];
     industrial_zones?: SectorEntity[];
     prom_zones?: SectorEntity[];
@@ -927,9 +929,10 @@ export default function Show({
                             'bg-gray-100 text-gray-800',
                         regionName:
                             project.region?.name ?? 'Аймақ көрсетілмеген',
-                        projectTypeName:
-                            project.project_type?.name ??
+                        projectTypeName: formatProjectTypeNames(
+                            project,
                             'Жоба түрі көрсетілмеген',
+                        ),
                     }}
                     summary={effectivePassportSummary}
                     canEdit={canEditProject}
@@ -1016,8 +1019,10 @@ export default function Show({
                                                 Жоба түрі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.project_type?.name ||
-                                                    'Көрсетілмеген'}
+                                                {formatProjectTypeNames(
+                                                    project,
+                                                    'Көрсетілмеген',
+                                                )}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">

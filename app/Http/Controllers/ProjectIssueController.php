@@ -23,7 +23,7 @@ class ProjectIssueController extends Controller
         $issues = $investmentProject->issues()->with('creator:id,full_name')->latest()->get();
 
         return Inertia::render('investment-projects/issues', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'issues' => $issues,
             'participantCanCreate' => $this->participantCanCreate(
                 $user,

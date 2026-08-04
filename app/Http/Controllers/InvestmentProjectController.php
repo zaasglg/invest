@@ -63,6 +63,7 @@ class InvestmentProjectController extends Controller
             'company',
             'region',
             'projectType',
+            'projectTypes',
             'creator',
             'curators',
             'investors',
@@ -96,7 +97,14 @@ class InvestmentProjectController extends Controller
         }
 
         if (! empty($filters['project_type_id'])) {
-            $projectsQuery->where('project_type_id', (int) $filters['project_type_id']);
+            $projectTypeId = (int) $filters['project_type_id'];
+            $projectsQuery->where(function ($query) use ($projectTypeId) {
+                $query->where('project_type_id', $projectTypeId)
+                    ->orWhereHas(
+                        'projectTypes',
+                        fn ($typeQuery) => $typeQuery->whereKey($projectTypeId)
+                    );
+            });
         }
 
         if (! empty($filters['status'])) {
@@ -454,7 +462,9 @@ class InvestmentProjectController extends Controller
                     }
                 },
             ],
-            'project_type_id' => 'required|exists:project_types,id',
+            'project_type_ids' => 'required_without:project_type_id|array|min:1',
+            'project_type_ids.*' => 'integer|distinct|exists:project_types,id',
+            'project_type_id' => 'nullable|integer|exists:project_types,id',
             'sector' => [
                 $restrictedSectorType ? 'required' : 'nullable',
                 'array',
@@ -511,6 +521,9 @@ class InvestmentProjectController extends Controller
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
             'company_id.required' => 'Компанияны таңдаңыз.',
             'company_id.exists' => 'Таңдалған компания табылмады.',
+            'project_type_ids.required_without' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
 
         $company = Company::query()
@@ -526,6 +539,10 @@ class InvestmentProjectController extends Controller
         }
 
         $validated['company_name'] = $company->display_name;
+
+        $projectTypeIds = $this->normalizeProjectTypeIds($validated);
+        $validated['project_type_id'] = $projectTypeIds[0];
+        unset($validated['project_type_ids']);
 
         $curatorIds = $canSelectCurators
             ? ($validated['curator_ids'] ?? [])
@@ -586,6 +603,8 @@ class InvestmentProjectController extends Controller
 
         $project = InvestmentProject::create($validated);
 
+        $project->projectTypes()->sync($projectTypeIds);
+
         // Sync curators (admin-managed, 1+)
         $project->curators()->sync(array_values(array_unique(array_map('intval', $curatorIds))));
 
@@ -625,6 +644,7 @@ class InvestmentProjectController extends Controller
             'company.region:id,name',
             'region',
             'projectType',
+            'projectTypes',
             'creator',
             'curators',
             'investors',
@@ -821,6 +841,7 @@ class InvestmentProjectController extends Controller
             'industrialZones',
             'promZones',
             'curators',
+            'projectTypes',
         ]);
 
         $regionsQuery = Region::query();
@@ -863,12 +884,19 @@ class InvestmentProjectController extends Controller
             $sector[] = "prom_zone-{$promZone->id}";
         }
 
-        $projectData = $investmentProject->load(['region', 'projectType', 'creator', 'executors', 'documents'])
+        $projectData = $investmentProject->load(['region', 'projectType', 'projectTypes', 'creator', 'executors', 'documents'])
             ->loadCount('photos')
             ->toArray();
 
         $projectData['sector'] = $sector;
         $projectData['curator_ids'] = $investmentProject->curators->pluck('id')->values()->all();
+        $projectData['project_type_ids'] = $investmentProject->projectTypes
+            ->pluck('id')
+            ->whenEmpty(fn ($ids) => $investmentProject->project_type_id
+                ? collect([$investmentProject->project_type_id])
+                : $ids)
+            ->values()
+            ->all();
 
         // Get invest-role users for curator selection (superadmin only)
         $isSuperAdmin = $user && $user->roleModel?->name === 'superadmin';
@@ -1055,7 +1083,7 @@ class InvestmentProjectController extends Controller
             ->pluck('total', 'category');
 
         return Inertia::render('investment-projects/logs', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'logs' => $logs,
             'actors' => $actors,
             'filters' => [
@@ -1095,7 +1123,9 @@ class InvestmentProjectController extends Controller
                     }
                 },
             ],
-            'project_type_id' => 'required|exists:project_types,id',
+            'project_type_ids' => 'required_without:project_type_id|array|min:1',
+            'project_type_ids.*' => 'integer|distinct|exists:project_types,id',
+            'project_type_id' => 'nullable|integer|exists:project_types,id',
             'sector' => [
                 $restrictedSectorType ? 'required' : 'nullable',
                 'array',
@@ -1149,6 +1179,9 @@ class InvestmentProjectController extends Controller
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
             'company_id.required' => 'Компанияны таңдаңыз.',
             'company_id.exists' => 'Таңдалған компания табылмады.',
+            'project_type_ids.required_without' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
 
         $company = Company::find($validated['company_id']);
@@ -1166,6 +1199,10 @@ class InvestmentProjectController extends Controller
         }
 
         $validated['company_name'] = $company->display_name;
+
+        $projectTypeIds = $this->normalizeProjectTypeIds($validated);
+        $validated['project_type_id'] = $projectTypeIds[0];
+        unset($validated['project_type_ids']);
 
         $activityBefore = $this->projectActivitySnapshot(
             $investmentProject
@@ -1206,6 +1243,8 @@ class InvestmentProjectController extends Controller
         unset($validated['executor_ids'], $validated['sector']);
 
         $investmentProject->update($validated);
+
+        $investmentProject->projectTypes()->sync($projectTypeIds);
 
         // Sync curators (superadmin only)
         if ($isSuperAdmin && $curatorIds !== null) {
@@ -1262,7 +1301,13 @@ class InvestmentProjectController extends Controller
             'jobs_count' => $project->jobs_count,
             'capacity' => $project->capacity,
             'region' => $project->region()->value('name'),
-            'project_type' => $project->projectType()->value('name'),
+            'project_types' => $project->projectTypes()
+                ->orderBy('name')
+                ->pluck('name')
+                ->whenEmpty(fn ($names) => $project->projectType?->name
+                    ? collect([$project->projectType->name])
+                    : $names)
+                ->all(),
             'total_investment' => $project->total_investment,
             'status' => $project->status,
             'start_date' => $project->start_date,
@@ -1305,7 +1350,7 @@ class InvestmentProjectController extends Controller
             'jobs_count' => 'Жұмыс орындары',
             'capacity' => 'Жоба қуаттылығы',
             'region' => 'Өңір',
-            'project_type' => 'Жоба түрі',
+            'project_types' => 'Жоба түрлері',
             'total_investment' => 'Инвестиция сомасы',
             'status' => 'Жоба статусы',
             'start_date' => 'Басталу күні',
@@ -1332,6 +1377,18 @@ class InvestmentProjectController extends Controller
         return ['type' => null, 'id' => null];
     }
 
+    /**
+     * @param  array<string, mixed>  $validated
+     * @return array<int, int>
+     */
+    private function normalizeProjectTypeIds(array $validated): array
+    {
+        $ids = $validated['project_type_ids']
+            ?? [$validated['project_type_id']];
+
+        return array_values(array_unique(array_map('intval', $ids)));
+    }
+
     public function passport(InvestmentProject $investmentProject)
     {
         // Check download permission for ispolnitel
@@ -1343,6 +1400,7 @@ class InvestmentProjectController extends Controller
         $investmentProject->load([
             'region',
             'projectType',
+            'projectTypes',
             'creator',
             'executors',
             'documents',
@@ -1445,7 +1503,7 @@ class InvestmentProjectController extends Controller
 
         // Load the single project with all relations
         $investmentProject->load([
-            'region', 'projectType', 'creator', 'executors',
+            'region', 'projectType', 'projectTypes', 'creator', 'executors',
             'documents', 'photos', 'issues',
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
         ]);
@@ -1514,7 +1572,7 @@ class InvestmentProjectController extends Controller
 
         $projectIds = $validated['project_ids'];
         $query = InvestmentProject::with([
-            'region', 'projectType', 'creator', 'executors',
+            'region', 'projectType', 'projectTypes', 'creator', 'executors',
             'documents', 'photos', 'issues',
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
         ])->whereIn('id', $projectIds);
@@ -1713,7 +1771,11 @@ class InvestmentProjectController extends Controller
         $infoItems = [
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $formatCurrency($project->total_investment)],
-            ['Саласы', $project->projectType?->name ?? 'Көрсетілмеген'],
+            [
+                'Саласы',
+                $project->projectTypes->pluck('name')->join(', ')
+                    ?: ($project->projectType?->name ?? 'Көрсетілмеген'),
+            ],
             ['Жоба қуаттылығы', $project->capacity ? $project->capacity : '—'],
             ['Жұмыс орындары', $project->jobs_count ? $project->jobs_count.' адам' : '—'],
         ];
@@ -2088,6 +2150,7 @@ class InvestmentProjectController extends Controller
             'company',
             'region',
             'projectType',
+            'projectTypes',
             'creator',
             'executors',
             'sezs',

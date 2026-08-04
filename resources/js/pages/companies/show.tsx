@@ -17,6 +17,7 @@ import {
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { PaginatedData } from '@/types';
 
@@ -55,6 +56,7 @@ interface Project {
     status: string;
     region?: { id: number; name: string } | null;
     project_type?: { id: number; name: string } | null;
+    project_types?: { id: number; name: string }[];
 }
 
 interface Props {
@@ -353,7 +355,7 @@ export default function Show({ company, projects, canManage }: Props) {
                                         </p>
                                         <p className="mt-1 text-xs text-gray-500">
                                             {project.region?.name || '—'} ·{' '}
-                                            {project.project_type?.name || '—'}
+                                            {formatProjectTypeNames(project)}
                                         </p>
                                     </div>
                                     <p className="text-sm font-medium">

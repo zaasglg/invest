@@ -162,7 +162,9 @@ class ProjectPassportSummaryService
             'Бастамашы компания' => $project->company_id !== null
                 || filled($project->company_name),
             'Аймақ' => $project->region !== null,
-            'Жоба түрі' => $project->projectType !== null,
+            'Жоба түрі' => ($project->relationLoaded('projectTypes')
+                && $project->projectTypes->isNotEmpty())
+                || $project->projectType !== null,
             'Жоба сипаттамасы' => filled($project->description),
             'Ағымдағы жағдай' => filled($project->current_status),
             'Инвестиция сомасы' => (float) $project->total_investment > 0,

@@ -22,6 +22,7 @@ import {
     useMap,
 } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -62,6 +63,7 @@ interface InvestmentProject {
     start_date?: string;
     end_date?: string;
     project_type?: { id: number; name: string };
+    project_types?: { id: number; name: string }[];
     executors?: { id: number; name: string; full_name?: string }[];
     sezs?: { id: number; name: string }[];
     industrial_zones?: { id: number; name: string }[];
@@ -899,7 +901,7 @@ export default function Map({
                     totalInvestment: project.total_investment ?? null,
                     startDate: project.start_date,
                     endDate: project.end_date,
-                    projectTypeName: project.project_type?.name,
+                    projectTypeName: formatProjectTypeNames(project, ''),
                     executorNames:
                         project.executors?.map((e) => e.full_name || e.name) ??
                         [],

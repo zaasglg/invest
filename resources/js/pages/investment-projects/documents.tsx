@@ -4,6 +4,7 @@ import DocumentWorkspace, {
 } from '@/components/document-workspace';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { show as projectShow } from '@/routes/investment-projects';
 import {
     deleted,
@@ -28,6 +29,7 @@ interface InvestmentProject {
     name: string;
     region?: Region;
     project_type?: ProjectType;
+    project_types?: ProjectType[];
 }
 
 interface Props {
@@ -106,7 +108,7 @@ export default function Documents({
                     },
                     {
                         label: 'Жоба түрі',
-                        value: project.project_type?.name || 'Көрсетілмеген',
+                        value: formatProjectTypeNames(project, 'Көрсетілмеген'),
                     },
                 ]}
             />

@@ -64,6 +64,7 @@ import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { persistOrder } from '@/lib/persist-order';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import type { PaginatedData, SharedData } from '@/types';
@@ -116,6 +117,7 @@ interface InvestmentProject {
     company_name: string | null;
     region: Region | null;
     project_type: ProjectType | null;
+    project_types?: ProjectType[];
     sector: string;
     total_investment: string | null;
     status: string;
@@ -1040,8 +1042,9 @@ export default function Index({
                                                         '—'}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {project.project_type
-                                                        ?.name ?? '—'}
+                                                    {formatProjectTypeNames(
+                                                        project,
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {getSectorDisplay(project)}

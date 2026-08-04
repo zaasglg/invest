@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import AppLayout from '@/layouts/app-layout';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import type { PaginatedData } from '@/types';
 
 interface ProjectType {
@@ -42,6 +43,7 @@ interface InvestmentProject {
     name: string;
     region?: Region;
     project_type?: ProjectType;
+    project_types?: ProjectType[];
 }
 
 interface LogUser {
@@ -319,8 +321,8 @@ export default function Logs({
                                 {project.region?.name
                                     ? ` • ${project.region.name}`
                                     : ''}
-                                {project.project_type?.name
-                                    ? ` • ${project.project_type.name}`
+                                {formatProjectTypeNames(project, '')
+                                    ? ` • ${formatProjectTypeNames(project, '')}`
                                     : ''}
                             </p>
                         </div>

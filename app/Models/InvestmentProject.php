@@ -110,6 +110,14 @@ class InvestmentProject extends Model
         return $this->belongsTo(ProjectType::class);
     }
 
+    public function projectTypes()
+    {
+        return $this->belongsToMany(
+            ProjectType::class,
+            'investment_project_project_type'
+        )->withTimestamps();
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);

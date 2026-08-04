@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 
 import type { PaginatedData } from '@/types';
@@ -40,6 +41,7 @@ interface InvestmentProject {
     company_name: string | null;
     region: Region;
     project_type: ProjectType;
+    project_types?: ProjectType[];
     total_investment: string | null;
     status: string;
     start_date: string | null;
@@ -200,7 +202,7 @@ export default function Archived({ projects, filters }: Props) {
                                             {project.region?.name || '—'}
                                         </TableCell>
                                         <TableCell className="text-sm text-gray-600">
-                                            {project.project_type?.name || '—'}
+                                            {formatProjectTypeNames(project)}
                                         </TableCell>
                                         <TableCell className="text-sm font-medium">
                                             {formatInvestment(

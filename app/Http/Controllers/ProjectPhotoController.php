@@ -55,7 +55,7 @@ class ProjectPhotoController extends Controller
             ->get();
 
         return Inertia::render('investment-projects/gallery', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,

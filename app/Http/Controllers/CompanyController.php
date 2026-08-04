@@ -107,7 +107,7 @@ class CompanyController extends Controller
                 'investor:id,company_id,full_name,email,phone',
             ]),
             'projects' => $company->projects()
-                ->with(['region:id,name', 'projectType:id,name'])
+                ->with(['region:id,name', 'projectType:id,name', 'projectTypes:id,name'])
                 ->latest()
                 ->paginate(15),
             'canManage' => $this->canManage($request),

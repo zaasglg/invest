@@ -13,6 +13,7 @@ import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import CompanySelect from '@/components/companies/company-select';
 import type { CompanyOption } from '@/components/companies/company-select';
+import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import LocationPicker from '@/components/location-picker';
 import ProjectInfrastructureForm from '@/components/project-infrastructure-form';
 import { Button } from '@/components/ui/button';
@@ -88,6 +89,7 @@ interface InvestmentProject {
     current_status: string | null;
     region_id: number;
     project_type_id: number;
+    project_type_ids?: number[];
     sector: string[];
     jobs_count?: number | null;
     capacity?: string | null;
@@ -154,7 +156,11 @@ export default function Edit({
         description: project.description || '',
         current_status: project.current_status || '',
         region_id: project.region_id?.toString() || '',
-        project_type_id: project.project_type_id?.toString() || '',
+        project_type_ids:
+            project.project_type_ids?.map((id) => id.toString()) ||
+            (project.project_type_id
+                ? [project.project_type_id.toString()]
+                : []),
         sector: project.sector
             ? Array.isArray(project.sector)
                 ? project.sector
@@ -383,8 +389,8 @@ export default function Edit({
         if (!data.region_id) {
             errors.region_id = 'Ауданды таңдаңыз';
         }
-        if (!data.project_type_id) {
-            errors.project_type_id = 'Жобаның түрін таңдаңыз';
+        if (data.project_type_ids.length === 0) {
+            errors.project_type_ids = 'Кемінде бір жоба түрін таңдаңыз';
         }
         if (!data.total_investment) {
             errors.total_investment = 'Жалпы инвестицияны енгізіңіз';
@@ -735,7 +741,7 @@ export default function Edit({
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <Label
-                                            htmlFor="project_type_id"
+                                            htmlFor="project_type_ids"
                                             className="text-xs font-medium tracking-wide text-gray-500 uppercase"
                                         >
                                             Жобаның түрі{' '}
@@ -743,46 +749,37 @@ export default function Edit({
                                                 *
                                             </span>
                                         </Label>
-                                        <Select
-                                            value={data.project_type_id}
-                                            onValueChange={(value) => {
+                                        <ProjectTypeMultiSelect
+                                            id="project_type_ids"
+                                            options={projectTypes}
+                                            value={data.project_type_ids}
+                                            onChange={(value) => {
                                                 setData(
-                                                    'project_type_id',
+                                                    'project_type_ids',
                                                     value,
                                                 );
                                                 if (
-                                                    validationErrors.project_type_id
+                                                    validationErrors.project_type_ids
                                                 ) {
                                                     setValidationErrors(
                                                         (prev) => ({
                                                             ...prev,
-                                                            project_type_id: '',
+                                                            project_type_ids:
+                                                                '',
                                                         }),
                                                     );
                                                 }
                                             }}
-                                        >
-                                            <SelectTrigger
-                                                className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.project_type_id ? 'border-red-500' : ''}`}
-                                            >
-                                                <SelectValue placeholder="Түрді таңдаңыз" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projectTypes.map((type) => (
-                                                    <SelectItem
-                                                        key={type.id}
-                                                        value={type.id.toString()}
-                                                    >
-                                                        {type.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {(errors.project_type_id ||
-                                            validationErrors.project_type_id) && (
+                                            hasError={Boolean(
+                                                errors.project_type_ids ||
+                                                validationErrors.project_type_ids,
+                                            )}
+                                        />
+                                        {(errors.project_type_ids ||
+                                            validationErrors.project_type_ids) && (
                                             <span className="text-sm text-red-500">
-                                                {errors.project_type_id ||
-                                                    validationErrors.project_type_id}
+                                                {errors.project_type_ids ||
+                                                    validationErrors.project_type_ids}
                                             </span>
                                         )}
                                     </div>
@@ -1405,11 +1402,14 @@ export default function Edit({
                                                 Жоба түрі:
                                             </span>
                                             <p className="font-medium">
-                                                {projectTypes.find(
-                                                    (t) =>
-                                                        t.id.toString() ===
-                                                        data.project_type_id,
-                                                )?.name || '—'}
+                                                {projectTypes
+                                                    .filter((type) =>
+                                                        data.project_type_ids.includes(
+                                                            type.id.toString(),
+                                                        ),
+                                                    )
+                                                    .map((type) => type.name)
+                                                    .join(', ') || '—'}
                                             </p>
                                         </div>
                                         <div>

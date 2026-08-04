@@ -292,6 +292,78 @@ test('project creation uses an active complete company and syncs its name', func
         ->assertSessionHasErrors('company_id');
 });
 
+test('project creation and editing support multiple project types', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $firstType = ProjectType::create(['name' => 'Primary project type']);
+    $secondType = ProjectType::create(['name' => 'Secondary project type']);
+    $thirdType = ProjectType::create(['name' => 'Replacement project type']);
+    $company = Company::factory()->create([
+        'region_id' => $region->id,
+        'name' => 'Multi type company',
+        'bin' => '444444444444',
+    ]);
+    createCompanyManagementInvestor($company);
+
+    $this->actingAs($user)
+        ->post(route('investment-projects.store'), [
+            'name' => 'Multiple type project',
+            'company_id' => $company->id,
+            'region_id' => $region->id,
+            'project_type_ids' => [$firstType->id, $secondType->id],
+            'total_investment' => 250000000,
+            'status' => 'plan',
+        ])
+        ->assertRedirect(route('investment-projects.index'));
+
+    $project = InvestmentProject::query()
+        ->where('name', 'Multiple type project')
+        ->sole();
+
+    expect($project->project_type_id)->toBe($firstType->id)
+        ->and($project->projectTypes()->orderBy('project_types.id')->pluck('project_types.id')->all())
+        ->toBe([$firstType->id, $secondType->id]);
+
+    $this->actingAs($user)
+        ->get(route('investment-projects.edit', $project))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/edit')
+            ->where('project.project_type_ids', [
+                $firstType->id,
+                $secondType->id,
+            ])
+        );
+
+    $this->actingAs($user)
+        ->put(route('investment-projects.update', $project), [
+            'name' => $project->name,
+            'company_id' => $company->id,
+            'region_id' => $region->id,
+            'project_type_ids' => [$secondType->id, $thirdType->id],
+            'total_investment' => 300000000,
+            'status' => 'implementation',
+        ])
+        ->assertRedirect(route('investment-projects.show', $project));
+
+    $project->refresh();
+
+    expect($project->project_type_id)->toBe($secondType->id)
+        ->and($project->projectTypes()->orderBy('project_types.id')->pluck('project_types.id')->all())
+        ->toBe([$secondType->id, $thirdType->id]);
+
+    $this->actingAs($user)
+        ->get(route('investment-projects.index', [
+            'project_type_id' => $thirdType->id,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/index')
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $project->id)
+        );
+});
+
 test('renaming a company updates project snapshots and linked company cannot be deleted', function () {
     $user = createCompanyManagementUser('superadmin');
     $region = createCompanyManagementRegion();

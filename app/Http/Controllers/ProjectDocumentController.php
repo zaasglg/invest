@@ -50,7 +50,7 @@ class ProjectDocumentController extends Controller
         $isSuperadmin = $user->roleModel?->name === 'superadmin';
 
         return Inertia::render('investment-projects/documents', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'completedDocuments' => $completedDocuments,
             'documents' => $documents,
             'canDownload' => $canDownload,
@@ -79,7 +79,7 @@ class ProjectDocumentController extends Controller
             ->get();
 
         return Inertia::render('investment-projects/deleted-documents', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'documents' => $documents,
         ]);
     }
