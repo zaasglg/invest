@@ -33,6 +33,8 @@ import type { SharedData } from '@/types';
 interface ChatSummary {
     id: number;
     name: string;
+    company_name: string | null;
+    company_bin: string | null;
     region_name: string | null;
     unread_count: number;
     last_message: {
@@ -81,6 +83,7 @@ interface SelectedChat {
     id: number;
     name: string;
     company_name: string | null;
+    company_bin: string | null;
     region_name: string | null;
     participant_count: number;
     participants: ChatParticipant[];
@@ -153,14 +156,20 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
 
     const filteredChats = useMemo(() => {
         const normalizedSearch = search.trim().toLocaleLowerCase('kk-KZ');
+        const normalizedBinSearch = search.replace(/\D/g, '');
 
         if (!normalizedSearch) return chats;
 
-        return chats.filter((chat) =>
-            `${chat.name} ${chat.region_name ?? ''}`
+        return chats.filter((chat) => {
+            const matchesName = `${chat.name} ${chat.company_name ?? ''}`
                 .toLocaleLowerCase('kk-KZ')
-                .includes(normalizedSearch),
-        );
+                .includes(normalizedSearch);
+            const matchesBin =
+                normalizedBinSearch.length > 0 &&
+                (chat.company_bin ?? '').includes(normalizedBinSearch);
+
+            return matchesName || matchesBin;
+        });
     }, [chats, search]);
 
     useEffect(() => {
@@ -265,7 +274,7 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                     onChange={(event) =>
                                         setSearch(event.target.value)
                                     }
-                                    placeholder="Чатты іздеу"
+                                    placeholder="Жоба, компания немесе БСН/БИН"
                                     className="h-10 border-0 bg-gray-100 pr-3 pl-9 shadow-none focus-visible:ring-1"
                                 />
                             </div>
@@ -309,6 +318,16 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                     </span>
                                                 )}
                                             </div>
+                                            <p
+                                                className="mt-0.5 truncate text-xs font-medium text-[#9a7d35]"
+                                                title={
+                                                    chat.company_name ||
+                                                    undefined
+                                                }
+                                            >
+                                                {chat.company_name ||
+                                                    'Компания көрсетілмеген'}
+                                            </p>
                                             <div className="mt-1 flex items-center gap-2">
                                                 <p
                                                     className={cn(
@@ -405,8 +424,8 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                                 {selectedChat.name}
                                             </p>
                                             <p className="truncate text-xs text-gray-400">
-                                                {selectedChat.participant_count}{' '}
-                                                қатысушы
+                                                {selectedChat.company_name ||
+                                                    'Компания көрсетілмеген'}
                                             </p>
                                         </div>
                                     </button>
@@ -795,6 +814,11 @@ export default function ChatsIndex({ chats, selectedChat }: Props) {
                                     {selectedChat.company_name && (
                                         <p className="mt-1 text-sm text-gray-500">
                                             {selectedChat.company_name}
+                                        </p>
+                                    )}
+                                    {selectedChat.company_bin && (
+                                        <p className="mt-1 text-xs text-gray-400">
+                                            БСН/БИН: {selectedChat.company_bin}
                                         </p>
                                     )}
                                     {selectedChat.region_name && (
