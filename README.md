@@ -89,8 +89,39 @@ actions tied to the current ChatGPT user. Leave public content anonymous.
 
 - `npm run dev`: start local development
 - `npm run build`: verify the vinext build output
+- `npm run data:sync`: download and normalize the latest configured BNS trade workbooks
+- `npm run data:sync:kdb`: refresh country import profiles from the public BRK Power BI model
 - `npm test`: build the starter and verify its rendered loading skeleton
 - `npm run db:generate`: generate Drizzle migrations after schema changes
+
+## Kazakhstan trade data
+
+The globe reads `public/data/trade/kazakhstan-trade.json`. The file is generated
+from the official country-level foreign-trade workbooks published by the Bureau
+of National Statistics of Kazakhstan:
+
+- full-year 2024/2025 country comparison;
+- January–May 2025/2026 country comparison.
+
+Run `npm run data:sync` to download fresh source workbooks into the ignored
+`data/raw/` directory and regenerate the public JSON. The sync script merges
+historical country-name variants by ISO 3166 code, calculates centroids from the
+same `world-atlas` geometry used by the globe, and reconciles partner totals to
+the workbook control totals before writing output.
+
+Source index: <https://stat.gov.kz/ru/industries/economy/foreign-market/spreadsheets/>
+Reuse terms: <https://stat.gov.kz/ru/description/>
+
+## BRK import-profile data
+
+The detailed country dialog also reads
+`public/data/trade/kdb-import-profile.json`. Run `npm run data:sync:kdb` after
+the BNS sync to refresh market-import history, import categories, Kazakhstan's
+share, and the leading six-digit TN VED product positions for every matching
+trade partner. Values are stored in millions of US dollars; Kazakhstan's share
+is stored as a percentage.
+
+Official source: <https://www.kdb.kz/analytics/analiticheskiy-portal-importnogo-profilya-stran-mira/>
 
 ## Learn More
 
