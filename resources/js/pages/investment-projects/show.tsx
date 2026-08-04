@@ -228,23 +228,31 @@ function DescriptionTabs({
     currentStatus,
     showCurrentStatus = true,
     canEditStatus = false,
+    appendOnlyStatus = false,
     projectId,
 }: {
     description?: string;
     currentStatus?: string | null;
     showCurrentStatus?: boolean;
     canEditStatus?: boolean;
+    appendOnlyStatus?: boolean;
     projectId?: number;
 }) {
     const [activeTab, setActiveTab] = useState<
         'description' | 'current_status'
     >('description');
     const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(currentStatus || '');
+    const [editValue, setEditValue] = useState(
+        appendOnlyStatus ? '' : currentStatus || '',
+    );
     const [isSaving, setIsSaving] = useState(false);
+    const statusEntries = (currentStatus || '')
+        .split(/\n\s*\n/)
+        .map((status) => status.trim())
+        .filter(Boolean);
 
     const handleSaveStatus = () => {
-        if (!projectId) return;
+        if (!projectId || (appendOnlyStatus && !editValue.trim())) return;
         setIsSaving(true);
         router.put(
             `/investment-projects/${projectId}/update-status`,
@@ -252,6 +260,9 @@ function DescriptionTabs({
             {
                 onSuccess: () => {
                     setIsEditing(false);
+                    if (appendOnlyStatus) {
+                        setEditValue('');
+                    }
                     setIsSaving(false);
                 },
                 onError: () => {
@@ -294,10 +305,32 @@ function DescriptionTabs({
             ) : (
                 <div>
                     {isEditing ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
+                            {appendOnlyStatus && statusEntries.length > 0 && (
+                                <div className="space-y-3 rounded-lg bg-gray-50 p-3">
+                                    {statusEntries.map((status, index) => (
+                                        <div
+                                            key={`${status}-${index}`}
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                        >
+                                            {status}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {appendOnlyStatus && (
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Жаңа ағымдағы жағдай
+                                </label>
+                            )}
                             <textarea
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
+                                placeholder={
+                                    appendOnlyStatus
+                                        ? 'Жаңа ақпаратты жазыңыз. Бұрынғы жазбалар өзгеріссіз сақталады.'
+                                        : undefined
+                                }
                                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
                                 rows={4}
                             />
@@ -305,16 +338,27 @@ function DescriptionTabs({
                                 <button
                                     type="button"
                                     onClick={handleSaveStatus}
-                                    disabled={isSaving}
+                                    disabled={
+                                        isSaving ||
+                                        (appendOnlyStatus && !editValue.trim())
+                                    }
                                     className="rounded-md bg-[#c8a44e] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#b8943e] disabled:opacity-50"
                                 >
-                                    {isSaving ? 'Сақталуда...' : 'Сақтау'}
+                                    {isSaving
+                                        ? 'Сақталуда...'
+                                        : appendOnlyStatus
+                                          ? 'Жаңа жазбаны қосу'
+                                          : 'Сақтау'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setIsEditing(false);
-                                        setEditValue(currentStatus || '');
+                                        setEditValue(
+                                            appendOnlyStatus
+                                                ? ''
+                                                : currentStatus || '',
+                                        );
                                     }}
                                     className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                                 >
@@ -324,16 +368,31 @@ function DescriptionTabs({
                         </div>
                     ) : (
                         <div>
-                            <div className="leading-relaxed whitespace-pre-wrap text-gray-700">
-                                {currentStatus || 'Ағымдағы жағдайы жоқ.'}
-                            </div>
+                            {statusEntries.length > 0 ? (
+                                <div className="space-y-3">
+                                    {statusEntries.map((status, index) => (
+                                        <div
+                                            key={`${status}-${index}`}
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                        >
+                                            {status}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-gray-500">
+                                    Ағымдағы жағдайы жоқ.
+                                </div>
+                            )}
                             {canEditStatus && (
                                 <button
                                     type="button"
                                     onClick={() => setIsEditing(true)}
                                     className="mt-2 text-sm font-medium text-[#c8a44e] hover:text-[#b8943e]"
                                 >
-                                    Өзгерту
+                                    {appendOnlyStatus
+                                        ? 'Жаңа жағдай қосу'
+                                        : 'Өзгерту'}
                                 </button>
                             )}
                         </div>
@@ -1246,6 +1305,7 @@ export default function Show({
                                         (isIspolnitel && isInvolved) ||
                                         isModerator
                                     }
+                                    appendOnlyStatus={isIspolnitel}
                                     projectId={project.id}
                                 />
                             </div>

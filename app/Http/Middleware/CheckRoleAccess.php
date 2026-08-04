@@ -362,6 +362,10 @@ class CheckRoleAccess
             return false;
         }
 
+        if ($routeName === 'investment-projects.update-status') {
+            return true;
+        }
+
         foreach ($this->writeSuffixes as $suffix) {
             if (str_ends_with($routeName, $suffix)) {
                 return true;

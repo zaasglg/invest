@@ -2,6 +2,7 @@
 
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
+use App\Models\ProjectTask;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
@@ -163,6 +164,82 @@ test('project status update creates a structured change event', function () {
         ->toBe('Planning')
         ->and($log->properties['changes']['current_status']['new'])
         ->toBe('Construction started');
+});
+
+test('assigned executor can only append to the current project status', function () {
+    $admin = createActivityLogUser('superadmin');
+    $executor = createActivityLogUser('ispolnitel');
+    $project = createActivityLogProject($admin);
+
+    ProjectTask::create([
+        'project_id' => $project->id,
+        'title' => 'Executor status task',
+        'assigned_to' => $executor->id,
+        'created_by' => $admin->id,
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+
+    $this->actingAs($executor)
+        ->put(route('investment-projects.update-status', $project), [
+            'current_status' => 'Construction started',
+        ])
+        ->assertRedirect();
+
+    expect($project->fresh()->current_status)
+        ->toBe("Planning\n\nConstruction started");
+
+    $this->put(route('investment-projects.update-status', $project), [
+        'current_status' => 'Equipment was delivered',
+    ])->assertRedirect();
+
+    expect($project->fresh()->current_status)
+        ->toBe(
+            "Planning\n\nConstruction started\n\nEquipment was delivered"
+        );
+
+    $logs = KpiLog::query()
+        ->where('event', 'project.status_update_added')
+        ->orderBy('id')
+        ->get();
+
+    expect($logs)->toHaveCount(2)
+        ->and($logs->last()->properties['changes']['current_status']['old'])
+        ->toBe("Planning\n\nConstruction started")
+        ->and($logs->last()->properties['changes']['current_status']['new'])
+        ->toBe(
+            "Planning\n\nConstruction started\n\nEquipment was delivered"
+        );
+});
+
+test('executor cannot clear a current status or update an unrelated project', function () {
+    $admin = createActivityLogUser('superadmin');
+    $executor = createActivityLogUser('ispolnitel');
+    $project = createActivityLogProject($admin);
+    $unrelatedProject = createActivityLogProject($admin);
+
+    ProjectTask::create([
+        'project_id' => $project->id,
+        'title' => 'Executor validation task',
+        'assigned_to' => $executor->id,
+        'created_by' => $admin->id,
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+
+    $this->actingAs($executor)
+        ->put(route('investment-projects.update-status', $project), [
+            'current_status' => '',
+        ])
+        ->assertSessionHasErrors('current_status');
+
+    expect($project->fresh()->current_status)->toBe('Planning');
+
+    $this->put(route('investment-projects.update-status', $unrelatedProject), [
+        'current_status' => 'Unauthorized status update',
+    ])->assertForbidden();
+
+    expect($unrelatedProject->fresh()->current_status)->toBe('Planning');
 });
 
 test('project reordering records old and new positions', function () {

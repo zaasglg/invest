@@ -13,6 +13,7 @@ use App\Models\Sez;
 use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
+use App\Services\InvestmentProjectStatusService;
 use App\Services\PrivateFileService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
@@ -36,6 +37,7 @@ class InvestmentProjectController extends Controller
     public function __construct(
         private readonly PrivateFileService $files,
         private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly InvestmentProjectStatusService $projectStatus,
         private readonly ProjectPassportSummaryService $passportSummary,
         private readonly SortOrderService $sortOrder,
         private readonly ProjectExecutorAssignmentService $projectExecutors
@@ -923,30 +925,68 @@ class InvestmentProjectController extends Controller
 
     public function updateStatus(Request $request, InvestmentProject $investmentProject)
     {
+        $user = $request->user()?->load('roleModel');
+        $isExecutor = $user?->roleModel?->name === 'ispolnitel';
+
         $validated = $request->validate([
-            'current_status' => 'nullable|string',
+            'current_status' => [
+                $isExecutor ? 'required' : 'nullable',
+                'string',
+                'max:10000',
+            ],
         ]);
 
-        $previousStatus = $investmentProject->current_status;
-        $investmentProject->update(['current_status' => $validated['current_status']]);
+        if ($isExecutor) {
+            abort_unless(
+                $user->isInvolvedInProject($investmentProject),
+                403,
+                'Сіз бұл жобаға қатыспайсыз.'
+            );
+
+            $statusUpdate = trim($validated['current_status']);
+            if ($statusUpdate === '') {
+                throw ValidationException::withMessages([
+                    'current_status' => 'Жаңа ағымдағы жағдайды жазыңыз.',
+                ]);
+            }
+
+            $statusChange = $this->projectStatus->append(
+                $investmentProject,
+                $statusUpdate
+            );
+        } else {
+            $statusChange = $this->projectStatus->replace(
+                $investmentProject,
+                $validated['current_status'] ?? null
+            );
+        }
 
         KpiLog::activity(
             projectId: $investmentProject->id,
-            event: 'project.status_updated',
+            event: $isExecutor
+                ? 'project.status_update_added'
+                : 'project.status_updated',
             category: 'project',
-            action: 'Жобаның ағымдағы жағдайы жаңартылды',
+            action: $isExecutor
+                ? 'Жобаның ағымдағы жағдайына жаңа жазба қосылды'
+                : 'Жобаның ағымдағы жағдайы жаңартылды',
             subject: $investmentProject,
             properties: [
                 'project_name' => $investmentProject->name,
                 'changes' => KpiLog::changes(
-                    ['current_status' => $previousStatus],
-                    ['current_status' => $investmentProject->current_status],
+                    ['current_status' => $statusChange['old']],
+                    ['current_status' => $statusChange['new']],
                     ['current_status' => 'Ағымдағы жағдай']
                 ),
             ]
         );
 
-        return redirect()->back()->with('success', 'Ағымдағы жағдайы жаңартылды.');
+        return redirect()->back()->with(
+            'success',
+            $isExecutor
+                ? 'Жаңа ағымдағы жағдай қосылды.'
+                : 'Ағымдағы жағдайы жаңартылды.'
+        );
     }
 
     public function logs(
