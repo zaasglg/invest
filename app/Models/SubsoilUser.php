@@ -45,6 +45,11 @@ class SubsoilUser extends Model
 
     public function documents()
     {
+        return $this->hasMany(SubsoilDocument::class)->active();
+    }
+
+    public function allDocuments()
+    {
         return $this->hasMany(SubsoilDocument::class);
     }
 

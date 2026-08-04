@@ -192,6 +192,11 @@ class InvestmentProject extends Model
 
     public function documents()
     {
+        return $this->hasMany(ProjectDocument::class, 'project_id')->active();
+    }
+
+    public function allDocuments()
+    {
         return $this->hasMany(ProjectDocument::class, 'project_id');
     }
 

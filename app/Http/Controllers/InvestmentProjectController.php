@@ -1370,7 +1370,7 @@ class InvestmentProjectController extends Controller
                     $document->file_path
                 );
                 $folder = $document->is_completed
-                    ? 'Құжаттар/Аяқталған құжаттар'
+                    ? 'Құжаттар/Тапсырма бойынша орындалған құжаттар'
                     : 'Құжаттар/Жүктелген құжаттар';
                 $zip->addFile($filePath, $folder.'/'.$docName);
             }

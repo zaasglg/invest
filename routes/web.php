@@ -76,6 +76,7 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
     Route::get('presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'presentation'])->name('investment-projects.presentation');
 
     Route::get('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])->name('investment-projects.documents.index');
+    Route::get('documents/deleted', [\App\Http\Controllers\ProjectDocumentController::class, 'deleted'])->name('investment-projects.documents.deleted');
     Route::post('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])->name('investment-projects.documents.store');
     Route::get('documents/{document}/download', [\App\Http\Controllers\ProjectDocumentController::class, 'download'])->name('investment-projects.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])->name('investment-projects.documents.destroy');
@@ -153,6 +154,7 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access']
     Route::delete('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'destroy'])->name('subsoil-users.issues.destroy');
 
     Route::get('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'index'])->name('subsoil-users.documents.index');
+    Route::get('documents/deleted', [\App\Http\Controllers\SubsoilDocumentController::class, 'deleted'])->name('subsoil-users.documents.deleted');
     Route::post('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'store'])->name('subsoil-users.documents.store');
     Route::get('documents/{document}/download', [\App\Http\Controllers\SubsoilDocumentController::class, 'download'])->name('subsoil-users.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\SubsoilDocumentController::class, 'destroy'])->name('subsoil-users.documents.destroy');

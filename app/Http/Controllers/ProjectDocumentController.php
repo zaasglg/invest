@@ -12,6 +12,14 @@ use Inertia\Inertia;
 
 class ProjectDocumentController extends Controller
 {
+    private const AUDIT_RELATIONS = [
+        'uploader:id,full_name',
+        'approver:id,full_name',
+        'taskAssigner:id,full_name',
+        'deleter:id,full_name',
+        'sourceTask:id,title,created_at',
+    ];
+
     public function __construct(
         private readonly PrivateFileService $files
     ) {}
@@ -29,13 +37,17 @@ class ProjectDocumentController extends Controller
 
         $completedDocuments = $investmentProject->documents()
             ->where('is_completed', true)
+            ->with(self::AUDIT_RELATIONS)
             ->latest()
             ->get();
 
         $documents = $investmentProject->documents()
             ->where('is_completed', false)
+            ->with(self::AUDIT_RELATIONS)
             ->latest()
             ->get();
+
+        $isSuperadmin = $user->roleModel?->name === 'superadmin';
 
         return Inertia::render('investment-projects/documents', [
             'project' => $investmentProject->load(['region', 'projectType']),
@@ -46,6 +58,29 @@ class ProjectDocumentController extends Controller
                 $user,
                 $investmentProject
             ),
+            'canMarkAsCompleted' => $isSuperadmin,
+            'canViewDeleted' => $isSuperadmin,
+            'deletedDocumentsCount' => $isSuperadmin
+                ? $investmentProject->allDocuments()
+                    ->where('is_deleted', true)
+                    ->count()
+                : 0,
+        ]);
+    }
+
+    public function deleted(InvestmentProject $investmentProject)
+    {
+        $this->ensureSuperadmin(Auth::user());
+
+        $documents = $investmentProject->allDocuments()
+            ->where('is_deleted', true)
+            ->with(self::AUDIT_RELATIONS)
+            ->latest('deleted_at')
+            ->get();
+
+        return Inertia::render('investment-projects/deleted-documents', [
+            'project' => $investmentProject->load(['region', 'projectType']),
+            'documents' => $documents,
         ]);
     }
 
@@ -56,6 +91,11 @@ class ProjectDocumentController extends Controller
         }
 
         $user = Auth::user();
+
+        if ($document->is_deleted
+            && $user->roleModel?->name !== 'superadmin') {
+            abort(404);
+        }
 
         if (! $user->canDownloadFromProject($investmentProject)) {
             abort(403, 'Сіздің бұл жобаның құжаттарына қол жеткізуіңіз жоқ.');
@@ -100,15 +140,8 @@ class ProjectDocumentController extends Controller
             'is_completed' => 'nullable|boolean',
         ]);
 
-        $isCompleted = $request->boolean('is_completed', false);
-
-        if (in_array(
-            $user->roleModel?->name,
-            ['ispolnitel', 'investor'],
-            true
-        )) {
-            $isCompleted = false;
-        }
+        $isCompleted = $user->roleModel?->name === 'superadmin'
+            && $request->boolean('is_completed', false);
 
         $document = null;
 
@@ -123,8 +156,12 @@ class ProjectDocumentController extends Controller
                 'project_id' => $investmentProject->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
-                'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
+                'type' => $validated['type'] ?? $file->getClientOriginalExtension(),
                 'is_completed' => $isCompleted,
+                'uploaded_by' => $user->id,
+                'source' => 'manual',
+                'approved_by' => $isCompleted ? $user->id : null,
+                'approved_at' => $isCompleted ? now() : null,
             ]);
         }
 
@@ -139,7 +176,7 @@ class ProjectDocumentController extends Controller
                 'details' => [
                     'Құжат атауы' => $validated['name'],
                     'Құжат түрі' => $document?->type,
-                    'Аяқталған құжат' => $isCompleted,
+                    'Тапсырма бойынша орындалған құжат' => $isCompleted,
                 ],
             ]
         );
@@ -164,27 +201,35 @@ class ProjectDocumentController extends Controller
             abort(404);
         }
 
-        $this->files->delete($document->file_path);
+        abort_if($document->is_deleted, 404);
 
-        $document->delete();
+        $document->update([
+            'is_deleted' => true,
+            'deleted_by' => $user->id,
+            'deleted_at' => now(),
+        ]);
 
         KpiLog::activity(
             projectId: $investmentProject->id,
-            event: 'document.deleted',
+            event: 'document.archived',
             category: 'document',
-            action: 'Құжат жойылды: "'.$document->name.'"',
+            action: 'Құжат өшірілген құжаттарға жіберілді: "'
+                .$document->name.'"',
             subject: $document,
             properties: [
                 'project_name' => $investmentProject->name,
                 'details' => [
                     'Құжат атауы' => $document->name,
                     'Құжат түрі' => $document->type,
-                    'Аяқталған құжат' => $document->is_completed,
+                    'Тапсырма бойынша орындалған құжат' => $document->is_completed,
                 ],
             ]
         );
 
-        return redirect()->back()->with('success', 'Құжат жойылды.');
+        return redirect()->back()->with(
+            'success',
+            'Құжат өшірілген құжаттар бөліміне жіберілді.'
+        );
     }
 
     private function participantCanCreate(
@@ -216,5 +261,14 @@ class ProjectDocumentController extends Controller
         ) && ! $this->participantCanCreate($user, $project)) {
             abort(403, 'Сіз бұл жобаға құжат қоса алмайсыз.');
         }
+    }
+
+    private function ensureSuperadmin($user): void
+    {
+        abort_unless(
+            $user?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген құжаттарды тек супер әкімші көре алады.'
+        );
     }
 }

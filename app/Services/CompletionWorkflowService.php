@@ -586,6 +586,16 @@ class CompletionWorkflowService
                 'file_path' => $newPath,
                 'type' => $extension ?: 'document',
                 'is_completed' => true,
+                'uploaded_by' => $completion->submitted_by,
+                'source' => 'task_completion',
+                'source_task_id' => $task->id,
+                'source_completion_id' => $completion->id,
+                'source_task_title' => $task->title,
+                'task_assigned_at' => $task->created_at,
+                'task_assigned_by' => $task->created_by,
+                'submitted_at' => $completion->created_at,
+                'approved_by' => $completion->reviewed_by,
+                'approved_at' => $completion->reviewed_at,
             ]);
         }
     }
@@ -617,6 +627,16 @@ class CompletionWorkflowService
                 'file_path' => $newPath,
                 'type' => $extension ?: 'document',
                 'is_completed' => true,
+                'uploaded_by' => $completion->submitted_by,
+                'source' => 'task_completion',
+                'source_task_id' => $task->id,
+                'source_completion_id' => $completion->id,
+                'source_task_title' => $task->title,
+                'task_assigned_at' => $task->created_at,
+                'task_assigned_by' => $task->created_by,
+                'submitted_at' => $completion->created_at,
+                'approved_by' => $completion->reviewed_by,
+                'approved_at' => $completion->reviewed_at,
             ]);
         }
     }
