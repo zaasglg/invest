@@ -76,6 +76,7 @@ class CheckRoleAccess
      */
     protected array $nonMutatingRoutes = [
         'investment-projects.bulk-presentation',
+        'chat.send',
     ];
 
     /**
@@ -98,6 +99,7 @@ class CheckRoleAccess
         'investment-projects.tasks.completions.store',
         'investment-projects.tasks.completions.files.preview',
         'investment-projects.tasks.completions.files.download',
+        'chat.send',
     ];
 
     /**
@@ -380,7 +382,8 @@ class CheckRoleAccess
         $user,
         string $routeName
     ): void {
-        if ($routeName === 'investment-projects.index') {
+        if (! str_starts_with($routeName, 'investment-projects.')
+            || $routeName === 'investment-projects.index') {
             return;
         }
 

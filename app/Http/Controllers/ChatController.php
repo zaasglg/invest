@@ -19,12 +19,6 @@ class ChatController extends Controller
 
     public function send(Request $request): JsonResponse
     {
-        abort_if(
-            $request->user()?->roleModel?->name === 'investor',
-            403,
-            'Инвесторға AI-көмекші қолжетімсіз.'
-        );
-
         $request->validate([
             'message' => 'required|string|max:1000',
         ]);
@@ -34,7 +28,11 @@ class ChatController extends Controller
             $user = $request->user();
 
             $entities = $this->localChat->analyzeQuery($message, $user);
-            $contextData = $this->contextService->buildContext($message, $entities);
+            $contextData = $this->contextService->buildContext(
+                $message,
+                $entities,
+                $user
+            );
 
             // Сначала пробуем Gemini, при неудаче — локальный fallback
             $response = null;

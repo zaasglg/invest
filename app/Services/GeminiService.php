@@ -103,10 +103,17 @@ class GeminiService
         $roleName = $user?->roleModel?->name ?? '';
 
         $contextText = $this->formatContext($contextData, $lang);
-        $hasData = ! empty($contextData);
+        $isInvestor = $roleName === 'investor';
 
         if ($lang === 'ru') {
             $userInfo = $userName ? "Пользователь: {$userName} (роль: {$roleName})\n" : '';
+            $investorRules = $isInvestor
+                ? <<<'RULES'
+- Ты персональный консультант инвестора: сначала ответь на вопрос, затем отдельно предложи до 3 подходящих мер поддержки и до 3 региональных площадок из переданных данных
+- Проекты, задачи и галерея уже отфильтрованы сервером по компании инвестора; не предполагай наличие других проектов
+- Не обещай получение льготы или свободный участок: назови подбор предварительным и предложи проверить критерии у оператора программы или управляющей компании
+RULES
+                : '';
 
             return <<<PROMPT
 Ты — AI-помощник системы Turkistan Invest (инвестиционная платформа Туркестанской области Казахстана).
@@ -124,12 +131,20 @@ class GeminiService
 - Не добавляй markdown звёздочки (**) — пиши простым текстом
 - Не упоминай JSON, поля базы данных, технические термины
 - Отвечай на русском языке
+{$investorRules}
 
 Вопрос: {$message}
 PROMPT;
         }
 
         $userInfo = $userName ? "Пайдаланушы: {$userName} (рөл: {$roleName})\n" : '';
+        $investorRules = $isInvestor
+            ? <<<'RULES'
+- Сен инвестордың жеке кеңесшісісің: алдымен сұраққа жауап бер, содан кейін берілген деректерден 3-ке дейін сәйкес қолдау шарасын және 3-ке дейін өңірлік алаңды бөлек ұсын
+- Жобалар, тапсырмалар мен галерея серверде инвестор компаниясы бойынша сүзілген; басқа жобалар бар деп болжама
+- Жеңілдік беріледі немесе жер бос деп уәде берме: іріктеу алдын ала екенін айтып, талаптарды бағдарлама операторынан не басқарушы компаниядан тексеруді ұсын
+RULES
+            : '';
 
         return <<<PROMPT
 Сен — Turkistan Invest жүйесінің AI-көмекшісісің (Қазақстанның Түркістан облысының инвестициялық платформасы).
@@ -147,6 +162,7 @@ PROMPT;
 - Markdown жұлдызшалар (**) қолданба — қарапайым мәтін жаз
 - JSON, дерекқор өрістері, техникалық терминдер айтпа
 - Қазақ тілінде жауап бер
+{$investorRules}
 
 Сұрақ: {$message}
 PROMPT;
@@ -328,6 +344,61 @@ PROMPT;
                 $label = $lang === 'ru' ? 'РЕЙТИНГ' : 'РЕЙТИНГ';
                 $lines[] = $label.':';
                 $lines[] = ($lang === 'ru' ? 'Всего исполнителей: ' : 'Барлық орындаушылар: ').($data['total_ispolnitel'] ?? 0);
+                break;
+
+            case 'investor_profile':
+                $label = $lang === 'ru' ? 'ПРОФИЛЬ ИНВЕСТОРА' : 'ИНВЕСТОР ПРОФИЛІ';
+                $lines[] = $label.':';
+                $lines[] = ($lang === 'ru' ? 'Компания: ' : 'Компания: ').($data['company'] ?? '—');
+                $lines[] = ($lang === 'ru' ? 'Вид деятельности: ' : 'Қызмет түрі: ').($data['activity_type'] ?? '—');
+                $lines[] = ($lang === 'ru' ? 'Базовый регион: ' : 'Негізгі өңір: ').($data['region'] ?? '—');
+                break;
+
+            case 'support_measures':
+                $lines[] = $lang === 'ru'
+                    ? 'МЕРЫ ГОСУДАРСТВЕННОЙ ПОДДЕРЖКИ (ПРЕДВАРИТЕЛЬНЫЙ ПОДБОР):'
+                    : 'МЕМЛЕКЕТТІК ҚОЛДАУ ШАРАЛАРЫ (АЛДЫН АЛА ІРІКТЕУ):';
+                foreach ($data['items'] ?? [] as $i => $item) {
+                    $title = $item[$lang === 'ru' ? 'title_ru' : 'title_kk'];
+                    $summary = $item[$lang === 'ru' ? 'summary_ru' : 'summary_kk'];
+                    $eligibility = $item[$lang === 'ru'
+                        ? 'eligibility_ru'
+                        : 'eligibility_kk'];
+                    $lines[] = ($i + 1).'. '.$title.': '.$summary;
+                    $lines[] = ($lang === 'ru' ? 'Критерий: ' : 'Шарты: ').$eligibility;
+                    $lines[] = 'Оператор: '.$item['operator'].'; '.$item['source_url'];
+                }
+                break;
+
+            case 'regional_assets':
+                $lines[] = $lang === 'ru'
+                    ? 'РЕГИОНАЛЬНЫЕ АКТИВЫ ДЛЯ РАССМОТРЕНИЯ:'
+                    : 'ҚАРАСТЫРУҒА БОЛАТЫН ӨҢІР АКТИВТЕРІ:';
+                if (! empty($data['region'])) {
+                    $lines[] = ($lang === 'ru' ? 'Регион: ' : 'Өңір: ').$data['region'];
+                }
+                foreach ($data['items'] ?? [] as $i => $item) {
+                    $area = $item['total_area'] !== null
+                        ? number_format((float) $item['total_area'], 2, ',', ' ').' га'
+                        : '—';
+                    $infrastructure = empty($item['infrastructure'])
+                        ? '—'
+                        : implode(', ', $item['infrastructure']);
+                    $lines[] = ($i + 1).'. '.$item['name']
+                        .' | '.($item['region'] ?? '—')
+                        .' | '.$item['type']
+                        .' | '.($item['status'] ?? '—')
+                        .' | '.$area
+                        .' | '.($lang === 'ru' ? 'инфраструктура: ' : 'инфрақұрылым: ')
+                        .$infrastructure;
+                    if (! empty($item['description'])) {
+                        $lines[] = ($lang === 'ru' ? 'Профиль площадки: ' : 'Алаң бейіні: ')
+                            .$item['description'];
+                    }
+                }
+                $lines[] = $lang === 'ru'
+                    ? 'Свободную площадь и технические лимиты нужно подтвердить у управляющей организации.'
+                    : 'Бос аумақ пен техникалық лимиттерді басқарушы ұйымнан нақтылау қажет.';
                 break;
 
             default:

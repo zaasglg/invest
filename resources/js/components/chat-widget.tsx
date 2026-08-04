@@ -1,3 +1,4 @@
+import { usePage } from '@inertiajs/react';
 import {
     ArrowUpRight,
     BotMessageSquare,
@@ -18,6 +19,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
+import { send as sendChatMessage } from '@/routes/chat';
+import type { SharedData } from '@/types';
 
 const INVESTOR_MAP_URL =
     'https://alpha-turkistan-investor-2026-0722.chatgpt-edu-7368.chatgpt.site/';
@@ -56,7 +59,98 @@ interface Message {
     content: string;
 }
 
+const ROLE_ASSISTANT_COPY: Record<
+    string,
+    { title: string; description: string; suggestions: string[] }
+> = {
+    superadmin: {
+        title: 'AI Көмекші',
+        description: 'Жүйедегі барлық бағыт бойынша талдау жасаймын',
+        suggestions: [
+            'Барлық инвестициялық жобалардың статистикасын көрсет',
+            'Жүйедегі белсенді мәселелерді көрсет',
+            'Қолдау шаралары мен өңір активтерін салыстыр',
+        ],
+    },
+    invest: {
+        title: 'Invest штабының AI көмекшісі',
+        description:
+            'Кураторлық жобалар мен инвестициялық мүмкіндіктерді талдаймын',
+        suggestions: [
+            'Менің бағытымдағы инвестициялық жобаларды көрсет',
+            'Жобалардағы белсенді мәселелерді көрсет',
+            'Жобаларға сәйкес қолдау шаралары мен алаңдарды ұсын',
+        ],
+    },
+    akim: {
+        title: 'Әкімнің AI көмекшісі',
+        description: 'Өңір жобалары мен инвестициялық көрсеткіштерді талдаймын',
+        suggestions: [
+            'Менің өңірімдегі инвестициялық жобаларды көрсет',
+            'Өңірдегі белсенді мәселелерді көрсет',
+            'Өңір активтері мен қолдау шараларын ұсын',
+        ],
+    },
+    zamakim: {
+        title: 'Әкім орынбасарының AI көмекшісі',
+        description:
+            'Жобалар мен өңірлік көрсеткіштер бойынша анықтама беремін',
+        suggestions: [
+            'Инвестициялық жобалардың статистикасын көрсет',
+            'Белсенді мәселелерді көрсет',
+            'Қолдау шаралары мен өңір активтерін ұсын',
+        ],
+    },
+    ispolnitel: {
+        title: 'Орындаушының AI көмекшісі',
+        description: 'Тапсырмалар мен жобалар бойынша жұмысқа көмектесемін',
+        suggestions: [
+            'Менің тапсырмаларымды көрсет',
+            'Жобалардағы белсенді мәселелерді көрсет',
+            'Қолжетімді өңір активтерін көрсет',
+        ],
+    },
+    moderator: {
+        title: 'Модератордың AI көмекшісі',
+        description: 'Turkistan Invest жобалары мен тапсырмаларын талдаймын',
+        suggestions: [
+            'Turkistan Invest жобаларын көрсет',
+            'Тексерілетін тапсырмаларды көрсет',
+            'Орындаушылар рейтингін көрсет',
+        ],
+    },
+    prokuror: {
+        title: 'Прокурордың AI көмекшісі',
+        description: 'Жүйедегі жобалар мен мәселелер бойынша шолу беремін',
+        suggestions: [
+            'Барлық инвестициялық жобаларды көрсет',
+            'Белсенді мәселелер мен тапсырмаларды көрсет',
+            'Өңірлердің инвестициялық статистикасын көрсет',
+        ],
+    },
+    investor: {
+        title: 'Инвестордың AI кеңесшісі',
+        description:
+            'Жобаңызға сай қолдау шаралары мен өңір активтерін табуға көмектесемін',
+        suggestions: [
+            'Менің жобама сәйкес мемлекеттік қолдау шараларын ұсын',
+            'Компанияма жақын өңір активтерін көрсет',
+            'Жобама қолайлы алаң мен жеңілдіктерді бірге таңда',
+        ],
+    },
+};
+
+const DEFAULT_ASSISTANT_COPY = {
+    title: 'AI Көмекші',
+    description: 'Жобалар, аймақтар және жүйе мүмкіндіктері туралы сұраңыз',
+    suggestions: ['Жүйе бойынша көмек көрсет'],
+};
+
 export function ChatWidget() {
+    const { auth } = usePage<SharedData>().props;
+    const roleName = auth.user?.role_model?.name ?? '';
+    const assistantCopy =
+        ROLE_ASSISTANT_COPY[roleName] ?? DEFAULT_ASSISTANT_COPY;
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
@@ -86,10 +180,12 @@ export function ChatWidget() {
         }
     }, [isOpen]);
 
-    const sendMessage = async () => {
-        if (!input.trim() || isLoading) return;
+    const sendMessage = async (suggestedMessage?: string) => {
+        const message = suggestedMessage ?? input;
 
-        const userMessage = input.trim();
+        if (!message.trim() || isLoading) return;
+
+        const userMessage = message.trim();
         setInput('');
         setIsLoading(true);
 
@@ -102,7 +198,7 @@ export function ChatWidget() {
         setMessages((prev) => [...prev, tempUserMsg]);
 
         try {
-            const response = await fetch('/chat/send', {
+            const response = await fetch(sendChatMessage.url(), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -173,7 +269,7 @@ export function ChatWidget() {
                         <div className="flex items-center gap-2">
                             <BotMessageSquare className="h-5 w-5" />
                             <CardTitle className="text-lg">
-                                AI Көмекші
+                                {assistantCopy.title}
                             </CardTitle>
                         </div>
                         <Button
@@ -220,13 +316,32 @@ export function ChatWidget() {
                                     <BotMessageSquare className="h-12 w-12 opacity-20" />
                                     <div>
                                         <p className="font-medium">
-                                            Сәлем! Мен сіздің AI көмекшіңізмін
+                                            Сәлем! Мен сіздің AI көмекшіңізбін
                                         </p>
                                         <p className="mt-1 text-sm">
-                                            Жобалар, аймақтар, мәселелер туралы
-                                            сұраңыз
+                                            {assistantCopy.description}
                                         </p>
                                     </div>
+                                    {assistantCopy.suggestions.length > 0 && (
+                                        <div className="flex w-full flex-col gap-2 pt-2">
+                                            {assistantCopy.suggestions.map(
+                                                (suggestion) => (
+                                                    <button
+                                                        key={suggestion}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            void sendMessage(
+                                                                suggestion,
+                                                            )
+                                                        }
+                                                        className="rounded-lg border bg-background px-3 py-2 text-left text-xs font-medium text-foreground transition-colors hover:border-[#c8a44e] hover:bg-[#f8f6ef]"
+                                                    >
+                                                        {suggestion}
+                                                    </button>
+                                                ),
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
                             ) : (
                                 <div className="space-y-4">
@@ -291,7 +406,7 @@ export function ChatWidget() {
                                 className="flex-1"
                             />
                             <Button
-                                onClick={sendMessage}
+                                onClick={() => void sendMessage()}
                                 disabled={isLoading || !input.trim()}
                                 size="icon"
                             >

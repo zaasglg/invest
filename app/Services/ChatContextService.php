@@ -13,16 +13,31 @@ use App\Models\Sez;
 use App\Models\SezIssue;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class ChatContextService
 {
-    public function buildContext(string $query, array $entities): array
-    {
+    public function __construct(
+        private readonly InvestmentRecommendationService $recommendations,
+        private readonly InvestmentProjectAccessService $projectAccess
+    ) {}
+
+    public function buildContext(
+        string $query,
+        array $entities,
+        ?User $user = null
+    ): array {
+        $user?->loadMissing(['roleModel', 'company.region']);
+
         // Минимальная статистика присутствует всегда
         $context = [
-            'overview' => $this->getOverviewStats(),
+            'overview' => $this->getOverviewStats($user),
         ];
+
+        if ($this->isInvestor($user)) {
+            $context['investor_profile'] = $this->getInvestorProfile($user);
+        }
 
         foreach ($entities as $entity) {
             switch ($entity) {
@@ -30,37 +45,48 @@ class ChatContextService
                     $context['regions'] = $this->getRegionsData($query);
                     break;
                 case 'investment_projects':
-                    $context['projects'] = $this->getProjectsData($query);
+                    $context['projects'] = $this->getProjectsData($query, $user);
                     break;
                 case 'project_types':
                     $context['project_types'] = $this->getProjectTypesData();
                     break;
                 case 'sezs':
-                    $context['sezs'] = $this->getSezData($query);
+                    $context['sezs'] = $this->getSezData($query, $user);
                     break;
                 case 'industrial_zones':
-                    $context['industrial_zones'] = $this->getIndustrialZonesData($query);
+                    $context['industrial_zones'] = $this
+                        ->getIndustrialZonesData($query, $user);
                     break;
                 case 'prom_zones':
-                    $context['prom_zones'] = $this->getPromZonesData($query);
+                    $context['prom_zones'] = $this
+                        ->getPromZonesData($query, $user);
                     break;
                 case 'subsoil_users':
-                    $context['subsoil_users'] = $this->getSubsoilUsersData($query);
+                    $context['subsoil_users'] = $this
+                        ->getSubsoilUsersData($query, $user);
                     break;
                 case 'issues':
-                    $context['issues'] = $this->getIssuesData($query);
+                    $context['issues'] = $this->getIssuesData($query, $user);
                     break;
                 case 'tasks':
-                    $context['tasks'] = $this->getTasksData($query);
+                    $context['tasks'] = $this->getTasksData($query, $user);
                     break;
                 case 'users':
                     $context['users'] = $this->getUsersData($query);
                     break;
                 case 'gallery':
-                    $context['gallery'] = $this->getGalleryData($query);
+                    $context['gallery'] = $this->getGalleryData($query, $user);
                     break;
                 case 'rating':
                     $context['rating'] = $this->getRatingData();
+                    break;
+                case 'support_measures':
+                    $context['support_measures'] = $this->recommendations
+                        ->supportMeasures($query, $user);
+                    break;
+                case 'regional_assets':
+                    $context['regional_assets'] = $this->recommendations
+                        ->regionalAssets($query, $user);
                     break;
             }
         }
@@ -68,16 +94,32 @@ class ChatContextService
         return $context;
     }
 
-    protected function getOverviewStats(): array
+    protected function getOverviewStats(?User $user): array
     {
+        $projects = $this->visibleProjects($user);
+
+        $activeIssues = ProjectIssue::query()
+            ->where('status', '!=', 'resolved')
+            ->whereIn('project_id', (clone $projects)->select('id'));
+
         return [
-            'total_projects' => InvestmentProject::count(),
-            'total_investment' => (float) InvestmentProject::sum('total_investment'),
+            'total_projects' => (clone $projects)->count(),
+            'total_investment' => (float) (clone $projects)
+                ->sum('total_investment'),
             'total_sezs' => Sez::count(),
             'total_industrial_zones' => IndustrialZone::count(),
             'total_prom_zones' => PromZone::count(),
             'total_subsoil_users' => SubsoilUser::count(),
-            'active_issues' => \App\Models\ProjectIssue::where('status', '!=', 'resolved')->count(),
+            'active_issues' => $activeIssues->count(),
+        ];
+    }
+
+    protected function getInvestorProfile(User $user): array
+    {
+        return [
+            'company' => $user->company?->display_name,
+            'activity_type' => $user->company?->activity_type,
+            'region' => $user->company?->region?->name,
         ];
     }
 
@@ -118,9 +160,10 @@ class ChatContextService
         ];
     }
 
-    protected function getProjectsData(string $query): array
+    protected function getProjectsData(string $query, ?User $user): array
     {
-        $projectsQuery = InvestmentProject::with(['region', 'issues']);
+        $projectsQuery = $this->visibleProjects($user)
+            ->with(['region', 'issues']);
 
         if ($regionName = $this->extractRegionName($query)) {
             $projectsQuery->whereHas('region', fn ($q) => $q->where('name', 'ILIKE', "%{$regionName}%"));
@@ -154,16 +197,18 @@ class ChatContextService
         ];
     }
 
-    protected function getSezData(string $query): array
+    protected function getSezData(string $query, ?User $user): array
     {
-        $sezs = Sez::with(['region', 'issues'])->get();
+        $sezsQuery = Sez::with(['region', 'issues']);
+        $this->scopeRegionalResource($sezsQuery, $user);
+        $sezs = $sezsQuery->get();
         $totalCount = $sezs->count();
 
         $items = $sezs->take(10)->map(fn ($sez) => [
             'id' => $sez->id,
             'name' => $sez->name,
             'region' => $sez->region->name ?? null,
-            'area' => $sez->area,
+            'area' => $sez->total_area,
             'issues_count' => $sez->issues->count(),
         ])->toArray();
 
@@ -173,16 +218,20 @@ class ChatContextService
         ];
     }
 
-    protected function getIndustrialZonesData(string $query): array
-    {
-        $zones = IndustrialZone::with(['region', 'issues'])->get();
+    protected function getIndustrialZonesData(
+        string $query,
+        ?User $user
+    ): array {
+        $zonesQuery = IndustrialZone::with(['region', 'issues']);
+        $this->scopeRegionalResource($zonesQuery, $user);
+        $zones = $zonesQuery->get();
         $totalCount = $zones->count();
 
         $items = $zones->take(10)->map(fn ($zone) => [
             'id' => $zone->id,
             'name' => $zone->name,
             'region' => $zone->region->name ?? null,
-            'area' => $zone->area,
+            'area' => $zone->total_area,
             'issues_count' => $zone->issues->count(),
         ])->toArray();
 
@@ -192,9 +241,13 @@ class ChatContextService
         ];
     }
 
-    protected function getSubsoilUsersData(string $query): array
-    {
-        $users = SubsoilUser::with(['region', 'issues'])->get();
+    protected function getSubsoilUsersData(
+        string $query,
+        ?User $user
+    ): array {
+        $usersQuery = SubsoilUser::with(['region', 'issues']);
+        $this->scopeRegionalResource($usersQuery, $user);
+        $users = $usersQuery->get();
         $totalCount = $users->count();
 
         $items = $users->take(10)->map(fn ($user) => [
@@ -213,10 +266,12 @@ class ChatContextService
         ];
     }
 
-    protected function getIssuesData(string $query): array
+    protected function getIssuesData(string $query, ?User $user): array
     {
+        $visibleProjects = $this->visibleProjects($user);
         $projectIssues = ProjectIssue::with(['project.region'])
             ->where('status', '!=', 'resolved')
+            ->whereIn('project_id', $visibleProjects->select('id'))
             ->limit(15)
             ->get()
             ->map(fn ($issue) => [
@@ -228,24 +283,39 @@ class ChatContextService
                 'project' => $issue->project->name ?? null,
             ]);
 
-        $sezIssues = SezIssue::with(['sez'])
-            ->where('status', '!=', 'resolved')
-            ->limit(10)
-            ->get()
-            ->map(fn ($issue) => [
-                'type' => 'sez',
-                'id' => $issue->id,
-                'title' => $issue->title,
-                'status' => $issue->status,
-                'sez' => $issue->sez->name ?? null,
-            ]);
+        $sezIssues = collect();
+
+        if ($user?->roleModel?->name !== 'moderator') {
+            $sezIssuesQuery = SezIssue::with(['sez'])
+                ->where('status', '!=', 'resolved');
+
+            if ($user?->isDistrictScoped()) {
+                $sezIssuesQuery->whereHas(
+                    'sez',
+                    fn (Builder $sez) => $sez
+                        ->where('region_id', $user->region_id)
+                );
+            }
+
+            $sezIssues = $sezIssuesQuery
+                ->limit(10)
+                ->get()
+                ->map(fn ($issue) => [
+                    'type' => 'sez',
+                    'id' => $issue->id,
+                    'title' => $issue->title,
+                    'status' => $issue->status,
+                    'sez' => $issue->sez->name ?? null,
+                ]);
+        }
 
         return array_merge($projectIssues->toArray(), $sezIssues->toArray());
     }
 
-    protected function getTasksData(string $query): array
+    protected function getTasksData(string $query, ?User $user): array
     {
-        return DB::table('project_tasks')
+        $visibleProjects = $this->visibleProjects($user);
+        $tasks = DB::table('project_tasks')
             ->join('investment_projects', 'project_tasks.project_id', '=', 'investment_projects.id')
             ->select(
                 'project_tasks.id',
@@ -254,6 +324,17 @@ class ChatContextService
                 'project_tasks.due_date',
                 'investment_projects.name as project_name'
             )
+            ->whereIn(
+                'investment_projects.id',
+                $visibleProjects->select('id')
+            );
+
+        if ($this->isInvestor($user)
+            || $user?->roleModel?->name === 'ispolnitel') {
+            $tasks->where('project_tasks.assigned_to', $user->id);
+        }
+
+        return $tasks
             ->limit(20)
             ->get()
             ->toArray();
@@ -307,16 +388,18 @@ class ChatContextService
         ];
     }
 
-    protected function getPromZonesData(string $query): array
+    protected function getPromZonesData(string $query, ?User $user): array
     {
-        $zones = PromZone::with(['region', 'issues'])->get();
+        $zonesQuery = PromZone::with(['region', 'issues']);
+        $this->scopeRegionalResource($zonesQuery, $user);
+        $zones = $zonesQuery->get();
         $totalCount = $zones->count();
 
         $items = $zones->take(10)->map(fn ($zone) => [
             'id' => $zone->id,
             'name' => $zone->name,
             'region' => $zone->region->name ?? null,
-            'area' => $zone->area ?? null,
+            'area' => $zone->total_area ?? null,
             'issues_count' => $zone->issues->count(),
         ])->toArray();
 
@@ -342,11 +425,23 @@ class ChatContextService
         ];
     }
 
-    protected function getGalleryData(string $query): array
+    protected function getGalleryData(string $query, ?User $user): array
     {
-        $totalPhotos = DB::table('project_photos')->count();
-        $recentPhotos = DB::table('project_photos')
-            ->join('investment_projects', 'project_photos.project_id', '=', 'investment_projects.id')
+        $visibleProjects = $this->visibleProjects($user);
+        $photos = DB::table('project_photos')
+            ->join(
+                'investment_projects',
+                'project_photos.project_id',
+                '=',
+                'investment_projects.id'
+            )
+            ->whereIn(
+                'investment_projects.id',
+                $visibleProjects->select('id')
+            );
+
+        $totalPhotos = (clone $photos)->count('project_photos.id');
+        $recentPhotos = (clone $photos)
             ->select(
                 'investment_projects.name as project_name',
                 DB::raw('count(*) as photos_count'),
@@ -362,6 +457,31 @@ class ChatContextService
             'total_photos' => $totalPhotos,
             'recent_by_project' => $recentPhotos,
         ];
+    }
+
+    protected function isInvestor(?User $user): bool
+    {
+        return $user?->roleModel?->name === 'investor';
+    }
+
+    protected function visibleProjects(?User $user): Builder
+    {
+        $projects = InvestmentProject::query()->active();
+
+        if ($user) {
+            $this->projectAccess->scopeVisible($projects, $user);
+        }
+
+        return $projects;
+    }
+
+    protected function scopeRegionalResource(
+        Builder $query,
+        ?User $user
+    ): void {
+        if ($user?->isDistrictScoped()) {
+            $query->where('region_id', $user->region_id);
+        }
     }
 
     protected function getRatingData(): array
