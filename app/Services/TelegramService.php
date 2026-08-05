@@ -91,7 +91,8 @@ class TelegramService
     ): string {
         $emoji = match ($type) {
             'task_assigned' => '📋',
-            'task_overdue' => '⏰',
+            'task_overdue', 'task_due_soon', 'subsoil_task_due_soon' => '⏰',
+            'assistant_suggestion' => '✨',
             'completion_submitted' => '📩',
             'completion_approved' => '✅',
             'completion_rejected' => '❌',

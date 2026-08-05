@@ -36,6 +36,14 @@ import { filterNavItemsByRole, headerNavItems } from '@/config/navigation';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
+import {
+    index as chatsIndex,
+    unreadCount as chatUnreadCount,
+} from '@/routes/chats';
+import {
+    index as notificationsIndex,
+    unreadCount as notificationUnreadCount,
+} from '@/routes/notifications';
 import type { BreadcrumbItem, NavItem, SharedData } from '@/types';
 
 type Props = {
@@ -71,6 +79,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const [unreadChatMessagesCount, setUnreadChatMessagesCount] = useState(
         page.props.unreadChatMessagesCount,
     );
+    const [unreadNotificationsCount, setUnreadNotificationsCount] = useState(
+        page.props.unreadNotificationsCount,
+    );
     const filteredHeaderNavItems = filterNavItemsByRole(
         headerNavItems,
         auth.user,
@@ -87,26 +98,73 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     }, [page.props.unreadChatMessagesCount]);
 
     useEffect(() => {
-        const loadUnreadChatCount = async () => {
+        setUnreadNotificationsCount(page.props.unreadNotificationsCount);
+    }, [page.props.unreadNotificationsCount]);
+
+    useEffect(() => {
+        const handleNotificationCounts = (event: Event) => {
+            const counts = (
+                event as CustomEvent<{
+                    count: number;
+                    assistant_count: number;
+                }>
+            ).detail;
+            setUnreadNotificationsCount(counts.count);
+        };
+
+        window.addEventListener(
+            'notification-counts-updated',
+            handleNotificationCounts,
+        );
+
+        return () =>
+            window.removeEventListener(
+                'notification-counts-updated',
+                handleNotificationCounts,
+            );
+    }, []);
+
+    useEffect(() => {
+        const loadUnreadCounts = async () => {
             try {
-                const response = await fetch('/chats/unread-count', {
+                const requestOptions = {
                     headers: {
                         Accept: 'application/json',
                         'X-Requested-With': 'XMLHttpRequest',
                     },
-                });
+                };
+                const [chatResponse, notificationResponse] = await Promise.all([
+                    fetch(chatUnreadCount.url(), requestOptions),
+                    fetch(notificationUnreadCount.url(), requestOptions),
+                ]);
 
-                if (!response.ok) return;
+                if (chatResponse.ok) {
+                    const chatData = (await chatResponse.json()) as {
+                        count: number;
+                    };
+                    setUnreadChatMessagesCount(chatData.count);
+                }
 
-                const data = (await response.json()) as { count: number };
-                setUnreadChatMessagesCount(data.count);
+                if (notificationResponse.ok) {
+                    const notificationData =
+                        (await notificationResponse.json()) as {
+                            count: number;
+                            assistant_count: number;
+                        };
+                    setUnreadNotificationsCount(notificationData.count);
+                    window.dispatchEvent(
+                        new CustomEvent('notification-counts-updated', {
+                            detail: notificationData,
+                        }),
+                    );
+                }
             } catch {
-                // Keep the last known count when the connection is unavailable.
+                // Keep the last known counts when the connection is unavailable.
             }
         };
 
-        void loadUnreadChatCount();
-        const intervalId = window.setInterval(loadUnreadChatCount, 5000);
+        void loadUnreadCounts();
+        const intervalId = window.setInterval(loadUnreadCounts, 5000);
 
         return () => window.clearInterval(intervalId);
     }, [auth.user.id]);
@@ -279,7 +337,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Link
-                                        href="/chats"
+                                        href={chatsIndex.url()}
                                         className={cn(
                                             'relative flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
                                             isCurrentUrl('/chats') &&
@@ -303,17 +361,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <Link
-                                        href="/notifications"
+                                        href={notificationsIndex.url()}
                                         className="relative flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white"
                                     >
                                         <Bell className="h-4 w-4" />
-                                        {page.props.unreadNotificationsCount >
-                                            0 && (
+                                        {unreadNotificationsCount > 0 && (
                                             <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
-                                                {
-                                                    page.props
-                                                        .unreadNotificationsCount
-                                                }
+                                                {unreadNotificationsCount > 99
+                                                    ? '99+'
+                                                    : unreadNotificationsCount}
                                             </span>
                                         )}
                                     </Link>

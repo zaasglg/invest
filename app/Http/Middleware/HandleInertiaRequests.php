@@ -55,6 +55,13 @@ class HandleInertiaRequests extends Middleware
                     ->where('is_read', false)
                     ->count()
                 : 0,
+            'unreadAssistantNotificationsCount' => $request->user()
+                ? TaskNotification::query()
+                    ->visibleTo($request->user())
+                    ->assistant()
+                    ->where('is_read', false)
+                    ->count()
+                : 0,
             'unreadChatMessagesCount' => fn () => $request->user()
                 ? app(ProjectChatService::class)->unreadMessageCount($request->user())
                 : 0,

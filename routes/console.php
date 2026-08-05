@@ -13,6 +13,11 @@ Schedule::command('tasks:notify-overdue')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
 
+Schedule::command('assistant:notify')
+    ->hourly()
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
+
 Schedule::command('photos:check-weekly')
     ->weeklyOn(1, '09:00')
     ->timezone(config('app.timezone'))

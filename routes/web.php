@@ -208,9 +208,13 @@ Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingContro
 
 Route::middleware(['auth', 'role.valid'])->group(function () {
     Route::get('notifications', [\App\Http\Controllers\TaskNotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{notification}/open', [\App\Http\Controllers\TaskNotificationController::class, 'open'])->name('notifications.open');
     Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+
+    Route::get('assistant/notifications', [\App\Http\Controllers\ProactiveAssistantController::class, 'index'])->name('assistant.notifications.index');
+    Route::post('assistant/notifications/read-all', [\App\Http\Controllers\ProactiveAssistantController::class, 'markAllAsRead'])->name('assistant.notifications.read-all');
 
     Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
     Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');

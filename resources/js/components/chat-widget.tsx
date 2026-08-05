@@ -194,6 +194,18 @@ export function ChatWidget() {
         }
     }, [isOpen]);
 
+    useEffect(() => {
+        const closeForAssistant = () => setIsOpen(false);
+
+        window.addEventListener('assistant-widget-opened', closeForAssistant);
+
+        return () =>
+            window.removeEventListener(
+                'assistant-widget-opened',
+                closeForAssistant,
+            );
+    }, []);
+
     const sendMessage = async (suggestedMessage?: string) => {
         const message = suggestedMessage ?? input;
 
@@ -263,7 +275,12 @@ export function ChatWidget() {
             {/* Чатты ашу батырмасы */}
             {!isOpen && (
                 <Button
-                    onClick={() => setIsOpen(true)}
+                    onClick={() => {
+                        window.dispatchEvent(
+                            new CustomEvent('chat-widget-opened'),
+                        );
+                        setIsOpen(true);
+                    }}
                     type="button"
                     size="icon"
                     aria-label="AI-көмекшіні ашу"
