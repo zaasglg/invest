@@ -200,6 +200,7 @@ type Props = {
     showRegionIconsDemo?: boolean;
     showOutsideRegionClouds?: boolean;
     activeTab?: string;
+    baseLayer?: 'standard' | 'satellite';
     sectorSummary?: SectorSummary | null;
     interactive?: boolean;
     onEntitySelect?: (
@@ -613,6 +614,7 @@ export default function Map({
     showRegionIconsDemo = false,
     showOutsideRegionClouds = false,
     activeTab = 'all',
+    baseLayer = 'satellite',
     sectorSummary = null,
     interactive = false,
     onEntitySelect,
@@ -988,11 +990,19 @@ export default function Map({
                     fitBounds={fitBounds}
                     resetTrigger={resetTrigger}
                 />
-                <TileLayer
-                    // attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    attribution="Tiles © Esri"
-                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                />
+                {baseLayer === 'standard' ? (
+                    <TileLayer
+                        key="standard"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                ) : (
+                    <TileLayer
+                        key="satellite"
+                        attribution="Tiles &copy; Esri"
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    />
+                )}
 
                 {outsideCloudMaskPositions && (
                     <Polygon
