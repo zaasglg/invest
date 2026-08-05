@@ -91,6 +91,16 @@ const ROLE_ASSISTANT_COPY: Record<
             'Өңір активтері мен қолдау шараларын ұсын',
         ],
     },
+    oblast_akim: {
+        title: 'Облыс әкімінің AI аналитигі',
+        description:
+            'Жобалар, жұмыс сапасы, рейтинг және өңір әлеуеті бойынша есеп пен кеңес беремін',
+        suggestions: [
+            'Облыс бойынша қысқаша басқарушылық есеп жаса',
+            'Аудандар мен басқармалардың жұмыс сапасын талда',
+            'Нишалық аналитика мен өңір әлеуеті бойынша кеңес бер',
+        ],
+    },
     zamakim: {
         title: 'Әкім орынбасарының AI көмекшісі',
         description:
@@ -149,8 +159,12 @@ const DEFAULT_ASSISTANT_COPY = {
 export function ChatWidget() {
     const { auth } = usePage<SharedData>().props;
     const roleName = auth.user?.role_model?.name ?? '';
+    const assistantRoleKey =
+        roleName === 'akim' && auth.user?.region?.type === 'oblast'
+            ? 'oblast_akim'
+            : roleName;
     const assistantCopy =
-        ROLE_ASSISTANT_COPY[roleName] ?? DEFAULT_ASSISTANT_COPY;
+        ROLE_ASSISTANT_COPY[assistantRoleKey] ?? DEFAULT_ASSISTANT_COPY;
     const [isOpen, setIsOpen] = useState(false);
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');

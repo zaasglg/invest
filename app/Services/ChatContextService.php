@@ -20,7 +20,8 @@ class ChatContextService
 {
     public function __construct(
         private readonly InvestmentRecommendationService $recommendations,
-        private readonly InvestmentProjectAccessService $projectAccess
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly OblastAkimAnalyticsService $oblastAnalytics
     ) {}
 
     public function buildContext(
@@ -42,7 +43,7 @@ class ChatContextService
         foreach ($entities as $entity) {
             switch ($entity) {
                 case 'regions':
-                    $context['regions'] = $this->getRegionsData($query);
+                    $context['regions'] = $this->getRegionsData($query, $user);
                     break;
                 case 'investment_projects':
                     $context['projects'] = $this->getProjectsData($query, $user);
@@ -88,6 +89,12 @@ class ChatContextService
                     $context['regional_assets'] = $this->recommendations
                         ->regionalAssets($query, $user);
                     break;
+                case 'oblast_analytics':
+                    if ($user?->isOblastScopedAkim()) {
+                        $context['oblast_analytics'] = $this->oblastAnalytics
+                            ->aiContext($user);
+                    }
+                    break;
             }
         }
 
@@ -123,17 +130,38 @@ class ChatContextService
         ];
     }
 
-    protected function getRegionsData(string $query): array
+    protected function getRegionsData(string $query, ?User $user): array
     {
-        $regions = Region::with(['investmentProjects', 'sezs', 'industrialZones'])
-            ->get();
+        $regionsQuery = Region::query()
+            ->with(['sezs', 'industrialZones']);
+
+        if ($user?->isDistrictScoped()) {
+            $regionsQuery->whereKey($user->region_id);
+        } elseif ($user?->isOblastScopedAkim()) {
+            $regionsQuery->where(function (Builder $regions) use ($user) {
+                $regions->whereKey($user->region_id)
+                    ->orWhere('parent_id', $user->region_id);
+            });
+        }
+
+        $regions = $regionsQuery->get();
+        $projectsByRegion = $this->visibleProjects($user)
+            ->whereIn('region_id', $regions->pluck('id'))
+            ->get(['id', 'region_id'])
+            ->groupBy('region_id');
 
         $totalProjects = 0;
         $totalSezs = 0;
         $totalIZ = 0;
 
-        $items = $regions->map(function ($region) use (&$totalProjects, &$totalSezs, &$totalIZ) {
-            $projectsCount = $region->investmentProjects->count();
+        $items = $regions->map(function ($region) use (
+            &$totalProjects,
+            &$totalSezs,
+            &$totalIZ,
+            $projectsByRegion
+        ) {
+            $projectsCount = $projectsByRegion->get($region->id, collect())
+                ->count();
             $sezsCount = $region->sezs->count();
             $izCount = $region->industrialZones->count();
 

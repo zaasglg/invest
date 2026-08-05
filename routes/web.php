@@ -11,6 +11,10 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'role.valid'])
     ->name('dashboard');
 
+Route::get('akim-analytics', \App\Http\Controllers\OblastAkimAnalyticsController::class)
+    ->middleware(['auth', 'role.access'])
+    ->name('akim.analytics');
+
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
     ->middleware(['auth', 'role.access']);
 

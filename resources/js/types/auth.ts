@@ -6,6 +6,12 @@ export type User = {
     avatar_url?: string | null;
     role?: string | null;
     region_id?: number | null;
+    region?: {
+        id: number;
+        name: string;
+        type: 'oblast' | 'district';
+        parent_id?: number | null;
+    } | null;
     telegram_chat_id?: string | null;
     baskarma_type?: 'district' | 'oblast' | 'additional' | null;
     role_model?: {

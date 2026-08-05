@@ -42,7 +42,10 @@ class HandleInertiaRequests extends Middleware
             'csrf_token' => csrf_token(),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user()?->load('roleModel'),
+                'user' => $request->user()?->load([
+                    'roleModel',
+                    'region:id,name,type,parent_id',
+                ]),
             ],
             'canModify' => ! $this->isReadOnlyRole($request->user()),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

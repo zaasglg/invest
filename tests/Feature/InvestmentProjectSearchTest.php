@@ -19,7 +19,7 @@ function createProjectSearchAdmin(): User
     );
 
     return User::factory()->create([
-        'role' => 'superadmin',
+        'role' => 'admin',
         'role_id' => $role->id,
     ]);
 }
@@ -42,7 +42,9 @@ function createProjectsForSearch(User $admin): array
         'color' => '#654321',
         'icon' => 'factory',
     ]);
-    $projectType = ProjectType::factory()->create();
+    $projectType = ProjectType::create([
+        'name' => 'Search test project type',
+    ]);
 
     $company = Company::factory()->create([
         'name' => 'QazTech Industries',
@@ -57,24 +59,31 @@ function createProjectsForSearch(User $admin): array
         'created_by' => $admin->id,
     ]);
 
-    $matchingProject = InvestmentProject::factory()->create([
+    $matchingProject = InvestmentProject::create([
         'name' => 'КҮН ЭНЕРГИЯСЫ ОРТАЛЫҒЫ',
         'company_id' => $company->id,
         'company_name' => $company->display_name,
         'region_id' => $region->id,
         'project_type_id' => $projectType->id,
+        'total_investment' => 1000000,
+        'status' => 'implementation',
         'created_by' => $admin->id,
         'is_archived' => false,
     ]);
-    $otherProject = InvestmentProject::factory()->create([
+    $matchingProject->projectTypes()->attach($projectType);
+
+    $otherProject = InvestmentProject::create([
         'name' => 'Басқа инвестициялық жоба',
         'company_id' => $otherCompany->id,
         'company_name' => $otherCompany->display_name,
         'region_id' => $region->id,
         'project_type_id' => $projectType->id,
+        'total_investment' => 2000000,
+        'status' => 'implementation',
         'created_by' => $admin->id,
         'is_archived' => false,
     ]);
+    $otherProject->projectTypes()->attach($projectType);
 
     return [
         'matching' => $matchingProject,
