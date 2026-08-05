@@ -71,6 +71,15 @@ Route::get('investment-projects-archived', [\App\Http\Controllers\InvestmentProj
     ->middleware(['auth', 'role.access'])
     ->name('investment-projects.archived');
 
+Route::get('investment-projects-deleted', [\App\Http\Controllers\InvestmentProjectController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('investment-projects.deleted');
+
+Route::post('investment-projects-deleted/{projectId}/restore', [\App\Http\Controllers\InvestmentProjectController::class, 'restoreDeleted'])
+    ->whereNumber('projectId')
+    ->middleware(['auth', 'role.access'])
+    ->name('investment-projects.restore-deleted');
+
 Route::post('investment-projects/{investmentProject}/archive', [\App\Http\Controllers\InvestmentProjectController::class, 'archive'])
     ->middleware(['auth', 'role.access'])
     ->name('investment-projects.archive');

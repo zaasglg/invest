@@ -353,7 +353,11 @@ export default function Index({
     };
 
     const handleDelete = (id: number) => {
-        if (confirm('Бұл жобаны жойғыңыз келетініне сенімдісіз бе?')) {
+        if (
+            confirm(
+                'Бұл жобаны өшірілген жобалар бөліміне жібергіңіз келетініне сенімдісіз бе?',
+            )
+        ) {
             router.delete(investmentProjectsRoutes.destroy.url(id));
         }
     };
@@ -578,6 +582,17 @@ export default function Index({
                                 >
                                     <Archive className="h-4 w-4" />
                                     Архив
+                                </Button>
+                            </Link>
+                        )}
+                        {isSuperAdmin && (
+                            <Link href={investmentProjectsRoutes.deleted.url()}>
+                                <Button
+                                    variant="outline"
+                                    className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                    Өшірілген жобалар
                                 </Button>
                             </Link>
                         )}
@@ -1132,7 +1147,7 @@ export default function Index({
                                                                                 project.id,
                                                                             )
                                                                         }
-                                                                        title="Жою"
+                                                                        title="Өшірілген жобаларға жіберу"
                                                                     >
                                                                         <Trash2 className="h-4 w-4" />
                                                                     </Button>

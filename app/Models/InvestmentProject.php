@@ -29,6 +29,9 @@ class InvestmentProject extends Model
         'infrastructure',
         'sort_order',
         'is_archived',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -40,8 +43,21 @@ class InvestmentProject extends Model
             'geometry' => 'array',
             'infrastructure' => 'array',
             'is_archived' => 'boolean',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
             'production_not_applicable' => 'boolean',
         ];
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(
+            'not_deleted',
+            fn (Builder $query) => $query->where(
+                $query->getModel()->qualifyColumn('is_deleted'),
+                false
+            )
+        );
     }
 
     public function scopeActive($query)
@@ -52,6 +68,30 @@ class InvestmentProject extends Model
     public function scopeArchived($query)
     {
         return $query->where('is_archived', true);
+    }
+
+    public function scopeOnlyDeleted(Builder $query): Builder
+    {
+        return $query
+            ->withoutGlobalScope('not_deleted')
+            ->where(
+                $query->getModel()->qualifyColumn('is_deleted'),
+                true
+            );
+    }
+
+    public function resolveRouteBindingQuery($query, $value, $field = null)
+    {
+        $user = auth()->user();
+        $user?->loadMissing('roleModel');
+
+        if ($user?->roleModel?->name === 'superadmin') {
+            $query = $query instanceof Model
+                ? $query->newQueryWithoutScope('not_deleted')
+                : $query->withoutGlobalScope('not_deleted');
+        }
+
+        return parent::resolveRouteBindingQuery($query, $value, $field);
     }
 
     public function scopeCuratedByTurkistanInvest(Builder $query): Builder
@@ -155,6 +195,11 @@ class InvestmentProject extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function deleter()
+    {
+        return $this->belongsTo(User::class, 'deleted_by');
     }
 
     /**

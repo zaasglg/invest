@@ -10,6 +10,7 @@ import {
     Map as MapIcon,
     Shield,
     Tags,
+    Trash2,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
@@ -86,6 +87,11 @@ export const projectNavItems: NavItem[] = [
         title: 'Рейтинг',
         href: '/baskarma-rating',
         icon: Award,
+    },
+    {
+        title: 'Өшірілген жобалар',
+        href: investmentProjects.deleted.url(),
+        icon: Trash2,
     },
 ];
 
@@ -214,6 +220,15 @@ export const filterNavItemsByRole = (
 ) => {
     // Superadmin and prokuror can see the full regions section.
     let filteredItems = items;
+    const isSuperadmin =
+        user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
+
+    if (!isSuperadmin) {
+        filteredItems = filteredItems.filter(
+            (item) => item.href !== investmentProjects.deleted.url(),
+        );
+    }
+
     const canViewAllRegions =
         user?.role_model?.name === 'superadmin' ||
         user?.role === 'superadmin' ||
