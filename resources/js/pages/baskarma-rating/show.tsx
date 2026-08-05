@@ -46,10 +46,38 @@ interface UserInfo {
     avatar_url?: string | null;
 }
 
+interface KpiComponent {
+    label: string;
+    score: number | null;
+    numerator: number;
+    denominator: number;
+    description: string;
+    weight: number;
+    effective_weight: number;
+    weighted_score: number | null;
+}
+
+interface KpiSnapshot {
+    score: number | null;
+    formula_type: 'district' | 'management';
+    formula: string;
+    is_preliminary: boolean;
+    components: Record<string, KpiComponent>;
+    stats: {
+        project_count: number;
+        total: number;
+        completed: number;
+        active: number;
+        overdue: number;
+        evaluated_tasks: number;
+    };
+}
+
 interface Props {
     user: UserInfo;
     projectCount: number;
-    kpd: number;
+    kpd: number | null;
+    kpi: KpiSnapshot;
     completedTasks: TaskItem[];
     activeTasks: TaskItem[];
     overdueTasks: TaskItem[];
@@ -156,12 +184,14 @@ export default function BaskarmaRatingShow({
     user,
     projectCount,
     kpd,
+    kpi,
     completedTasks,
     activeTasks,
     overdueTasks,
 }: Props) {
     const totalTasks =
         completedTasks.length + activeTasks.length + overdueTasks.length;
+    const kpiScore = kpd ?? 0;
 
     return (
         <AppLayout
@@ -239,26 +269,119 @@ export default function BaskarmaRatingShow({
                             </div>
                             <div
                                 className={`rounded-lg border px-4 py-2 text-center ${
-                                    kpd >= 70
-                                        ? 'border-green-200 bg-green-50'
-                                        : kpd >= 40
-                                          ? 'border-amber-200 bg-amber-50'
-                                          : 'border-red-200 bg-red-50'
+                                    kpd === null
+                                        ? 'border-gray-200 bg-gray-50'
+                                        : kpiScore >= 70
+                                          ? 'border-green-200 bg-green-50'
+                                          : kpiScore >= 40
+                                            ? 'border-amber-200 bg-amber-50'
+                                            : 'border-red-200 bg-red-50'
                                 }`}
                             >
                                 <p
                                     className={`text-2xl font-bold ${
-                                        kpd >= 70
-                                            ? 'text-green-600'
-                                            : kpd >= 40
-                                              ? 'text-amber-600'
-                                              : 'text-red-600'
+                                        kpd === null
+                                            ? 'text-gray-500'
+                                            : kpiScore >= 70
+                                              ? 'text-green-600'
+                                              : kpiScore >= 40
+                                                ? 'text-amber-600'
+                                                : 'text-red-600'
                                     }`}
                                 >
-                                    {kpd}%
+                                    {kpd === null ? '—' : `${kpd}%`}
                                 </p>
-                                <p className="text-xs text-gray-500">КПД</p>
+                                <p className="text-xs text-gray-500">KPI</p>
                             </div>
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card className="shadow-none">
+                    <CardHeader>
+                        <CardTitle className="flex flex-wrap items-center justify-between gap-3 text-lg text-[#0f1b3d]">
+                            <span>KPI құрамы</span>
+                            {kpi.is_preliminary && (
+                                <Badge className="border-0 bg-amber-100 text-amber-700">
+                                    Алдын ала баға
+                                </Badge>
+                            )}
+                        </CardTitle>
+                        <p className="text-sm text-gray-500">{kpi.formula}</p>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                            {Object.entries(kpi.components).map(
+                                ([key, component]) => (
+                                    <div
+                                        key={key}
+                                        className="rounded-xl border border-gray-200 p-4"
+                                    >
+                                        <div className="flex items-start justify-between gap-3">
+                                            <div>
+                                                <p className="font-semibold text-[#0f1b3d]">
+                                                    {component.label}
+                                                </p>
+                                                <p className="mt-1 text-xs text-gray-500">
+                                                    {component.description}
+                                                </p>
+                                            </div>
+                                            <Badge
+                                                variant="outline"
+                                                className="shrink-0"
+                                            >
+                                                {component.weight}%
+                                            </Badge>
+                                        </div>
+
+                                        <div className="mt-4 flex items-end justify-between gap-3">
+                                            <p className="text-2xl font-bold text-[#0f1b3d]">
+                                                {component.score === null
+                                                    ? '—'
+                                                    : `${component.score}%`}
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                {component.denominator > 0
+                                                    ? `${component.numerator} / ${component.denominator}`
+                                                    : 'Дерек жоқ'}
+                                            </p>
+                                        </div>
+
+                                        {component.score !== null && (
+                                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+                                                <div
+                                                    className="h-full rounded-full bg-[#c8a44e]"
+                                                    style={{
+                                                        width: `${component.score}%`,
+                                                    }}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                ),
+                            )}
+                        </div>
+
+                        <div className="rounded-lg bg-slate-50 px-4 py-3 text-sm text-slate-600">
+                            {kpi.formula_type === 'district' ? (
+                                <>
+                                    Басқа аудандардан берілген тапсырмалар да
+                                    тапсырма, мерзім және сапа KPI-ына толық
+                                    кіреді. Фотоесеп тек орындаушының өз
+                                    ауданындағы белсенді жобалар бойынша соңғы 7
+                                    күнге есептеледі.
+                                </>
+                            ) : (
+                                <>
+                                    Облыстық және қосымша орындаушыларға
+                                    фотоесеп міндеті қолданылмайды; KPI барлық
+                                    тағайындалған жобалық тапсырмалар бойынша
+                                    есептеледі.
+                                </>
+                            )}
+                            {
+                                ' Дерегі жоқ компонент қалған салмақтарға пропорционалды бөлінеді.'
+                            }
                         </div>
                     </CardContent>
                 </Card>

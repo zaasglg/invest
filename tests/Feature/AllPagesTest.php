@@ -538,9 +538,18 @@ test('baskarma rating has a separate additional instances group', function () {
 });
 
 test('baskarma rating show page loads for admin', function () {
-    $user = createAdminUser();
+    $admin = createAdminUser();
+    $ispolnitelRole = Role::firstOrCreate(
+        ['name' => 'ispolnitel'],
+        ['display_name' => 'Исполнитель', 'description' => 'Тест']
+    );
+    $executor = User::factory()->create([
+        'role_id' => $ispolnitelRole->id,
+        'baskarma_type' => 'district',
+    ]);
 
-    $response = $this->actingAs($user)->get("/baskarma-rating/{$user->id}");
+    $response = $this->actingAs($admin)
+        ->get("/baskarma-rating/{$executor->id}");
 
     $response->assertStatus(200);
 });

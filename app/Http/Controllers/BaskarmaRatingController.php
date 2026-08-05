@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\InvestmentProject;
 use App\Models\ProjectTask;
 use App\Models\User;
+use App\Services\BaskarmaKpiService;
 use App\Services\InvestmentProjectAccessService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -12,7 +13,8 @@ use Inertia\Inertia;
 class BaskarmaRatingController extends Controller
 {
     public function __construct(
-        private readonly InvestmentProjectAccessService $projectAccess
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly BaskarmaKpiService $kpi
     ) {}
 
     public function index(Request $request)
@@ -26,33 +28,13 @@ class BaskarmaRatingController extends Controller
             ->with('region')
             ->get();
 
-        $now = now()->startOfDay();
+        $kpiByUser = $this->kpi->calculateMany($ispolnitelUsers);
 
-        // Get task stats for each ispolnitel user
-        $ratings = $ispolnitelUsers->map(function (User $user) use ($now) {
-            $tasks = ProjectTask::query()
-                ->where('assigned_to', $user->id)
-                ->get();
-
-            // Count distinct projects this ispolnitel is assigned to
-            $projectCount = $tasks->pluck('project_id')->unique()->count();
-
-            $completed = 0;
-            $active = 0; // new, in_progress — not overdue
-            $overdue = 0;
-
-            foreach ($tasks as $task) {
-                if ($task->status === 'done') {
-                    $completed++;
-                } elseif ($task->due_date && $task->due_date->startOfDay()->lt($now)) {
-                    $overdue++;
-                } else {
-                    $active++;
-                }
-            }
-
-            $total = $tasks->count();
-            $kpd = $total > 0 ? round((1 - ($overdue / $total)) * 100, 1) : 0;
+        $ratings = $ispolnitelUsers->map(function (User $user) use (
+            $kpiByUser
+        ) {
+            $kpi = $kpiByUser->get($user->id);
+            $stats = $kpi['stats'];
 
             return [
                 'id' => $user->id,
@@ -62,29 +44,30 @@ class BaskarmaRatingController extends Controller
                 'baskarma_type' => $user->baskarma_type,
                 'region' => $user->region?->name,
                 'avatar_url' => $user->avatar_url,
-                'project_count' => $projectCount,
-                'total' => $total,
-                'completed' => $completed,
-                'active' => $active,
-                'overdue' => $overdue,
-                'kpd' => $kpd,
+                'project_count' => $stats['project_count'],
+                'total' => $stats['total'],
+                'completed' => $stats['completed'],
+                'active' => $stats['active'],
+                'overdue' => $stats['overdue'],
+                'kpd' => $kpi['score'],
+                'kpi' => $kpi,
             ];
         });
 
         // Split into all three ispolnitel types, sorted by KPD descending
         $districtRatings = $ratings
             ->filter(fn ($r) => $r['baskarma_type'] === 'district')
-            ->sortByDesc('kpd')
+            ->sortByDesc(fn ($rating) => $rating['kpd'] ?? -1)
             ->values();
 
         $oblastRatings = $ratings
             ->filter(fn ($r) => $r['baskarma_type'] === 'oblast')
-            ->sortByDesc('kpd')
+            ->sortByDesc(fn ($rating) => $rating['kpd'] ?? -1)
             ->values();
 
         $additionalRatings = $ratings
             ->filter(fn ($r) => $r['baskarma_type'] === 'additional')
-            ->sortByDesc('kpd')
+            ->sortByDesc(fn ($rating) => $rating['kpd'] ?? -1)
             ->values();
 
         // For ispolnitel: collect IDs they are allowed to view
@@ -118,6 +101,17 @@ class BaskarmaRatingController extends Controller
         $currentUser = request()->user();
         $currentUser->load('roleModel');
         $roleName = $currentUser->roleModel?->name;
+        $user->load('region', 'roleModel');
+
+        abort_unless(
+            $user->roleModel?->name === 'ispolnitel'
+                && in_array(
+                    $user->baskarma_type,
+                    User::BASKARMA_TYPES,
+                    true
+                ),
+            404
+        );
 
         // Ispolnitel can only see their own page
         if ($roleName === 'ispolnitel' && $currentUser->id !== $user->id) {
@@ -133,11 +127,11 @@ class BaskarmaRatingController extends Controller
             }
         }
 
-        $user->load('region', 'roleModel');
-
         $now = now()->startOfDay();
 
         $tasks = ProjectTask::where('assigned_to', $user->id)
+            ->where('approval_status', 'approved')
+            ->whereHas('project', fn ($project) => $project->active())
             ->with(['project:id,name,region_id', 'project.region:id,name', 'latestCompletion'])
             ->get();
         $visibleProjectIds = array_fill_keys(
@@ -178,9 +172,7 @@ class BaskarmaRatingController extends Controller
             }
         }
 
-        $projectCount = $tasks->pluck('project_id')->unique()->count();
-        $total = $tasks->count();
-        $kpd = $total > 0 ? round((1 - (count($overdueTasks) / $total)) * 100, 1) : 0;
+        $kpi = $this->kpi->calculate($user);
 
         return Inertia::render('baskarma-rating/show', [
             'user' => [
@@ -192,8 +184,9 @@ class BaskarmaRatingController extends Controller
                 'region' => $user->region?->name,
                 'avatar_url' => $user->avatar_url,
             ],
-            'projectCount' => $projectCount,
-            'kpd' => $kpd,
+            'projectCount' => $kpi['stats']['project_count'],
+            'kpd' => $kpi['score'],
+            'kpi' => $kpi,
             'completedTasks' => $completedTasks,
             'activeTasks' => $activeTasks,
             'overdueTasks' => $overdueTasks,

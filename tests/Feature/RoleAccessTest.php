@@ -679,10 +679,21 @@ describe('Baskarma rating', function () {
 
     test('all roles can view user baskarma rating', function () {
         $roles = ['superadmin', 'invest', 'akim', 'zamakim', 'ispolnitel'];
+        $executor = createUserWithRole(
+            'ispolnitel',
+            extra: ['baskarma_type' => 'district']
+        );
 
         foreach ($roles as $roleName) {
             $user = createUserWithRole($roleName);
-            $this->actingAs($user)->get("/baskarma-rating/{$user->id}")->assertStatus(200);
+            $target = $roleName === 'ispolnitel' ? $user : $executor;
+            if ($roleName === 'ispolnitel') {
+                $target->update(['baskarma_type' => 'district']);
+            }
+
+            $this->actingAs($user)
+                ->get("/baskarma-rating/{$target->id}")
+                ->assertStatus(200);
         }
     });
 });
