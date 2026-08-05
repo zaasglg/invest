@@ -26,7 +26,14 @@ interface RatingItem {
     completed: number;
     active: number;
     overdue: number;
-    kpd: number;
+    kpd: number | null;
+    kpi: KpiSnapshot;
+}
+
+interface KpiSnapshot {
+    score: number | null;
+    formula: string;
+    is_preliminary: boolean;
 }
 
 interface Props {
@@ -90,24 +97,45 @@ function StackedTaskBar({
     );
 }
 
-function KpdBar({ kpd }: { kpd: number }) {
+function KpiBar({
+    kpd,
+    preliminary,
+}: {
+    kpd: number | null;
+    preliminary: boolean;
+}) {
+    const score = kpd ?? 0;
+
+    if (kpd === null) {
+        return <span className="text-sm text-gray-400">Дерек жеткіліксіз</span>;
+    }
+
     return (
-        <div className="flex items-center gap-2">
-            <div className="h-2.5 w-24 overflow-hidden rounded-full bg-gray-200">
-                <div
-                    className={`h-full rounded-full transition-all ${
-                        kpd >= 70
-                            ? 'bg-blue-500'
-                            : kpd >= 40
-                              ? 'bg-amber-500'
-                              : kpd > 0
-                                ? 'bg-red-500'
-                                : 'bg-gray-300'
-                    }`}
-                    style={{ width: `${kpd}%` }}
-                />
+        <div className="flex flex-col gap-1">
+            <div className="flex items-center gap-2">
+                <div className="h-2.5 w-24 overflow-hidden rounded-full bg-gray-200">
+                    <div
+                        className={`h-full rounded-full transition-all ${
+                            score >= 70
+                                ? 'bg-blue-500'
+                                : score >= 40
+                                  ? 'bg-amber-500'
+                                  : score > 0
+                                    ? 'bg-red-500'
+                                    : 'bg-gray-300'
+                        }`}
+                        style={{ width: `${score}%` }}
+                    />
+                </div>
+                <span className="text-sm font-medium text-gray-700">
+                    {score}%
+                </span>
             </div>
-            <span className="text-sm font-medium text-gray-700">{kpd}%</span>
+            {preliminary && (
+                <span className="text-[11px] text-amber-600">
+                    Алдын ала баға
+                </span>
+            )}
         </div>
     );
 }
@@ -117,18 +145,25 @@ function RatingTable({
     title,
     icon,
     allowedIds,
+    formula,
 }: {
     ratings: RatingItem[];
     title: string;
     icon: React.ReactNode;
     allowedIds?: number[] | null;
+    formula: string;
 }) {
     return (
         <Card className="rounded-xl border-gray-100 shadow-sm">
             <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-lg text-[#0f1b3d]">
-                    {icon}
-                    {title}
+                <CardTitle className="space-y-1 text-lg text-[#0f1b3d]">
+                    <span className="flex items-center gap-2">
+                        {icon}
+                        {title}
+                    </span>
+                    <span className="block text-xs font-normal text-gray-500">
+                        KPI формуласы: {formula}
+                    </span>
                 </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -152,7 +187,7 @@ function RatingTable({
                                         Жобалар
                                     </TableHead>
                                     <TableHead>Тапсырмалар</TableHead>
-                                    <TableHead>КПД</TableHead>
+                                    <TableHead>KPI</TableHead>
                                     <TableHead className="w-12" />
                                 </TableRow>
                             </TableHeader>
@@ -216,7 +251,12 @@ function RatingTable({
                                             />
                                         </TableCell>
                                         <TableCell>
-                                            <KpdBar kpd={item.kpd} />
+                                            <KpiBar
+                                                kpd={item.kpd}
+                                                preliminary={
+                                                    item.kpi.is_preliminary
+                                                }
+                                            />
                                         </TableCell>
                                         <TableCell>
                                             {!allowedIds ||
@@ -281,6 +321,10 @@ export default function BaskarmaRating({
             : tab === 'oblast'
               ? 'text-purple-600'
               : 'text-emerald-600';
+    const activeFormula =
+        tab === 'district'
+            ? '35% орындау + 30% мерзім + 20% сапа + 15% фотоесеп'
+            : '40% орындау + 35% мерзім + 25% сапа';
 
     return (
         <AppLayout
@@ -361,6 +405,7 @@ export default function BaskarmaRating({
                             />
                         }
                         allowedIds={allowedIds}
+                        formula={activeFormula}
                     />
                 </div>
             </div>
