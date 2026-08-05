@@ -86,6 +86,34 @@ interface NicheItem {
     potential_score: number;
 }
 
+interface ProductionSummary {
+    projects_with_plans: number;
+    complete_plans: number;
+    projects_needing_plan_completion: number;
+    incomplete_plans: number;
+    reporting_projects: number;
+    launched_without_reports: number;
+    reported_periods: number;
+    planned_amount_for_reported_periods: number;
+    actual_amount: number;
+    amount_completion_rate: number | null;
+    average_volume_completion_rate: number | null;
+}
+
+interface ProductionPerformanceItem {
+    id: number;
+    name: string;
+    region_name: string | null;
+    status: string;
+    products: string[];
+    products_count: number;
+    reported_periods: number;
+    planned_amount_for_reported_periods: number;
+    actual_amount: number;
+    amount_completion_rate: number | null;
+    volume_completion_rate: number | null;
+}
+
 interface Analytics {
     scope: {
         oblast_id: number;
@@ -97,6 +125,8 @@ interface Analytics {
     status_distribution: Array<{ name: string; value: number }>;
     district_quality: QualityItem[];
     management_quality: QualityItem[];
+    production_summary: ProductionSummary;
+    production_performance: ProductionPerformanceItem[];
     niche_analytics: NicheItem[];
     regional_potential: {
         pipeline_projects: number;
@@ -123,6 +153,13 @@ const moneyFormatter = new Intl.NumberFormat('kk-KZ', {
 
 const formatNumber = (value: number) => numberFormatter.format(value);
 const formatMoney = (value: number) => `${moneyFormatter.format(value)} ₸`;
+
+const projectStatusLabels: Record<string, string> = {
+    plan: 'Жоспарлау',
+    implementation: 'Іске асыру',
+    launched: 'Іске қосылған',
+    suspended: 'Тоқтатылған',
+};
 
 function Score({ value }: { value: number | null }) {
     if (value === null) {
@@ -211,12 +248,16 @@ function QualityTable({
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-14">№</TableHead>
-                        <TableHead>{management ? 'Басқарма' : 'Аудан/қала'}</TableHead>
+                        <TableHead>
+                            {management ? 'Басқарма' : 'Аудан/қала'}
+                        </TableHead>
                         <TableHead className="text-center">Жоба</TableHead>
                         <TableHead>Тапсырма</TableHead>
                         <TableHead className="text-center">Кешіккен</TableHead>
                         {!management && (
-                            <TableHead className="text-center">Мәселе</TableHead>
+                            <TableHead className="text-center">
+                                Мәселе
+                            </TableHead>
                         )}
                         <TableHead className="min-w-52">Сапа бағасы</TableHead>
                     </TableRow>
@@ -226,18 +267,21 @@ function QualityTable({
                         <TableRow key={`${item.rank}-${item.name}`}>
                             <TableCell>
                                 <Badge
-                                    variant={item.rank <= 3 ? 'default' : 'outline'}
+                                    variant={
+                                        item.rank <= 3 ? 'default' : 'outline'
+                                    }
                                 >
                                     {item.rank}
                                 </Badge>
                             </TableCell>
                             <TableCell>
                                 <p className="font-medium">{item.name}</p>
-                                {management && item.members_count !== undefined && (
-                                    <p className="text-xs text-muted-foreground">
-                                        {item.members_count} орындаушы
-                                    </p>
-                                )}
+                                {management &&
+                                    item.members_count !== undefined && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {item.members_count} орындаушы
+                                        </p>
+                                    )}
                             </TableCell>
                             <TableCell className="text-center">
                                 {item.project_count}
@@ -283,7 +327,11 @@ export default function AkimAnalytics({ analytics }: Props) {
     const [aiResponse, setAiResponse] = useState('');
     const [aiLoading, setAiLoading] = useState(false);
     const [aiError, setAiError] = useState('');
-    const { summary, regional_potential: potential } = analytics;
+    const {
+        summary,
+        production_summary: production,
+        regional_potential: potential,
+    } = analytics;
 
     const breadcrumbs: BreadcrumbItem[] = [
         {
@@ -346,13 +394,13 @@ export default function AkimAnalytics({ analytics }: Props) {
                             <Badge className="mb-4 bg-white/15 text-white hover:bg-white/20">
                                 Облыстық әкімге арналған басқарушылық панель
                             </Badge>
-                            <h1 className="text-3xl font-bold tracking-tight md:text-4xl text-white">
+                            <h1 className="text-3xl font-bold tracking-tight text-white md:text-4xl">
                                 {analytics.scope.oblast_name} аналитикасы
                             </h1>
                             <p className="mt-3 text-sm text-blue-100 md:text-base">
-                                {analytics.scope.description}. Сапа көрсеткіштері,
-                                рейтинг, нишалар және өңірдің инвестициялық әлеуеті
-                                бір жерде.
+                                {analytics.scope.description}. Сапа
+                                көрсеткіштері, рейтинг, нишалар және өңірдің
+                                инвестициялық әлеуеті бір жерде.
                             </p>
                         </div>
 
@@ -364,7 +412,9 @@ export default function AkimAnalytics({ analytics }: Props) {
                                 <Search className="absolute top-1/2 left-3 size-4 -translate-y-1/2 text-blue-200" />
                                 <Input
                                     value={search}
-                                    onChange={(event) => setSearch(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearch(event.target.value)
+                                    }
                                     placeholder="Жоба, ТОО атауы немесе БИН"
                                     className="border-white/20 bg-white/10 pl-9 text-white placeholder:text-blue-200"
                                 />
@@ -408,14 +458,226 @@ export default function AkimAnalytics({ analytics }: Props) {
                     />
                 </section>
 
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Factory className="size-5 text-blue-600" />
+                            Өндіріс жоспарының орындалуы
+                        </CardTitle>
+                        <CardDescription>
+                            Нақты есеп берілген әр кезең сол кезеңнің жоспарымен
+                            салыстырылады. Әртүрлі өнім өлшемдері бір-біріне
+                            қосылмайды.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-5">
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <div className="rounded-xl bg-muted/60 p-4">
+                                <p className="text-2xl font-bold">
+                                    {production.projects_with_plans}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    жоспары бар жоба ·{' '}
+                                    {production.complete_plans} өнім/нәтиже
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-muted/60 p-4">
+                                <p className="text-2xl font-bold">
+                                    {production.reporting_projects}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    есеп берген жоба ·{' '}
+                                    {production.reported_periods} кезең
+                                </p>
+                            </div>
+                            <div className="rounded-xl bg-muted/60 p-4">
+                                <p className="text-lg font-bold">
+                                    {formatMoney(production.actual_amount)}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    нақты өндіріс сомасы · жоспар{' '}
+                                    {formatMoney(
+                                        production.planned_amount_for_reported_periods,
+                                    )}
+                                </p>
+                            </div>
+                            <div
+                                className={`rounded-xl p-4 ${
+                                    production.launched_without_reports > 0
+                                        ? 'bg-red-50 dark:bg-red-950/30'
+                                        : 'bg-muted/60'
+                                }`}
+                            >
+                                <p className="text-2xl font-bold">
+                                    {production.launched_without_reports}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    іске қосылған, бірақ нақты есебі жоқ жоба
+                                </p>
+                            </div>
+                        </div>
+
+                        {production.projects_needing_plan_completion > 0 && (
+                            <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+                                <AlertTriangle className="mt-0.5 size-4 shrink-0" />
+                                <p>
+                                    {
+                                        production.projects_needing_plan_completion
+                                    }{' '}
+                                    жобадағы {production.incomplete_plans}{' '}
+                                    бұрынғы қуаттылық жазбасын өнім атауы,
+                                    көлем, өлшем, сома және кезең бойынша
+                                    толықтыру қажет. Толық емес жоспарлар
+                                    орындалу есебіне қосылмайды.
+                                </p>
+                            </div>
+                        )}
+
+                        {analytics.production_performance.length === 0 ? (
+                            <div className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">
+                                Толық жоспарлы өндіріс дерегі жоқ
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto rounded-xl border">
+                                <Table className="min-w-[1050px]">
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>
+                                                Жоба және өнім
+                                            </TableHead>
+                                            <TableHead>Мәртебе</TableHead>
+                                            <TableHead className="text-center">
+                                                Есеп кезеңі
+                                            </TableHead>
+                                            <TableHead>
+                                                Кезеңдер жоспары
+                                            </TableHead>
+                                            <TableHead>Нақты сома</TableHead>
+                                            <TableHead>Көлем</TableHead>
+                                            <TableHead>Сома</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {analytics.production_performance.map(
+                                            (item) => (
+                                                <TableRow key={item.id}>
+                                                    <TableCell>
+                                                        <Link
+                                                            className="font-medium text-blue-700 hover:underline dark:text-blue-300"
+                                                            href={investmentProjects.show.url(
+                                                                item.id,
+                                                            )}
+                                                        >
+                                                            {item.name}
+                                                        </Link>
+                                                        <p className="mt-1 max-w-80 truncate text-xs text-muted-foreground">
+                                                            {item.region_name ??
+                                                                'Өңір көрсетілмеген'}{' '}
+                                                            ·{' '}
+                                                            {item.products.join(
+                                                                ', ',
+                                                            )}
+                                                        </p>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Badge variant="outline">
+                                                            {projectStatusLabels[
+                                                                item.status
+                                                            ] ?? item.status}
+                                                        </Badge>
+                                                        {item.status ===
+                                                            'launched' &&
+                                                            item.reported_periods ===
+                                                                0 && (
+                                                                <p className="mt-1 text-xs text-red-600">
+                                                                    Нақты есеп
+                                                                    жоқ
+                                                                </p>
+                                                            )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center font-semibold">
+                                                        {item.reported_periods}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {item.reported_periods >
+                                                        0
+                                                            ? formatMoney(
+                                                                  item.planned_amount_for_reported_periods,
+                                                              )
+                                                            : '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {item.reported_periods >
+                                                        0
+                                                            ? formatMoney(
+                                                                  item.actual_amount,
+                                                              )
+                                                            : '—'}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Score
+                                                            value={
+                                                                item.volume_completion_rate
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Score
+                                                            value={
+                                                                item.amount_completion_rate
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ),
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+                        )}
+
+                        {production.reporting_projects > 0 && (
+                            <div className="grid gap-3 sm:grid-cols-2">
+                                <div className="rounded-xl border p-4">
+                                    <p className="text-xs text-muted-foreground">
+                                        Ақшалай жоспардың орындалуы
+                                    </p>
+                                    <div className="mt-2">
+                                        <Score
+                                            value={
+                                                production.amount_completion_rate
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                                <div className="rounded-xl border p-4">
+                                    <p className="text-xs text-muted-foreground">
+                                        Өнім көлемінің орташа орындалуы
+                                    </p>
+                                    <div className="mt-2">
+                                        <Score
+                                            value={
+                                                production.average_volume_completion_rate
+                                            }
+                                        />
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
                 <section className="grid gap-6 xl:grid-cols-[1.35fr_1fr]">
                     <Card>
                         <CardHeader className="flex-row items-start justify-between gap-4">
                             <div>
-                                <CardTitle>Аудан әкімдіктерінің жұмыс сапасы</CardTitle>
+                                <CardTitle>
+                                    Аудан әкімдіктерінің жұмыс сапасы
+                                </CardTitle>
                                 <CardDescription>
-                                    Тапсырма орындалуы, мерзім тәртібі, мәселелердің
-                                    шешілуі және жоба тұрақтылығы бойынша есептеледі.
+                                    Тапсырма орындалуы, мерзім тәртібі,
+                                    мәселелердің шешілуі және жоба тұрақтылығы
+                                    бойынша есептеледі.
                                 </CardDescription>
                             </div>
                             <Award className="size-6 text-amber-500" />
@@ -462,7 +724,8 @@ export default function AkimAnalytics({ analytics }: Props) {
                             <CardHeader>
                                 <CardTitle>Өңір әлеуеті</CardTitle>
                                 <CardDescription>
-                                    Жоспарлау және іске асыру сатысындағы портфель
+                                    Жоспарлау және іске асыру сатысындағы
+                                    портфель
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="grid grid-cols-2 gap-4">
@@ -519,8 +782,8 @@ export default function AkimAnalytics({ analytics }: Props) {
                         <CardHeader>
                             <CardTitle>Нишалық аналитика</CardTitle>
                             <CardDescription>
-                                Инвестиция, жұмыс орны, жоба портфелі және тұрақтылық
-                                негізіндегі салыстырмалы әлеует.
+                                Инвестиция, жұмыс орны, жоба портфелі және
+                                тұрақтылық негізіндегі салыстырмалы әлеует.
                             </CardDescription>
                         </CardHeader>
                         <CardContent className="p-0">
@@ -540,42 +803,58 @@ export default function AkimAnalytics({ analytics }: Props) {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {analytics.niche_analytics.map((niche) => (
-                                            <TableRow key={niche.id ?? 'none'}>
-                                                <TableCell>
-                                                    <div className="flex items-center gap-2">
-                                                        <Badge variant="outline">
-                                                            {niche.rank}
-                                                        </Badge>
-                                                        <div>
-                                                            <p className="font-medium">
-                                                                {niche.name}
-                                                            </p>
-                                                            <p className="text-xs text-muted-foreground">
-                                                                {niche.implementation_projects}{' '}
-                                                                іске асырылуда ·{' '}
-                                                                {niche.launched_projects} іске
-                                                                қосылған
-                                                            </p>
+                                        {analytics.niche_analytics.map(
+                                            (niche) => (
+                                                <TableRow
+                                                    key={niche.id ?? 'none'}
+                                                >
+                                                    <TableCell>
+                                                        <div className="flex items-center gap-2">
+                                                            <Badge variant="outline">
+                                                                {niche.rank}
+                                                            </Badge>
+                                                            <div>
+                                                                <p className="font-medium">
+                                                                    {niche.name}
+                                                                </p>
+                                                                <p className="text-xs text-muted-foreground">
+                                                                    {
+                                                                        niche.implementation_projects
+                                                                    }{' '}
+                                                                    іске
+                                                                    асырылуда ·{' '}
+                                                                    {
+                                                                        niche.launched_projects
+                                                                    }{' '}
+                                                                    іске
+                                                                    қосылған
+                                                                </p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {niche.project_count}
-                                                </TableCell>
-                                                <TableCell>
-                                                    {formatMoney(niche.investment)}
-                                                </TableCell>
-                                                <TableCell className="text-center">
-                                                    {formatNumber(niche.jobs_count)}
-                                                </TableCell>
-                                                <TableCell>
-                                                    <Score
-                                                        value={niche.potential_score}
-                                                    />
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {niche.project_count}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {formatMoney(
+                                                            niche.investment,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell className="text-center">
+                                                        {formatNumber(
+                                                            niche.jobs_count,
+                                                        )}
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Score
+                                                            value={
+                                                                niche.potential_score
+                                                            }
+                                                        />
+                                                    </TableCell>
+                                                </TableRow>
+                                            ),
+                                        )}
                                     </TableBody>
                                 </Table>
                             </div>
@@ -607,7 +886,9 @@ export default function AkimAnalytics({ analytics }: Props) {
                                         key={label}
                                         className="rounded-xl border bg-card p-4"
                                     >
-                                        <p className="text-2xl font-bold">{value}</p>
+                                        <p className="text-2xl font-bold">
+                                            {value}
+                                        </p>
                                         <p className="mt-1 text-xs text-muted-foreground">
                                             {label}
                                         </p>
@@ -645,9 +926,9 @@ export default function AkimAnalytics({ analytics }: Props) {
                             Әкімнің ИИ аналитигі
                         </CardTitle>
                         <CardDescription>
-                            ИИ тек облысқа қолжетімді нақты жоба, тапсырма, мәселе,
-                            рейтинг және нишалық әлеует деректеріне сүйеніп есеп пен
-                            ұсыныс жасайды.
+                            ИИ тек облысқа қолжетімді нақты жоба, тапсырма,
+                            мәселе, рейтинг және нишалық әлеует деректеріне
+                            сүйеніп есеп пен ұсыныс жасайды.
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
@@ -655,6 +936,7 @@ export default function AkimAnalytics({ analytics }: Props) {
                             {[
                                 'Облыс бойынша қысқаша басқарушылық есеп жаса',
                                 'Аудандар мен басқармалардың жұмыс сапасын талдап, кеңес бер',
+                                'Өндіріс жоспары мен нақты көрсеткіштердің орындалуын талда',
                                 'Нишалық аналитика мен өңір әлеуеті бойынша ұсыныс жаса',
                             ].map((prompt) => (
                                 <Button
@@ -681,7 +963,7 @@ export default function AkimAnalytics({ analytics }: Props) {
                             </div>
                         )}
                         {aiResponse && !aiLoading && (
-                            <div className="whitespace-pre-wrap rounded-xl border bg-background p-5 text-sm leading-6 shadow-sm">
+                            <div className="rounded-xl border bg-background p-5 text-sm leading-6 whitespace-pre-wrap shadow-sm">
                                 {aiResponse}
                             </div>
                         )}
@@ -695,9 +977,12 @@ export default function AkimAnalytics({ analytics }: Props) {
                                 <Building2 className="size-5" />
                             </div>
                             <div>
-                                <p className="font-semibold">Барлық жобалар тізімі</p>
+                                <p className="font-semibold">
+                                    Барлық жобалар тізімі
+                                </p>
                                 <p className="text-sm text-muted-foreground">
-                                    Атауы, ТОО атауы немесе БИН арқылы толық іздеу
+                                    Атауы, ТОО атауы немесе БИН арқылы толық
+                                    іздеу
                                 </p>
                             </div>
                         </div>

@@ -19,7 +19,7 @@ class InvestmentProject extends Model
         'region_id',
         'project_type_id',
         'jobs_count',
-        'capacity',
+        'production_not_applicable',
         'total_investment',
         'status',
         'start_date',
@@ -40,6 +40,7 @@ class InvestmentProject extends Model
             'geometry' => 'array',
             'infrastructure' => 'array',
             'is_archived' => 'boolean',
+            'production_not_applicable' => 'boolean',
         ];
     }
 
@@ -209,6 +210,14 @@ class InvestmentProject extends Model
     public function documents()
     {
         return $this->hasMany(ProjectDocument::class, 'project_id')->active();
+    }
+
+    public function productionPlans()
+    {
+        return $this->hasMany(
+            ProjectProductionPlan::class,
+            'project_id'
+        )->orderBy('sort_order');
     }
 
     public function allDocuments()

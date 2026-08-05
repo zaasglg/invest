@@ -17,8 +17,10 @@ use App\Services\InvestmentProjectStatusService;
 use App\Services\PrivateFileService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
+use App\Services\ProjectProductionService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
+use App\Support\ProductionPlanValidationRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -39,6 +41,7 @@ class InvestmentProjectController extends Controller
         private readonly InvestmentProjectAccessService $projectAccess,
         private readonly InvestmentProjectStatusService $projectStatus,
         private readonly ProjectPassportSummaryService $passportSummary,
+        private readonly ProjectProductionService $production,
         private readonly SortOrderService $sortOrder,
         private readonly ProjectExecutorAssignmentService $projectExecutors
     ) {}
@@ -449,7 +452,6 @@ class InvestmentProjectController extends Controller
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
-            'capacity' => 'nullable|string|max:500',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -507,6 +509,7 @@ class InvestmentProjectController extends Controller
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
+            ...ProductionPlanValidationRules::rules(),
             'curator_ids' => 'nullable|array|max:100',
             'curator_ids.*' => 'exists:users,id',
         ], [
@@ -518,6 +521,17 @@ class InvestmentProjectController extends Controller
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
+
+        $plannedProduction = $validated['planned_production'] ?? [];
+        unset($validated['planned_production']);
+        $validated['production_not_applicable'] = (bool) (
+            $validated['production_not_applicable'] ?? false
+        );
+        $this->production->assertApplicability(
+            (bool) $validated['production_not_applicable'],
+            $plannedProduction
+        );
+        $this->production->assertNewPlansAreComplete($plannedProduction);
 
         $company = Company::query()
             ->active()
@@ -576,6 +590,8 @@ class InvestmentProjectController extends Controller
         unset($validated['executor_ids'], $validated['sector']);
 
         $project = InvestmentProject::create($validated);
+
+        $this->production->syncPlans($project, $plannedProduction);
 
         $project->projectTypes()->sync($projectTypeIds);
 
@@ -643,6 +659,8 @@ class InvestmentProjectController extends Controller
             'industrialZones',
             'promZones',
             'subsoilUsers',
+            'productionPlans.facts',
+            'productionPlans.facts.reporter:id,full_name',
         ])
             ->withCount('photos')
             ->find($id);
@@ -789,6 +807,9 @@ class InvestmentProjectController extends Controller
             $project->setRelation('documents', collect());
             $project->setRelation('issues', collect());
             $project->setRelation('tasks', collect());
+            $project->productionPlans->each(
+                fn ($plan) => $plan->setRelation('facts', collect())
+            );
         }
 
         return Inertia::render('investment-projects/show', [
@@ -800,6 +821,9 @@ class InvestmentProjectController extends Controller
             'canDownload' => $canDownload,
             'canAccessChat' => $user && is_object($project)
                 ? $project->isChatParticipant($user)
+                : false,
+            'canReportProduction' => $user && is_object($project)
+                ? $this->production->canReport($user, $project)
                 : false,
             'isInvolved' => $isInvolved,
             'isOwnDistrict' => $isOwnDistrict,
@@ -820,6 +844,7 @@ class InvestmentProjectController extends Controller
             'promZones',
             'curators',
             'projectTypes',
+            'productionPlans' => fn ($query) => $query->withCount('facts'),
         ]);
 
         $regionsQuery = Region::query();
@@ -1129,7 +1154,6 @@ class InvestmentProjectController extends Controller
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0',
-            'capacity' => 'nullable|string|max:500',
             'region_id' => [
                 'required',
                 'exists:regions,id',
@@ -1187,6 +1211,7 @@ class InvestmentProjectController extends Controller
             'executor_ids.*' => 'exists:users,id',
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
+            ...ProductionPlanValidationRules::rules(),
             'curator_ids' => 'nullable|array',
             'curator_ids.*' => 'exists:users,id',
             'return_to' => 'nullable|string',
@@ -1199,6 +1224,41 @@ class InvestmentProjectController extends Controller
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
+
+        $hasPlannedProduction = array_key_exists(
+            'planned_production',
+            $validated
+        );
+        $hasProductionApplicability = array_key_exists(
+            'production_not_applicable',
+            $validated
+        );
+        $plannedProduction = $hasPlannedProduction
+            ? ($validated['planned_production'] ?? [])
+            : null;
+        unset($validated['planned_production']);
+        $productionNotApplicable = (bool) (
+            $validated['production_not_applicable']
+                ?? $investmentProject->production_not_applicable
+        );
+        $validated['production_not_applicable'] = $productionNotApplicable;
+
+        if ($hasProductionApplicability
+            && $productionNotApplicable
+            && ! $hasPlannedProduction) {
+            $plannedProduction = [];
+        }
+
+        if ($plannedProduction !== null) {
+            $this->production->assertApplicability(
+                $productionNotApplicable,
+                $plannedProduction
+            );
+            $this->production->assertPlansCanBeSynced(
+                $investmentProject,
+                $plannedProduction
+            );
+        }
 
         $company = Company::find($validated['company_id']);
         $keepsCurrentCompany = (int) $investmentProject->company_id
@@ -1260,6 +1320,13 @@ class InvestmentProjectController extends Controller
 
         $investmentProject->update($validated);
 
+        if ($plannedProduction !== null) {
+            $this->production->syncPlans(
+                $investmentProject,
+                $plannedProduction
+            );
+        }
+
         $investmentProject->projectTypes()->sync($projectTypeIds);
 
         // Sync curators (superadmin only)
@@ -1315,7 +1382,8 @@ class InvestmentProjectController extends Controller
             'description' => $project->description,
             'current_status' => $project->current_status,
             'jobs_count' => $project->jobs_count,
-            'capacity' => $project->capacity,
+            'planned_production' => $this->production
+                ->activitySnapshot($project),
             'region' => $project->region()->value('name'),
             'project_types' => $project->projectTypes()
                 ->orderBy('name')
@@ -1364,7 +1432,7 @@ class InvestmentProjectController extends Controller
             'description' => 'Сипаттама',
             'current_status' => 'Ағымдағы жағдай',
             'jobs_count' => 'Жұмыс орындары',
-            'capacity' => 'Жоба қуаттылығы',
+            'planned_production' => 'Жоспарлы өндіріс',
             'region' => 'Өңір',
             'project_types' => 'Жоба түрлері',
             'total_investment' => 'Инвестиция сомасы',
@@ -1522,6 +1590,7 @@ class InvestmentProjectController extends Controller
             'region', 'projectType', 'projectTypes', 'creator', 'executors',
             'documents', 'photos', 'issues',
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
+            'productionPlans',
         ]);
 
         $pptx = new PhpPresentation;
@@ -1597,6 +1666,7 @@ class InvestmentProjectController extends Controller
             'region', 'projectType', 'projectTypes', 'creator', 'executors',
             'documents', 'photos', 'issues',
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
+            'productionPlans',
         ])->whereIn('id', $projectIds);
 
         $user = $request->user();
@@ -1693,11 +1763,56 @@ class InvestmentProjectController extends Controller
         return $filePath;
     }
 
+    private function plannedProductionSummary(
+        InvestmentProject $project
+    ): string {
+        if ($project->production_not_applicable) {
+            return 'Қолданылмайды';
+        }
+
+        $project->loadMissing('productionPlans');
+
+        if ($project->productionPlans->isEmpty()) {
+            return 'Көрсетілмеген';
+        }
+
+        $items = $project->productionPlans
+            ->take(3)
+            ->map(function ($plan): string {
+                if (filled($plan->legacy_value) && ! $plan->is_complete) {
+                    return $plan->legacy_value;
+                }
+
+                $quantity = rtrim(
+                    rtrim(number_format(
+                        (float) $plan->planned_quantity,
+                        3,
+                        '.',
+                        ' '
+                    ), '0'),
+                    '.'
+                );
+
+                return $plan->product_name.': '.$quantity.' '
+                    .$plan->unit_label.' '.$plan->period_label;
+            });
+
+        if ($project->productionPlans->count() > 3) {
+            $items->push(
+                'тағы '.($project->productionPlans->count() - 3).' өнім'
+            );
+        }
+
+        return $items->join('; ');
+    }
+
     /**
      * Build a single slide for a project on the given slide object.
      */
     protected function buildProjectSlide($slide, InvestmentProject $project): void
     {
+        $project->loadMissing('productionPlans');
+
         $white = 'FFFFFF';
         $darkGray = '333333';
         $midGray = '666666';
@@ -1798,7 +1913,7 @@ class InvestmentProjectController extends Controller
                 $project->projectTypes->pluck('name')->join(', ')
                     ?: ($project->projectType?->name ?? 'Көрсетілмеген'),
             ],
-            ['Жоба қуаттылығы', $project->capacity ? $project->capacity : '—'],
+            ['Жоспарлы өндіріс', $this->plannedProductionSummary($project)],
             ['Жұмыс орындары', $project->jobs_count ? $project->jobs_count.' адам' : '—'],
         ];
 

@@ -421,6 +421,7 @@ PROMPT;
             case 'oblast_analytics':
                 $scope = $data['scope'] ?? [];
                 $summary = $data['summary'] ?? [];
+                $production = $data['production_summary'] ?? [];
                 $investment = number_format(
                     (float) ($summary['total_investment'] ?? 0),
                     0,
@@ -440,6 +441,27 @@ PROMPT;
                     .($summary['active_issues'] ?? 0)
                     .' | '.($lang === 'ru' ? 'просроченных задач: ' : 'кешіккен тапсырма: ')
                     .($summary['overdue_tasks'] ?? 0);
+
+                if (($production['projects_with_plans'] ?? 0) > 0) {
+                    $lines[] = $lang === 'ru'
+                        ? 'ВЫПОЛНЕНИЕ ПРОИЗВОДСТВЕННОГО ПЛАНА:'
+                        : 'ӨНДІРІС ЖОСПАРЫНЫҢ ОРЫНДАЛУЫ:';
+                    $lines[] = ($lang === 'ru' ? 'Отчитались: ' : 'Есеп берген жоба: ')
+                        .($production['reporting_projects'] ?? 0)
+                        .' / '.($production['projects_with_plans'] ?? 0)
+                        .' | '.($lang === 'ru' ? 'по сумме: ' : 'сома бойынша: ')
+                        .(($production['amount_completion_rate'] ?? null) !== null
+                            ? $production['amount_completion_rate'].'%'
+                            : '—')
+                        .' | '.($lang === 'ru' ? 'по объёму: ' : 'көлем бойынша: ')
+                        .(($production['average_volume_completion_rate'] ?? null) !== null
+                            ? $production['average_volume_completion_rate'].'%'
+                            : '—')
+                        .' | '.($lang === 'ru' ? 'без отчёта после запуска: ' : 'іске қосылған, есебі жоқ: ')
+                        .($production['launched_without_reports'] ?? 0)
+                        .' | '.($lang === 'ru' ? 'требуют дополнения старых данных: ' : 'ескі деректі толықтыру қажет: ')
+                        .($production['projects_needing_plan_completion'] ?? 0);
+                }
 
                 $lines[] = $lang === 'ru'
                     ? 'КАЧЕСТВО РАЙОННЫХ АКИМАТОВ:'

@@ -26,6 +26,7 @@ import {
     MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
+import ProductionMonitoringCard from '@/components/investment-projects/production-monitoring-card';
 import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
 import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -49,6 +50,7 @@ import {
     PROJECT_INFRASTRUCTURE_FIELDS,
 } from '@/lib/infrastructure';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
+import type { ProductionPlanInput } from '@/lib/production';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
@@ -113,7 +115,8 @@ interface InvestmentProject {
     subsoil_users?: SectorEntity[];
     total_investment?: number;
     jobs_count?: number | null;
-    capacity?: string | null;
+    production_not_applicable?: boolean;
+    production_plans?: ProductionPlanInput[];
     status: 'plan' | 'implementation' | 'launched' | 'suspended';
     start_date?: string;
     end_date?: string;
@@ -218,6 +221,7 @@ interface Props {
     users?: UserOption[];
     canDownload: boolean;
     canAccessChat?: boolean;
+    canReportProduction?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
     passportSummary?: ProjectPassportSummary | null;
@@ -410,6 +414,7 @@ export default function Show({
     users = [],
     canDownload,
     canAccessChat = false,
+    canReportProduction = false,
     isInvolved = true,
     passportSummary,
 }: Props) {
@@ -1130,11 +1135,15 @@ export default function Show({
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Factory className="h-3.5 w-3.5" />{' '}
-                                                Жұмыс қуаттылығы
+                                                Жоспарлы өндіріс
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.capacity ||
-                                                    'Көрсетілмеген'}
+                                                {project.production_not_applicable
+                                                    ? 'Қолданылмайды'
+                                                    : project.production_plans
+                                                            ?.length
+                                                      ? `${project.production_plans.length} өнім/нәтиже`
+                                                      : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                     </div>
@@ -1473,6 +1482,18 @@ export default function Show({
                                     </div>
                                 )}
                         </Card>
+
+                        {!isRestrictedView && (
+                            <ProductionMonitoringCard
+                                canReport={canReportProduction}
+                                notApplicable={Boolean(
+                                    project.production_not_applicable,
+                                )}
+                                plans={project.production_plans ?? []}
+                                projectId={project.id}
+                                projectStatus={project.status}
+                            />
+                        )}
 
                         {/* Roadmap / Дорожная карта */}
                         {!isRestrictedView && (

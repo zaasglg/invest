@@ -752,6 +752,7 @@ class LocalChatService
             0,
             3
         );
+        $production = $data['production_summary'] ?? [];
         $niches = array_slice($data['niche_analytics'] ?? [], 0, 3);
         $potential = $data['regional_potential'] ?? [];
         $investment = number_format(
@@ -780,6 +781,39 @@ class LocalChatService
                     .' белсенді мәселе, '.($summary['overdue_tasks'] ?? 0)
                     .' кешіктірілген тапсырма.',
             ];
+
+        if (($production['projects_with_plans'] ?? 0) > 0) {
+            $amountRate = ($production['amount_completion_rate'] ?? null)
+                !== null
+                ? $production['amount_completion_rate'].'%'
+                : ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+            $volumeRate = (
+                $production['average_volume_completion_rate'] ?? null
+            ) !== null
+                ? $production['average_volume_completion_rate'].'%'
+                : ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Выполнение производственного плана:'
+                : 'Өндіріс жоспарының орындалуы:';
+            $lines[] = ($lang === 'ru' ? 'Отчитались: ' : 'Есеп берген жоба: ')
+                .($production['reporting_projects'] ?? 0)
+                .' / '.($production['projects_with_plans'] ?? 0)
+                .' · '.($lang === 'ru' ? 'по сумме: ' : 'сома бойынша: ')
+                .$amountRate
+                .' · '.($lang === 'ru' ? 'по объёму: ' : 'көлем бойынша: ')
+                .$volumeRate;
+            $lines[] = ($lang === 'ru'
+                ? 'Запущенных проектов без фактического отчёта: '
+                : 'Іске қосылған, бірақ нақты есебі жоқ жоба: ')
+                .($production['launched_without_reports'] ?? 0).'.';
+            if (($production['projects_needing_plan_completion'] ?? 0) > 0) {
+                $lines[] = ($lang === 'ru'
+                    ? 'Нужно дополнить старые данные мощности: '
+                    : 'Бұрынғы қуаттылық дерегін толықтыру қажет жоба: ')
+                    .$production['projects_needing_plan_completion'].'.';
+            }
+        }
 
         if ($districts !== []) {
             $lines[] = '';
@@ -1045,7 +1079,7 @@ class LocalChatService
 
         $roleName = $user?->roleModel?->name;
         if ($user?->isOblastScopedAkim()
-            && preg_match('/(есеп|отч[её]т|аналитик|талдау|кеңес|совет|ұсыныс|рекомендац|әлеует|потенциал|ниша|сапа|качество|басқарма|управлен|әкімдік|акимат)/ui', $query)) {
+            && preg_match('/(есеп|отч[её]т|аналитик|талда|кеңес|совет|ұсыныс|рекомендац|әлеует|потенциал|ниша|сапа|качество|басқарма|управлен|әкімдік|акимат)/ui', $query)) {
             $entities[] = 'oblast_analytics';
         }
 

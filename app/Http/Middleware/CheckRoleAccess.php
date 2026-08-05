@@ -90,6 +90,7 @@ class CheckRoleAccess
         'investment-projects.documents.index',
         'investment-projects.documents.store',
         'investment-projects.documents.download',
+        'investment-projects.production-facts.store',
         'investment-projects.gallery.index',
         'investment-projects.gallery.store',
         'investment-projects.gallery.download',

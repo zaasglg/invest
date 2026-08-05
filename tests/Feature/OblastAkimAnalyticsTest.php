@@ -142,6 +142,48 @@ function seedOblastAnalyticsScenario(): array
         500
     );
 
+    $implementationProject->productionPlans()->create([
+        'product_name' => 'Сүт өнімі',
+        'planned_quantity' => 500,
+        'unit' => 'ton',
+        'planned_amount' => 500000000,
+        'period' => 'year',
+    ]);
+    $implementationProject->productionPlans()->create([
+        'product_name' => 'Сайрам агро жобасы',
+        'unit' => 'other',
+        'period' => 'year',
+        'legacy_value' => 'Жылына 200 тонна',
+    ]);
+    $launchedPlan = $launchedProject->productionPlans()->create([
+        'product_name' => 'Дайын өнім',
+        'planned_quantity' => 1000,
+        'unit' => 'piece',
+        'planned_amount' => 1000000000,
+        'period' => 'year',
+    ]);
+    $launchedPlan->facts()->create([
+        'period_key' => '2026',
+        'reporting_year' => 2026,
+        'actual_quantity' => 800,
+        'actual_amount' => 800000000,
+        'reported_by' => $admin->id,
+    ]);
+    $outsidePlan = $outsideProject->productionPlans()->create([
+        'product_name' => 'Сыртқы өнім',
+        'planned_quantity' => 100000,
+        'unit' => 'ton',
+        'planned_amount' => 9000000000,
+        'period' => 'year',
+    ]);
+    $outsidePlan->facts()->create([
+        'period_key' => '2026',
+        'reporting_year' => 2026,
+        'actual_quantity' => 100000,
+        'actual_amount' => 9000000000,
+        'reported_by' => $admin->id,
+    ]);
+
     ProjectTask::create([
         'project_id' => $implementationProject->id,
         'title' => 'Орындалған тапсырма',
@@ -210,6 +252,30 @@ test('oblast akim receives scoped management and niche analytics', function () {
             ->where('analytics.summary.jobs_count', 120)
             ->where('analytics.summary.active_issues', 1)
             ->where('analytics.summary.overdue_tasks', 1)
+            ->where('analytics.production_summary.projects_with_plans', 2)
+            ->where('analytics.production_summary.complete_plans', 2)
+            ->where(
+                'analytics.production_summary.projects_needing_plan_completion',
+                1
+            )
+            ->where('analytics.production_summary.incomplete_plans', 1)
+            ->where('analytics.production_summary.reporting_projects', 1)
+            ->where('analytics.production_summary.reported_periods', 1)
+            ->where(
+                'analytics.production_summary.planned_amount_for_reported_periods',
+                1000000000
+            )
+            ->where('analytics.production_summary.actual_amount', 800000000)
+            ->where('analytics.production_summary.amount_completion_rate', 80)
+            ->where(
+                'analytics.production_summary.average_volume_completion_rate',
+                80
+            )
+            ->has('analytics.production_performance', 2)
+            ->where(
+                'analytics.production_performance.0.id',
+                $data['launchedProject']->id
+            )
             ->has('analytics.district_quality', 2)
             ->has('analytics.management_quality', 1)
             ->where(
@@ -269,6 +335,19 @@ test('oblast akim AI generates a scoped management report', function () {
     expect($message)
         ->toContain('БАСҚАРУШЫЛЫҚ ЕСЕП')
         ->toContain('Тест Түркістан облысы')
+        ->toContain('Өндіріс жоспарының орындалуы')
         ->toContain('Агроөнеркәсіп')
         ->not->toContain('Облысқа көрінбейтін жоба');
+
+    $productionMessage = $this->actingAs($data['oblastAkim'])
+        ->postJson(route('chat.send'), [
+            'message' => 'Өндіріс жоспары мен нақты көрсеткіштердің орындалуын талда',
+        ])
+        ->assertOk()
+        ->json('message');
+
+    expect($productionMessage)
+        ->toContain('Өндіріс жоспарының орындалуы')
+        ->toContain('сома бойынша: 80%')
+        ->toContain('көлем бойынша: 80%');
 });

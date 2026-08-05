@@ -93,6 +93,8 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
     Route::get('documents/{document}/download', [\App\Http\Controllers\ProjectDocumentController::class, 'download'])->name('investment-projects.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])->name('investment-projects.documents.destroy');
 
+    Route::post('production-facts', [\App\Http\Controllers\ProjectProductionFactController::class, 'store'])->name('investment-projects.production-facts.store');
+
     Route::get('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'index'])->name('investment-projects.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'store'])->name('investment-projects.gallery.store');
     Route::get('gallery/{photo}/download', [\App\Http\Controllers\ProjectPhotoController::class, 'download'])->name('investment-projects.gallery.download');

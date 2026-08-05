@@ -99,7 +99,6 @@ function moderatorProjectPayload(array $dependencies): array
         'description' => 'Moderator project scope test',
         'current_status' => 'Жоспарлау',
         'jobs_count' => 25,
-        'capacity' => '100 тонна',
         'region_id' => $dependencies['region']->id,
         'project_type_id' => $dependencies['project_type']->id,
         'sector' => [],
@@ -228,6 +227,13 @@ test('moderator can edit scoped projects but cannot mutate other resources', fun
         $dependencies,
         'Жабық жоба'
     );
+    $visibleProject->productionPlans()->create([
+        'product_name' => 'Тест өнімі',
+        'planned_quantity' => 100,
+        'unit' => 'piece',
+        'planned_amount' => 1000000,
+        'period' => 'year',
+    ]);
 
     $this->actingAs($moderator)
         ->get(route('investment-projects.edit', $visibleProject))
@@ -241,7 +247,8 @@ test('moderator can edit scoped projects but cannot mutate other resources', fun
         $payload
     )->assertRedirect(route('investment-projects.show', $visibleProject));
 
-    expect($visibleProject->fresh()->name)->toBe('Moderator өңдеген жоба');
+    expect($visibleProject->fresh()->name)->toBe('Moderator өңдеген жоба')
+        ->and($visibleProject->productionPlans()->count())->toBe(1);
 
     $this->post(route('investment-projects.archive', $visibleProject))
         ->assertRedirect();

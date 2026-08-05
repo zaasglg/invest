@@ -11,6 +11,7 @@ import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import CompanySelect from '@/components/companies/company-select';
 import type { CompanyOption } from '@/components/companies/company-select';
+import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import LocationPicker from '@/components/location-picker';
 import ProjectInfrastructureForm from '@/components/project-infrastructure-form';
@@ -31,6 +32,7 @@ import {
     getEmptyProjectInfrastructure,
     PROJECT_INFRASTRUCTURE_FIELDS,
 } from '@/lib/infrastructure';
+import type { ProductionPlanInput } from '@/lib/production';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjects from '@/routes/investment-projects';
 
@@ -137,7 +139,8 @@ export default function Create({
         project_type_ids: [] as string[],
         sector: [] as string[],
         jobs_count: '',
-        capacity: '',
+        production_not_applicable: false,
+        planned_production: [] as ProductionPlanInput[],
         total_investment: '',
         status: 'plan',
         start_date: '',
@@ -988,8 +991,8 @@ export default function Create({
                                     </div>
                                 </div>
 
-                                {/* Жұмыс орындары, Қуаттылық, Инвестиция - 3 column */}
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                {/* Жұмыс орындары және инвестиция */}
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <Label
                                             htmlFor="jobs_count"
@@ -1014,38 +1017,6 @@ export default function Create({
                                         {errors.jobs_count && (
                                             <span className="text-sm text-red-500">
                                                 {errors.jobs_count}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="capacity"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Қуаттылығы
-                                        </Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="capacity"
-                                                type="text"
-                                                value={data.capacity}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'capacity',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                placeholder="Мысалы: 500"
-                                            />
-                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-400">
-                                                МВт/с
-                                            </span>
-                                        </div>
-                                        {errors.capacity && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.capacity}
                                             </span>
                                         )}
                                     </div>
@@ -1088,6 +1059,23 @@ export default function Create({
                                         )}
                                     </div>
                                 </div>
+
+                                <PlannedProductionForm
+                                    errors={errors}
+                                    notApplicable={
+                                        data.production_not_applicable
+                                    }
+                                    onChange={(plans) =>
+                                        setData('planned_production', plans)
+                                    }
+                                    onNotApplicableChange={(value) =>
+                                        setData(
+                                            'production_not_applicable',
+                                            value,
+                                        )
+                                    }
+                                    value={data.planned_production}
+                                />
 
                                 {/* Мәртебесі - full width */}
                                 <div className="flex flex-col gap-2">
@@ -1374,15 +1362,53 @@ export default function Create({
                                                     : '—'}
                                             </p>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-500">
-                                                Қуаттылығы:
-                                            </span>
-                                            <p className="font-medium">
-                                                {data.capacity || '—'}
-                                            </p>
-                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Жоспарлы өндіріс
+                                    </h4>
+                                    {data.production_not_applicable ? (
+                                        <p className="text-sm text-gray-500">
+                                            Бұл жобаға қолданылмайды
+                                        </p>
+                                    ) : data.planned_production.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {data.planned_production.map(
+                                                (plan, index) => (
+                                                    <div
+                                                        className="text-sm text-gray-700"
+                                                        key={
+                                                            plan.id ??
+                                                            plan.client_key ??
+                                                            index
+                                                        }
+                                                    >
+                                                        <span className="font-medium">
+                                                            {plan.product_name ||
+                                                                `${index + 1}-нәтиже`}
+                                                        </span>
+                                                        :{' '}
+                                                        {plan.planned_quantity ||
+                                                            '—'}{' '}
+                                                        ·{' '}
+                                                        {plan.planned_amount
+                                                            ? formatMoneyCompact(
+                                                                  Number(
+                                                                      plan.planned_amount,
+                                                                  ),
+                                                              )
+                                                            : '—'}
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">
+                                            Енгізілмеген
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Сипаттама */}

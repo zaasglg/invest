@@ -169,7 +169,15 @@ class ProjectPassportSummaryService
             'Ағымдағы жағдай' => filled($project->current_status),
             'Инвестиция сомасы' => (float) $project->total_investment > 0,
             'Жұмыс орындары' => $project->jobs_count !== null,
-            'Өндірістік қуат' => filled($project->capacity),
+            'Жоспарлы өндіріс' => $project->production_not_applicable
+                || ($project->relationLoaded('productionPlans')
+                    ? $project->productionPlans->contains(
+                        fn ($plan) => $plan->is_complete
+                    )
+                    : $project->productionPlans()
+                        ->whereNotNull('planned_quantity')
+                        ->whereNotNull('planned_amount')
+                        ->exists()),
             'Басталу мерзімі' => $project->start_date !== null,
             'Аяқталу мерзімі' => $project->end_date !== null,
             'Жауапты тұлға' => $project->curators->isNotEmpty()

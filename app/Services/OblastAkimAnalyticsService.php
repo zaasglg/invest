@@ -45,11 +45,13 @@ class OblastAkimAnalyticsService
                 'projectTypes:id,name',
                 'tasks:id,project_id,assigned_to,status,due_date',
                 'issues:id,project_id,status,severity',
+                'productionPlans.facts',
             ])
             ->get();
 
         $districtQuality = $this->districtQuality($districts, $projects);
         $managementQuality = $this->managementQuality($projects);
+        $production = $this->productionPerformance($projects);
         $niches = $this->nicheAnalytics($projects);
         $regionalPotential = $this->regionalPotential(
             $regionIds,
@@ -69,6 +71,8 @@ class OblastAkimAnalyticsService
             'status_distribution' => $this->statusDistribution($projects),
             'district_quality' => $districtQuality,
             'management_quality' => $managementQuality,
+            'production_summary' => $production['summary'],
+            'production_performance' => $production['projects'],
             'niche_analytics' => $niches,
             'regional_potential' => $regionalPotential,
         ];
@@ -98,6 +102,12 @@ class OblastAkimAnalyticsService
             ),
             'management_quality' => array_slice(
                 $analytics['management_quality'],
+                0,
+                10
+            ),
+            'production_summary' => $analytics['production_summary'],
+            'production_performance' => array_slice(
+                $analytics['production_performance'],
                 0,
                 10
             ),
@@ -319,6 +329,122 @@ class OblastAkimAnalyticsService
     }
 
     /**
+     * Compare every actual report with the plan for the same reporting period.
+     * Product quantities are not summed because their units may differ.
+     *
+     * @return array{summary: array<string, int|float|null>, projects: array<int, array<string, mixed>>}
+     */
+    private function productionPerformance(Collection $projects): array
+    {
+        $applicableProjects = $projects->reject(
+            fn (InvestmentProject $project): bool => $project
+                ->production_not_applicable
+        );
+        $incompletePlans = $applicableProjects->sum(
+            fn (InvestmentProject $project): int => $project->productionPlans
+                ->reject(fn ($plan): bool => $plan->is_complete)
+                ->count()
+        );
+        $projectsNeedingCompletion = $applicableProjects->filter(
+            fn (InvestmentProject $project): bool => $project->productionPlans
+                ->contains(fn ($plan): bool => ! $plan->is_complete)
+        )->count();
+
+        $rows = $applicableProjects
+            ->map(function (InvestmentProject $project): ?array {
+                $plans = $project->productionPlans
+                    ->filter(fn ($plan): bool => $plan->is_complete)
+                    ->values();
+
+                if ($plans->isEmpty()) {
+                    return null;
+                }
+
+                $reportedPeriods = $plans->sum(
+                    fn ($plan): int => $plan->facts->count()
+                );
+                $plannedAmount = (float) $plans->sum(
+                    fn ($plan): float => (float) $plan->planned_amount
+                        * $plan->facts->count()
+                );
+                $actualAmount = (float) $plans->sum(
+                    fn ($plan): float => (float) $plan->facts
+                        ->sum('actual_amount')
+                );
+                $volumeRates = $plans->flatMap(
+                    fn ($plan) => $plan->facts->map(
+                        fn ($fact): float => $this->ratio(
+                            (float) $fact->actual_quantity,
+                            (float) $plan->planned_quantity
+                        )
+                    )
+                );
+
+                return [
+                    'id' => $project->id,
+                    'name' => $project->name,
+                    'region_name' => $project->region?->name,
+                    'status' => $project->status,
+                    'products' => $plans->pluck('product_name')->values()->all(),
+                    'products_count' => $plans->count(),
+                    'reported_periods' => $reportedPeriods,
+                    'planned_amount_for_reported_periods' => $plannedAmount,
+                    'actual_amount' => $actualAmount,
+                    'amount_completion_rate' => $reportedPeriods > 0
+                        && $plannedAmount > 0
+                        ? $this->ratio($actualAmount, $plannedAmount)
+                        : null,
+                    'volume_completion_rate' => $volumeRates->isNotEmpty()
+                        ? round((float) $volumeRates->average(), 1)
+                        : null,
+                ];
+            })
+            ->filter()
+            ->sortBy([
+                [fn (array $item): int => $item['status'] === 'launched'
+                        && $item['reported_periods'] === 0 ? 0 : 1, 'asc'],
+                [fn (array $item): float => (float) ($item['amount_completion_rate'] ?? 101), 'asc'],
+                ['name', 'asc'],
+            ])
+            ->values();
+
+        $reportedRows = $rows->where('reported_periods', '>', 0);
+        $reportedPlanAmount = (float) $reportedRows->sum(
+            'planned_amount_for_reported_periods'
+        );
+        $actualAmount = (float) $reportedRows->sum('actual_amount');
+        $volumeRates = $reportedRows
+            ->pluck('volume_completion_rate')
+            ->filter(fn ($rate): bool => $rate !== null);
+
+        return [
+            'summary' => [
+                'projects_with_plans' => $rows->count(),
+                'complete_plans' => (int) $rows->sum('products_count'),
+                'projects_needing_plan_completion' => $projectsNeedingCompletion,
+                'incomplete_plans' => $incompletePlans,
+                'reporting_projects' => $reportedRows->count(),
+                'launched_without_reports' => $rows
+                    ->where('status', 'launched')
+                    ->where('reported_periods', 0)
+                    ->count(),
+                'reported_periods' => (int) $reportedRows
+                    ->sum('reported_periods'),
+                'planned_amount_for_reported_periods' => $reportedPlanAmount,
+                'actual_amount' => $actualAmount,
+                'amount_completion_rate' => $reportedRows->isNotEmpty()
+                    && $reportedPlanAmount > 0
+                    ? $this->ratio($actualAmount, $reportedPlanAmount)
+                    : null,
+                'average_volume_completion_rate' => $volumeRates->isNotEmpty()
+                    ? round((float) $volumeRates->average(), 1)
+                    : null,
+            ],
+            'projects' => $rows->all(),
+        ];
+    }
+
+    /**
      * @return array<int, array<string, mixed>>
      */
     private function nicheAnalytics(Collection $projects): array
@@ -476,6 +602,11 @@ class OblastAkimAnalyticsService
     }
 
     private function percentage(int $value, int $total): float
+    {
+        return $total > 0 ? round(($value / $total) * 100, 1) : 0.0;
+    }
+
+    private function ratio(float $value, float $total): float
     {
         return $total > 0 ? round(($value / $total) * 100, 1) : 0.0;
     }

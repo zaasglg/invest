@@ -38,7 +38,6 @@ function createPassportProject(User $creator): InvestmentProject
         'region_id' => $region->id,
         'total_investment' => 150000000,
         'jobs_count' => 75,
-        'capacity' => 'Жылына 10 000 тонна',
         'status' => 'implementation',
         'start_date' => '2026-01-01',
         'end_date' => '2026-12-31',
