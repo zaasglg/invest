@@ -1445,6 +1445,7 @@ button {
 .asset-card.category-agriculture::before { background: #87b84b; }
 .asset-card.category-tourism::before { background: #698b70; }
 .asset-card.category-infrastructure::before { background: #3d7460; }
+.asset-card.category-bank_collateral::before { background: #1f5f3c; }
 
 .asset-card-topline,
 .asset-card footer {
@@ -1490,6 +1491,18 @@ button {
   font-size: 8px;
   line-height: 1.45;
 }
+
+.asset-bank-line {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 8px;
+  color: #285d3a;
+  font-size: 7px;
+}
+
+.asset-bank-line strong { font-weight: 750; }
+.asset-bank-line span { margin-left: auto; color: #75847b; font-weight: 500; }
 
 .asset-facts {
   display: flex;

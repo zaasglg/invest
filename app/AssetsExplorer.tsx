@@ -6,6 +6,7 @@ import {
   Building2,
   ExternalLink,
   Factory,
+  Gavel,
   Landmark,
   MapPinned,
   Search,
@@ -16,7 +17,7 @@ import {
   Zap,
 } from "lucide-react";
 
-type AssetCategory = "industrial" | "logistics" | "energy" | "agriculture" | "tourism" | "infrastructure";
+type AssetCategory = "industrial" | "logistics" | "energy" | "agriculture" | "tourism" | "infrastructure" | "bank_collateral";
 
 type RegionAsset = {
   id: string;
@@ -27,6 +28,9 @@ type RegionAsset = {
   status: string;
   facts: string[];
   sourceUrl: string;
+  sourceLabel?: string;
+  bank?: string;
+  verifiedAt?: string;
 };
 
 type Territory = {
@@ -53,6 +57,7 @@ const CATEGORY_META: Record<AssetCategory, { label: string; icon: typeof Factory
   agriculture: { label: "АПК", icon: Sprout },
   tourism: { label: "Туризм", icon: Landmark },
   infrastructure: { label: "Инфраструктура", icon: Building2 },
+  bank_collateral: { label: "Залоги банков", icon: Gavel },
 };
 
 export function AssetsExplorer({ onClose }: { onClose: () => void }) {
@@ -102,7 +107,7 @@ export function AssetsExplorer({ onClose }: { onClose: () => void }) {
       if (selectedTerritory !== "all" && asset.territoryId !== selectedTerritory) return false;
       if (selectedCategory !== "all" && asset.category !== selectedCategory) return false;
       if (!needle) return true;
-      return `${asset.title} ${asset.description} ${asset.facts.join(" ")}`.toLocaleLowerCase("ru-RU").includes(needle);
+      return `${asset.title} ${asset.description} ${asset.bank ?? ""} ${asset.facts.join(" ")}`.toLocaleLowerCase("ru-RU").includes(needle);
     });
   }, [dataset, search, selectedCategory, selectedTerritory]);
 
@@ -212,13 +217,20 @@ export function AssetsExplorer({ onClose }: { onClose: () => void }) {
                     </div>
                     <h4>{asset.title}</h4>
                     <p>{asset.description}</p>
+                    {asset.bank && (
+                      <div className="asset-bank-line">
+                        <Landmark size={12} />
+                        <strong>{asset.bank}</strong>
+                        {asset.verifiedAt && <span>проверено {asset.verifiedAt}</span>}
+                      </div>
+                    )}
                     <div className="asset-facts">
                       {asset.facts.map((fact) => <span key={fact}>{fact}</span>)}
                     </div>
                     <footer>
                       <span><MapPinned size={12} /> {territory?.name}</span>
                       <a href={asset.sourceUrl} target="_blank" rel="noreferrer" aria-label={`Открыть источник: ${asset.title}`}>
-                        Источник <ExternalLink size={11} />
+                        {asset.sourceLabel ?? "Источник"} <ExternalLink size={11} />
                       </a>
                     </footer>
                   </article>
