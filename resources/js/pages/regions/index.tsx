@@ -16,7 +16,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { Trash2, Edit, GripVertical, MoveRight } from 'lucide-react';
+import { Edit, GripVertical, MoveRight } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
@@ -202,12 +202,6 @@ export default function Index({ regions: regionsData }: Props) {
         void saveOrder(newOrder, orderedRegions);
     };
 
-    const handleDelete = (id: number) => {
-        if (confirm('Сенімдісіз бе?')) {
-            router.delete(regions.destroy.url(id));
-        }
-    };
-
     return (
         <AppLayout
             breadcrumbs={[{ title: 'Аймақтар', href: regions.index.url() }]}
@@ -366,18 +360,6 @@ export default function Index({ regions: regionsData }: Props) {
                                                             >
                                                                 <Edit className="h-4 w-4" />
                                                             </Link>
-                                                        </Button>
-                                                        <Button
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-red-500 transition-colors hover:bg-red-50 hover:text-red-700"
-                                                            onClick={() =>
-                                                                handleDelete(
-                                                                    region.id,
-                                                                )
-                                                            }
-                                                        >
-                                                            <Trash2 className="h-4 w-4" />
                                                         </Button>
                                                     </>
                                                 )}

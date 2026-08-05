@@ -1,5 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Search, Trash2, UserIcon, X } from 'lucide-react';
+import { Pencil, Plus, Search, UserIcon, X } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -95,12 +95,6 @@ export default function Index({ users, filters }: Props) {
             .map((p) => p.charAt(0).toUpperCase())
             .join('');
         return `${first} ${initials}`;
-    };
-
-    const handleDelete = (id: number) => {
-        if (confirm('Бұл пайдаланушыны жоюға сенімдісіз бе?')) {
-            router.delete(usersRoutes.destroy.url(id));
-        }
     };
 
     return (
@@ -274,18 +268,6 @@ export default function Index({ users, filters }: Props) {
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                user.id,
-                                                            )
-                                                        }
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
                                                 </div>
                                             )}
                                         </TableCell>

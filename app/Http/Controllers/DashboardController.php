@@ -13,6 +13,7 @@ use App\Models\Sez;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
 use App\Models\SubsoilUser;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -23,23 +24,28 @@ class DashboardController extends Controller
 {
     private bool $moderatorProjectScope = false;
 
+    /** @var list<int> */
+    private array $regionScopeIds = [];
+
     /**
      * Handle the incoming request.
      */
     public function __invoke(Request $request)
     {
         $user = $request->user();
-        $roleName = $user?->load('roleModel')->roleModel?->name;
+        $roleName = $user?->load(['roleModel', 'region'])->roleModel?->name;
         $investSubRole = ($roleName === 'invest'
             && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
             ? $user->invest_sub_role
             : null;
         $investorId = $roleName === 'investor' ? $user->id : null;
         $this->moderatorProjectScope = $roleName === 'moderator';
+        $this->regionScopeIds = $this->resolveRegionScopeIds($user);
         $hasScopedProjects = (bool) (
             $investSubRole
             || $investorId
             || $this->moderatorProjectScope
+            || $this->hasRegionScope()
         );
 
         // Scoped roles must never consume or populate the shared global cache.
@@ -155,6 +161,13 @@ class DashboardController extends Controller
         // });
         $regions = Region::where('type', 'district')
             ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
+            ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'id',
+                    $this->regionScopeIds
+                )
+            )
             ->when($investorId, function ($query) use ($investorId) {
                 $query->whereHas(
                     'investmentProjects.investors',
@@ -202,6 +215,13 @@ class DashboardController extends Controller
     ): Builder {
         return InvestmentProject::active()
             ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'investment_projects.region_id',
+                    $this->regionScopeIds
+                )
+            )
+            ->when(
                 $this->moderatorProjectScope,
                 fn ($query) => $query->curatedByTurkistanInvest()
             )
@@ -234,18 +254,40 @@ class DashboardController extends Controller
         ?string $subRole,
         ?int $investorId = null
     ): array {
-        $sezCount = $investorId
-            ? Sez::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->count()
-            : Sez::count();
-        $izCount = $investorId
-            ? IndustrialZone::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->count()
-            : IndustrialZone::count();
+        $sezCount = Sez::query()
+            ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'region_id',
+                    $this->regionScopeIds
+                )
+            )
+            ->when(
+                $investorId,
+                fn ($query) => $query->whereHas(
+                    'investmentProjects.investors',
+                    fn ($investorQuery) => $investorQuery
+                        ->where('users.id', $investorId)
+                )
+            )
+            ->count();
+        $izCount = IndustrialZone::query()
+            ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'region_id',
+                    $this->regionScopeIds
+                )
+            )
+            ->when(
+                $investorId,
+                fn ($query) => $query->whereHas(
+                    'investmentProjects.investors',
+                    fn ($investorQuery) => $investorQuery
+                        ->where('users.id', $investorId)
+                )
+            )
+            ->count();
 
         return [
             'total_investment' => $this->projects($subRole, $investorId)
@@ -285,14 +327,22 @@ class DashboardController extends Controller
             ->pluck('cnt', 'region_id')
             ->toArray();
 
-        $subsoilUsers = SubsoilUser::when(
-            $investorId,
-            fn ($query) => $query->whereHas(
-                'investmentProjects.investors',
-                fn ($investorQuery) => $investorQuery
-                    ->where('users.id', $investorId)
+        $subsoilUsers = SubsoilUser::query()
+            ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'region_id',
+                    $this->regionScopeIds
+                )
             )
-        )
+            ->when(
+                $investorId,
+                fn ($query) => $query->whereHas(
+                    'investmentProjects.investors',
+                    fn ($investorQuery) => $investorQuery
+                        ->where('users.id', $investorId)
+                )
+            )
             ->selectRaw('region_id, COUNT(*) as cnt')
             ->groupBy('region_id')
             ->pluck('cnt', 'region_id')
@@ -410,7 +460,10 @@ class DashboardController extends Controller
         ?string $subRole,
         ?int $investorId = null
     ): array {
-        if ($subRole || $investorId || $this->moderatorProjectScope) {
+        if ($subRole
+            || $investorId
+            || $this->moderatorProjectScope
+            || $this->hasRegionScope()) {
             return $this->computeSectorSummary($subRole, $investorId);
         }
 
@@ -461,29 +514,81 @@ class DashboardController extends Controller
         $canSeeProm = ! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true);
         $canSeeSubsoil = ! $subRole || $subRole === 'turkistan_invest';
 
-        $sezIds = $investorId
-            ? Sez::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->pluck('id')
+        $sezIds = ($investorId || $this->hasRegionScope())
+            ? Sez::query()
+                ->when(
+                    $this->hasRegionScope(),
+                    fn ($query) => $query->whereIn(
+                        'region_id',
+                        $this->regionScopeIds
+                    )
+                )
+                ->when(
+                    $investorId,
+                    fn ($query) => $query->whereHas(
+                        'investmentProjects.investors',
+                        fn ($investorQuery) => $investorQuery
+                            ->where('users.id', $investorId)
+                    )
+                )
+                ->pluck('id')
             : null;
-        $izIds = $investorId
-            ? IndustrialZone::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->pluck('id')
+        $izIds = ($investorId || $this->hasRegionScope())
+            ? IndustrialZone::query()
+                ->when(
+                    $this->hasRegionScope(),
+                    fn ($query) => $query->whereIn(
+                        'region_id',
+                        $this->regionScopeIds
+                    )
+                )
+                ->when(
+                    $investorId,
+                    fn ($query) => $query->whereHas(
+                        'investmentProjects.investors',
+                        fn ($investorQuery) => $investorQuery
+                            ->where('users.id', $investorId)
+                    )
+                )
+                ->pluck('id')
             : null;
-        $promZoneIds = $investorId
-            ? PromZone::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->pluck('id')
+        $promZoneIds = ($investorId || $this->hasRegionScope())
+            ? PromZone::query()
+                ->when(
+                    $this->hasRegionScope(),
+                    fn ($query) => $query->whereIn(
+                        'region_id',
+                        $this->regionScopeIds
+                    )
+                )
+                ->when(
+                    $investorId,
+                    fn ($query) => $query->whereHas(
+                        'investmentProjects.investors',
+                        fn ($investorQuery) => $investorQuery
+                            ->where('users.id', $investorId)
+                    )
+                )
+                ->pluck('id')
             : null;
-        $subsoilUserIds = $investorId
-            ? SubsoilUser::whereHas(
-                'investmentProjects.investors',
-                fn ($query) => $query->where('users.id', $investorId)
-            )->pluck('id')
+        $subsoilUserIds = ($investorId || $this->hasRegionScope())
+            ? SubsoilUser::query()
+                ->when(
+                    $this->hasRegionScope(),
+                    fn ($query) => $query->whereIn(
+                        'region_id',
+                        $this->regionScopeIds
+                    )
+                )
+                ->when(
+                    $investorId,
+                    fn ($query) => $query->whereHas(
+                        'investmentProjects.investors',
+                        fn ($investorQuery) => $investorQuery
+                            ->where('users.id', $investorId)
+                    )
+                )
+                ->pluck('id')
             : null;
 
         $sezIssues = $canSeeSez
@@ -652,6 +757,13 @@ class DashboardController extends Controller
 
         // Build per-region map
         $regionIds = Region::where('type', 'district')
+            ->when(
+                $this->hasRegionScope(),
+                fn ($query) => $query->whereIn(
+                    'id',
+                    $this->regionScopeIds
+                )
+            )
             ->when($investorId, function ($query) use ($investorId) {
                 $query->whereHas(
                     'investmentProjects.investors',
@@ -714,5 +826,35 @@ class DashboardController extends Controller
             'total' => $total,
             'byRegion' => $byRegion,
         ];
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function resolveRegionScopeIds(?User $user): array
+    {
+        if (! $user) {
+            return [];
+        }
+
+        if ($user->isDistrictScoped()) {
+            return [(int) $user->region_id];
+        }
+
+        if ($user->isOblastScopedAkim()) {
+            return Region::query()
+                ->where('id', $user->region_id)
+                ->orWhere('parent_id', $user->region_id)
+                ->pluck('id')
+                ->map(static fn ($id): int => (int) $id)
+                ->all();
+        }
+
+        return [];
+    }
+
+    private function hasRegionScope(): bool
+    {
+        return $this->regionScopeIds !== [];
     }
 }

@@ -1,5 +1,5 @@
-import { Head, Link, router } from '@inertiajs/react';
-import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { Pencil, Plus } from 'lucide-react';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,17 +29,6 @@ interface Props {
 
 export default function Index({ roles }: Props) {
     const canModify = useCanModify();
-
-    const handleDelete = (id: number, usersCount: number) => {
-        if (usersCount > 0) {
-            alert('Рөл пайдаланушыларға тағайындалғандықтан, жою мүмкін емес.');
-            return;
-        }
-
-        if (confirm('Бұл рөлді жоюға сенімдісіз бе?')) {
-            router.delete(rolesRoutes.destroy.url(id));
-        }
-    };
 
     return (
         <AppLayout breadcrumbs={[{ title: 'Рөлдер', href: '#' }]}>
@@ -126,24 +115,6 @@ export default function Index({ roles }: Props) {
                                                             <Pencil className="h-4 w-4" />
                                                         </Button>
                                                     </Link>
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="icon"
-                                                        className="text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                        onClick={() =>
-                                                            handleDelete(
-                                                                role.id,
-                                                                role.users_count,
-                                                            )
-                                                        }
-                                                        disabled={
-                                                            role.users_count > 0
-                                                        }
-                                                    >
-                                                        <Trash2
-                                                            className={`h-4 w-4 ${role.users_count > 0 ? 'text-neutral-300' : ''}`}
-                                                        />
-                                                    </Button>
                                                 </div>
                                             )}
                                         </TableCell>

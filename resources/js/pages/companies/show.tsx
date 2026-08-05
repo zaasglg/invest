@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import * as companiesRoutes from '@/routes/companies';
 import type { PaginatedData } from '@/types';
 
 interface Company {
@@ -74,6 +75,7 @@ interface Project {
 interface Props {
     company: Company;
     projects: PaginatedData<Project>;
+    projectCount: number;
     canManage: boolean;
 }
 
@@ -109,22 +111,32 @@ function formatFileSize(bytes: number): string {
     return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
-export default function Show({ company, projects, canManage }: Props) {
+export default function Show({
+    company,
+    projects,
+    projectCount,
+    canManage,
+}: Props) {
     const removeCompany = () => {
-        if (
-            projects.total > 0 ||
-            !window.confirm('Компанияны жоюды растайсыз ба?')
-        ) {
+        if (projectCount > 0) {
+            window.alert(
+                `Бұл компанияға ${projectCount} жоба тіркелген. Компанияны өшіруге тыйым салынады.`,
+            );
+
             return;
         }
 
-        router.delete(`/companies/${company.id}`);
+        if (!window.confirm('Компанияны жоюды растайсыз ба?')) {
+            return;
+        }
+
+        router.delete(companiesRoutes.destroy.url(company.id));
     };
 
     return (
         <AppLayout
             breadcrumbs={[
-                { title: 'Компаниялар', href: '/companies' },
+                { title: 'Компаниялар', href: companiesRoutes.index.url() },
                 { title: company.display_name, href: '' },
             ]}
         >
@@ -133,7 +145,10 @@ export default function Show({ company, projects, canManage }: Props) {
                 <div className="flex flex-wrap items-start justify-between gap-4">
                     <div className="flex items-start gap-3">
                         <Button asChild size="icon" variant="outline">
-                            <Link href="/companies" aria-label="Артқа">
+                            <Link
+                                href={companiesRoutes.index.url()}
+                                aria-label="Артқа"
+                            >
                                 <ArrowLeft className="h-4 w-4" />
                             </Link>
                         </Button>
@@ -143,14 +158,16 @@ export default function Show({ company, projects, canManage }: Props) {
                             </h1>
                             <p className="mt-1 text-sm text-gray-500">
                                 {company.legal_form_label} ·{' '}
-                                {company.status_label} · {projects.total} жоба
+                                {company.status_label} · {projectCount} жоба
                             </p>
                         </div>
                     </div>
                     {canManage && (
                         <div className="flex gap-2">
                             <Button asChild variant="outline">
-                                <Link href={`/companies/${company.id}/edit`}>
+                                <Link
+                                    href={companiesRoutes.edit.url(company.id)}
+                                >
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Өңдеу
                                 </Link>
@@ -158,11 +175,10 @@ export default function Show({ company, projects, canManage }: Props) {
                             <Button
                                 type="button"
                                 variant="outline"
-                                disabled={projects.total > 0}
                                 onClick={removeCompany}
                                 title={
-                                    projects.total > 0
-                                        ? 'Жобалары бар компанияны жоюға болмайды'
+                                    projectCount > 0
+                                        ? `Компанияға ${projectCount} жоба тіркелген — жоюға болмайды`
                                         : undefined
                                 }
                                 className="text-red-600 hover:text-red-700"

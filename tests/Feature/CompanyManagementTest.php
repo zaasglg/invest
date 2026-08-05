@@ -495,7 +495,75 @@ test('renaming a company updates project snapshots and linked company cannot be 
 
     $this->actingAs($user)
         ->delete(route('companies.destroy', $company))
-        ->assertStatus(409);
+        ->assertRedirect()
+        ->assertSessionHas(
+            'error',
+            'Бұл компанияға 1 жоба тіркелген. Компанияны өшіруге тыйым салынады.'
+        );
 
     $this->assertDatabaseHas('companies', ['id' => $company->id]);
+});
+
+test('deleting a company with no projects removes all company data', function () {
+    Storage::fake('local');
+
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+    $investor = createCompanyManagementInvestor($company);
+    $document = CompanyDocument::create([
+        'company_id' => $company->id,
+        'name' => 'company-file.pdf',
+        'file_path' => "company-documents/{$company->id}/company-file.pdf",
+        'type' => 'pdf',
+        'size' => 12,
+        'uploaded_by' => $user->id,
+    ]);
+    Storage::disk('local')->put($document->file_path, 'company document');
+
+    $this->actingAs($user)
+        ->delete(route('companies.destroy', $company))
+        ->assertRedirect(route('companies.index'));
+
+    $this->assertDatabaseMissing('companies', ['id' => $company->id]);
+    $this->assertDatabaseMissing('users', ['id' => $investor->id]);
+    $this->assertDatabaseMissing('company_documents', ['id' => $document->id]);
+    Storage::disk('local')->assertMissing($document->file_path);
+});
+
+test('logically deleted projects still prevent company deletion', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+    $project = InvestmentProject::create([
+        'name' => 'Deleted company project',
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
+        'region_id' => $region->id,
+        'total_investment' => 1000000,
+        'status' => 'plan',
+        'created_by' => $user->id,
+        'is_deleted' => true,
+        'deleted_by' => $user->id,
+        'deleted_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('companies.show', $company))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('projectCount', 1)
+            ->where('projects.total', 0)
+        );
+
+    $this->actingAs($user)
+        ->delete(route('companies.destroy', $company))
+        ->assertRedirect()
+        ->assertSessionHas(
+            'error',
+            'Бұл компанияға 1 жоба тіркелген. Компанияны өшіруге тыйым салынады.'
+        );
+
+    $this->assertDatabaseHas('companies', ['id' => $company->id]);
+    $this->assertDatabaseHas('investment_projects', ['id' => $project->id]);
 });

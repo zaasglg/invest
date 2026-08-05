@@ -105,6 +105,8 @@ class CompanyController extends Controller
     {
         $this->authorizeRead($request);
 
+        $projectCount = $company->allProjects()->count();
+
         return Inertia::render('companies/show', [
             'company' => $company->load([
                 'region:id,name',
@@ -116,6 +118,7 @@ class CompanyController extends Controller
                 ->with(['region:id,name', 'projectType:id,name', 'projectTypes:id,name'])
                 ->latest()
                 ->paginate(15),
+            'projectCount' => $projectCount,
             'canManage' => $this->canManage($request),
         ]);
     }
@@ -203,15 +206,24 @@ class CompanyController extends Controller
     public function destroy(Request $request, Company $company)
     {
         abort_unless($this->canManage($request), 403);
-        abort_if(
-            $company->projects()->exists(),
-            409,
-            'Жобаларға тіркелген компанияны жоюға болмайды. Алдымен статусын белсенді емес етіп өзгертіңіз.'
-        );
+
+        $projectCount = $company->allProjects()->count();
+        if ($projectCount > 0) {
+            return redirect()->back()->with(
+                'error',
+                "Бұл компанияға {$projectCount} жоба тіркелген. Компанияны өшіруге тыйым салынады."
+            );
+        }
 
         $documentPaths = $company->documents()->pluck('file_path');
 
-        DB::transaction(fn () => $company->delete());
+        DB::transaction(function () use ($company): void {
+            User::query()
+                ->where('company_id', $company->id)
+                ->delete();
+
+            $company->delete();
+        });
         $this->documents->deleteFiles($documentPaths);
 
         return redirect()
