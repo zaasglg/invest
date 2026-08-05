@@ -19,7 +19,7 @@ class InvestmentProject extends Model
         'region_id',
         'project_type_id',
         'jobs_count',
-        'capacity',
+        'production_not_applicable',
         'total_investment',
         'status',
         'start_date',
@@ -40,6 +40,7 @@ class InvestmentProject extends Model
             'geometry' => 'array',
             'infrastructure' => 'array',
             'is_archived' => 'boolean',
+            'production_not_applicable' => 'boolean',
         ];
     }
 
@@ -55,15 +56,23 @@ class InvestmentProject extends Model
 
     public function scopeCuratedByTurkistanInvest(Builder $query): Builder
     {
-        return $query->whereHas(
-            'curators',
-            fn (Builder $curator) => $curator
-                ->where('users.invest_sub_role', 'turkistan_invest')
-                ->whereHas(
-                    'roleModel',
-                    fn (Builder $role) => $role->where('name', 'invest')
-                )
-        );
+        return $query->whereHas('curators', function (Builder $curator) {
+            $curator->where(function (Builder $turkistanInvest) {
+                $turkistanInvest
+                    ->where(function (Builder $invest) {
+                        $invest
+                            ->where('users.invest_sub_role', 'turkistan_invest')
+                            ->whereHas(
+                                'roleModel',
+                                fn (Builder $role) => $role->where('name', 'invest')
+                            );
+                    })
+                    ->orWhereHas(
+                        'roleModel',
+                        fn (Builder $role) => $role->where('name', 'moderator')
+                    );
+            });
+        });
     }
 
     public function scopeWhereChatParticipant(
@@ -108,6 +117,14 @@ class InvestmentProject extends Model
     public function projectType()
     {
         return $this->belongsTo(ProjectType::class);
+    }
+
+    public function projectTypes()
+    {
+        return $this->belongsToMany(
+            ProjectType::class,
+            'investment_project_project_type'
+        )->withTimestamps();
     }
 
     public function company()
@@ -191,6 +208,19 @@ class InvestmentProject extends Model
     }
 
     public function documents()
+    {
+        return $this->hasMany(ProjectDocument::class, 'project_id')->active();
+    }
+
+    public function productionPlans()
+    {
+        return $this->hasMany(
+            ProjectProductionPlan::class,
+            'project_id'
+        )->orderBy('sort_order');
+    }
+
+    public function allDocuments()
     {
         return $this->hasMany(ProjectDocument::class, 'project_id');
     }

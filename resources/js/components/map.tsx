@@ -22,6 +22,7 @@ import {
     useMap,
 } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -62,6 +63,7 @@ interface InvestmentProject {
     start_date?: string;
     end_date?: string;
     project_type?: { id: number; name: string };
+    project_types?: { id: number; name: string }[];
     executors?: { id: number; name: string; full_name?: string }[];
     sezs?: { id: number; name: string }[];
     industrial_zones?: { id: number; name: string }[];
@@ -198,6 +200,7 @@ type Props = {
     showRegionIconsDemo?: boolean;
     showOutsideRegionClouds?: boolean;
     activeTab?: string;
+    baseLayer?: 'standard' | 'satellite';
     sectorSummary?: SectorSummary | null;
     interactive?: boolean;
     onEntitySelect?: (
@@ -611,6 +614,7 @@ export default function Map({
     showRegionIconsDemo = false,
     showOutsideRegionClouds = false,
     activeTab = 'all',
+    baseLayer = 'satellite',
     sectorSummary = null,
     interactive = false,
     onEntitySelect,
@@ -899,7 +903,7 @@ export default function Map({
                     totalInvestment: project.total_investment ?? null,
                     startDate: project.start_date,
                     endDate: project.end_date,
-                    projectTypeName: project.project_type?.name,
+                    projectTypeName: formatProjectTypeNames(project, ''),
                     executorNames:
                         project.executors?.map((e) => e.full_name || e.name) ??
                         [],
@@ -986,11 +990,19 @@ export default function Map({
                     fitBounds={fitBounds}
                     resetTrigger={resetTrigger}
                 />
-                <TileLayer
-                    // attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                    attribution="Tiles © Esri"
-                    url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
-                />
+                {baseLayer === 'standard' ? (
+                    <TileLayer
+                        key="standard"
+                        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                ) : (
+                    <TileLayer
+                        key="satellite"
+                        attribution="Tiles &copy; Esri"
+                        url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+                    />
+                )}
 
                 {outsideCloudMaskPositions && (
                     <Polygon

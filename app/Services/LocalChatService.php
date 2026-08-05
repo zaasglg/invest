@@ -145,6 +145,15 @@ class LocalChatService
                 return $this->formatGalleryResponse($contextData, $query, $lang);
             case 'rating':
                 return $this->formatRatingResponse($contextData, $query, $lang);
+            case 'support_measures':
+                return $this->formatSupportMeasuresResponse($contextData, $lang);
+            case 'regional_assets':
+                return $this->formatRegionalAssetsResponse($contextData, $lang);
+            case 'oblast_analytics':
+                return $this->formatOblastAnalyticsResponse(
+                    $contextData,
+                    $lang
+                );
             default:
                 return '';
         }
@@ -634,6 +643,227 @@ class LocalChatService
         return "⭐ **Басқарма рейтингі** — барлық орындаушылар: {$total}";
     }
 
+    // ─── Инвесторға ұсыныстар ─────────────────────────────────
+
+    protected function formatSupportMeasuresResponse(array $contextData, string $lang): string
+    {
+        $items = $contextData['support_measures']['items'] ?? [];
+
+        if (empty($items)) {
+            return $lang === 'ru'
+                ? 'Подходящие меры государственной поддержки не найдены.'
+                : 'Сәйкес мемлекеттік қолдау шаралары табылмады.';
+        }
+
+        $lines = [
+            $lang === 'ru'
+                ? '💼 **Предварительно подходящие меры поддержки:**'
+                : '💼 **Алдын ала сәйкес келетін қолдау шаралары:**',
+        ];
+
+        foreach ($items as $index => $item) {
+            $title = $item[$lang === 'ru' ? 'title_ru' : 'title_kk'];
+            $summary = $item[$lang === 'ru' ? 'summary_ru' : 'summary_kk'];
+            $eligibility = $item[$lang === 'ru'
+                ? 'eligibility_ru'
+                : 'eligibility_kk'];
+            $lines[] = ($index + 1).". **{$title}** — {$summary}";
+            $lines[] = $lang === 'ru'
+                ? "   Условие: {$eligibility}"
+                : "   Шарты: {$eligibility}";
+            $lines[] = "   {$item['operator']}: {$item['source_url']}";
+        }
+
+        $lines[] = '';
+        $lines[] = $lang === 'ru'
+            ? 'Условия программ меняются: перед подачей заявки подтвердите актуальные требования у оператора.'
+            : 'Бағдарлама шарттары өзгеруі мүмкін: өтінім берер алдында өзекті талаптарды оператордан растаңыз.';
+
+        return implode("\n", $lines);
+    }
+
+    protected function formatRegionalAssetsResponse(array $contextData, string $lang): string
+    {
+        $data = $contextData['regional_assets'] ?? null;
+        $items = $data['items'] ?? [];
+
+        if (! $data || empty($items)) {
+            return $lang === 'ru'
+                ? 'Подходящие региональные площадки в базе пока не найдены.'
+                : 'Дерекқордан сәйкес өңірлік алаңдар әзірге табылмады.';
+        }
+
+        $region = $data['region'] ?? null;
+        $heading = $lang === 'ru'
+            ? '📍 **Региональные активы для рассмотрения**'
+            : '📍 **Қарастыруға болатын өңір активтері**';
+        $lines = [$region ? "{$heading} — {$region}:" : "{$heading}:"];
+        $typeLabels = $lang === 'ru'
+            ? [
+                'sez' => 'СЭЗ',
+                'industrial_zone' => 'индустриальная зона',
+                'prom_zone' => 'промышленная зона',
+            ]
+            : [
+                'sez' => 'АЭА',
+                'industrial_zone' => 'индустриалды аймақ',
+                'prom_zone' => 'пром аймақ',
+            ];
+
+        foreach ($items as $index => $item) {
+            $type = $typeLabels[$item['type']] ?? $item['type'];
+            $area = $item['total_area'] !== null
+                ? number_format((float) $item['total_area'], 2, ',', ' ').' га'
+                : '—';
+            $infrastructure = empty($item['infrastructure'])
+                ? '—'
+                : implode(', ', $item['infrastructure']);
+            $lines[] = ($index + 1).". **{$item['name']}** ({$type})";
+            $lines[] = $lang === 'ru'
+                ? "   {$item['region']} · статус: {$item['status']} · площадь: {$area} · инфраструктура: {$infrastructure}"
+                : "   {$item['region']} · мәртебе: {$item['status']} · аумағы: {$area} · инфрақұрылым: {$infrastructure}";
+        }
+
+        $lines[] = '';
+        $lines[] = $lang === 'ru'
+            ? 'Свободную площадь и технические лимиты нужно подтвердить у управляющей организации выбранной площадки.'
+            : 'Бос аумақ пен техникалық лимиттерді таңдалған алаңның басқарушы ұйымынан нақтылау қажет.';
+
+        return implode("\n", $lines);
+    }
+
+    protected function formatOblastAnalyticsResponse(
+        array $contextData,
+        string $lang
+    ): string {
+        $data = $contextData['oblast_analytics'] ?? null;
+
+        if (! $data) {
+            return $lang === 'ru'
+                ? 'Аналитические данные области не найдены.'
+                : 'Облыстық аналитика деректері табылмады.';
+        }
+
+        $scope = $data['scope'] ?? [];
+        $summary = $data['summary'] ?? [];
+        $districts = array_slice($data['district_quality'] ?? [], 0, 3);
+        $managements = array_slice(
+            $data['management_quality'] ?? [],
+            0,
+            3
+        );
+        $production = $data['production_summary'] ?? [];
+        $niches = array_slice($data['niche_analytics'] ?? [], 0, 3);
+        $potential = $data['regional_potential'] ?? [];
+        $investment = number_format(
+            (float) ($summary['total_investment'] ?? 0),
+            0,
+            ',',
+            ' '
+        );
+
+        $lines = $lang === 'ru'
+            ? [
+                '📊 УПРАВЛЕНЧЕСКИЙ ОТЧЁТ — '.($scope['oblast_name'] ?? 'область'),
+                'Проектов: '.($summary['total_projects'] ?? 0)
+                    ." · инвестиции: {$investment} ₸"
+                    .' · рабочих мест: '.($summary['jobs_count'] ?? 0),
+                'На контроле: '.($summary['active_issues'] ?? 0)
+                    .' активных проблем, '.($summary['overdue_tasks'] ?? 0)
+                    .' просроченных задач.',
+            ]
+            : [
+                '📊 БАСҚАРУШЫЛЫҚ ЕСЕП — '.($scope['oblast_name'] ?? 'облыс'),
+                'Жоба: '.($summary['total_projects'] ?? 0)
+                    ." · инвестиция: {$investment} ₸"
+                    .' · жұмыс орны: '.($summary['jobs_count'] ?? 0),
+                'Бақылауда: '.($summary['active_issues'] ?? 0)
+                    .' белсенді мәселе, '.($summary['overdue_tasks'] ?? 0)
+                    .' кешіктірілген тапсырма.',
+            ];
+
+        if (($production['projects_with_plans'] ?? 0) > 0) {
+            $amountRate = ($production['amount_completion_rate'] ?? null)
+                !== null
+                ? $production['amount_completion_rate'].'%'
+                : ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+            $volumeRate = (
+                $production['average_volume_completion_rate'] ?? null
+            ) !== null
+                ? $production['average_volume_completion_rate'].'%'
+                : ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Выполнение производственного плана:'
+                : 'Өндіріс жоспарының орындалуы:';
+            $lines[] = ($lang === 'ru' ? 'Отчитались: ' : 'Есеп берген жоба: ')
+                .($production['reporting_projects'] ?? 0)
+                .' / '.($production['projects_with_plans'] ?? 0)
+                .' · '.($lang === 'ru' ? 'по сумме: ' : 'сома бойынша: ')
+                .$amountRate
+                .' · '.($lang === 'ru' ? 'по объёму: ' : 'көлем бойынша: ')
+                .$volumeRate;
+            $lines[] = ($lang === 'ru'
+                ? 'Запущенных проектов без фактического отчёта: '
+                : 'Іске қосылған, бірақ нақты есебі жоқ жоба: ')
+                .($production['launched_without_reports'] ?? 0).'.';
+            if (($production['projects_needing_plan_completion'] ?? 0) > 0) {
+                $lines[] = ($lang === 'ru'
+                    ? 'Нужно дополнить старые данные мощности: '
+                    : 'Бұрынғы қуаттылық дерегін толықтыру қажет жоба: ')
+                    .$production['projects_needing_plan_completion'].'.';
+            }
+        }
+
+        if ($districts !== []) {
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Рейтинг районов/городов:'
+                : 'Аудан/қала рейтингі:';
+            foreach ($districts as $item) {
+                $score = $item['score'] ?? ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+                $lines[] = "- {$item['name']}: {$score} балл"
+                    ." · {$item['overdue_tasks']} "
+                    .($lang === 'ru' ? 'просрочено' : 'кешіккен');
+            }
+        }
+
+        if ($managements !== []) {
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Качество работы управлений:'
+                : 'Басқармалар жұмысының сапасы:';
+            foreach ($managements as $item) {
+                $score = $item['score'] ?? ($lang === 'ru' ? 'нет данных' : 'дерек жоқ');
+                $lines[] = "- {$item['name']}: {$score} балл"
+                    ." · {$item['completed_tasks']}/{$item['total_tasks']} "
+                    .($lang === 'ru' ? 'задач выполнено' : 'тапсырма орындалды');
+            }
+        }
+
+        if ($niches !== []) {
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Ниши с наибольшим потенциалом:'
+                : 'Әлеуеті жоғары нишалар:';
+            foreach ($niches as $item) {
+                $lines[] = "- {$item['name']}: {$item['potential_score']} балл"
+                    ." · {$item['project_count']} "
+                    .($lang === 'ru' ? 'проектов' : 'жоба');
+            }
+        }
+
+        if (! empty($potential['insights'])) {
+            $lines[] = '';
+            $lines[] = $lang === 'ru' ? 'Рекомендации:' : 'Ұсыныстар:';
+            foreach ($potential['insights'] as $insight) {
+                $lines[] = '- '.$insight;
+            }
+        }
+
+        return implode("\n", $lines);
+    }
+
     // ─── Көмек / Бөлімдер ─────────────────────────────────────
 
     protected function buildHelpResponse(?User $user, string $lang): string
@@ -725,8 +955,11 @@ class LocalChatService
                 ? '🔔 **Уведомления** — уведомления по задачам (также в Telegram).'
                 : '🔔 **Хабарламалар** — тапсырма хабарламалары (Telegram арқылы да).',
             'settings' => $lang === 'ru'
-                ? '⚙️ **Настройки** — профиль, пароль, аватар, 2FA.'
-                : '⚙️ **Баптаулар** — профиль, құпия сөз, аватар, 2FA.',
+                ? '⚙️ **Настройки** — профиль, пароль, аватар и Telegram.'
+                : '⚙️ **Баптаулар** — профиль, құпия сөз, аватар және Telegram.',
+            'investor_assistant' => $lang === 'ru'
+                ? '🤖 **AI-консультант** — работает с доступными вашей роли данными, подбирает меры господдержки и площадки региона.'
+                : '🤖 **AI көмекші** — рөліңізге қолжетімді деректермен жұмыс істеп, мемлекеттік қолдау шаралары мен өңір алаңдарын ұсынады.',
         ];
 
         $keys = match ($roleName) {
@@ -734,7 +967,8 @@ class LocalChatService
             'invest' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'tasks', 'rating', 'notifications', 'settings'],
             'akim', 'zamakim' => ['dashboard', 'projects', 'project_types', 'sez', 'ia', 'prom', 'subsoil', 'issues', 'notifications', 'settings'],
             'ispolnitel' => ['dashboard', 'projects', 'tasks', 'issues', 'notifications', 'settings'],
-            'investor' => ['dashboard', 'projects', 'tasks', 'notifications', 'settings'],
+            'investor' => ['dashboard', 'projects', 'tasks', 'investor_assistant', 'notifications', 'settings'],
+            'moderator' => ['dashboard', 'projects', 'tasks', 'rating', 'investor_assistant', 'notifications', 'settings'],
             default => ['dashboard', 'notifications', 'settings'],
         };
 
@@ -762,6 +996,7 @@ class LocalChatService
                 'zamakim' => '🔐 Ваша роль: **Зам Аким** — только просмотр (read-only).',
                 'ispolnitel' => '🔐 Ваша роль: **Исполнитель** — выполнение задач, загрузка фото/документов.',
                 'investor' => '🔐 Ваша роль: **Инвестор** — просмотр назначенных проектов и выполнение назначенных задач.',
+                'moderator' => '🔐 Ваша роль: **Модератор** — работа с проектами Turkistan Invest и проверка их задач.',
                 default => '🔐 У вас ограниченный доступ.',
             };
         }
@@ -774,6 +1009,7 @@ class LocalChatService
             'zamakim' => '🔐 Сіздің рөліңіз: **Зам Аким** — тек қарау (read-only).',
             'ispolnitel' => '🔐 Сіздің рөліңіз: **Орындаушы** — тапсырмаларды орындау, сурет/құжат жүктеу.',
             'investor' => '🔐 Сіздің рөліңіз: **Инвестор** — бекітілген жобаларды көру және берілген тапсырмаларды орындау.',
+            'moderator' => '🔐 Сіздің рөліңіз: **Модератор** — Turkistan Invest жобаларымен жұмыс істеу және олардың тапсырмаларын тексеру.',
             default => '🔐 Сізде шектеулі қолжетімділік бар.',
         };
     }
@@ -823,6 +1059,12 @@ class LocalChatService
         if (preg_match('/(рейтинг|басқарма|kpi|бағалау|оценк)/ui', $query)) {
             $entities[] = 'rating';
         }
+        if (preg_match('/(қолдау|жеңілдік|субсид|льгот|преференц|грант|кепіл|гарант|жеңілдетілген|господдерж|мемлекет.*көмек)/ui', $query)) {
+            $entities[] = 'support_measures';
+        }
+        if (preg_match('/(өңір.*актив|регион.*актив|алаң|площадк|орналас|локац|жер телім|земельн.*участ|инфрақұрыл|инфраструктур|сэз|аэа|индустриал|пром.?зон)/ui', $query)) {
+            $entities[] = 'regional_assets';
+        }
         if (preg_match('/(статистик|санақ|қанша|сколько|неше|всего|жалпы|барлық|итого|тартылған|привлечен)/ui', $query)) {
             $entities[] = 'regions';
             $entities[] = 'investment_projects';
@@ -833,6 +1075,27 @@ class LocalChatService
         }
         if (preg_match('/(қалай|как|помощ|көмек|не білесің|қандай|что ум|help|навигац|бөлім|раздел|менюдегі|функци)/ui', $query)) {
             $entities[] = 'help';
+        }
+
+        $roleName = $user?->roleModel?->name;
+        if ($user?->isOblastScopedAkim()
+            && preg_match('/(есеп|отч[её]т|аналитик|талда|кеңес|совет|ұсыныс|рекомендац|әлеует|потенциал|ниша|сапа|качество|басқарма|управлен|әкімдік|акимат)/ui', $query)) {
+            $entities[] = 'oblast_analytics';
+        }
+
+        $isInvestmentDiscovery = preg_match(
+            '/(инвест|жоба|проект|бизнес|өндір|производ|зауыт|завод|орналастыр|размест|ашу|открыть)/ui',
+            $query
+        );
+
+        if ($isInvestmentDiscovery) {
+            $entities[] = 'support_measures';
+            $entities[] = 'regional_assets';
+        }
+
+        if ($roleName === 'investor' && empty($entities)) {
+            $entities[] = 'support_measures';
+            $entities[] = 'regional_assets';
         }
 
         $entities = array_unique($entities);
@@ -855,24 +1118,36 @@ class LocalChatService
                 'regions', 'investment_projects', 'project_types',
                 'sezs', 'industrial_zones', 'prom_zones', 'subsoil_users',
                 'issues', 'tasks', 'users', 'gallery', 'rating', 'help',
+                'support_measures', 'regional_assets',
             ],
             'invest' => match ($subRole) {
-                'aea' => ['sezs', 'issues', 'gallery', 'help'],
-                'ia' => ['industrial_zones', 'issues', 'gallery', 'help'],
-                'prom_zone' => ['prom_zones', 'issues', 'gallery', 'help'],
+                'aea' => ['sezs', 'issues', 'gallery', 'help', 'support_measures', 'regional_assets'],
+                'ia' => ['industrial_zones', 'issues', 'gallery', 'help', 'support_measures', 'regional_assets'],
+                'prom_zone' => ['prom_zones', 'issues', 'gallery', 'help', 'support_measures', 'regional_assets'],
                 default => [
                     'regions', 'investment_projects', 'project_types',
                     'sezs', 'industrial_zones', 'prom_zones', 'subsoil_users',
                     'issues', 'tasks', 'gallery', 'rating', 'help',
+                    'support_measures', 'regional_assets',
                 ],
             },
-            'akim', 'zamakim' => [
+            'akim' => array_merge([
                 'regions', 'investment_projects', 'project_types',
                 'sezs', 'industrial_zones', 'prom_zones', 'subsoil_users',
-                'issues', 'gallery', 'help',
+                'issues', 'gallery', 'help', 'support_measures',
+                'regional_assets',
+            ], $user?->isOblastScopedAkim()
+                ? ['tasks', 'rating', 'oblast_analytics']
+                : []),
+            'zamakim' => [
+                'regions', 'investment_projects', 'project_types',
+                'sezs', 'industrial_zones', 'prom_zones', 'subsoil_users',
+                'issues', 'gallery', 'help', 'support_measures',
+                'regional_assets',
             ],
-            'ispolnitel' => ['investment_projects', 'tasks', 'issues', 'gallery', 'help'],
-            'investor' => ['investment_projects', 'tasks', 'gallery', 'help'],
+            'ispolnitel' => ['investment_projects', 'tasks', 'issues', 'gallery', 'help', 'support_measures', 'regional_assets'],
+            'investor' => ['investment_projects', 'tasks', 'gallery', 'help', 'support_measures', 'regional_assets'],
+            'moderator' => ['investment_projects', 'tasks', 'issues', 'gallery', 'rating', 'help', 'support_measures', 'regional_assets'],
             default => ['help'],
         };
     }

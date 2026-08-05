@@ -1,5 +1,6 @@
 import {
     Award,
+    BarChart3,
     Briefcase,
     Building2,
     Factory,
@@ -12,6 +13,7 @@ import {
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
+import * as akim from '@/routes/akim';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentProjects from '@/routes/investment-projects';
 import * as projectTypes from '@/routes/project-types';
@@ -28,6 +30,11 @@ export const mainNavItems: NavItem[] = [
         title: 'Басқару тақтасы',
         href: dashboard.url(),
         icon: LayoutDashboard,
+    },
+    {
+        title: 'Облыс аналитикасы',
+        href: akim.analytics.url(),
+        icon: BarChart3,
     },
 ];
 
@@ -218,6 +225,13 @@ export const filterNavItemsByRole = (
     }
 
     const roleKey = getRoleKey(user);
+
+    filteredItems = filteredItems.filter(
+        (item) =>
+            item.href !== akim.analytics.url() ||
+            (roleKey === 'akim' && user?.region?.type === 'oblast'),
+    );
+
     if (!roleKey) return filteredItems;
 
     if (roleKey === 'invest') {

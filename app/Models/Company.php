@@ -41,6 +41,7 @@ class Company extends Model
         'website',
         'legal_address',
         'actual_address',
+        'licenses_and_regulatory_documents',
         'status',
         'notes',
         'created_by',
@@ -129,6 +130,11 @@ class Company extends Model
     public function projects()
     {
         return $this->hasMany(InvestmentProject::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(CompanyDocument::class)->latest();
     }
 
     public function investor()

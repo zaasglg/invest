@@ -50,6 +50,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
 import { persistOrder } from '@/lib/persist-order';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 
 interface InfrastructureDetails {
@@ -132,6 +133,7 @@ interface InvestmentProject {
     end_date?: string;
     geometry?: { lat: number; lng: number }[];
     project_type?: { id: number; name: string };
+    project_types?: { id: number; name: string }[];
     executors?: { id: number; name: string; full_name?: string }[];
     sezs?: Sez[];
     industrial_zones?: IndustrialZone[];
@@ -1483,10 +1485,9 @@ export default function Show({
                                                                                         </Badge>
                                                                                     </TableCell>
                                                                                     <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                        {project
-                                                                                            .project_type
-                                                                                            ?.name ??
-                                                                                            '—'}
+                                                                                        {formatProjectTypeNames(
+                                                                                            project,
+                                                                                        )}
                                                                                     </TableCell>
                                                                                     <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
                                                                                         {project.total_investment
@@ -1680,10 +1681,9 @@ export default function Show({
                                                                                 </Badge>
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {project
-                                                                                    .project_type
-                                                                                    ?.name ??
-                                                                                    '—'}
+                                                                                {formatProjectTypeNames(
+                                                                                    project,
+                                                                                )}
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
                                                                                 {project.total_investment
@@ -1869,10 +1869,9 @@ export default function Show({
                                                                                 </Badge>
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {project
-                                                                                    .project_type
-                                                                                    ?.name ??
-                                                                                    '—'}
+                                                                                {formatProjectTypeNames(
+                                                                                    project,
+                                                                                )}
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
                                                                                 {project.total_investment
@@ -2058,10 +2057,9 @@ export default function Show({
                                                                                 </Badge>
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {project
-                                                                                    .project_type
-                                                                                    ?.name ??
-                                                                                    '—'}
+                                                                                {formatProjectTypeNames(
+                                                                                    project,
+                                                                                )}
                                                                             </TableCell>
                                                                             <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
                                                                                 {project.total_investment

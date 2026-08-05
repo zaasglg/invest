@@ -55,7 +55,7 @@ class ProjectPhotoController extends Controller
             ->get();
 
         return Inertia::render('investment-projects/gallery', [
-            'project' => $investmentProject->load(['region', 'projectType']),
+            'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
@@ -136,6 +136,7 @@ class ProjectPhotoController extends Controller
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
                 'description' => $validated['description'] ?? null,
+                'uploaded_by' => $user->id,
             ]);
             $createdPhotoIds[] = $createdPhoto->id;
         }

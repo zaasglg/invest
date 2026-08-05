@@ -7,6 +7,7 @@ use App\Models\Company;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\CompanyDocumentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -14,6 +15,10 @@ use Inertia\Inertia;
 
 class CompanyController extends Controller
 {
+    public function __construct(
+        private readonly CompanyDocumentService $documents
+    ) {}
+
     public function index(Request $request)
     {
         $this->authorizeRead($request);
@@ -105,9 +110,10 @@ class CompanyController extends Controller
                 'region:id,name',
                 'creator:id,full_name',
                 'investor:id,company_id,full_name,email,phone',
+                'documents:id,company_id,name,type,size,created_at',
             ]),
             'projects' => $company->projects()
-                ->with(['region:id,name', 'projectType:id,name'])
+                ->with(['region:id,name', 'projectType:id,name', 'projectTypes:id,name'])
                 ->latest()
                 ->paginate(15),
             'canManage' => $this->canManage($request),
@@ -136,6 +142,11 @@ class CompanyController extends Controller
             ]);
 
             $this->createInvestor($company, $investorData);
+            $this->documents->storeMany(
+                $company,
+                $request->file('documents', []),
+                $request->user()
+            );
 
             return $company;
         });
@@ -150,9 +161,10 @@ class CompanyController extends Controller
         abort_unless($this->canManage($request), 403);
 
         return Inertia::render('companies/edit', [
-            'company' => $company->load(
-                'investor:id,company_id,full_name,email,phone'
-            ),
+            'company' => $company->load([
+                'investor:id,company_id,full_name,email,phone',
+                'documents:id,company_id,name,type,size,created_at',
+            ]),
             ...$this->formOptions(),
         ]);
     }
@@ -175,6 +187,12 @@ class CompanyController extends Controller
             $company->projects()->update([
                 'company_name' => $company->display_name,
             ]);
+
+            $this->documents->storeMany(
+                $company,
+                $request->file('documents', []),
+                $request->user()
+            );
         });
 
         return redirect()
@@ -191,7 +209,10 @@ class CompanyController extends Controller
             'Жобаларға тіркелген компанияны жоюға болмайды. Алдымен статусын белсенді емес етіп өзгертіңіз.'
         );
 
+        $documentPaths = $company->documents()->pluck('file_path');
+
         DB::transaction(fn () => $company->delete());
+        $this->documents->deleteFiles($documentPaths);
 
         return redirect()
             ->route('companies.index')
@@ -206,7 +227,8 @@ class CompanyController extends Controller
         return [
             'regions' => Region::query()
                 ->select('id', 'name', 'type', 'parent_id')
-                ->orderBy('name')
+                ->where('type', 'district')
+                ->orderBy('sort_order')
                 ->get(),
             'legalForms' => Company::LEGAL_FORMS,
             'statuses' => Company::STATUSES,
@@ -240,7 +262,8 @@ class CompanyController extends Controller
             $validated['investor_full_name'],
             $validated['investor_email'],
             $validated['investor_password'],
-            $validated['investor_password_confirmation']
+            $validated['investor_password_confirmation'],
+            $validated['documents']
         );
 
         return $validated;

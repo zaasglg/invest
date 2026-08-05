@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Company;
+use App\Models\IndustrialZone;
 use App\Models\InvestmentProject;
 use App\Models\ProjectDocument;
 use App\Models\ProjectIssue;
@@ -221,8 +222,74 @@ test('investor navigation scope is enforced on the server', function () {
     $this->get('/baskarma-rating')->assertForbidden();
     $this->get('/users')->assertForbidden();
     $this->get('/investment-projects/create')->assertForbidden();
+
+    config(['services.gemini.api_key' => '']);
     $this->post('/chat/send', ['message' => 'Барлық жобалар'])
-        ->assertForbidden();
+        ->assertOk();
+});
+
+test('investor AI recommends support and regional assets without leaking other company projects', function () {
+    config(['services.gemini.api_key' => '']);
+
+    $superadmin = createInvestorTestUser('superadmin');
+    $investorRegion = createInvestorTestRegion('Инвестор AI ауданы');
+    $otherRegion = createInvestorTestRegion('Бөгде AI ауданы');
+    $scope = createInvestorTestCompany(
+        $superadmin,
+        $investorRegion,
+        'AI Investor company'
+    );
+    $otherScope = createInvestorTestCompany(
+        $superadmin,
+        $otherRegion,
+        'Other AI company'
+    );
+
+    $ownProject = createInvestorTestProject(
+        $superadmin,
+        $scope['company'],
+        $investorRegion,
+        'AI инвестордың өз жобасы',
+        4500000
+    );
+    $foreignProject = createInvestorTestProject(
+        $superadmin,
+        $otherScope['company'],
+        $otherRegion,
+        'AI инвесторға жабық жоба',
+        9900000
+    );
+
+    $asset = IndustrialZone::create([
+        'name' => 'Инвесторға ұсынылатын индустриалды аймақ',
+        'region_id' => $investorRegion->id,
+        'status' => 'active',
+        'total_area' => 125.5,
+        'infrastructure' => [
+            'electricity' => ['available' => true, 'capacity' => '20 МВт'],
+            'water' => ['available' => true, 'capacity' => '500 м³/тәулік'],
+        ],
+    ]);
+    IndustrialZone::create([
+        'name' => 'Бөгде өңір активі',
+        'region_id' => $otherRegion->id,
+        'status' => 'active',
+    ]);
+
+    $response = $this->actingAs($scope['investor'])
+        ->postJson('/chat/send', [
+            'message' => 'Менің инвестициялық жобама қолдау мен алаң ұсын',
+        ])
+        ->assertOk();
+
+    $message = $response->json('message');
+
+    expect($message)
+        ->toContain($ownProject->name)
+        ->toContain('Инвестициялық преференциялар')
+        ->toContain($asset->name)
+        ->not->toContain($foreignProject->name)
+        ->not->toContain('Бөгде өңір активі');
 });
 
 test('investor can add project evidence but cannot modify status or remove shared data', function () {
@@ -257,7 +324,13 @@ test('investor can add project evidence but cannot modify status or remove share
         ->assertRedirect();
 
     $this->post(route('investment-projects.gallery.store', $project), [
-        'photos' => [UploadedFile::fake()->image('progress.jpg')],
+        'photos' => [UploadedFile::fake()->createWithContent(
+            'progress.png',
+            base64_decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC'
+                .'AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+            )
+        )],
         'description' => 'Құрылыс барысы',
         'photo_type' => 'gallery',
     ])->assertRedirect();

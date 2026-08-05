@@ -66,12 +66,24 @@ class IssuesController extends Controller
             }
             // Scope to only the invest sub-role's projects (via curators pivot).
             if ($sector === 'invest') {
-                $query->whereHas('project', function ($q) {
-                    $q->whereHas('curators', fn ($cq) => $cq->where('users.invest_sub_role', 'turkistan_invest'));
-                });
+                $query->whereHas(
+                    'project',
+                    fn ($project) => $project
+                        ->curatedByTurkistanInvest()
+                );
             } elseif ($investSubRole) {
                 $query->whereHas('project', function ($q) use ($investSubRole) {
-                    $q->whereHas('curators', fn ($cq) => $cq->where('users.invest_sub_role', $investSubRole));
+                    if ($investSubRole === 'turkistan_invest') {
+                        $q->curatedByTurkistanInvest();
+
+                        return;
+                    }
+
+                    $q->whereHas(
+                        'curators',
+                        fn ($curators) => $curators
+                            ->where('users.invest_sub_role', $investSubRole)
+                    );
                 });
             }
             $projectIssues = $query->latest()->get()->map(function ($issue) use ($sector) {

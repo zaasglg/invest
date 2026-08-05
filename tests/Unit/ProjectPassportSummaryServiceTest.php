@@ -3,6 +3,7 @@
 use App\Models\InvestmentProject;
 use App\Models\ProjectDocument;
 use App\Models\ProjectIssue;
+use App\Models\ProjectProductionPlan;
 use App\Models\ProjectTask;
 use App\Models\ProjectType;
 use App\Models\Region;
@@ -26,7 +27,6 @@ test('passport summary calculates progress timeline risks and next milestone', f
         'current_status' => 'Құрылыс жүргізілуде',
         'total_investment' => 250000000,
         'jobs_count' => 100,
-        'capacity' => 'Жылына 20 000 тонна',
         'status' => 'implementation',
         'start_date' => '2026-01-01',
         'end_date' => '2026-12-31',
@@ -43,6 +43,18 @@ test('passport summary calculates progress timeline risks and next milestone', f
     );
     $project->setRelation('creator', new User(['full_name' => 'Куратор']));
     $project->setRelation('curators', collect());
+    $project->setRelation(
+        'productionPlans',
+        collect([
+            new ProjectProductionPlan([
+                'product_name' => 'Өнім',
+                'planned_quantity' => 20000,
+                'unit' => 'ton',
+                'planned_amount' => 500000000,
+                'period' => 'year',
+            ]),
+        ])
+    );
     $project->setRelation(
         'documents',
         collect([
@@ -132,6 +144,7 @@ test('restricted passport summary omits task and issue aggregates', function () 
     $project->setRelation('projectType', null);
     $project->setRelation('creator', null);
     $project->setRelation('curators', collect());
+    $project->setRelation('productionPlans', collect());
     $project->setRelation('documents', collect());
     $project->setRelation(
         'tasks',

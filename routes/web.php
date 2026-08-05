@@ -11,11 +11,23 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'role.valid'])
     ->name('dashboard');
 
+Route::get('akim-analytics', \App\Http\Controllers\OblastAkimAnalyticsController::class)
+    ->middleware(['auth', 'role.access'])
+    ->name('akim.analytics');
+
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
     ->middleware(['auth', 'role.access']);
 
 Route::resource('companies', \App\Http\Controllers\CompanyController::class)
     ->middleware(['auth', 'role.access']);
+
+Route::get('companies/{company}/documents/{companyDocument}/download', [\App\Http\Controllers\CompanyDocumentController::class, 'download'])
+    ->middleware(['auth', 'role.access'])
+    ->name('companies.documents.download');
+
+Route::delete('companies/{company}/documents/{companyDocument}', [\App\Http\Controllers\CompanyDocumentController::class, 'destroy'])
+    ->middleware(['auth', 'role.access'])
+    ->name('companies.documents.destroy');
 
 Route::post('regions/reorder', [\App\Http\Controllers\RegionController::class, 'reorder'])
     ->middleware(['auth', 'role.access'])
@@ -76,9 +88,12 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
     Route::get('presentation', [\App\Http\Controllers\InvestmentProjectController::class, 'presentation'])->name('investment-projects.presentation');
 
     Route::get('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'index'])->name('investment-projects.documents.index');
+    Route::get('documents/deleted', [\App\Http\Controllers\ProjectDocumentController::class, 'deleted'])->name('investment-projects.documents.deleted');
     Route::post('documents', [\App\Http\Controllers\ProjectDocumentController::class, 'store'])->name('investment-projects.documents.store');
     Route::get('documents/{document}/download', [\App\Http\Controllers\ProjectDocumentController::class, 'download'])->name('investment-projects.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\ProjectDocumentController::class, 'destroy'])->name('investment-projects.documents.destroy');
+
+    Route::post('production-facts', [\App\Http\Controllers\ProjectProductionFactController::class, 'store'])->name('investment-projects.production-facts.store');
 
     Route::get('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'index'])->name('investment-projects.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\ProjectPhotoController::class, 'store'])->name('investment-projects.gallery.store');
@@ -153,6 +168,7 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access']
     Route::delete('issues/{issue}', [\App\Http\Controllers\SubsoilIssueController::class, 'destroy'])->name('subsoil-users.issues.destroy');
 
     Route::get('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'index'])->name('subsoil-users.documents.index');
+    Route::get('documents/deleted', [\App\Http\Controllers\SubsoilDocumentController::class, 'deleted'])->name('subsoil-users.documents.deleted');
     Route::post('documents', [\App\Http\Controllers\SubsoilDocumentController::class, 'store'])->name('subsoil-users.documents.store');
     Route::get('documents/{document}/download', [\App\Http\Controllers\SubsoilDocumentController::class, 'download'])->name('subsoil-users.documents.download');
     Route::delete('documents/{document}', [\App\Http\Controllers\SubsoilDocumentController::class, 'destroy'])->name('subsoil-users.documents.destroy');
@@ -192,9 +208,13 @@ Route::get('baskarma-rating/{user}', [\App\Http\Controllers\BaskarmaRatingContro
 
 Route::middleware(['auth', 'role.valid'])->group(function () {
     Route::get('notifications', [\App\Http\Controllers\TaskNotificationController::class, 'index'])->name('notifications.index');
+    Route::post('notifications/{notification}/open', [\App\Http\Controllers\TaskNotificationController::class, 'open'])->name('notifications.open');
     Route::put('notifications/{notification}/read', [\App\Http\Controllers\TaskNotificationController::class, 'markAsRead'])->name('notifications.read');
     Route::post('notifications/read-all', [\App\Http\Controllers\TaskNotificationController::class, 'markAllAsRead'])->name('notifications.read-all');
     Route::get('notifications/unread-count', [\App\Http\Controllers\TaskNotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+
+    Route::get('assistant/notifications', [\App\Http\Controllers\ProactiveAssistantController::class, 'index'])->name('assistant.notifications.index');
+    Route::post('assistant/notifications/read-all', [\App\Http\Controllers\ProactiveAssistantController::class, 'markAllAsRead'])->name('assistant.notifications.read-all');
 
     Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
     Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');

@@ -12,6 +12,7 @@ class ProjectPhoto extends Model
         'photo_type',
         'gallery_date',
         'description',
+        'uploaded_by',
     ];
 
     protected function casts(): array
@@ -24,6 +25,11 @@ class ProjectPhoto extends Model
     public function project()
     {
         return $this->belongsTo(InvestmentProject::class, 'project_id');
+    }
+
+    public function uploader()
+    {
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 
     // Область видимости для основной галереи

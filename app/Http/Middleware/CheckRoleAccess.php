@@ -76,6 +76,7 @@ class CheckRoleAccess
      */
     protected array $nonMutatingRoutes = [
         'investment-projects.bulk-presentation',
+        'chat.send',
     ];
 
     /**
@@ -89,6 +90,7 @@ class CheckRoleAccess
         'investment-projects.documents.index',
         'investment-projects.documents.store',
         'investment-projects.documents.download',
+        'investment-projects.production-facts.store',
         'investment-projects.gallery.index',
         'investment-projects.gallery.store',
         'investment-projects.gallery.download',
@@ -98,6 +100,7 @@ class CheckRoleAccess
         'investment-projects.tasks.completions.store',
         'investment-projects.tasks.completions.files.preview',
         'investment-projects.tasks.completions.files.download',
+        'chat.send',
     ];
 
     /**
@@ -210,8 +213,8 @@ class CheckRoleAccess
                 }
             }
 
-            // Moderator can manage Turkistan Invest project cards and review
-            // their tasks. Other resources remain read-only.
+            // Moderator has the same project-management rights as Turkistan
+            // Invest, except that projects themselves cannot be deleted.
             if ($roleName === 'moderator') {
                 if ($this->isMatchingRoute($request, $this->limitedBlockedRoutes)) {
                     abort(403, 'Сіздің бұл бөлімге қол жеткізуіңіз жоқ.');
@@ -223,20 +226,18 @@ class CheckRoleAccess
                     $routeName
                 );
 
-                $moderatorWriteRoutes = [
-                    'investment-projects.create',
-                    'investment-projects.store',
-                    'investment-projects.edit',
-                    'investment-projects.update',
-                    'investment-projects.update-status',
-                    'investment-projects.tasks.approve',
-                    'investment-projects.tasks.reject',
-                ];
+                if ($routeName === 'investment-projects.destroy') {
+                    abort(403, 'Модератор жобаны жоя алмайды.');
+                }
+
                 if ($this->isWriteAction($request)
-                    && ! in_array($routeName, $moderatorWriteRoutes, true)) {
+                    && ! str_starts_with(
+                        (string) $routeName,
+                        'investment-projects.'
+                    )) {
                     abort(
                         403,
-                        'Модератор Turkistan Invest жобасының негізгі деректерін ғана өзгерте алады.'
+                        'Модератор тек Turkistan Invest жобаларын басқара алады.'
                     );
                 }
             }
@@ -362,6 +363,10 @@ class CheckRoleAccess
             return false;
         }
 
+        if ($routeName === 'investment-projects.update-status') {
+            return true;
+        }
+
         foreach ($this->writeSuffixes as $suffix) {
             if (str_ends_with($routeName, $suffix)) {
                 return true;
@@ -380,7 +385,8 @@ class CheckRoleAccess
         $user,
         string $routeName
     ): void {
-        if ($routeName === 'investment-projects.index') {
+        if (! str_starts_with($routeName, 'investment-projects.')
+            || $routeName === 'investment-projects.index') {
             return;
         }
 
@@ -527,7 +533,11 @@ class CheckRoleAccess
      */
     protected function blockArchivedProjectAccess(Request $request, $user, ?string $roleName): void
     {
-        if (in_array($roleName, ['superadmin', 'invest', 'prokuror'], true)) {
+        if (in_array(
+            $roleName,
+            ['superadmin', 'invest', 'moderator', 'prokuror'],
+            true
+        )) {
             return;
         }
 
@@ -639,9 +649,14 @@ class CheckRoleAccess
         // users access projects curated by their peers.
         $subRole = $user->invest_sub_role;
         if ($subRole) {
-            $hasSubRoleCurator = $project->curators()
-                ->where('users.invest_sub_role', $subRole)
-                ->exists();
+            $hasSubRoleCurator = $subRole === 'turkistan_invest'
+                ? InvestmentProject::query()
+                    ->whereKey($project->id)
+                    ->curatedByTurkistanInvest()
+                    ->exists()
+                : $project->curators()
+                    ->where('users.invest_sub_role', $subRole)
+                    ->exists();
             if (! $hasSubRoleCurator) {
                 abort(403, 'Сіз бұл жобаның кураторы емессіз.');
             }

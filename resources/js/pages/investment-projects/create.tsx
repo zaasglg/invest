@@ -11,7 +11,10 @@ import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import CompanySelect from '@/components/companies/company-select';
 import type { CompanyOption } from '@/components/companies/company-select';
+import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
+import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import LocationPicker from '@/components/location-picker';
+import ProjectInfrastructureForm from '@/components/project-infrastructure-form';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -25,6 +28,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
+import {
+    getEmptyProjectInfrastructure,
+    PROJECT_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
+import type { ProductionPlanInput } from '@/lib/production';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjects from '@/routes/investment-projects';
 
@@ -128,22 +136,18 @@ export default function Create({
         description: '',
         current_status: '',
         region_id: userRegionId ? userRegionId.toString() : '',
-        project_type_id: '',
+        project_type_ids: [] as string[],
         sector: [] as string[],
         jobs_count: '',
-        capacity: '',
+        production_not_applicable: false,
+        planned_production: [] as ProductionPlanInput[],
         total_investment: '',
         status: 'plan',
         start_date: '',
         end_date: '',
         executor_ids: [] as string[],
         geometry: [] as { lat: number; lng: number }[],
-        infrastructure: {
-            gas: { needed: false, capacity: '' },
-            water: { needed: false, capacity: '' },
-            electricity: { needed: false, capacity: '' },
-            land: { needed: false, capacity: '' },
-        } as Record<string, { needed: boolean; capacity: string }>,
+        infrastructure: getEmptyProjectInfrastructure(),
         curator_ids: [] as string[],
     });
 
@@ -349,8 +353,8 @@ export default function Create({
         if (!data.region_id) {
             errors.region_id = 'Ауданды таңдаңыз';
         }
-        if (!data.project_type_id) {
-            errors.project_type_id = 'Жобаның түрін таңдаңыз';
+        if (data.project_type_ids.length === 0) {
+            errors.project_type_ids = 'Кемінде бір жоба түрін таңдаңыз';
         }
         if (!data.total_investment) {
             errors.total_investment = 'Жалпы инвестицияны енгізіңіз';
@@ -740,7 +744,7 @@ export default function Create({
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <Label
-                                            htmlFor="project_type_id"
+                                            htmlFor="project_type_ids"
                                             className="text-xs font-medium tracking-wide text-gray-500 uppercase"
                                         >
                                             Жобаның түрі{' '}
@@ -748,46 +752,37 @@ export default function Create({
                                                 *
                                             </span>
                                         </Label>
-                                        <Select
-                                            value={data.project_type_id}
-                                            onValueChange={(value) => {
+                                        <ProjectTypeMultiSelect
+                                            id="project_type_ids"
+                                            options={projectTypes}
+                                            value={data.project_type_ids}
+                                            onChange={(value) => {
                                                 setData(
-                                                    'project_type_id',
+                                                    'project_type_ids',
                                                     value,
                                                 );
                                                 if (
-                                                    validationErrors.project_type_id
+                                                    validationErrors.project_type_ids
                                                 ) {
                                                     setValidationErrors(
                                                         (prev) => ({
                                                             ...prev,
-                                                            project_type_id: '',
+                                                            project_type_ids:
+                                                                '',
                                                         }),
                                                     );
                                                 }
                                             }}
-                                        >
-                                            <SelectTrigger
-                                                className={`h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0 ${validationErrors.project_type_id ? 'border-red-500' : ''}`}
-                                            >
-                                                <SelectValue placeholder="Түрді таңдаңыз" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {projectTypes.map((type) => (
-                                                    <SelectItem
-                                                        key={type.id}
-                                                        value={type.id.toString()}
-                                                    >
-                                                        {type.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                        {(errors.project_type_id ||
-                                            validationErrors.project_type_id) && (
+                                            hasError={Boolean(
+                                                errors.project_type_ids ||
+                                                validationErrors.project_type_ids,
+                                            )}
+                                        />
+                                        {(errors.project_type_ids ||
+                                            validationErrors.project_type_ids) && (
                                             <span className="text-sm text-red-500">
-                                                {errors.project_type_id ||
-                                                    validationErrors.project_type_id}
+                                                {errors.project_type_ids ||
+                                                    validationErrors.project_type_ids}
                                             </span>
                                         )}
                                     </div>
@@ -996,8 +991,8 @@ export default function Create({
                                     </div>
                                 </div>
 
-                                {/* Жұмыс орындары, Қуаттылық, Инвестиция - 3 column */}
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                {/* Жұмыс орындары және инвестиция */}
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
                                         <Label
                                             htmlFor="jobs_count"
@@ -1022,38 +1017,6 @@ export default function Create({
                                         {errors.jobs_count && (
                                             <span className="text-sm text-red-500">
                                                 {errors.jobs_count}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="capacity"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Қуаттылығы
-                                        </Label>
-                                        <div className="relative">
-                                            <Input
-                                                id="capacity"
-                                                type="text"
-                                                value={data.capacity}
-                                                onChange={(e) =>
-                                                    setData(
-                                                        'capacity',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                placeholder="Мысалы: 500"
-                                            />
-                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-400">
-                                                МВт/с
-                                            </span>
-                                        </div>
-                                        {errors.capacity && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.capacity}
                                             </span>
                                         )}
                                     </div>
@@ -1096,6 +1059,23 @@ export default function Create({
                                         )}
                                     </div>
                                 </div>
+
+                                <PlannedProductionForm
+                                    errors={errors}
+                                    notApplicable={
+                                        data.production_not_applicable
+                                    }
+                                    onChange={(plans) =>
+                                        setData('planned_production', plans)
+                                    }
+                                    onNotApplicableChange={(value) =>
+                                        setData(
+                                            'production_not_applicable',
+                                            value,
+                                        )
+                                    }
+                                    value={data.planned_production}
+                                />
 
                                 {/* Мәртебесі - full width */}
                                 <div className="flex flex-col gap-2">
@@ -1221,101 +1201,15 @@ export default function Create({
                                         </h3>
                                     </div>
 
-                                    <div className="space-y-4">
-                                        {[
-                                            { key: 'gas', label: 'Газ' },
-                                            {
-                                                key: 'water',
-                                                label: 'Су (Сумен қамтамасыз ету)',
-                                            },
-                                            {
-                                                key: 'electricity',
-                                                label: 'Электр қуаты',
-                                            },
-                                            {
-                                                key: 'land',
-                                                label: 'Жер учаскесі',
-                                            },
-                                        ].map((item) => (
-                                            <div
-                                                key={item.key}
-                                                className="flex items-center gap-4"
-                                            >
-                                                <div className="flex w-48 items-center space-x-2">
-                                                    <Checkbox
-                                                        id={`infra-${item.key}`}
-                                                        checked={
-                                                            data.infrastructure[
-                                                                item.key
-                                                            ]?.needed || false
-                                                        }
-                                                        onCheckedChange={(
-                                                            checked,
-                                                        ) => {
-                                                            setData(
-                                                                'infrastructure',
-                                                                {
-                                                                    ...data.infrastructure,
-                                                                    [item.key]:
-                                                                        {
-                                                                            ...data
-                                                                                .infrastructure[
-                                                                                item
-                                                                                    .key
-                                                                            ],
-                                                                            needed: checked as boolean,
-                                                                        },
-                                                                },
-                                                            );
-                                                        }}
-                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                    />
-                                                    <Label
-                                                        htmlFor={`infra-${item.key}`}
-                                                        className="cursor-pointer font-normal"
-                                                    >
-                                                        {item.label}
-                                                    </Label>
-                                                </div>
-                                                {data.infrastructure[item.key]
-                                                    ?.needed && (
-                                                    <div className="flex flex-1 items-center gap-2">
-                                                        <Input
-                                                            value={
-                                                                data
-                                                                    .infrastructure[
-                                                                    item.key
-                                                                ]?.capacity ||
-                                                                ''
-                                                            }
-                                                            onChange={(e) => {
-                                                                setData(
-                                                                    'infrastructure',
-                                                                    {
-                                                                        ...data.infrastructure,
-                                                                        [item.key]:
-                                                                            {
-                                                                                ...data
-                                                                                    .infrastructure[
-                                                                                    item
-                                                                                        .key
-                                                                                ],
-                                                                                capacity:
-                                                                                    e
-                                                                                        .target
-                                                                                        .value,
-                                                                            },
-                                                                    },
-                                                                );
-                                                            }}
-                                                            className="h-9 max-w-[200px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                            placeholder="Көлемі"
-                                                        />
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
+                                    <ProjectInfrastructureForm
+                                        onChange={(infrastructure) =>
+                                            setData(
+                                                'infrastructure',
+                                                infrastructure,
+                                            )
+                                        }
+                                        value={data.infrastructure}
+                                    />
                                 </div>
 
                                 {/* Құжаттар - placeholder */}
@@ -1436,11 +1330,14 @@ export default function Create({
                                                 Жоба түрі:
                                             </span>
                                             <p className="font-medium">
-                                                {projectTypes.find(
-                                                    (t) =>
-                                                        t.id.toString() ===
-                                                        data.project_type_id,
-                                                )?.name || '—'}
+                                                {projectTypes
+                                                    .filter((type) =>
+                                                        data.project_type_ids.includes(
+                                                            type.id.toString(),
+                                                        ),
+                                                    )
+                                                    .map((type) => type.name)
+                                                    .join(', ') || '—'}
                                             </p>
                                         </div>
                                         <div>
@@ -1465,15 +1362,53 @@ export default function Create({
                                                     : '—'}
                                             </p>
                                         </div>
-                                        <div>
-                                            <span className="text-gray-500">
-                                                Қуаттылығы:
-                                            </span>
-                                            <p className="font-medium">
-                                                {data.capacity || '—'}
-                                            </p>
-                                        </div>
                                     </div>
+                                </div>
+
+                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                        Жоспарлы өндіріс
+                                    </h4>
+                                    {data.production_not_applicable ? (
+                                        <p className="text-sm text-gray-500">
+                                            Бұл жобаға қолданылмайды
+                                        </p>
+                                    ) : data.planned_production.length > 0 ? (
+                                        <div className="space-y-2">
+                                            {data.planned_production.map(
+                                                (plan, index) => (
+                                                    <div
+                                                        className="text-sm text-gray-700"
+                                                        key={
+                                                            plan.id ??
+                                                            plan.client_key ??
+                                                            index
+                                                        }
+                                                    >
+                                                        <span className="font-medium">
+                                                            {plan.product_name ||
+                                                                `${index + 1}-нәтиже`}
+                                                        </span>
+                                                        :{' '}
+                                                        {plan.planned_quantity ||
+                                                            '—'}{' '}
+                                                        ·{' '}
+                                                        {plan.planned_amount
+                                                            ? formatMoneyCompact(
+                                                                  Number(
+                                                                      plan.planned_amount,
+                                                                  ),
+                                                              )
+                                                            : '—'}
+                                                    </div>
+                                                ),
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-gray-500">
+                                            Енгізілмеген
+                                        </p>
+                                    )}
                                 </div>
 
                                 {/* Сипаттама */}
@@ -1494,20 +1429,17 @@ export default function Create({
                                         Инфрақұрылым
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {Object.entries(data.infrastructure)
-                                            .filter(([, val]) => val.needed)
-                                            .map(([key]) => (
-                                                <span
-                                                    key={key}
-                                                    className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
-                                                >
-                                                    {key === 'gas' && 'Газ'}
-                                                    {key === 'water' && 'Су'}
-                                                    {key === 'electricity' &&
-                                                        'Электр'}
-                                                    {key === 'land' && 'Жер'}
-                                                </span>
-                                            ))}
+                                        {PROJECT_INFRASTRUCTURE_FIELDS.filter(
+                                            ({ key }) =>
+                                                data.infrastructure[key].needed,
+                                        ).map((field) => (
+                                            <span
+                                                key={field.key}
+                                                className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
+                                            >
+                                                {field.label}
+                                            </span>
+                                        ))}
                                         {Object.values(
                                             data.infrastructure,
                                         ).every((v) => !v.needed) && (

@@ -207,10 +207,19 @@ class DashboardController extends Controller
             )
             ->when(
                 $subRole,
-                fn ($q) => $q->whereHas(
-                    'curators',
-                    fn ($cq) => $cq->where('users.invest_sub_role', $subRole)
-                )
+                function ($query) use ($subRole) {
+                    if ($subRole === 'turkistan_invest') {
+                        $query->curatedByTurkistanInvest();
+
+                        return;
+                    }
+
+                    $query->whereHas(
+                        'curators',
+                        fn ($curators) => $curators
+                            ->where('users.invest_sub_role', $subRole)
+                    );
+                }
             )
             ->when(
                 $investorId,
@@ -416,11 +425,7 @@ class DashboardController extends Controller
         $p = fn () => $this->projects($subRole, $investorId);
         $pti = $investorId
             ? fn () => $p()
-            : fn () => $p()->whereHas(
-                'curators',
-                fn ($cq) => $cq
-                    ->where('users.invest_sub_role', 'turkistan_invest')
-            );
+            : fn () => $p()->curatedByTurkistanInvest();
 
         // Job counts per sector
         $sezJobCount = (int) $p()->whereHas('sezs')->sum('jobs_count');

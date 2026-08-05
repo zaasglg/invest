@@ -40,7 +40,13 @@ class TaskNotificationObserver implements ShouldHandleEventsAfterCommit
             $projectId = $notification->telegramProjectId();
             $subsoilUserId = $notification->telegramSubsoilUserId();
 
-            if ($subsoilUserId) {
+            if ($notification->action_url) {
+                $formattedMessage = $telegram->formatNotificationForTarget(
+                    $notification->type,
+                    $notification->message,
+                    url($notification->destination_url)
+                );
+            } elseif ($subsoilUserId) {
                 $targetUrl = route('subsoil-users.show', $subsoilUserId);
                 $formattedMessage = $telegram->formatNotificationForTarget(
                     $notification->type,

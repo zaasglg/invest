@@ -1,12 +1,15 @@
 <?php
 
 use App\Models\Company;
+use App\Models\CompanyDocument;
 use App\Models\InvestmentProject;
 use App\Models\ProjectType;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
@@ -77,6 +80,7 @@ function validCompanyPayload(Region $region, array $overrides = []): array
         'website' => 'https://example.test',
         'legal_address' => 'Түркістан қаласы, Тест көшесі 1',
         'actual_address' => 'Түркістан қаласы, Тест көшесі 2',
+        'licenses_and_regulatory_documents' => 'Лицензия №123, 2025 жылғы 1 қаңтардан бастап жарамды.',
         'status' => 'active',
         'notes' => 'Тест компания',
         'investor_full_name' => 'Тест Инвестор',
@@ -87,21 +91,38 @@ function validCompanyPayload(Region $region, array $overrides = []): array
 }
 
 test('superadmin can create and update a complete company card', function () {
+    Storage::fake('local');
+
     $user = createCompanyManagementUser('superadmin');
     $region = createCompanyManagementRegion();
+    $license = UploadedFile::fake()->create(
+        'license.pdf',
+        128,
+        'application/pdf'
+    );
 
     $this->actingAs($user)
-        ->post(route('companies.store'), validCompanyPayload($region))
+        ->post(
+            route('companies.store'),
+            validCompanyPayload($region, ['documents' => [$license]])
+        )
         ->assertRedirect();
 
     $company = Company::query()->sole();
+    $document = CompanyDocument::query()->sole();
 
     expect($company->created_by)->toBe($user->id)
         ->and($company->display_name)->toContain('Turkistan Test Company')
         ->and($company->is_profile_complete)->toBeTrue()
+        ->and($company->licenses_and_regulatory_documents)
+        ->toContain('Лицензия №123')
         ->and($company->investor)->not->toBeNull()
         ->and($company->investor->email)
-        ->toBe('company-investor@example.test');
+        ->toBe('company-investor@example.test')
+        ->and($document->name)->toBe('license.pdf')
+        ->and($document->uploaded_by)->toBe($user->id);
+
+    Storage::disk('local')->assertExists($document->file_path);
 
     $this->actingAs($user)
         ->get(route('companies.index'))
@@ -122,6 +143,12 @@ test('superadmin can create and update a complete company card', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('companies/show')
             ->where('company.id', $company->id)
+            ->where(
+                'company.licenses_and_regulatory_documents',
+                'Лицензия №123, 2025 жылғы 1 қаңтардан бастап жарамды.'
+            )
+            ->has('company.documents', 1)
+            ->where('company.documents.0.name', 'license.pdf')
         );
     $this->actingAs($user)
         ->get(route('companies.edit', $company))
@@ -129,14 +156,29 @@ test('superadmin can create and update a complete company card', function () {
         ->assertInertia(fn (Assert $page) => $page
             ->component('companies/edit')
             ->where('company.id', $company->id)
+            ->where(
+                'company.licenses_and_regulatory_documents',
+                'Лицензия №123, 2025 жылғы 1 қаңтардан бастап жарамды.'
+            )
+            ->has('company.documents', 1)
+            ->where('company.documents.0.name', 'license.pdf')
         );
 
+    $updatedLicense = UploadedFile::fake()->create(
+        'updated-license.docx',
+        64,
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    );
+
     $this->actingAs($user)
-        ->put(
+        ->post(
             route('companies.update', $company),
             validCompanyPayload($region, [
+                '_method' => 'put',
                 'name' => 'Updated Company',
                 'phone' => '+7 701 999 88 77',
+                'licenses_and_regulatory_documents' => 'Жаңартылған лицензия №456.',
+                'documents' => [$updatedLicense],
                 'investor_full_name' => 'Жаңартылған Инвестор',
                 'investor_password' => '',
                 'investor_password_confirmation' => '',
@@ -148,12 +190,51 @@ test('superadmin can create and update a complete company card', function () {
         'id' => $company->id,
         'name' => 'Updated Company',
         'phone' => '+7 701 999 88 77',
+        'licenses_and_regulatory_documents' => 'Жаңартылған лицензия №456.',
     ]);
+    expect($company->documents()->count())->toBe(2);
+
+    $this->actingAs($user)
+        ->get(route('companies.documents.download', [$company, $document]))
+        ->assertOk();
+
+    $this->actingAs($user)
+        ->delete(route('companies.documents.destroy', [$company, $document]))
+        ->assertRedirect();
+
+    $this->assertDatabaseMissing('company_documents', [
+        'id' => $document->id,
+    ]);
+    Storage::disk('local')->assertMissing($document->file_path);
     $this->assertDatabaseHas('users', [
         'company_id' => $company->id,
         'full_name' => 'Жаңартылған Инвестор',
         'email' => 'company-investor@example.test',
     ]);
+});
+
+test('company documents reject unsupported file formats', function () {
+    Storage::fake('local');
+
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+
+    $this->actingAs($user)
+        ->post(
+            route('companies.store'),
+            validCompanyPayload($region, [
+                'documents' => [
+                    UploadedFile::fake()->create(
+                        'script.html',
+                        10,
+                        'text/html'
+                    ),
+                ],
+            ])
+        )
+        ->assertSessionHasErrors('documents.0');
+
+    $this->assertDatabaseCount('companies', 0);
 });
 
 test('company bin must contain twelve digits and be unique', function () {
@@ -177,8 +258,18 @@ test('company bin must contain twelve digits and be unique', function () {
 });
 
 test('company access follows read and write role boundaries', function () {
+    Storage::fake('local');
+
     $region = createCompanyManagementRegion();
     $company = Company::factory()->create(['region_id' => $region->id]);
+    $document = CompanyDocument::create([
+        'company_id' => $company->id,
+        'name' => 'license.pdf',
+        'file_path' => 'company-documents/'.$company->id.'/license.pdf',
+        'type' => 'pdf',
+        'size' => 7,
+    ]);
+    Storage::disk('local')->put($document->file_path, 'license');
     $prokuror = createCompanyManagementUser('prokuror');
     $invest = createCompanyManagementUser('invest');
     $ispolnitel = createCompanyManagementUser('ispolnitel');
@@ -186,6 +277,14 @@ test('company access follows read and write role boundaries', function () {
     $this->actingAs($prokuror)
         ->get(route('companies.show', $company))
         ->assertOk();
+
+    $this->actingAs($prokuror)
+        ->get(route('companies.documents.download', [$company, $document]))
+        ->assertOk();
+
+    $this->actingAs($prokuror)
+        ->delete(route('companies.documents.destroy', [$company, $document]))
+        ->assertForbidden();
 
     $this->actingAs($prokuror)
         ->get(route('companies.create'))
@@ -290,6 +389,78 @@ test('project creation uses an active complete company and syncs its name', func
             'status' => 'plan',
         ])
         ->assertSessionHasErrors('company_id');
+});
+
+test('project creation and editing support multiple project types', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $firstType = ProjectType::create(['name' => 'Primary project type']);
+    $secondType = ProjectType::create(['name' => 'Secondary project type']);
+    $thirdType = ProjectType::create(['name' => 'Replacement project type']);
+    $company = Company::factory()->create([
+        'region_id' => $region->id,
+        'name' => 'Multi type company',
+        'bin' => '444444444444',
+    ]);
+    createCompanyManagementInvestor($company);
+
+    $this->actingAs($user)
+        ->post(route('investment-projects.store'), [
+            'name' => 'Multiple type project',
+            'company_id' => $company->id,
+            'region_id' => $region->id,
+            'project_type_ids' => [$firstType->id, $secondType->id],
+            'total_investment' => 250000000,
+            'status' => 'plan',
+        ])
+        ->assertRedirect(route('investment-projects.index'));
+
+    $project = InvestmentProject::query()
+        ->where('name', 'Multiple type project')
+        ->sole();
+
+    expect($project->project_type_id)->toBe($firstType->id)
+        ->and($project->projectTypes()->orderBy('project_types.id')->pluck('project_types.id')->all())
+        ->toBe([$firstType->id, $secondType->id]);
+
+    $this->actingAs($user)
+        ->get(route('investment-projects.edit', $project))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/edit')
+            ->where('project.project_type_ids', [
+                $firstType->id,
+                $secondType->id,
+            ])
+        );
+
+    $this->actingAs($user)
+        ->put(route('investment-projects.update', $project), [
+            'name' => $project->name,
+            'company_id' => $company->id,
+            'region_id' => $region->id,
+            'project_type_ids' => [$secondType->id, $thirdType->id],
+            'total_investment' => 300000000,
+            'status' => 'implementation',
+        ])
+        ->assertRedirect(route('investment-projects.show', $project));
+
+    $project->refresh();
+
+    expect($project->project_type_id)->toBe($secondType->id)
+        ->and($project->projectTypes()->orderBy('project_types.id')->pluck('project_types.id')->all())
+        ->toBe([$secondType->id, $thirdType->id]);
+
+    $this->actingAs($user)
+        ->get(route('investment-projects.index', [
+            'project_type_id' => $thirdType->id,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/index')
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $project->id)
+        );
 });
 
 test('renaming a company updates project snapshots and linked company cannot be deleted', function () {

@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\InvestmentProject;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -9,6 +10,17 @@ use Illuminate\Database\Eloquent\Factories\Factory;
  */
 class InvestmentProjectFactory extends Factory
 {
+    public function configure(): static
+    {
+        return $this->afterCreating(function (InvestmentProject $project): void {
+            if ($project->project_type_id) {
+                $project->projectTypes()->syncWithoutDetaching([
+                    $project->project_type_id,
+                ]);
+            }
+        });
+    }
+
     /**
      * Define the model's default state.
      *

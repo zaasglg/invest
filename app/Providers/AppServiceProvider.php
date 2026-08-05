@@ -27,6 +27,10 @@ class AppServiceProvider extends ServiceProvider
         $this->configureDefaults();
         $this->configureDashboardCacheInvalidation();
 
+        \App\Models\InvestmentProject::observe(
+            \App\Observers\InvestmentProjectObserver::class
+        );
+        \App\Models\User::observe(\App\Observers\UserObserver::class);
         \App\Models\TaskNotification::observe(\App\Observers\TaskNotificationObserver::class);
     }
 

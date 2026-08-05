@@ -7,6 +7,13 @@ use Illuminate\Database\Eloquent\Model;
 
 class TaskNotification extends Model
 {
+    public const ASSISTANT_TYPES = [
+        'assistant_suggestion',
+        'task_due_soon',
+        'subsoil_task_due_soon',
+        'task_overdue',
+    ];
+
     protected $fillable = [
         'user_id',
         'task_id',
@@ -15,7 +22,14 @@ class TaskNotification extends Model
         'subsoil_completion_id',
         'type',
         'message',
+        'action_url',
+        'action_label',
         'is_read',
+    ];
+
+    protected $appends = [
+        'destination_url',
+        'is_assistant',
     ];
 
     protected function casts(): array
@@ -67,6 +81,11 @@ class TaskNotification extends Model
         });
     }
 
+    public function scopeAssistant(Builder $query): Builder
+    {
+        return $query->whereIn('type', self::ASSISTANT_TYPES);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -106,5 +125,34 @@ class TaskNotification extends Model
             ?? $this->subsoilCompletion?->task?->subsoil_user_id;
 
         return $subsoilUserId !== null ? (int) $subsoilUserId : null;
+    }
+
+    public function getDestinationUrlAttribute(): string
+    {
+        if ($this->hasSafeActionUrl()) {
+            return $this->action_url;
+        }
+
+        if ($projectId = $this->telegramProjectId()) {
+            return route('investment-projects.show', $projectId, false);
+        }
+
+        if ($subsoilUserId = $this->telegramSubsoilUserId()) {
+            return route('subsoil-users.show', $subsoilUserId, false);
+        }
+
+        return route('notifications.index', absolute: false);
+    }
+
+    public function getIsAssistantAttribute(): bool
+    {
+        return in_array($this->type, self::ASSISTANT_TYPES, true);
+    }
+
+    private function hasSafeActionUrl(): bool
+    {
+        return is_string($this->action_url)
+            && str_starts_with($this->action_url, '/')
+            && ! str_starts_with($this->action_url, '//');
     }
 }

@@ -1,242 +1,217 @@
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import {
+    ArrowRight,
     Bell,
+    BellRing,
+    CalendarClock,
     CheckCircle2,
+    Clock3,
+    Inbox,
+    ListChecks,
+    Sparkles,
     XCircle,
-    Clock,
-    FileText,
-    Eye,
-    Download,
-    Flag,
-    X,
 } from 'lucide-react';
-import React, { useState } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
+
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
-
-import type { SharedData } from '@/types';
+import { cn } from '@/lib/utils';
+import {
+    index as notificationsIndex,
+    open as openNotification,
+    readAll as readAllNotifications,
+} from '@/routes/notifications';
 import type { PaginatedData } from '@/types/pagination';
 
-interface CompletionFile {
-    id: number;
-    file_path: string;
-    file_name: string;
-    type: 'document' | 'photo';
-}
-
-interface Completion {
-    id: number;
-    task_id: number;
-    submitted_by: number;
-    comment?: string;
-    status: 'pending' | 'approved' | 'rejected';
-    reviewer_comment?: string;
-    reviewed_by?: number;
-    reviewed_at?: string;
-    created_at: string;
-    submitter?: { id: number; full_name?: string };
-    reviewer?: { id: number; full_name?: string };
-    files: CompletionFile[];
-}
-
-interface Task {
+type RelatedTask = {
     id: number;
     title: string;
-    description?: string;
-    status: string;
     project?: {
         id: number;
         name: string;
     };
-    assignee?: {
-        id: number;
-        full_name?: string;
-    };
-}
+};
 
-interface SubsoilTask {
+type RelatedSubsoilTask = {
     id: number;
     title: string;
-    subsoil_user_id: number;
     subsoil_user?: {
         id: number;
         name: string;
     };
-}
+};
 
-interface NotificationItem {
+type NotificationItem = {
     id: number;
-    user_id: number;
-    task_id: number;
-    subsoil_task_id?: number;
-    completion_id?: number;
-    subsoil_completion_id?: number;
     type: string;
     message: string;
     is_read: boolean;
+    is_assistant: boolean;
     created_at: string;
-    task?: Task;
-    subsoil_task?: SubsoilTask;
-    completion?: Completion;
-    subsoil_completion?: Completion;
-}
+    action_label?: string | null;
+    destination_url: string;
+    task?: RelatedTask;
+    subsoil_task?: RelatedSubsoilTask;
+    completion?: { task?: RelatedTask };
+    subsoil_completion?: { task?: RelatedSubsoilTask };
+};
 
-interface Props {
+type NotificationSummary = {
+    total: number;
+    unread: number;
+    assistant: number;
+};
+
+type Props = {
     notifications: PaginatedData<NotificationItem>;
+    notificationSummary: NotificationSummary;
+    filter: 'all' | 'unread' | 'assistant' | 'tasks';
+};
+
+type TypeConfig = {
+    label: string;
+    icon: LucideIcon;
+    iconClassName: string;
+};
+
+const TYPE_CONFIG: Record<string, TypeConfig> = {
+    assistant_suggestion: {
+        label: 'Көмекші ұсынысы',
+        icon: Sparkles,
+        iconClassName: 'bg-violet-100 text-violet-700',
+    },
+    task_due_soon: {
+        label: 'Мерзімі жақындады',
+        icon: CalendarClock,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    subsoil_task_due_soon: {
+        label: 'Мерзімі жақындады',
+        icon: CalendarClock,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    task_overdue: {
+        label: 'Мерзімі өтті',
+        icon: CalendarClock,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    task_assigned: {
+        label: 'Жаңа тапсырма',
+        icon: ListChecks,
+        iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    completion_submitted: {
+        label: 'Орындау жіберілді',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    completion_approved: {
+        label: 'Қабылданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    completion_rejected: {
+        label: 'Қабылданбады',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    task_pending_approval: {
+        label: 'Растауды күтуде',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    task_approved: {
+        label: 'Тапсырма расталды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    task_rejected: {
+        label: 'Тапсырма қабылданбады',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+};
+
+const DEFAULT_TYPE_CONFIG: TypeConfig = {
+    label: 'Хабарлама',
+    icon: BellRing,
+    iconClassName: 'bg-slate-100 text-slate-700',
+};
+
+const FILTERS = [
+    { value: 'all', label: 'Барлығы' },
+    { value: 'unread', label: 'Оқылмаған' },
+    { value: 'assistant', label: 'Көмекші' },
+    { value: 'tasks', label: 'Тапсырмалар' },
+] as const;
+
+function contextLabel(notification: NotificationItem): string | null {
+    const project =
+        notification.task?.project ?? notification.completion?.task?.project;
+    if (project) return `Жоба: ${project.name}`;
+
+    const subsoilUser =
+        notification.subsoil_task?.subsoil_user ??
+        notification.subsoil_completion?.task?.subsoil_user;
+    if (subsoilUser) {
+        return `Жер қойнауын пайдаланушы: ${subsoilUser.name}`;
+    }
+
+    return null;
 }
 
-export default function NotificationsIndex({ notifications }: Props) {
-    const { auth } = usePage<SharedData>().props;
-    const canReviewCompletions = ['superadmin', 'invest'].includes(
-        auth.user?.role_model?.name ?? '',
-    );
-    const [viewCompletion, setViewCompletion] = useState<Completion | null>(
-        null,
-    );
-    const [viewTask, setViewTask] = useState<Task | null>(null);
-    const [reviewSource, setReviewSource] = useState<{
-        type: 'investment' | 'subsoil';
-        subsoilUserId?: number;
-        subsoilTaskId?: number;
-        subsoilUserName?: string;
-    } | null>(null);
-    const [reviewComment, setReviewComment] = useState('');
-    const [isReviewing, setIsReviewing] = useState(false);
+export default function NotificationsIndex({
+    notifications,
+    notificationSummary,
+    filter,
+}: Props) {
+    const lastUnreadCount = useRef(notificationSummary.unread);
 
-    const getCompletionFileUrl = (
-        fileId: number,
-        action: 'preview' | 'download',
-    ): string => {
-        if (!viewCompletion || !viewTask || !reviewSource) return '#';
+    useEffect(() => {
+        lastUnreadCount.current = notificationSummary.unread;
+    }, [notificationSummary.unread]);
 
-        if (
-            reviewSource.type === 'subsoil' &&
-            reviewSource.subsoilUserId &&
-            reviewSource.subsoilTaskId
-        ) {
-            return `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/files/${fileId}/${action}`;
-        }
+    useEffect(() => {
+        const handleCounts = (event: Event) => {
+            const counts = (
+                event as CustomEvent<{
+                    count: number;
+                    assistant_count: number;
+                }>
+            ).detail;
 
-        if (reviewSource.type === 'investment' && viewTask.project?.id) {
-            return `/investment-projects/${viewTask.project.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/files/${fileId}/${action}`;
-        }
+            if (counts.count === lastUnreadCount.current) return;
 
-        return '#';
-    };
+            lastUnreadCount.current = counts.count;
+            router.reload({
+                only: [
+                    'notifications',
+                    'notificationSummary',
+                    'unreadNotificationsCount',
+                    'unreadAssistantNotificationsCount',
+                ],
+            });
+        };
 
-    const typeConfig: Record<
-        string,
-        { label: string; icon: React.ElementType; color: string }
-    > = {
-        task_assigned: {
-            label: 'Жаңа тапсырма',
-            icon: Flag,
-            color: 'bg-blue-100 text-blue-700',
-        },
-        completion_submitted: {
-            label: 'Орындау жіберілді',
-            icon: Clock,
-            color: 'bg-amber-100 text-amber-700',
-        },
-        completion_approved: {
-            label: 'Қабылданды',
-            icon: CheckCircle2,
-            color: 'bg-green-100 text-green-700',
-        },
-        completion_rejected: {
-            label: 'Қабылданбады',
-            icon: XCircle,
-            color: 'bg-red-100 text-red-700',
-        },
-        task_pending_approval: {
-            label: 'Растауды күтуде',
-            icon: Clock,
-            color: 'bg-amber-100 text-amber-700',
-        },
-        task_approved: {
-            label: 'Тапсырма қабылданды',
-            icon: CheckCircle2,
-            color: 'bg-green-100 text-green-700',
-        },
-        task_rejected: {
-            label: 'Тапсырма қабылданбады',
-            icon: XCircle,
-            color: 'bg-red-100 text-red-700',
-        },
-    };
+        window.addEventListener('notification-counts-updated', handleCounts);
 
-    const handleMarkAsRead = (id: number) => {
-        router.put(`/notifications/${id}/read`, {}, { preserveScroll: true });
-    };
+        return () =>
+            window.removeEventListener(
+                'notification-counts-updated',
+                handleCounts,
+            );
+    }, []);
 
     const handleMarkAllRead = () => {
-        router.post('/notifications/read-all', {}, { preserveScroll: true });
+        router.post(readAllNotifications.url(), {}, { preserveScroll: true });
     };
 
-    const handleViewCompletion = (notification: NotificationItem) => {
-        if (!notification.is_read) {
-            handleMarkAsRead(notification.id);
-        }
-        if (notification.subsoil_completion) {
-            setViewCompletion(notification.subsoil_completion);
-            setViewTask(
-                notification.subsoil_task
-                    ? {
-                          id: notification.subsoil_task.id,
-                          title: notification.subsoil_task.title,
-                          status: '',
-                      }
-                    : null,
-            );
-            setReviewSource({
-                type: 'subsoil',
-                subsoilUserId: notification.subsoil_task?.subsoil_user_id,
-                subsoilTaskId: notification.subsoil_task?.id,
-                subsoilUserName: notification.subsoil_task?.subsoil_user?.name,
-            });
-            setReviewComment('');
-        } else if (notification.completion) {
-            setViewCompletion(notification.completion);
-            setViewTask(notification.task || null);
-            setReviewSource({
-                type: 'investment',
-            });
-            setReviewComment('');
-        }
+    const handleOpen = (notification: NotificationItem) => {
+        router.post(openNotification.url(notification.id));
     };
-
-    const handleReview = (status: 'approved' | 'rejected') => {
-        if (!viewCompletion || !viewTask) return;
-        setIsReviewing(true);
-
-        const url =
-            reviewSource?.type === 'subsoil'
-                ? `/subsoil-users/${reviewSource.subsoilUserId}/tasks/${reviewSource.subsoilTaskId}/completions/${viewCompletion.id}/review`
-                : `/investment-projects/${viewTask.project?.id}/tasks/${viewTask.id}/completions/${viewCompletion.id}/review`;
-
-        router.put(
-            url,
-            {
-                status,
-                reviewer_comment: reviewComment || null,
-            },
-            {
-                onSuccess: () => {
-                    setViewCompletion(null);
-                    setViewTask(null);
-                    setReviewSource(null);
-                    setReviewComment('');
-                    setIsReviewing(false);
-                },
-                onError: () => setIsReviewing(false),
-            },
-        );
-    };
-
-    const unreadCount = notifications.data.filter((n) => !n.is_read).length;
 
     return (
         <AppLayout
@@ -244,415 +219,207 @@ export default function NotificationsIndex({ notifications }: Props) {
         >
             <Head title="Хабарламалар" />
 
-            <div className="page-surface flex max-w-5xl flex-1 flex-col gap-6">
-                <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
-                    <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md bg-navy">
-                            <Bell className="h-5 w-5 text-[#c8a44e]" />
+            <div className="page-surface flex max-w-6xl flex-1 flex-col gap-6">
+                <section className="relative overflow-hidden rounded-2xl bg-[#0f1b3d] px-5 py-6 text-white shadow-lg sm:px-7 sm:py-7">
+                    <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-[#c8a44e]/15 blur-2xl" />
+                    <div className="absolute -bottom-24 left-1/3 h-48 w-48 rounded-full bg-sky-400/10 blur-2xl" />
+
+                    <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="flex items-center gap-4">
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-white/10 text-[#e4c878] ring-1 ring-white/10">
+                                <Bell className="h-6 w-6" />
+                            </span>
+                            <div>
+                                <div className="flex flex-wrap items-center gap-2.5">
+                                    <h1 className="text-2xl font-extrabold sm:text-3xl">
+                                        Хабарламалар
+                                    </h1>
+                                    {notificationSummary.unread > 0 && (
+                                        <Badge className="border-0 bg-rose-500 text-white">
+                                            {notificationSummary.unread} жаңа
+                                        </Badge>
+                                    )}
+                                </div>
+                                <p className="mt-1 text-sm text-white/60">
+                                    Тапсырмалар, тексерулер және көмекші
+                                    ұсыныстары бір жерде
+                                </p>
+                            </div>
                         </div>
-                        <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
-                            Хабарламалар
-                        </h1>
-                        {unreadCount > 0 && (
-                            <Badge className="bg-red-500 text-white">
-                                {unreadCount} жаңа
-                            </Badge>
+
+                        {notificationSummary.unread > 0 && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={handleMarkAllRead}
+                                className="border-white/20 bg-white/10 text-white shadow-none hover:bg-white/20 hover:text-white"
+                            >
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                Барлығын оқу
+                            </Button>
                         )}
                     </div>
-                    {unreadCount > 0 && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="border-gray-200 shadow-none hover:bg-gray-50"
-                            onClick={handleMarkAllRead}
+
+                    <div className="relative mt-6 grid grid-cols-3 gap-2.5 sm:max-w-xl sm:gap-3">
+                        {[
+                            {
+                                label: 'Барлығы',
+                                value: notificationSummary.total,
+                            },
+                            {
+                                label: 'Оқылмаған',
+                                value: notificationSummary.unread,
+                            },
+                            {
+                                label: 'Көмекші',
+                                value: notificationSummary.assistant,
+                            },
+                        ].map((item) => (
+                            <div
+                                key={item.label}
+                                className="rounded-xl border border-white/10 bg-white/5 px-3 py-3 backdrop-blur-sm sm:px-4"
+                            >
+                                <p className="text-xl font-bold text-[#e4c878]">
+                                    {item.value}
+                                </p>
+                                <p className="mt-0.5 truncate text-[11px] text-white/55 sm:text-xs">
+                                    {item.label}
+                                </p>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <nav className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-sm">
+                    {FILTERS.map((item) => (
+                        <Link
+                            key={item.value}
+                            href={
+                                notificationsIndex({
+                                    query:
+                                        item.value === 'all'
+                                            ? {}
+                                            : { filter: item.value },
+                                }).url
+                            }
+                            preserveScroll
+                            className={cn(
+                                'shrink-0 rounded-lg px-4 py-2 text-sm font-medium transition-colors',
+                                filter === item.value
+                                    ? 'bg-[#0f1b3d] text-white shadow-sm'
+                                    : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900',
+                            )}
                         >
-                            <CheckCircle2 className="mr-2 h-4 w-4" />
-                            Барлығын оқылды деп белгілеу
-                        </Button>
-                    )}
-                </header>
+                            {item.label}
+                        </Link>
+                    ))}
+                </nav>
 
                 {notifications.data.length === 0 ? (
-                    <div className="rounded-xl border border-gray-100 bg-white py-16 text-center shadow-sm">
-                        <Bell className="mx-auto mb-4 h-12 w-12 text-gray-300" />
-                        <p className="text-gray-400">Хабарламалар жоқ</p>
+                    <div className="flex min-h-80 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white px-6 text-center">
+                        <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-slate-100 text-slate-400">
+                            <Inbox className="h-7 w-7" />
+                        </span>
+                        <p className="font-semibold text-[#0f1b3d]">
+                            Бұл санатта хабарлама жоқ
+                        </p>
+                        <p className="mt-1 max-w-sm text-sm text-slate-500">
+                            Жаңа хабарлама түскенде ол refresh жасамай-ақ осы
+                            бетте пайда болады.
+                        </p>
                     </div>
                 ) : (
                     <div className="space-y-3">
                         {notifications.data.map((notification) => {
                             const config =
-                                typeConfig[notification.type] ||
-                                typeConfig.task_assigned;
-                            const IconComponent = config.icon;
+                                TYPE_CONFIG[notification.type] ??
+                                DEFAULT_TYPE_CONFIG;
+                            const Icon = config.icon;
+                            const context = contextLabel(notification);
 
                             return (
-                                <Card
+                                <button
                                     key={notification.id}
-                                    className={`cursor-pointer rounded-xl border-gray-100 shadow-sm transition-colors hover:bg-[#f8fafc] ${
-                                        !notification.is_read
-                                            ? 'border-l-4 border-l-[#c8a44e] bg-[#c8a44e]/5'
-                                            : ''
-                                    }`}
-                                    onClick={() => {
-                                        if (
-                                            notification.type ===
-                                                'completion_submitted' ||
-                                            notification.type ===
-                                                'completion_approved' ||
-                                            notification.type ===
-                                                'completion_rejected'
-                                        ) {
-                                            handleViewCompletion(notification);
-                                        } else if (
-                                            notification.type ===
-                                                'task_assigned' ||
-                                            notification.type ===
-                                                'task_pending_approval' ||
-                                            notification.type ===
-                                                'task_approved' ||
-                                            notification.type ===
-                                                'task_rejected'
-                                        ) {
-                                            if (!notification.is_read) {
-                                                handleMarkAsRead(
-                                                    notification.id,
-                                                );
-                                            }
-                                            if (
-                                                notification.subsoil_task
-                                                    ?.subsoil_user
-                                            ) {
-                                                router.visit(
-                                                    `/subsoil-users/${notification.subsoil_task.subsoil_user.id}`,
-                                                );
-                                            } else if (
-                                                notification.task?.project
-                                            ) {
-                                                router.visit(
-                                                    `/investment-projects/${notification.task.project.id}`,
-                                                );
-                                            }
-                                        }
-                                    }}
+                                    type="button"
+                                    onClick={() => handleOpen(notification)}
+                                    className={cn(
+                                        'group relative w-full overflow-hidden rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:border-[#c8a44e]/50 hover:shadow-md sm:p-5',
+                                        notification.is_read
+                                            ? 'border-slate-200'
+                                            : 'border-[#c8a44e]/40 bg-[#fffdf8]',
+                                    )}
                                 >
-                                    <CardContent className="flex items-start gap-4 p-4">
-                                        <div
-                                            className={`flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full ${config.color}`}
+                                    {!notification.is_read && (
+                                        <span className="absolute inset-y-0 left-0 w-1 bg-[#c8a44e]" />
+                                    )}
+                                    <span className="flex items-start gap-3.5 sm:gap-4">
+                                        <span
+                                            className={cn(
+                                                'flex h-11 w-11 shrink-0 items-center justify-center rounded-xl',
+                                                config.iconClassName,
+                                            )}
                                         >
-                                            <IconComponent className="h-5 w-5" />
-                                        </div>
-                                        <div className="min-w-0 flex-1">
-                                            <div className="mb-1 flex items-center gap-2">
+                                            <Icon className="h-5 w-5" />
+                                        </span>
+
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex flex-wrap items-center gap-2">
                                                 <Badge
-                                                    className={`${config.color} border-0 text-xs`}
+                                                    variant="secondary"
+                                                    className="border-0 bg-slate-100 text-[11px] text-slate-600"
                                                 >
                                                     {config.label}
                                                 </Badge>
-                                                {!notification.is_read && (
-                                                    <span className="h-2 w-2 rounded-full bg-blue-500" />
+                                                {notification.is_assistant && (
+                                                    <span className="flex items-center gap-1 text-[11px] font-semibold text-violet-600">
+                                                        <Sparkles className="h-3 w-3" />
+                                                        Іс-қимыл көмекшісі
+                                                    </span>
                                                 )}
-                                            </div>
-                                            <p className="text-sm font-medium text-[#0f1b3d]">
+                                                {!notification.is_read && (
+                                                    <span className="h-2 w-2 rounded-full bg-rose-500" />
+                                                )}
+                                            </span>
+
+                                            <span className="mt-2 block text-sm leading-6 font-medium whitespace-pre-line text-[#0f1b3d] sm:text-[15px]">
                                                 {notification.message}
-                                            </p>
-                                            {notification.task?.project && (
-                                                <p className="mt-1 text-xs text-gray-500">
-                                                    Жоба:{' '}
-                                                    {
-                                                        notification.task
-                                                            .project.name
-                                                    }
-                                                </p>
-                                            )}
-                                            {notification.subsoil_task
-                                                ?.subsoil_user && (
-                                                <p className="mt-1 text-xs text-gray-500">
-                                                    Жер қойнауын пайдаланушы:{' '}
-                                                    {
-                                                        notification
-                                                            .subsoil_task
-                                                            .subsoil_user.name
-                                                    }
-                                                </p>
-                                            )}
-                                            <p className="mt-1 text-xs text-gray-400">
-                                                {new Date(
-                                                    notification.created_at,
-                                                ).toLocaleString('kk-KZ')}
-                                            </p>
-                                        </div>
-                                        {(notification.completion ||
-                                            notification.subsoil_completion) &&
-                                            notification.type ===
-                                                'completion_submitted' && (
-                                                <div className="flex items-center gap-1 text-xs text-gray-400">
-                                                    <Eye className="h-4 w-4" />
-                                                    Тексеру
-                                                </div>
-                                            )}
-                                    </CardContent>
-                                </Card>
+                                            </span>
+
+                                            <span className="mt-3 flex flex-col gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+                                                <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-slate-400">
+                                                    {context && (
+                                                        <span className="font-medium text-slate-500">
+                                                            {context}
+                                                        </span>
+                                                    )}
+                                                    <time>
+                                                        {new Date(
+                                                            notification.created_at,
+                                                        ).toLocaleString(
+                                                            'kk-KZ',
+                                                            {
+                                                                day: '2-digit',
+                                                                month: 'long',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                            },
+                                                        )}
+                                                    </time>
+                                                </span>
+                                                <span className="flex items-center gap-1.5 self-end font-semibold text-[#9a7624] sm:self-auto">
+                                                    {notification.action_label ??
+                                                        'Толығырақ ашу'}
+                                                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                                                </span>
+                                            </span>
+                                        </span>
+                                    </span>
+                                </button>
                             );
                         })}
 
-                        {/* Pagination */}
-                        <Pagination
-                            paginator={notifications}
-                            preserveScroll={true}
-                        />
-                    </div>
-                )}
-
-                {/* Review Completion Modal */}
-                {viewCompletion && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="mx-4 w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl">
-                            <div className="flex items-center justify-between bg-[#0f1b3d] px-6 py-4">
-                                <h3 className="flex items-center gap-2 text-lg font-bold text-white">
-                                    <Eye className="h-5 w-5" />
-                                    Тапсырманы тексеру
-                                </h3>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setViewCompletion(null);
-                                        setViewTask(null);
-                                        setReviewSource(null);
-                                    }}
-                                    className="text-white/80 transition-colors hover:text-white"
-                                >
-                                    <X className="h-5 w-5" />
-                                </button>
-                            </div>
-
-                            <div className="max-h-[70vh] space-y-5 overflow-y-auto p-6">
-                                {/* Task info */}
-                                {viewTask && (
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                            Тапсырма
-                                        </p>
-                                        <p className="mt-1 font-semibold text-[#0f1b3d]">
-                                            {viewTask.title}
-                                        </p>
-                                        {viewTask.description && (
-                                            <p className="mt-1 text-sm text-gray-600">
-                                                {viewTask.description}
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Who submitted */}
-                                <div className="rounded-lg border border-gray-200 p-4">
-                                    <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                        Жіберген
-                                    </p>
-                                    <p className="mt-1 font-medium text-[#0f1b3d]">
-                                        {viewCompletion.submitter?.full_name ||
-                                            '—'}
-                                    </p>
-                                    <p className="text-xs text-gray-500">
-                                        {new Date(
-                                            viewCompletion.created_at,
-                                        ).toLocaleString('kk-KZ')}
-                                    </p>
-                                </div>
-
-                                {/* Comment */}
-                                {viewCompletion.comment && (
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                            Пікір
-                                        </p>
-                                        <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
-                                            {viewCompletion.comment}
-                                        </p>
-                                    </div>
-                                )}
-
-                                {/* Files */}
-                                {viewCompletion.files &&
-                                    viewCompletion.files.length > 0 && (
-                                        <div>
-                                            <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                                Файлдар
-                                            </p>
-                                            <div className="space-y-2">
-                                                {viewCompletion.files.map(
-                                                    (file) => (
-                                                        <div
-                                                            key={file.id}
-                                                            className="flex items-center gap-3 rounded-lg border border-gray-200 p-3"
-                                                        >
-                                                            {file.type ===
-                                                            'photo' ? (
-                                                                <div className="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg">
-                                                                    <img
-                                                                        src={getCompletionFileUrl(
-                                                                            file.id,
-                                                                            'preview',
-                                                                        )}
-                                                                        alt={
-                                                                            file.file_name
-                                                                        }
-                                                                        className="h-full w-full object-cover"
-                                                                    />
-                                                                </div>
-                                                            ) : (
-                                                                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                                                                    <FileText className="h-5 w-5 text-gray-500" />
-                                                                </div>
-                                                            )}
-                                                            <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm font-medium text-[#0f1b3d]">
-                                                                    {
-                                                                        file.file_name
-                                                                    }
-                                                                </p>
-                                                                <p className="text-xs text-gray-400">
-                                                                    {file.type ===
-                                                                    'photo'
-                                                                        ? 'Фото'
-                                                                        : 'Құжат'}
-                                                                </p>
-                                                            </div>
-                                                            <a
-                                                                href={getCompletionFileUrl(
-                                                                    file.id,
-                                                                    'download',
-                                                                )}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                                className="text-blue-600 hover:text-blue-800"
-                                                                onClick={(e) =>
-                                                                    e.stopPropagation()
-                                                                }
-                                                            >
-                                                                <Download className="h-4 w-4" />
-                                                            </a>
-                                                        </div>
-                                                    ),
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                {/* Status badge if already reviewed */}
-                                {viewCompletion.status !== 'pending' && (
-                                    <div className="rounded-lg border border-gray-200 p-4">
-                                        <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                            Нәтиже
-                                        </p>
-                                        <Badge
-                                            className={`mt-1 ${
-                                                viewCompletion.status ===
-                                                'approved'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-red-100 text-red-700'
-                                            } border-0`}
-                                        >
-                                            {viewCompletion.status ===
-                                            'approved'
-                                                ? 'Қабылданды'
-                                                : 'Қабылданбады'}
-                                        </Badge>
-                                        {viewCompletion.reviewer_comment && (
-                                            <p className="mt-2 text-sm text-gray-600">
-                                                {
-                                                    viewCompletion.reviewer_comment
-                                                }
-                                            </p>
-                                        )}
-                                    </div>
-                                )}
-
-                                {/* Navigate to project/subsoil to resubmit (for ispolnitel seeing rejection) */}
-                                {viewCompletion.status !== 'pending' &&
-                                    (viewTask?.project ||
-                                        reviewSource?.type === 'subsoil') && (
-                                        <div className="flex justify-center border-t border-gray-200 pt-4">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => {
-                                                    if (
-                                                        reviewSource?.type ===
-                                                            'subsoil' &&
-                                                        reviewSource.subsoilUserId
-                                                    ) {
-                                                        setViewCompletion(null);
-                                                        setViewTask(null);
-                                                        setReviewSource(null);
-                                                        router.visit(
-                                                            `/subsoil-users/${reviewSource.subsoilUserId}`,
-                                                        );
-                                                    } else if (
-                                                        viewTask?.project
-                                                    ) {
-                                                        setViewCompletion(null);
-                                                        setViewTask(null);
-                                                        setReviewSource(null);
-                                                        router.visit(
-                                                            `/investment-projects/${viewTask.project!.id}`,
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                <Flag className="mr-2 h-4 w-4" />
-                                                {reviewSource?.type ===
-                                                'subsoil'
-                                                    ? 'Объектіге өту'
-                                                    : 'Жобаға өту'}
-                                            </Button>
-                                        </div>
-                                    )}
-
-                                {/* Review form (only for pending) */}
-                                {viewCompletion.status === 'pending' &&
-                                    canReviewCompletions && (
-                                        <div className="space-y-4 border-t border-gray-200 pt-4">
-                                            <div>
-                                                <label className="text-sm font-semibold text-[#0f1b3d]">
-                                                    Пікір
-                                                </label>
-                                                <textarea
-                                                    value={reviewComment}
-                                                    onChange={(e) =>
-                                                        setReviewComment(
-                                                            e.target.value,
-                                                        )
-                                                    }
-                                                    placeholder="Пікір енгізіңіз..."
-                                                    className="mt-1.5 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
-                                                    rows={3}
-                                                />
-                                            </div>
-                                            <div className="flex justify-end gap-3">
-                                                <Button
-                                                    onClick={() =>
-                                                        handleReview('approved')
-                                                    }
-                                                    className="bg-emerald-500 hover:bg-emerald-600"
-                                                    disabled={isReviewing}
-                                                >
-                                                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                                                    Иә
-                                                </Button>
-                                                <Button
-                                                    onClick={() =>
-                                                        handleReview('rejected')
-                                                    }
-                                                    className="bg-red-500 hover:bg-red-600"
-                                                    disabled={isReviewing}
-                                                >
-                                                    <XCircle className="mr-2 h-4 w-4" />
-                                                    Жоқ
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    )}
-                            </div>
-                        </div>
+                        <Pagination paginator={notifications} preserveScroll />
                     </div>
                 )}
             </div>

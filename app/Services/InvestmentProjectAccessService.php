@@ -22,9 +22,7 @@ class InvestmentProjectAccessService
         }
 
         if ($roleName === 'moderator') {
-            $query
-                ->active()
-                ->curatedByTurkistanInvest();
+            $query->curatedByTurkistanInvest();
         }
 
         if ($user->isDistrictScoped()) {
@@ -49,11 +47,15 @@ class InvestmentProjectAccessService
                 ['turkistan_invest', 'aea', 'ia', 'prom_zone'],
                 true
             )) {
-                $query->whereHas(
-                    'curators',
-                    fn (Builder $curators) => $curators
-                        ->where('users.invest_sub_role', $subRole)
-                );
+                if ($subRole === 'turkistan_invest') {
+                    $query->curatedByTurkistanInvest();
+                } else {
+                    $query->whereHas(
+                        'curators',
+                        fn (Builder $curators) => $curators
+                            ->where('users.invest_sub_role', $subRole)
+                    );
+                }
             } else {
                 $query->whereHas(
                     'curators',

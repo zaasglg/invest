@@ -8,5 +8,17 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-Schedule::command('tasks:notify-overdue')->daily();
-Schedule::command('photos:check-weekly')->weeklyOn(1, '09:00');
+Schedule::command('tasks:notify-overdue')
+    ->daily()
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
+
+Schedule::command('assistant:notify')
+    ->hourly()
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();
+
+Schedule::command('photos:check-weekly')
+    ->weeklyOn(1, '09:00')
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();

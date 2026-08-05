@@ -10,6 +10,14 @@ use Inertia\Inertia;
 
 class SubsoilDocumentController extends Controller
 {
+    private const AUDIT_RELATIONS = [
+        'uploader:id,full_name',
+        'approver:id,full_name',
+        'taskAssigner:id,full_name',
+        'deleter:id,full_name',
+        'sourceTask:id,title,created_at',
+    ];
+
     public function __construct(
         private readonly PrivateFileService $files
     ) {}
@@ -17,20 +25,53 @@ class SubsoilDocumentController extends Controller
     public function index(SubsoilUser $subsoilUser)
     {
         $completedDocuments = $subsoilUser->documents()
-            ->where('is_completed', true)->latest()->get();
+            ->where('is_completed', true)
+            ->with(self::AUDIT_RELATIONS)
+            ->latest()
+            ->get();
 
         $documents = $subsoilUser->documents()
-            ->where('is_completed', false)->latest()->get();
+            ->where('is_completed', false)
+            ->with(self::AUDIT_RELATIONS)
+            ->latest()
+            ->get();
+
+        $user = request()->user();
+        $isSuperadmin = $user?->roleModel?->name === 'superadmin';
 
         return Inertia::render('subsoil-users/documents', [
             'subsoilUser' => $subsoilUser->load('region'),
             'completedDocuments' => $completedDocuments,
+            'documents' => $documents,
+            'canMarkAsCompleted' => $isSuperadmin,
+            'canViewDeleted' => $isSuperadmin,
+            'deletedDocumentsCount' => $isSuperadmin
+                ? $subsoilUser->allDocuments()
+                    ->where('is_deleted', true)
+                    ->count()
+                : 0,
+        ]);
+    }
+
+    public function deleted(SubsoilUser $subsoilUser)
+    {
+        $this->ensureSuperadmin(request()->user());
+
+        $documents = $subsoilUser->allDocuments()
+            ->where('is_deleted', true)
+            ->with(self::AUDIT_RELATIONS)
+            ->latest('deleted_at')
+            ->get();
+
+        return Inertia::render('subsoil-users/deleted-documents', [
+            'subsoilUser' => $subsoilUser->load('region'),
             'documents' => $documents,
         ]);
     }
 
     public function store(Request $request, SubsoilUser $subsoilUser)
     {
+        $user = $request->user();
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'file' => [
@@ -43,6 +84,9 @@ class SubsoilDocumentController extends Controller
             'is_completed' => 'nullable|boolean',
         ]);
 
+        $isCompleted = $user?->roleModel?->name === 'superadmin'
+            && $request->boolean('is_completed', false);
+
         if ($request->hasFile('file')) {
             $file = $request->file('file');
             $path = $file->store(
@@ -54,8 +98,12 @@ class SubsoilDocumentController extends Controller
                 'subsoil_user_id' => $subsoilUser->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
-                'type' => $request->input('type') ?? $file->getClientOriginalExtension(),
-                'is_completed' => $request->boolean('is_completed'),
+                'type' => $validated['type'] ?? $file->getClientOriginalExtension(),
+                'is_completed' => $isCompleted,
+                'uploaded_by' => $user?->id,
+                'source' => 'manual',
+                'approved_by' => $isCompleted ? $user?->id : null,
+                'approved_at' => $isCompleted ? now() : null,
             ]);
         }
 
@@ -67,6 +115,11 @@ class SubsoilDocumentController extends Controller
         SubsoilDocument $document
     ) {
         if ($document->subsoil_user_id !== $subsoilUser->id) {
+            abort(404);
+        }
+
+        if ($document->is_deleted
+            && request()->user()?->roleModel?->name !== 'superadmin') {
             abort(404);
         }
 
@@ -82,10 +135,26 @@ class SubsoilDocumentController extends Controller
             abort(404);
         }
 
-        $this->files->delete($document->file_path);
+        abort_if($document->is_deleted, 404);
 
-        $document->delete();
+        $document->update([
+            'is_deleted' => true,
+            'deleted_by' => request()->user()?->id,
+            'deleted_at' => now(),
+        ]);
 
-        return redirect()->back()->with('success', 'Құжат жойылды.');
+        return redirect()->back()->with(
+            'success',
+            'Құжат өшірілген құжаттар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin($user): void
+    {
+        abort_unless(
+            $user?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген құжаттарды тек супер әкімші көре алады.'
+        );
     }
 }

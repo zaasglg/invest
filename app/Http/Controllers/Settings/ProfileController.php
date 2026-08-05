@@ -3,11 +3,9 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -21,7 +19,9 @@ class ProfileController extends Controller
      */
     public function edit(Request $request): Response
     {
-        return Inertia::render('settings/profile');
+        return Inertia::render('settings/profile', [
+            'telegramBotUrl' => config('services.telegram.bot_url'),
+        ]);
     }
 
     /**
@@ -89,28 +89,5 @@ class ProfileController extends Controller
         }
 
         return back()->with('status', 'avatar-deleted');
-    }
-
-    /**
-     * Delete the user's profile.
-     */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
-    {
-        $user = $request->user();
-
-        abort_if(
-            $user->roleModel?->name === 'investor' && $user->company_id,
-            403,
-            'Компанияның инвестор аккаунтын жоюға болмайды.'
-        );
-
-        Auth::logout();
-
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return redirect('/');
     }
 }

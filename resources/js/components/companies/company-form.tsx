@@ -1,6 +1,15 @@
-import { Link, useForm } from '@inertiajs/react';
-import { Building2, KeyRound, Save, UserRound } from 'lucide-react';
-import type { FormEvent } from 'react';
+import { Link, router, useForm } from '@inertiajs/react';
+import {
+    Building2,
+    Download,
+    FileText,
+    KeyRound,
+    Save,
+    Upload,
+    UserRound,
+    X,
+} from 'lucide-react';
+import type { ChangeEvent, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +20,26 @@ interface RegionOption {
     name: string;
     type: string;
     parent_id: number | null;
+}
+
+interface CompanyDocument {
+    id: number;
+    name: string;
+    type: string | null;
+    size: number | null;
+    created_at: string;
+}
+
+function formatFileSize(bytes: number): string {
+    if (bytes < 1024) {
+        return `${bytes} Б`;
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${(bytes / 1024).toFixed(1)} КБ`;
+    }
+
+    return `${(bytes / (1024 * 1024)).toFixed(1)} МБ`;
 }
 
 export interface CompanyFormValue {
@@ -28,6 +57,8 @@ export interface CompanyFormValue {
     website?: string | null;
     legal_address?: string | null;
     actual_address?: string | null;
+    licenses_and_regulatory_documents?: string | null;
+    documents?: CompanyDocument[];
     status?: string;
     notes?: string | null;
     investor?: {
@@ -57,7 +88,7 @@ export default function CompanyForm({
     method,
     submitLabel,
 }: Props) {
-    const { data, setData, post, put, processing, errors } = useForm({
+    const { data, setData, post, processing, errors, transform } = useForm({
         legal_form: company?.legal_form || 'too',
         name: company?.name || '',
         bin: company?.bin || '',
@@ -73,6 +104,9 @@ export default function CompanyForm({
         website: company?.website || '',
         legal_address: company?.legal_address || '',
         actual_address: company?.actual_address || '',
+        licenses_and_regulatory_documents:
+            company?.licenses_and_regulatory_documents || '',
+        documents: [] as File[],
         status: company?.status || 'active',
         notes: company?.notes || '',
         investor_full_name: company?.investor?.full_name || '',
@@ -85,17 +119,54 @@ export default function CompanyForm({
         event.preventDefault();
 
         if (method === 'put') {
-            put(submitUrl);
+            transform((values) => ({ ...values, _method: 'put' }));
+        }
+
+        post(submitUrl, { forceFormData: true });
+    };
+
+    const addDocuments = (event: ChangeEvent<HTMLInputElement>) => {
+        const files = Array.from(event.target.files || []);
+
+        if (files.length > 0) {
+            setData('documents', [...data.documents, ...files].slice(0, 10));
+        }
+
+        event.target.value = '';
+    };
+
+    const removeDocument = (index: number) => {
+        setData(
+            'documents',
+            data.documents.filter(
+                (_, documentIndex) => documentIndex !== index,
+            ),
+        );
+    };
+
+    const deleteExistingDocument = (documentId: number) => {
+        if (
+            !company?.id ||
+            !window.confirm('Бұл құжатты жоюды растайсыз ба?')
+        ) {
             return;
         }
 
-        post(submitUrl);
+        router.delete(`/companies/${company.id}/documents/${documentId}`, {
+            preserveScroll: true,
+        });
     };
 
     const fieldError = (field: keyof typeof errors) =>
         errors[field] ? (
             <p className="text-sm text-red-600">{errors[field]}</p>
         ) : null;
+
+    const documentsError =
+        errors.documents ||
+        Object.entries(errors).find(([field]) =>
+            field.startsWith('documents.'),
+        )?.[1];
 
     return (
         <form onSubmit={submit} className="space-y-6">
@@ -340,6 +411,148 @@ export default function CompanyForm({
                             autoComplete="new-password"
                         />
                     </div>
+                </div>
+            </section>
+
+            <section className="rounded-xl border border-gray-200 bg-white p-6">
+                <div className="mb-5 flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#0f1b3d]/5">
+                        <FileText className="h-5 w-5 text-[#0f1b3d]" />
+                    </div>
+                    <div>
+                        <h2 className="font-semibold text-[#0f1b3d]">
+                            Лицензии и нормативные документы
+                        </h2>
+                        <p className="text-sm text-gray-500">
+                            Лицензиялар мен нормативтік құжаттардың деректерін
+                            енгізіңіз.
+                        </p>
+                    </div>
+                </div>
+                <div className="space-y-2">
+                    <Label htmlFor="licenses_and_regulatory_documents">
+                        Құжаттар туралы мәлімет
+                    </Label>
+                    <Textarea
+                        id="licenses_and_regulatory_documents"
+                        value={data.licenses_and_regulatory_documents}
+                        onChange={(event) =>
+                            setData(
+                                'licenses_and_regulatory_documents',
+                                event.target.value,
+                            )
+                        }
+                        placeholder="Лицензиялардың нөмірі, берілген күні және нормативтік құжаттар туралы мәлімет"
+                        rows={5}
+                    />
+                    {fieldError('licenses_and_regulatory_documents')}
+                </div>
+
+                <div className="mt-5 space-y-3 border-t border-gray-100 pt-5">
+                    <div>
+                        <Label>Құжаттарды жүктеу</Label>
+                        <p className="mt-1 text-xs text-gray-500">
+                            Бір ретте 10 файлға дейін, әр файл 10 МБ-тан аспауы
+                            керек.
+                        </p>
+                    </div>
+
+                    {(company?.documents?.length || 0) > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-700">
+                                Бұрын жүктелген құжаттар
+                            </p>
+                            {company?.documents?.map((document) => (
+                                <div
+                                    key={document.id}
+                                    className="flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3"
+                                >
+                                    <FileText className="h-5 w-5 shrink-0 text-[#b18b35]" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                            {document.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {(
+                                                document.type || 'file'
+                                            ).toUpperCase()}
+                                            {document.size
+                                                ? ` · ${formatFileSize(document.size)}`
+                                                : ''}
+                                        </p>
+                                    </div>
+                                    <a
+                                        href={`/companies/${company?.id}/documents/${document.id}/download`}
+                                        className="rounded-md p-2 text-gray-500 hover:bg-white hover:text-blue-600"
+                                        title="Жүктеп алу"
+                                    >
+                                        <Download className="h-4 w-4" />
+                                    </a>
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            deleteExistingDocument(document.id)
+                                        }
+                                        className="rounded-md p-2 text-gray-500 hover:bg-white hover:text-red-600"
+                                        title="Жою"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {data.documents.length > 0 && (
+                        <div className="space-y-2">
+                            <p className="text-sm font-medium text-gray-700">
+                                Жаңа құжаттар
+                            </p>
+                            {data.documents.map((document, index) => (
+                                <div
+                                    key={`${document.name}-${document.lastModified}-${index}`}
+                                    className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50/50 p-3"
+                                >
+                                    <FileText className="h-5 w-5 shrink-0 text-amber-700" />
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                            {document.name}
+                                        </p>
+                                        <p className="text-xs text-gray-500">
+                                            {formatFileSize(document.size)}
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => removeDocument(index)}
+                                        className="rounded-md p-2 text-gray-500 hover:bg-white hover:text-red-600"
+                                        title="Тізімнен алып тастау"
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-5 text-sm font-medium text-gray-600 transition hover:border-[#c8a44e] hover:bg-amber-50/40 hover:text-[#8a6a25]">
+                        <Upload className="h-5 w-5" />
+                        Файлдарды таңдау
+                        <input
+                            type="file"
+                            multiple
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.gif"
+                            onChange={addDocuments}
+                            className="hidden"
+                        />
+                    </label>
+                    <p className="text-xs text-gray-400">
+                        PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP, RAR және
+                        суреттер.
+                    </p>
+                    {documentsError && (
+                        <p className="text-sm text-red-600">{documentsError}</p>
+                    )}
                 </div>
             </section>
 

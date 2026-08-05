@@ -35,6 +35,7 @@ class ProjectChatController extends Controller
             ->accessibleProjects($user)
             ->whereHas('chatMessages')
             ->with([
+                'company:id,legal_form,name,bin',
                 'region:id,name',
                 'latestChatMessage.user:id,full_name,avatar',
                 'latestChatMessage.attachments:id,project_chat_message_id,original_name',
@@ -68,6 +69,8 @@ class ProjectChatController extends Controller
                 fn (InvestmentProject $project) => [
                     'id' => $project->id,
                     'name' => $project->name,
+                    'company_name' => $this->companyName($project),
+                    'company_bin' => $project->company?->bin,
                     'region_name' => $project->region?->name,
                     'unread_count' => $unreadCounts->get($project->id, 0),
                     'last_message' => $project->latestChatMessage
@@ -283,7 +286,10 @@ class ProjectChatController extends Controller
         InvestmentProject $project,
         int $currentUserId
     ): array {
-        $project->loadMissing('region:id,name');
+        $project->loadMissing([
+            'company:id,legal_form,name,bin',
+            'region:id,name',
+        ]);
 
         $messages = $project->chatMessages()
             ->with([
@@ -337,12 +343,19 @@ class ProjectChatController extends Controller
         return [
             'id' => $project->id,
             'name' => $project->name,
-            'company_name' => $project->company_name,
+            'company_name' => $this->companyName($project),
+            'company_bin' => $project->company?->bin,
             'region_name' => $project->region?->name,
             'participants' => $participants,
             'participant_count' => $participants->count(),
             'messages' => $messages,
         ];
+    }
+
+    private function companyName(InvestmentProject $project): ?string
+    {
+        return $project->company?->display_name
+            ?? $project->company_name;
     }
 
     private function ensureAttachmentAccess(

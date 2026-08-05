@@ -13,7 +13,6 @@ import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
 import InfrastructureList from '@/components/infrastructure-list';
-import Map from '@/components/map';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -27,6 +26,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import ZoneTerritoryMapCard from '@/components/zone-territory-map-card';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { cn, formatMoneyCompact } from '@/lib/utils';
@@ -187,25 +187,6 @@ export default function Show({
     const issues = sez.issues ?? [];
     const photosCount =
         typeof sez.photos_count === 'number' ? sez.photos_count : 0;
-    const rawMapBoundary = Array.isArray(sez.location) ? sez.location : [];
-    const mapBoundary = rawMapBoundary
-        .filter(
-            (point): point is { lat?: unknown; lng?: unknown } =>
-                typeof point === 'object' && point !== null,
-        )
-        .map((point) => ({
-            lat: Number(point.lat),
-            lng: Number(point.lng),
-        }))
-        .filter(
-            (point) => Number.isFinite(point.lat) && Number.isFinite(point.lng),
-        );
-    const hasMapBoundary = mapBoundary.length >= 3;
-    const firstMapPoint = mapBoundary[0];
-    const mapCenter: [number, number] = firstMapPoint
-        ? [Number(firstMapPoint.lat), Number(firstMapPoint.lng)]
-        : [43.3016, 68.2692];
-
     return (
         <AppLayout
             breadcrumbs={[
@@ -343,61 +324,11 @@ export default function Show({
                             </div>
                         </Card>
 
-                        {/* Territory map */}
-                        <Card className="overflow-hidden border-slate-200/80 py-0 shadow-none">
-                            <div className="flex flex-col gap-3 border-b border-slate-200 bg-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-                                <div>
-                                    <p className="text-[10px] font-bold tracking-[0.14em] text-gold-dark uppercase">
-                                        Аумақ картасы
-                                    </p>
-                                    <h2 className="mt-1 text-lg font-extrabold tracking-tight text-navy">
-                                        {sez.name} орналасуы
-                                    </h2>
-                                </div>
-                                <div className="flex items-center gap-2 text-xs font-semibold text-slate-500">
-                                    <span className="size-2 rounded-full bg-violet-500" />
-                                    <span>СЭЗ шекарасы</span>
-                                    {sez.total_area !== undefined && (
-                                        <span className="ml-1 rounded-full bg-slate-100 px-2.5 py-1 text-navy tabular-nums">
-                                            {sez.total_area} га
-                                        </span>
-                                    )}
-                                </div>
-                            </div>
-                            <div className="relative h-[360px] bg-slate-100 sm:h-[440px]">
-                                {hasMapBoundary ? (
-                                    <Map
-                                        aria-label={`${sez.name} аумағы мен инвестициялық жобаларының картасы`}
-                                        activeTab="sez"
-                                        center={mapCenter}
-                                        className="h-full w-full"
-                                        fitBounds
-                                        interactive
-                                        projects={mapProjects}
-                                        selectedEntityId={sez.id}
-                                        selectedEntityType="sez"
-                                        sezs={[
-                                            { ...sez, location: mapBoundary },
-                                        ]}
-                                        showPolygons={false}
-                                        zoom={14}
-                                    />
-                                ) : (
-                                    <div className="flex h-full flex-col items-center justify-center px-6 text-center">
-                                        <span className="flex size-11 items-center justify-center rounded-full bg-white text-gold-dark shadow-sm ring-1 ring-slate-200">
-                                            <MapPin className="size-5" />
-                                        </span>
-                                        <p className="mt-4 text-sm font-bold text-navy">
-                                            Карта координаттары көрсетілмеген
-                                        </p>
-                                        <p className="mt-1 max-w-sm text-xs leading-relaxed text-slate-500">
-                                            СЭЗ аумағының координаттарын өңдеу
-                                            бөлімінде қосыңыз.
-                                        </p>
-                                    </div>
-                                )}
-                            </div>
-                        </Card>
+                        <ZoneTerritoryMapCard
+                            entity={sez}
+                            entityType="sez"
+                            projects={mapProjects}
+                        />
 
                         {/* Investment Projects */}
                         <Card className="shadow-none">

@@ -113,7 +113,7 @@ test('reassigning the last task keeps the automatic district executor attached',
         'region_id' => $region->id,
     ]);
     $replacement->update(['baskarma_type' => 'oblast']);
-    $project->executors()->attach($districtExecutor);
+    $project->executors()->syncWithoutDetaching([$districtExecutor->id]);
 
     $task = ProjectTask::create([
         'project_id' => $project->id,
@@ -151,7 +151,7 @@ test('deleting the last task keeps the automatic district executor attached', fu
         'baskarma_type' => 'district',
         'region_id' => $region->id,
     ]);
-    $project->executors()->attach($districtExecutor);
+    $project->executors()->syncWithoutDetaching([$districtExecutor->id]);
 
     $task = ProjectTask::create([
         'project_id' => $project->id,

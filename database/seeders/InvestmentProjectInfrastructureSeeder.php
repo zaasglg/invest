@@ -40,19 +40,38 @@ class InvestmentProjectInfrastructureSeeder extends Seeder
                 'infrastructure' => [
                     'electricity' => [
                         'needed' => $electricity > 0,
-                        'capacity' => $electricity > 0 ? "{$electricity} кВт" : '',
+                        'required_capacity' => $electricity > 0 ? (string) $electricity : '',
+                        'used_capacity' => $electricity > 0 ? (string) $electricity : '',
                     ],
                     'gas' => [
                         'needed' => $gas > 0,
-                        'capacity' => $gas > 0 ? "{$gas} м³/сағ" : '',
+                        'required_capacity' => $gas > 0 ? (string) $gas : '',
+                        'used_capacity' => $gas > 0 ? (string) $gas : '',
                     ],
                     'water' => [
                         'needed' => $water > 0,
-                        'capacity' => $water > 0 ? "{$water} м³/тәу" : '',
+                        'required_capacity' => $water > 0 ? (string) $water : '',
+                        'used_capacity' => $water > 0 ? (string) $water : '',
+                    ],
+                    'roads' => [
+                        'needed' => false,
+                        'required_capacity' => '',
+                        'used_capacity' => '',
+                    ],
+                    'railway' => [
+                        'needed' => false,
+                        'required_capacity' => '',
+                        'used_capacity' => '',
+                    ],
+                    'internet' => [
+                        'needed' => false,
+                        'required_capacity' => '',
+                        'used_capacity' => '',
                     ],
                     'land' => [
                         'needed' => false,
-                        'capacity' => '',
+                        'required_capacity' => '',
+                        'used_capacity' => '',
                     ],
                 ],
             ]);

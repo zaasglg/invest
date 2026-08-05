@@ -103,10 +103,25 @@ class GeminiService
         $roleName = $user?->roleModel?->name ?? '';
 
         $contextText = $this->formatContext($contextData, $lang);
-        $hasData = ! empty($contextData);
+        $isInvestor = $roleName === 'investor';
+        $isOblastAkim = $user?->isOblastScopedAkim() ?? false;
 
         if ($lang === 'ru') {
             $userInfo = $userName ? "Пользователь: {$userName} (роль: {$roleName})\n" : '';
+            $investorRules = $isInvestor
+                ? <<<'RULES'
+- Ты персональный консультант инвестора: сначала ответь на вопрос, затем отдельно предложи до 3 подходящих мер поддержки и до 3 региональных площадок из переданных данных
+- Проекты, задачи и галерея уже отфильтрованы сервером по компании инвестора; не предполагай наличие других проектов
+- Не обещай получение льготы или свободный участок: назови подбор предварительным и предложи проверить критерии у оператора программы или управляющей компании
+RULES
+                : '';
+            $oblastAkimRules = $isOblastAkim
+                ? <<<'RULES'
+- Ты управленческий AI-аналитик областного акима: по запросу формируй краткий отчёт, выделяй риски, сравнивай районы и управления, предлагай конкретные следующие действия
+- Используй только переданную аналитику области. Не смешивай её с данными других областей и не придумывай отсутствующие показатели
+- При рекомендациях отделяй подтверждённые факты от аналитического вывода
+RULES
+                : '';
 
             return <<<PROMPT
 Ты — AI-помощник системы Turkistan Invest (инвестиционная платформа Туркестанской области Казахстана).
@@ -124,12 +139,28 @@ class GeminiService
 - Не добавляй markdown звёздочки (**) — пиши простым текстом
 - Не упоминай JSON, поля базы данных, технические термины
 - Отвечай на русском языке
+{$investorRules}
+{$oblastAkimRules}
 
 Вопрос: {$message}
 PROMPT;
         }
 
         $userInfo = $userName ? "Пайдаланушы: {$userName} (рөл: {$roleName})\n" : '';
+        $investorRules = $isInvestor
+            ? <<<'RULES'
+- Сен инвестордың жеке кеңесшісісің: алдымен сұраққа жауап бер, содан кейін берілген деректерден 3-ке дейін сәйкес қолдау шарасын және 3-ке дейін өңірлік алаңды бөлек ұсын
+- Жобалар, тапсырмалар мен галерея серверде инвестор компаниясы бойынша сүзілген; басқа жобалар бар деп болжама
+- Жеңілдік беріледі немесе жер бос деп уәде берме: іріктеу алдын ала екенін айтып, талаптарды бағдарлама операторынан не басқарушы компаниядан тексеруді ұсын
+RULES
+            : '';
+        $oblastAkimRules = $isOblastAkim
+            ? <<<'RULES'
+- Сен облыстық әкімнің басқарушылық AI-аналитигісің: сұралғанда қысқа есеп жаса, тәуекелдерді белгіле, аудандар мен басқармаларды салыстыр және нақты келесі қадамдарды ұсын
+- Тек берілген облыстық аналитиканы пайдалан. Басқа облыстардың деректерімен араластырма және жоқ көрсеткіштерді ойдан шығарма
+- Ұсыныс бергенде расталған факт пен аналитикалық қорытындыны ажырат
+RULES
+            : '';
 
         return <<<PROMPT
 Сен — Turkistan Invest жүйесінің AI-көмекшісісің (Қазақстанның Түркістан облысының инвестициялық платформасы).
@@ -147,6 +178,8 @@ PROMPT;
 - Markdown жұлдызшалар (**) қолданба — қарапайым мәтін жаз
 - JSON, дерекқор өрістері, техникалық терминдер айтпа
 - Қазақ тілінде жауап бер
+{$investorRules}
+{$oblastAkimRules}
 
 Сұрақ: {$message}
 PROMPT;
@@ -328,6 +361,151 @@ PROMPT;
                 $label = $lang === 'ru' ? 'РЕЙТИНГ' : 'РЕЙТИНГ';
                 $lines[] = $label.':';
                 $lines[] = ($lang === 'ru' ? 'Всего исполнителей: ' : 'Барлық орындаушылар: ').($data['total_ispolnitel'] ?? 0);
+                break;
+
+            case 'investor_profile':
+                $label = $lang === 'ru' ? 'ПРОФИЛЬ ИНВЕСТОРА' : 'ИНВЕСТОР ПРОФИЛІ';
+                $lines[] = $label.':';
+                $lines[] = ($lang === 'ru' ? 'Компания: ' : 'Компания: ').($data['company'] ?? '—');
+                $lines[] = ($lang === 'ru' ? 'Вид деятельности: ' : 'Қызмет түрі: ').($data['activity_type'] ?? '—');
+                $lines[] = ($lang === 'ru' ? 'Базовый регион: ' : 'Негізгі өңір: ').($data['region'] ?? '—');
+                break;
+
+            case 'support_measures':
+                $lines[] = $lang === 'ru'
+                    ? 'МЕРЫ ГОСУДАРСТВЕННОЙ ПОДДЕРЖКИ (ПРЕДВАРИТЕЛЬНЫЙ ПОДБОР):'
+                    : 'МЕМЛЕКЕТТІК ҚОЛДАУ ШАРАЛАРЫ (АЛДЫН АЛА ІРІКТЕУ):';
+                foreach ($data['items'] ?? [] as $i => $item) {
+                    $title = $item[$lang === 'ru' ? 'title_ru' : 'title_kk'];
+                    $summary = $item[$lang === 'ru' ? 'summary_ru' : 'summary_kk'];
+                    $eligibility = $item[$lang === 'ru'
+                        ? 'eligibility_ru'
+                        : 'eligibility_kk'];
+                    $lines[] = ($i + 1).'. '.$title.': '.$summary;
+                    $lines[] = ($lang === 'ru' ? 'Критерий: ' : 'Шарты: ').$eligibility;
+                    $lines[] = 'Оператор: '.$item['operator'].'; '.$item['source_url'];
+                }
+                break;
+
+            case 'regional_assets':
+                $lines[] = $lang === 'ru'
+                    ? 'РЕГИОНАЛЬНЫЕ АКТИВЫ ДЛЯ РАССМОТРЕНИЯ:'
+                    : 'ҚАРАСТЫРУҒА БОЛАТЫН ӨҢІР АКТИВТЕРІ:';
+                if (! empty($data['region'])) {
+                    $lines[] = ($lang === 'ru' ? 'Регион: ' : 'Өңір: ').$data['region'];
+                }
+                foreach ($data['items'] ?? [] as $i => $item) {
+                    $area = $item['total_area'] !== null
+                        ? number_format((float) $item['total_area'], 2, ',', ' ').' га'
+                        : '—';
+                    $infrastructure = empty($item['infrastructure'])
+                        ? '—'
+                        : implode(', ', $item['infrastructure']);
+                    $lines[] = ($i + 1).'. '.$item['name']
+                        .' | '.($item['region'] ?? '—')
+                        .' | '.$item['type']
+                        .' | '.($item['status'] ?? '—')
+                        .' | '.$area
+                        .' | '.($lang === 'ru' ? 'инфраструктура: ' : 'инфрақұрылым: ')
+                        .$infrastructure;
+                    if (! empty($item['description'])) {
+                        $lines[] = ($lang === 'ru' ? 'Профиль площадки: ' : 'Алаң бейіні: ')
+                            .$item['description'];
+                    }
+                }
+                $lines[] = $lang === 'ru'
+                    ? 'Свободную площадь и технические лимиты нужно подтвердить у управляющей организации.'
+                    : 'Бос аумақ пен техникалық лимиттерді басқарушы ұйымнан нақтылау қажет.';
+                break;
+
+            case 'oblast_analytics':
+                $scope = $data['scope'] ?? [];
+                $summary = $data['summary'] ?? [];
+                $production = $data['production_summary'] ?? [];
+                $investment = number_format(
+                    (float) ($summary['total_investment'] ?? 0),
+                    0,
+                    ',',
+                    ' '
+                );
+                $lines[] = $lang === 'ru'
+                    ? 'УПРАВЛЕНЧЕСКАЯ АНАЛИТИКА ОБЛАСТИ: '.($scope['oblast_name'] ?? '—')
+                    : 'ОБЛЫСТЫҚ БАСҚАРУШЫЛЫҚ АНАЛИТИКА: '.($scope['oblast_name'] ?? '—');
+                $lines[] = ($lang === 'ru' ? 'Проектов: ' : 'Жоба: ')
+                    .($summary['total_projects'] ?? 0)
+                    .' | '.($lang === 'ru' ? 'инвестиции: ' : 'инвестиция: ')
+                    .$investment.' ₸'
+                    .' | '.($lang === 'ru' ? 'рабочих мест: ' : 'жұмыс орны: ')
+                    .($summary['jobs_count'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Активных проблем: ' : 'Белсенді мәселе: ')
+                    .($summary['active_issues'] ?? 0)
+                    .' | '.($lang === 'ru' ? 'просроченных задач: ' : 'кешіккен тапсырма: ')
+                    .($summary['overdue_tasks'] ?? 0);
+
+                if (($production['projects_with_plans'] ?? 0) > 0) {
+                    $lines[] = $lang === 'ru'
+                        ? 'ВЫПОЛНЕНИЕ ПРОИЗВОДСТВЕННОГО ПЛАНА:'
+                        : 'ӨНДІРІС ЖОСПАРЫНЫҢ ОРЫНДАЛУЫ:';
+                    $lines[] = ($lang === 'ru' ? 'Отчитались: ' : 'Есеп берген жоба: ')
+                        .($production['reporting_projects'] ?? 0)
+                        .' / '.($production['projects_with_plans'] ?? 0)
+                        .' | '.($lang === 'ru' ? 'по сумме: ' : 'сома бойынша: ')
+                        .(($production['amount_completion_rate'] ?? null) !== null
+                            ? $production['amount_completion_rate'].'%'
+                            : '—')
+                        .' | '.($lang === 'ru' ? 'по объёму: ' : 'көлем бойынша: ')
+                        .(($production['average_volume_completion_rate'] ?? null) !== null
+                            ? $production['average_volume_completion_rate'].'%'
+                            : '—')
+                        .' | '.($lang === 'ru' ? 'без отчёта после запуска: ' : 'іске қосылған, есебі жоқ: ')
+                        .($production['launched_without_reports'] ?? 0)
+                        .' | '.($lang === 'ru' ? 'требуют дополнения старых данных: ' : 'ескі деректі толықтыру қажет: ')
+                        .($production['projects_needing_plan_completion'] ?? 0);
+                }
+
+                $lines[] = $lang === 'ru'
+                    ? 'КАЧЕСТВО РАЙОННЫХ АКИМАТОВ:'
+                    : 'АУДАН ӘКІМДІКТЕРІНІҢ САПАСЫ:';
+                foreach ($data['district_quality'] ?? [] as $item) {
+                    $lines[] = '- '.$item['name']
+                        .': '.($item['score'] ?? '—').' балл'
+                        .', '.($item['completed_tasks'] ?? 0)
+                        .'/'.($item['total_tasks'] ?? 0)
+                        .($lang === 'ru' ? ' задач выполнено' : ' тапсырма орындалды')
+                        .', '.($item['overdue_tasks'] ?? 0)
+                        .($lang === 'ru' ? ' просрочено' : ' кешіккен');
+                }
+
+                $lines[] = $lang === 'ru'
+                    ? 'КАЧЕСТВО УПРАВЛЕНИЙ:'
+                    : 'БАСҚАРМАЛАР САПАСЫ:';
+                foreach ($data['management_quality'] ?? [] as $item) {
+                    $lines[] = '- '.$item['name']
+                        .': '.($item['score'] ?? '—').' балл'
+                        .', '.($item['completed_tasks'] ?? 0)
+                        .'/'.($item['total_tasks'] ?? 0)
+                        .($lang === 'ru' ? ' задач выполнено' : ' тапсырма орындалды');
+                }
+
+                $lines[] = $lang === 'ru'
+                    ? 'НИШЕВОЙ ПОТЕНЦИАЛ:'
+                    : 'НИШАЛЫҚ ӘЛЕУЕТ:';
+                foreach ($data['niche_analytics'] ?? [] as $item) {
+                    $lines[] = '- '.$item['name']
+                        .': '.$item['potential_score'].' балл'
+                        .', '.$item['project_count']
+                        .($lang === 'ru' ? ' проектов' : ' жоба')
+                        .', '.number_format(
+                            (float) $item['investment'],
+                            0,
+                            ',',
+                            ' '
+                        ).' ₸';
+                }
+
+                foreach ($data['regional_potential']['insights'] ?? [] as $insight) {
+                    $lines[] = '- '.$insight;
+                }
                 break;
 
             default:

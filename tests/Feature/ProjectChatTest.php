@@ -37,9 +37,17 @@ function createProjectChatProject(User $creator): InvestmentProject
         'icon' => 'factory',
     ]);
 
+    $company = Company::factory()->create([
+        'legal_form' => 'too',
+        'name' => 'Chat Test Company',
+        'bin' => '123456789012',
+        'region_id' => $region->id,
+    ]);
+
     return InvestmentProject::create([
         'name' => 'Тест топтық чат жобасы',
-        'company_name' => 'Chat Test Company',
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
         'region_id' => $region->id,
         'total_investment' => 1000000,
         'status' => 'implementation',
@@ -60,6 +68,11 @@ test('project participant can open an empty project chat directly', function () 
             ->has('chats', 0)
             ->where('selectedChat.id', $project->id)
             ->where('selectedChat.name', $project->name)
+            ->where(
+                'selectedChat.company_name',
+                $project->company->display_name
+            )
+            ->where('selectedChat.company_bin', '123456789012')
             ->has('selectedChat.messages', 0)
             ->where('selectedChat.participant_count', 1)
             ->where(
@@ -105,6 +118,12 @@ test('empty project chat is hidden until its first message is sent', function ()
             ->component('chats/index')
             ->has('chats', 1)
             ->where('chats.0.id', $project->id)
+            ->where('chats.0.name', $project->name)
+            ->where(
+                'chats.0.company_name',
+                $project->company->display_name
+            )
+            ->where('chats.0.company_bin', '123456789012')
             ->where(
                 'chats.0.last_message.message',
                 'Бірінші жоба хабарламасы'

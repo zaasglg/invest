@@ -1,4 +1,4 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import { Eye, RotateCcw, Search } from 'lucide-react';
 import { type FormEvent } from 'react';
 import Pagination from '@/components/pagination';
@@ -15,9 +15,10 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -40,6 +41,7 @@ interface InvestmentProject {
     company_name: string | null;
     region: Region;
     project_type: ProjectType;
+    project_types?: ProjectType[];
     total_investment: string | null;
     status: string;
     start_date: string | null;
@@ -54,6 +56,9 @@ interface Props {
 
 export default function Archived({ projects, filters }: Props) {
     const canModify = useCanModify();
+    const { auth } = usePage<SharedData>().props;
+    const canUnarchive =
+        canModify || auth.user?.role_model?.name === 'moderator';
     const { data, setData, get } = useForm({
         search: filters.search ?? '',
     });
@@ -200,7 +205,7 @@ export default function Archived({ projects, filters }: Props) {
                                             {project.region?.name || '—'}
                                         </TableCell>
                                         <TableCell className="text-sm text-gray-600">
-                                            {project.project_type?.name || '—'}
+                                            {formatProjectTypeNames(project)}
                                         </TableCell>
                                         <TableCell className="text-sm font-medium">
                                             {formatInvestment(
@@ -227,7 +232,7 @@ export default function Archived({ projects, filters }: Props) {
                                                         <Eye className="h-4 w-4" />
                                                     </Button>
                                                 </Link>
-                                                {canModify && (
+                                                {canUnarchive && (
                                                     <Button
                                                         variant="ghost"
                                                         size="sm"

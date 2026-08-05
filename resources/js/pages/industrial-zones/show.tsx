@@ -25,6 +25,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import ZoneTerritoryMapCard from '@/components/zone-territory-map-card';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
@@ -51,6 +52,7 @@ interface InvestmentProject {
     total_investment?: number;
     status: string;
     region?: Region;
+    geometry?: unknown;
 }
 
 interface InfrastructureDetails {
@@ -79,6 +81,7 @@ interface IndustrialZone {
     region_id: number;
     region?: Region;
     total_area?: number;
+    location?: unknown;
     status: 'active' | 'developing';
     infrastructure?: InfrastructureData | null;
     description?: string;
@@ -325,6 +328,12 @@ export default function Show({
                                 </p>
                             </div>
                         </Card>
+
+                        <ZoneTerritoryMapCard
+                            entity={industrialZone}
+                            entityType="iz"
+                            projects={projects}
+                        />
 
                         {/* Investment Projects */}
                         <Card className="shadow-none">

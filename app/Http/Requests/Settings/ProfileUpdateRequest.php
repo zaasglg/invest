@@ -17,6 +17,26 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        return [
+            ...$this->profileRules($this->user()->id),
+            'telegram_chat_id' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^-?\d+$/',
+            ],
+        ];
+    }
+
+    /**
+     * Get the validation error messages for the request.
+     *
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'telegram_chat_id.regex' => 'Telegram ID тек сандардан тұруы керек.',
+        ];
     }
 }

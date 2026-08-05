@@ -26,6 +26,7 @@ import {
     MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
+import ProductionMonitoringCard from '@/components/investment-projects/production-monitoring-card';
 import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
 import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -43,7 +44,14 @@ import {
 } from '@/components/ui/select';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import {
+    formatInfrastructureValue,
+    normalizeProjectInfrastructure,
+    PROJECT_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
+import type { ProductionPlanInput } from '@/lib/production';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -100,13 +108,15 @@ interface InvestmentProject {
     region?: Region;
     project_type_id: number;
     project_type?: ProjectType;
+    project_types?: ProjectType[];
     sezs?: SectorEntity[];
     industrial_zones?: SectorEntity[];
     prom_zones?: SectorEntity[];
     subsoil_users?: SectorEntity[];
     total_investment?: number;
     jobs_count?: number | null;
-    capacity?: string | null;
+    production_not_applicable?: boolean;
+    production_plans?: ProductionPlanInput[];
     status: 'plan' | 'implementation' | 'launched' | 'suspended';
     start_date?: string;
     end_date?: string;
@@ -126,10 +136,7 @@ interface InvestmentProject {
     tasks?: ProjectTaskItem[];
     photos_count?: { photos_count: number } | number;
     geometry?: { lat: number; lng: number }[];
-    infrastructure?: Record<
-        string,
-        { needed: boolean; capacity: string }
-    > | null;
+    infrastructure?: Record<string, Record<string, unknown>> | null;
     created_at: string;
     updated_at?: string;
 }
@@ -214,6 +221,7 @@ interface Props {
     users?: UserOption[];
     canDownload: boolean;
     canAccessChat?: boolean;
+    canReportProduction?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
     passportSummary?: ProjectPassportSummary | null;
@@ -224,23 +232,31 @@ function DescriptionTabs({
     currentStatus,
     showCurrentStatus = true,
     canEditStatus = false,
+    appendOnlyStatus = false,
     projectId,
 }: {
     description?: string;
     currentStatus?: string | null;
     showCurrentStatus?: boolean;
     canEditStatus?: boolean;
+    appendOnlyStatus?: boolean;
     projectId?: number;
 }) {
     const [activeTab, setActiveTab] = useState<
         'description' | 'current_status'
     >('description');
     const [isEditing, setIsEditing] = useState(false);
-    const [editValue, setEditValue] = useState(currentStatus || '');
+    const [editValue, setEditValue] = useState(
+        appendOnlyStatus ? '' : currentStatus || '',
+    );
     const [isSaving, setIsSaving] = useState(false);
+    const statusEntries = (currentStatus || '')
+        .split(/\n\s*\n/)
+        .map((status) => status.trim())
+        .filter(Boolean);
 
     const handleSaveStatus = () => {
-        if (!projectId) return;
+        if (!projectId || (appendOnlyStatus && !editValue.trim())) return;
         setIsSaving(true);
         router.put(
             `/investment-projects/${projectId}/update-status`,
@@ -248,6 +264,9 @@ function DescriptionTabs({
             {
                 onSuccess: () => {
                     setIsEditing(false);
+                    if (appendOnlyStatus) {
+                        setEditValue('');
+                    }
                     setIsSaving(false);
                 },
                 onError: () => {
@@ -290,10 +309,32 @@ function DescriptionTabs({
             ) : (
                 <div>
                     {isEditing ? (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
+                            {appendOnlyStatus && statusEntries.length > 0 && (
+                                <div className="space-y-3 rounded-lg bg-gray-50 p-3">
+                                    {statusEntries.map((status, index) => (
+                                        <div
+                                            key={`${status}-${index}`}
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                        >
+                                            {status}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                            {appendOnlyStatus && (
+                                <label className="block text-sm font-medium text-gray-700">
+                                    Жаңа ағымдағы жағдай
+                                </label>
+                            )}
                             <textarea
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
+                                placeholder={
+                                    appendOnlyStatus
+                                        ? 'Жаңа ақпаратты жазыңыз. Бұрынғы жазбалар өзгеріссіз сақталады.'
+                                        : undefined
+                                }
                                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
                                 rows={4}
                             />
@@ -301,16 +342,27 @@ function DescriptionTabs({
                                 <button
                                     type="button"
                                     onClick={handleSaveStatus}
-                                    disabled={isSaving}
+                                    disabled={
+                                        isSaving ||
+                                        (appendOnlyStatus && !editValue.trim())
+                                    }
                                     className="rounded-md bg-[#c8a44e] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#b8943e] disabled:opacity-50"
                                 >
-                                    {isSaving ? 'Сақталуда...' : 'Сақтау'}
+                                    {isSaving
+                                        ? 'Сақталуда...'
+                                        : appendOnlyStatus
+                                          ? 'Жаңа жазбаны қосу'
+                                          : 'Сақтау'}
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => {
                                         setIsEditing(false);
-                                        setEditValue(currentStatus || '');
+                                        setEditValue(
+                                            appendOnlyStatus
+                                                ? ''
+                                                : currentStatus || '',
+                                        );
                                     }}
                                     className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
                                 >
@@ -320,16 +372,31 @@ function DescriptionTabs({
                         </div>
                     ) : (
                         <div>
-                            <div className="leading-relaxed whitespace-pre-wrap text-gray-700">
-                                {currentStatus || 'Ағымдағы жағдайы жоқ.'}
-                            </div>
+                            {statusEntries.length > 0 ? (
+                                <div className="space-y-3">
+                                    {statusEntries.map((status, index) => (
+                                        <div
+                                            key={`${status}-${index}`}
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                        >
+                                            {status}
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="text-gray-500">
+                                    Ағымдағы жағдайы жоқ.
+                                </div>
+                            )}
                             {canEditStatus && (
                                 <button
                                     type="button"
                                     onClick={() => setIsEditing(true)}
                                     className="mt-2 text-sm font-medium text-[#c8a44e] hover:text-[#b8943e]"
                                 >
-                                    Өзгерту
+                                    {appendOnlyStatus
+                                        ? 'Жаңа жағдай қосу'
+                                        : 'Өзгерту'}
                                 </button>
                             )}
                         </div>
@@ -347,6 +414,7 @@ export default function Show({
     users = [],
     canDownload,
     canAccessChat = false,
+    canReportProduction = false,
     isInvolved = true,
     passportSummary,
 }: Props) {
@@ -368,7 +436,7 @@ export default function Show({
         'zamakim',
     ].includes(currentRoleName);
     const canApproveTasks = isModerator || isSuperAdmin;
-    const canManageTasks = isSuperAdmin || isInvest;
+    const canManageTasks = isSuperAdmin || isInvest || isModerator;
     const canCreateTasks = canManageTasks || isProkuror;
     const canEditProject = canModify || isModerator;
     const isExecutorParticipant = isIspolnitel || isInvestor;
@@ -380,6 +448,9 @@ export default function Show({
             ? project.photos_count
             : // eslint-disable-next-line @typescript-eslint/no-explicit-any
               (project.photos_count as any)?.photos_count || 0;
+    const projectInfrastructure = normalizeProjectInfrastructure(
+        project.infrastructure,
+    );
 
     const statusMap: Record<string, { label: string; color: string }> = {
         plan: { label: 'Жоспарлау', color: 'bg-blue-100 text-blue-800' },
@@ -922,9 +993,10 @@ export default function Show({
                             'bg-gray-100 text-gray-800',
                         regionName:
                             project.region?.name ?? 'Аймақ көрсетілмеген',
-                        projectTypeName:
-                            project.project_type?.name ??
+                        projectTypeName: formatProjectTypeNames(
+                            project,
                             'Жоба түрі көрсетілмеген',
+                        ),
                     }}
                     summary={effectivePassportSummary}
                     canEdit={canEditProject}
@@ -1011,8 +1083,10 @@ export default function Show({
                                                 Жоба түрі
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.project_type?.name ||
-                                                    'Көрсетілмеген'}
+                                                {formatProjectTypeNames(
+                                                    project,
+                                                    'Көрсетілмеген',
+                                                )}
                                             </p>
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
@@ -1061,11 +1135,15 @@ export default function Show({
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                 <Factory className="h-3.5 w-3.5" />{' '}
-                                                Жұмыс қуаттылығы
+                                                Жоспарлы өндіріс
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.capacity ||
-                                                    'Көрсетілмеген'}
+                                                {project.production_not_applicable
+                                                    ? 'Қолданылмайды'
+                                                    : project.production_plans
+                                                            ?.length
+                                                      ? `${project.production_plans.length} өнім/нәтиже`
+                                                      : 'Көрсетілмеген'}
                                             </p>
                                         </div>
                                     </div>
@@ -1169,35 +1247,23 @@ export default function Show({
                             )}
 
                             {/* Инфрақұрылымға қажеттілік */}
-                            {project.infrastructure &&
-                                Object.values(project.infrastructure).some(
-                                    (v: Record<string, unknown>) => v?.needed,
-                                ) && (
-                                    <div className="border-t border-gray-200 px-6 py-5">
-                                        <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                            <Building2 className="h-5 w-5 text-gray-500" />
-                                            Инфрақұрылымға қажеттілік
-                                        </h2>
-                                        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                                            {[
-                                                { key: 'gas', label: 'Газ' },
-                                                { key: 'water', label: 'Су' },
-                                                {
-                                                    key: 'electricity',
-                                                    label: 'Электр қуаты',
-                                                },
-                                                {
-                                                    key: 'land',
-                                                    label: 'Жер учаскесі',
-                                                },
-                                            ].map((item) => {
-                                                const infra = (
-                                                    project.infrastructure as Record<
-                                                        string,
-                                                        Record<string, unknown>
-                                                    >
-                                                )?.[item.key];
-                                                if (!infra?.needed) return null;
+                            {PROJECT_INFRASTRUCTURE_FIELDS.some(
+                                ({ key }) => projectInfrastructure[key].needed,
+                            ) && (
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                        <Building2 className="h-5 w-5 text-gray-500" />
+                                        Инфрақұрылымға қажеттілік
+                                    </h2>
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                        {PROJECT_INFRASTRUCTURE_FIELDS.map(
+                                            (item) => {
+                                                const infra =
+                                                    projectInfrastructure[
+                                                        item.key
+                                                    ];
+                                                if (!infra.needed) return null;
+
                                                 return (
                                                     <div
                                                         key={item.key}
@@ -1206,17 +1272,37 @@ export default function Show({
                                                         <p className="mb-1 text-xs font-medium text-gray-500">
                                                             {item.label}
                                                         </p>
-                                                        <p className="text-sm font-bold text-[#0f1b3d]">
-                                                            {infra.capacity
-                                                                ? `${infra.capacity}`
-                                                                : 'Қажет'}
-                                                        </p>
+                                                        <div className="mt-2 grid grid-cols-2 gap-3">
+                                                            <div>
+                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                    Қажетті
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-bold text-[#0f1b3d]">
+                                                                    {formatInfrastructureValue(
+                                                                        infra.required_capacity,
+                                                                        item.key,
+                                                                    ) || '—'}
+                                                                </p>
+                                                            </div>
+                                                            <div className="border-l border-gray-100 pl-3">
+                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                    Пайдалануда
+                                                                </p>
+                                                                <p className="mt-1 text-sm font-bold text-emerald-700">
+                                                                    {formatInfrastructureValue(
+                                                                        infra.used_capacity,
+                                                                        item.key,
+                                                                    ) || '—'}
+                                                                </p>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 );
-                                            })}
-                                        </div>
+                                            },
+                                        )}
                                     </div>
-                                )}
+                                </div>
+                            )}
 
                             {/* Description & Current Status Tabs */}
                             <div className="border-t border-gray-200 px-6 py-5">
@@ -1228,6 +1314,7 @@ export default function Show({
                                         (isIspolnitel && isInvolved) ||
                                         isModerator
                                     }
+                                    appendOnlyStatus={isIspolnitel}
                                     projectId={project.id}
                                 />
                             </div>
@@ -1382,7 +1469,8 @@ export default function Show({
                                             </div>
                                             {(canModify ||
                                                 participantCanWrite ||
-                                                isAkim) && (
+                                                isAkim ||
+                                                isModerator) && (
                                                 <Link
                                                     href={`/investment-projects/${project.id}/issues`}
                                                     className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
@@ -1394,6 +1482,18 @@ export default function Show({
                                     </div>
                                 )}
                         </Card>
+
+                        {!isRestrictedView && (
+                            <ProductionMonitoringCard
+                                canReport={canReportProduction}
+                                notApplicable={Boolean(
+                                    project.production_not_applicable,
+                                )}
+                                plans={project.production_plans ?? []}
+                                projectId={project.id}
+                                projectStatus={project.status}
+                            />
+                        )}
 
                         {/* Roadmap / Дорожная карта */}
                         {!isRestrictedView && (
@@ -1724,9 +1824,8 @@ export default function Show({
                                                                     </Button>
                                                                 )}
                                                             {/* Invest: review pending completion */}
-                                                            {canModify &&
+                                                            {canManageTasks &&
                                                                 !isExecutorParticipant &&
-                                                                !isModerator &&
                                                                 pendingCompletion && (
                                                                     <Button
                                                                         variant="outline"
@@ -2208,7 +2307,7 @@ export default function Show({
                                         </Button>
                                     </a>
                                 )}
-                                {(isSuperAdmin || isInvest) && (
+                                {(isSuperAdmin || isInvest || isModerator) && (
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"

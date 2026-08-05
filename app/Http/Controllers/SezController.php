@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\Sez;
 use App\Services\InfrastructureUsageService;
+use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -96,7 +97,7 @@ class SezController extends Controller
             ],
             'total_area' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
-            'infrastructure' => 'nullable|array',
+            ...InfrastructureValidationRules::zone(),
             'location' => 'nullable|array',
             'description' => 'nullable|string',
         ]);
@@ -205,7 +206,7 @@ class SezController extends Controller
             ],
             'total_area' => 'nullable|numeric|min:0',
             'status' => 'required|in:active,developing',
-            'infrastructure' => 'nullable|array',
+            ...InfrastructureValidationRules::zone(),
             'location' => 'nullable|array',
             'description' => 'nullable|string',
             'return_to' => 'nullable|string',

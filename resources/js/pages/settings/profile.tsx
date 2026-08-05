@@ -1,12 +1,21 @@
 import { Transition } from '@headlessui/react';
 import { Form, Head, router, usePage } from '@inertiajs/react';
-import { Camera, Trash2 } from 'lucide-react';
-import React, { useRef, useState } from 'react';
+import {
+    Camera,
+    CheckCircle2,
+    ImagePlus,
+    Save,
+    Send,
+    Trash2,
+    UserRound,
+} from 'lucide-react';
+import { useRef, useState } from 'react';
+import type { ChangeEvent } from 'react';
+
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import AvatarCropper from '@/components/avatar-cropper';
-import DeleteUser from '@/components/delete-user';
-import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
+import TelegramIdHelpDialog from '@/components/telegram-id-help-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,17 +23,21 @@ import { Label } from '@/components/ui/label';
 import { useInitials } from '@/hooks/use-initials';
 import AppLayout from '@/layouts/app-layout';
 import SettingsLayout from '@/layouts/settings/layout';
-import { edit } from '@/routes/profile';
 import type { BreadcrumbItem, SharedData } from '@/types';
+import { edit } from '@/routes/profile';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
-        title: 'Профиль баптаулары',
+        title: 'Профиль параметрлері',
         href: edit().url,
     },
 ];
 
-export default function Profile() {
+type ProfileProps = {
+    telegramBotUrl?: string | null;
+};
+
+export default function Profile({ telegramBotUrl }: ProfileProps) {
     const { auth } = usePage<SharedData>().props;
     const getInitials = useInitials();
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -33,36 +46,34 @@ export default function Profile() {
     const [cropperOpen, setCropperOpen] = useState(false);
     const [rawImageSrc, setRawImageSrc] = useState<string | null>(null);
 
-    const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
+    const handleAvatarChange = (event: ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
 
-        // Read file and open cropper
+        if (!file) {
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = () => {
             setRawImageSrc(reader.result as string);
             setCropperOpen(true);
         };
         reader.readAsDataURL(file);
-
-        // Reset input so same file can be selected again
-        e.target.value = '';
+        event.target.value = '';
     };
 
     const handleCropComplete = (croppedBlob: Blob) => {
         setCropperOpen(false);
         setRawImageSrc(null);
 
-        // Show preview
         const previewUrl = URL.createObjectURL(croppedBlob);
         setAvatarPreview(previewUrl);
-
-        // Upload cropped image
         setIsUploadingAvatar(true);
+
         const formData = new FormData();
         formData.append('avatar', croppedBlob, 'avatar.jpg');
 
-        router.post('/settings/profile/avatar', formData, {
+        router.post(ProfileController.updateAvatar.url(), formData, {
             forceFormData: true,
             onSuccess: () => {
                 setAvatarPreview(null);
@@ -83,44 +94,54 @@ export default function Profile() {
     };
 
     const handleDeleteAvatar = () => {
-        if (!auth.user.avatar) return;
+        if (!auth.user.avatar) {
+            return;
+        }
 
-        const confirmed = confirm(
-            'Профиль суретін өшіргіңіз келетініне сенімдісіз бе?',
-        );
-        if (!confirmed) return;
+        if (!confirm('Профиль суретін өшіргіңіз келетініне сенімдісіз бе?')) {
+            return;
+        }
 
-        router.delete('/settings/profile/avatar', {
+        router.delete(ProfileController.deleteAvatar.url(), {
             onSuccess: () => setAvatarPreview(null),
         });
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Профиль баптаулары" />
-
-            <h1 className="sr-only">Профиль баптаулары</h1>
+            <Head title="Профиль параметрлері" />
 
             <SettingsLayout>
-                {/* Avatar Section */}
-                <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <Heading
-                        variant="small"
-                        title="Профиль фотосы"
-                        description="Фотосуретіңізді жүктеңіз. Ол сайт тақырыбында және жоба беттерінде көрсетіледі."
-                    />
+                <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_-28px_rgba(15,27,61,0.7)]">
+                    <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+                        <div className="flex items-center gap-3">
+                            <span className="flex size-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
+                                <ImagePlus className="size-5" />
+                            </span>
+                            <div>
+                                <h2 className="font-bold text-navy">
+                                    Профиль фотосы
+                                </h2>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Сайтта көрсетілетін фотосуретіңізді
+                                    жаңартыңыз.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
-                    <div className="mt-4 flex items-center gap-6">
-                        <div className="group relative">
-                            <Avatar className="h-20 w-20 rounded-full ring-2 ring-gray-100">
+                    <div className="flex flex-col gap-5 p-6 sm:flex-row sm:items-center">
+                        <div className="group relative w-fit">
+                            <Avatar className="size-24 rounded-2xl ring-4 ring-slate-100">
                                 <AvatarImage
                                     src={
                                         avatarPreview ||
-                                        (auth.user.avatar_url as string)
+                                        auth.user.avatar_url ||
+                                        undefined
                                     }
                                     alt={auth.user.full_name}
                                 />
-                                <AvatarFallback className="rounded-full bg-[#0f1b3d]/10 text-lg font-semibold text-[#0f1b3d]">
+                                <AvatarFallback className="rounded-2xl bg-navy/10 text-xl font-bold text-navy">
                                     {getInitials(
                                         auth.user.full_name || auth.user.email,
                                     )}
@@ -129,9 +150,10 @@ export default function Profile() {
                             <button
                                 type="button"
                                 onClick={() => fileInputRef.current?.click()}
-                                className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100"
+                                className="absolute inset-0 flex items-center justify-center rounded-2xl bg-navy/60 text-white opacity-0 backdrop-blur-[2px] transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                                aria-label="Профиль фотосын өзгерту"
                             >
-                                <Camera className="h-6 w-6 text-white" />
+                                <Camera className="size-6" />
                             </button>
                             <input
                                 ref={fileInputRef}
@@ -141,121 +163,169 @@ export default function Profile() {
                                 className="hidden"
                             />
                         </div>
-                        <div className="flex flex-col gap-2">
+
+                        <div className="min-w-0 flex-1">
+                            <p className="font-semibold text-slate-800">
+                                {auth.user.full_name}
+                            </p>
+                            <p className="mt-1 truncate text-sm text-slate-500">
+                                {auth.user.email}
+                            </p>
+                            <p className="mt-2 text-xs text-slate-400">
+                                JPG, PNG немесе WebP · максимум 2 МБ
+                            </p>
+                        </div>
+
+                        <div className="flex shrink-0 flex-wrap gap-2">
                             <Button
                                 type="button"
                                 variant="outline"
-                                size="sm"
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploadingAvatar}
-                                className="border-gray-200 shadow-none hover:bg-gray-50"
                             >
+                                <Camera className="size-4" />
                                 {isUploadingAvatar
                                     ? 'Жүктелуде...'
-                                    : 'Фото жүктеу'}
+                                    : 'Фото таңдау'}
                             </Button>
                             {auth.user.avatar && (
                                 <Button
                                     type="button"
                                     variant="ghost"
-                                    size="sm"
                                     onClick={handleDeleteAvatar}
                                     className="text-red-500 hover:bg-red-50 hover:text-red-700"
+                                    aria-label="Профиль фотосын жою"
                                 >
-                                    <Trash2 className="mr-1 h-3.5 w-3.5" />
-                                    Жою
+                                    <Trash2 className="size-4" />
                                 </Button>
                             )}
                         </div>
                     </div>
-                    <p className="mt-3 text-xs text-gray-400">
-                        JPG, PNG немесе WebP. Максимум 2 МБ.
-                    </p>
-                </div>
+                </section>
 
-                {/* Profile info section */}
-                <div className="rounded-xl border border-gray-100 bg-white p-6 shadow-sm">
-                    <Heading
-                        variant="small"
-                        title="Жеке мәліметтер"
-                        description="Атыңызды және электрондық поштаңызды жаңартыңыз"
-                    />
+                <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_10px_35px_-28px_rgba(15,27,61,0.7)]">
+                    <div className="border-b border-slate-100 bg-gradient-to-r from-slate-50 to-white px-6 py-5">
+                        <div className="flex items-center gap-3">
+                            <span className="flex size-10 items-center justify-center rounded-xl bg-navy/5 text-navy">
+                                <UserRound className="size-5" />
+                            </span>
+                            <div>
+                                <h2 className="font-bold text-navy">
+                                    Жеке мәліметтер
+                                </h2>
+                                <p className="mt-0.5 text-sm text-slate-500">
+                                    Профиль мен Telegram байланысын осы жерден
+                                    өзгертіңіз.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
 
                     <Form
                         {...ProfileController.update.form()}
-                        options={{
-                            preserveScroll: true,
-                        }}
-                        className="mt-4 space-y-5"
+                        options={{ preserveScroll: true }}
+                        className="space-y-6 p-6"
                     >
                         {({ processing, recentlySuccessful, errors }) => (
                             <>
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="full_name">Аты</Label>
-                                    <Input
-                                        id="full_name"
-                                        className="block w-full"
-                                        defaultValue={auth.user.full_name}
-                                        name="full_name"
-                                        required
-                                        autoComplete="name"
-                                        placeholder="Толық атыңыз"
-                                    />
-                                    <InputError
-                                        className="mt-1"
-                                        message={errors.full_name}
-                                    />
+                                <div className="grid gap-5 sm:grid-cols-2">
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="full_name">
+                                            Толық аты-жөні
+                                        </Label>
+                                        <Input
+                                            id="full_name"
+                                            defaultValue={auth.user.full_name}
+                                            name="full_name"
+                                            required
+                                            autoComplete="name"
+                                            placeholder="Толық аты-жөніңіз"
+                                        />
+                                        <InputError
+                                            message={errors.full_name}
+                                        />
+                                    </div>
+
+                                    <div className="grid gap-2">
+                                        <Label htmlFor="email">
+                                            Электрондық пошта
+                                        </Label>
+                                        <Input
+                                            id="email"
+                                            type="email"
+                                            defaultValue={auth.user.email}
+                                            name="email"
+                                            required
+                                            autoComplete="username"
+                                            placeholder="name@example.com"
+                                        />
+                                        <InputError message={errors.email} />
+                                    </div>
                                 </div>
 
-                                <div className="grid gap-1.5">
-                                    <Label htmlFor="email">
-                                        Электрондық пошта
+                                <div className="grid gap-2">
+                                    <Label htmlFor="telegram_chat_id">
+                                        Telegram ID
                                     </Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        className="block w-full"
-                                        defaultValue={auth.user.email}
-                                        name="email"
-                                        required
-                                        autoComplete="username"
-                                        placeholder="Электрондық пошта мекенжайы"
-                                    />
+                                    <div className="flex items-center gap-2">
+                                        <div className="relative min-w-0 flex-1">
+                                            <Send className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-sky-500" />
+                                            <Input
+                                                id="telegram_chat_id"
+                                                name="telegram_chat_id"
+                                                defaultValue={
+                                                    auth.user
+                                                        .telegram_chat_id ?? ''
+                                                }
+                                                inputMode="numeric"
+                                                autoComplete="off"
+                                                placeholder="Мысалы: 123456789"
+                                                className="pl-10"
+                                            />
+                                        </div>
+                                        <TelegramIdHelpDialog
+                                            botUrl={telegramBotUrl}
+                                        />
+                                    </div>
+                                    <p className="text-xs leading-5 text-slate-400">
+                                        Жеке хабарламаларды Telegram арқылы алу
+                                        үшін сандық ID-іңізді енгізіңіз.
+                                    </p>
                                     <InputError
-                                        className="mt-1"
-                                        message={errors.email}
+                                        message={errors.telegram_chat_id}
                                     />
                                 </div>
 
-                                <div className="flex items-center gap-4">
+                                <div className="flex flex-wrap items-center gap-4 border-t border-slate-100 pt-5">
                                     <Button
+                                        type="submit"
                                         disabled={processing}
                                         data-test="update-profile-button"
-                                        className="bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
                                     >
-                                        Сақтау
+                                        <Save className="size-4" />
+                                        {processing
+                                            ? 'Сақталуда...'
+                                            : 'Өзгерістерді сақтау'}
                                     </Button>
 
                                     <Transition
                                         show={recentlySuccessful}
                                         enter="transition ease-in-out"
-                                        enterFrom="opacity-0"
+                                        enterFrom="translate-y-1 opacity-0"
                                         leave="transition ease-in-out"
-                                        leaveTo="opacity-0"
+                                        leaveTo="translate-y-1 opacity-0"
                                     >
-                                        <p className="text-sm text-green-600">
-                                            Сақталды
+                                        <p className="flex items-center gap-1.5 text-sm font-medium text-emerald-600">
+                                            <CheckCircle2 className="size-4" />
+                                            Өзгерістер сақталды
                                         </p>
                                     </Transition>
                                 </div>
                             </>
                         )}
                     </Form>
-                </div>
+                </section>
 
-                {auth.user?.role_model?.name !== 'investor' && <DeleteUser />}
-
-                {/* Avatar Cropper Modal */}
                 {rawImageSrc && (
                     <AvatarCropper
                         open={cropperOpen}

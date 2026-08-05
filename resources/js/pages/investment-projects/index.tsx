@@ -26,6 +26,7 @@ import {
     MoveRight,
     Pencil,
     Plus,
+    Search,
     SlidersHorizontal,
     Trash2,
     Waypoints,
@@ -63,6 +64,7 @@ import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { persistOrder } from '@/lib/persist-order';
+import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
 import type { PaginatedData, SharedData } from '@/types';
@@ -115,6 +117,7 @@ interface InvestmentProject {
     company_name: string | null;
     region: Region | null;
     project_type: ProjectType | null;
+    project_types?: ProjectType[];
     sector: string;
     total_investment: string | null;
     status: string;
@@ -236,6 +239,8 @@ export default function Index({
     const isProkuror = auth.user?.role_model?.name === 'prokuror';
     const canCreateProject = canModify || isModerator;
     const canEditProject = canModify || isModerator;
+    const canDeleteProject = canModify && !isModerator;
+    const canReorderProjects = isSuperAdmin || isInvest || isModerator;
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -334,7 +339,7 @@ export default function Index({
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if ((!isSuperAdmin && !isInvest) || isSavingOrder) return;
+        if (!canReorderProjects || isSavingOrder) return;
 
         const { active, over } = event;
         if (!over || active.id === over.id) return;
@@ -562,7 +567,10 @@ export default function Index({
                             <Calendar className="h-4 w-4" />
                             Биыл аяқталатын
                         </Button>
-                        {(isSuperAdmin || isInvest || isProkuror) && (
+                        {(isSuperAdmin ||
+                            isInvest ||
+                            isModerator ||
+                            isProkuror) && (
                             <Link href="/investment-projects-archived">
                                 <Button
                                     variant="outline"
@@ -594,14 +602,25 @@ export default function Index({
                 >
                     <div className="space-y-1.5">
                         <Label htmlFor="search">Іздеу</Label>
-                        <Input
-                            id="search"
-                            value={data.search}
-                            onChange={(event) =>
-                                setData('search', event.target.value)
-                            }
-                            placeholder="Атауы немесе компания"
-                        />
+                        <div className="relative">
+                            <Search className="pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-slate-400" />
+                            <Input
+                                id="search"
+                                name="search"
+                                type="search"
+                                value={data.search}
+                                onChange={(event) =>
+                                    setData('search', event.target.value)
+                                }
+                                autoComplete="off"
+                                placeholder="Жоба атауы, компания немесе БИН"
+                                className="pl-10"
+                            />
+                        </div>
+                        <p className="text-xs leading-5 text-slate-400">
+                            Жоба атауы, компания атауы немесе 12 таңбалы БИН
+                            бойынша іздеңіз.
+                        </p>
                     </div>
                     <div className="space-y-1.5">
                         <Label>Аймақ</Label>
@@ -962,7 +981,7 @@ export default function Index({
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    {(isSuperAdmin || isInvest) && (
+                                    {canReorderProjects && (
                                         <TableHead className="w-12"></TableHead>
                                     )}
                                     <TableHead>Атауы / Компания</TableHead>
@@ -981,9 +1000,7 @@ export default function Index({
                                 {orderedProjects.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={
-                                                isSuperAdmin || isInvest ? 9 : 8
-                                            }
+                                            colSpan={canReorderProjects ? 9 : 8}
                                             className="py-12 text-center text-gray-400"
                                         >
                                             Деректер жоқ
@@ -998,9 +1015,7 @@ export default function Index({
                                             <SortableProjectRow
                                                 key={project.id}
                                                 id={project.id}
-                                                isEnabled={
-                                                    isSuperAdmin || isInvest
-                                                }
+                                                isEnabled={canReorderProjects}
                                             >
                                                 <TableCell>
                                                     <div className="flex flex-col">
@@ -1028,8 +1043,9 @@ export default function Index({
                                                         '—'}
                                                 </TableCell>
                                                 <TableCell>
-                                                    {project.project_type
-                                                        ?.name ?? '—'}
+                                                    {formatProjectTypeNames(
+                                                        project,
+                                                    )}
                                                 </TableCell>
                                                 <TableCell>
                                                     {getSectorDisplay(project)}
@@ -1061,8 +1077,7 @@ export default function Index({
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
-                                                        {(isSuperAdmin ||
-                                                            isInvest) && (
+                                                        {canReorderProjects && (
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
@@ -1107,7 +1122,7 @@ export default function Index({
                                                                         <Pencil className="h-4 w-4" />
                                                                     </Link>
                                                                 </Button>
-                                                                {canModify && (
+                                                                {canDeleteProject && (
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"

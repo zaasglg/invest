@@ -3,7 +3,7 @@ import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { useState, useMemo } from 'react';
 import InfrastructureForm, {
-    getEmptyInfrastructure,
+    normalizeZoneInfrastructure,
 } from '@/components/infrastructure-form';
 import type { InfrastructureData } from '@/components/infrastructure-form';
 import LocationPicker from '@/components/location-picker';
@@ -62,8 +62,9 @@ export default function Edit({
         status: industrialZone.status || 'developing',
         description: industrialZone.description || '',
         location: industrialZone.location || [],
-        infrastructure: (industrialZone.infrastructure ||
-            getEmptyInfrastructure()) as InfrastructureData,
+        infrastructure: normalizeZoneInfrastructure(
+            industrialZone.infrastructure,
+        ),
     });
 
     const initialRegion = regions.find(

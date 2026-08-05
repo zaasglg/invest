@@ -27,12 +27,15 @@ class TelegramService
         }
 
         try {
-            $response = Http::withoutVerifying()->post("{$this->apiUrl}/sendMessage", [
-                'chat_id' => $chatId,
-                'text' => $text,
-                'parse_mode' => $parseMode,
-                'disable_web_page_preview' => true,
-            ]);
+            $response = Http::withoutVerifying()
+                ->timeout(10)
+                ->retry(3, 1000)
+                ->post("{$this->apiUrl}/sendMessage", [
+                    'chat_id' => $chatId,
+                    'text' => $text,
+                    'parse_mode' => $parseMode,
+                    'disable_web_page_preview' => true,
+                ]);
 
             if (! $response->successful()) {
                 Log::warning('Telegram sendMessage failed', [
@@ -48,7 +51,11 @@ class TelegramService
         } catch (\Throwable $e) {
             Log::error('Telegram sendMessage exception', [
                 'chat_id' => $chatId,
-                'error' => $e->getMessage(),
+                'error' => str_replace(
+                    $this->botToken,
+                    '[telegram-token-redacted]',
+                    $e->getMessage()
+                ),
             ]);
 
             return false;
@@ -84,10 +91,12 @@ class TelegramService
     ): string {
         $emoji = match ($type) {
             'task_assigned' => '📋',
-            'task_overdue' => '⏰',
+            'task_overdue', 'task_due_soon', 'subsoil_task_due_soon' => '⏰',
+            'assistant_suggestion' => '✨',
             'completion_submitted' => '📩',
             'completion_approved' => '✅',
             'completion_rejected' => '❌',
+            'photo_missing' => '📸',
             default => '🔔',
         };
 

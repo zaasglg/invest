@@ -37,6 +37,7 @@ return [
 
     'telegram' => [
         'bot_token' => env('TELEGRAM_BOT_TOKEN', ''),
+        'bot_url' => env('TELEGRAM_BOT_URL', ''),
     ],
 
     'gemini' => [

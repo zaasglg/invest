@@ -37,6 +37,7 @@ class CompanyFactory extends Factory
             'website' => fake()->url(),
             'legal_address' => fake()->address(),
             'actual_address' => fake()->address(),
+            'licenses_and_regulatory_documents' => null,
             'status' => 'active',
             'notes' => null,
         ];

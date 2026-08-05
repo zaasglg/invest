@@ -1,6 +1,7 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
 import { ChatWidget } from '@/components/chat-widget';
+import { ProactiveAssistantWidget } from '@/components/proactive-assistant-widget';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import type { SharedData } from '@/types';
 
@@ -11,13 +12,13 @@ type Props = {
 
 export function AppShell({ children, variant = 'header' }: Props) {
     const { auth, sidebarOpen: isOpen } = usePage<SharedData>().props;
-    const roleName = auth.user?.role_model?.name;
-    const showChat = roleName !== 'investor' && roleName !== 'moderator';
+    const showChat = Boolean(auth.user);
 
     if (variant === 'header') {
         return (
             <div className="app-shell flex min-h-screen w-full flex-col overflow-x-hidden">
                 {children}
+                {showChat && <ProactiveAssistantWidget />}
                 {showChat && <ChatWidget />}
             </div>
         );
@@ -26,6 +27,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
     return (
         <SidebarProvider defaultOpen={isOpen}>
             {children}
+            {showChat && <ProactiveAssistantWidget />}
             {showChat && <ChatWidget />}
         </SidebarProvider>
     );
