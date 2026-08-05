@@ -57,12 +57,9 @@ class RoleController extends Controller
 
     public function destroy(Role $role)
     {
-        if ($role->users()->count() > 0) {
-            return redirect()->back()->with('error', 'Рөлді жою мүмкін емес, себебі ол пайдаланушыларға тағайындалған.');
-        }
-
-        $role->delete();
-
-        return redirect()->back()->with('success', 'Рөл жойылды.');
+        return redirect()->back()->with(
+            'error',
+            'Рөлдерді жоюға тыйым салынған.'
+        );
     }
 }

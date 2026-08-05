@@ -127,6 +127,7 @@ class RegionController extends Controller
     public function show(Region $region)
     {
         $user = request()->user();
+        $this->authorizeRegionAccess($region, $user);
 
         $region->load([
             'subsoilUsers' => function ($query) {
@@ -357,15 +358,10 @@ class RegionController extends Controller
 
     public function destroy(Region $region)
     {
-        $oldIcon = $region->icon;
-        $region->delete();
-
-        if ($oldIcon && str_contains($oldIcon, '/')) {
-            Storage::disk('public')->delete($oldIcon);
-        }
-        $this->clearDashboardRegionCache();
-
-        return redirect()->back()->with('success', 'Аймақ жойылды.');
+        return redirect()->back()->with(
+            'error',
+            'Аймақтарды жоюға тыйым салынған.'
+        );
     }
 
     private function clearDashboardRegionCache(): void
@@ -383,6 +379,31 @@ class RegionController extends Controller
         $user->loadMissing('roleModel');
 
         return $user->roleModel?->name === 'ispolnitel';
+    }
+
+    private function authorizeRegionAccess(Region $region, $user): void
+    {
+        if (! $user) {
+            return;
+        }
+
+        $user->loadMissing(['roleModel', 'region']);
+
+        if ($user->isDistrictScoped()
+            && (int) $region->id !== (int) $user->region_id) {
+            abort(403, 'Сіздің бұл аймаққа қол жеткізу құқығыңыз жоқ.');
+        }
+
+        if ($user->isOblastScopedAkim()) {
+            $isInOwnOblast = (int) $region->id === (int) $user->region_id
+                || (int) $region->parent_id === (int) $user->region_id;
+
+            abort_unless(
+                $isInOwnOblast,
+                403,
+                'Сіздің бұл аймаққа қол жеткізу құқығыңыз жоқ.'
+            );
+        }
     }
 
     private function hasProjectParticipationInRegion(int $regionId, int $userId): bool

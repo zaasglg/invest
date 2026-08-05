@@ -231,20 +231,9 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
-        // Prevent deleting current user
-        if ($user->id === auth()->id()) {
-            return redirect()->back()->with('error', 'Өз аккаунтыңызды жоюға болмайды.');
-        }
-
-        if ($user->roleModel?->name === 'investor' && $user->company_id) {
-            return redirect()->back()->with(
-                'error',
-                'Компанияның инвестор аккаунтын бөлек жоюға болмайды.'
-            );
-        }
-
-        $user->delete();
-
-        return redirect()->back()->with('success', 'Пайдаланушы жойылды.');
+        return redirect()->back()->with(
+            'error',
+            'Пайдаланушыларды жоюға тыйым салынған.'
+        );
     }
 }

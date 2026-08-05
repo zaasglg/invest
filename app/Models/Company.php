@@ -132,6 +132,12 @@ class Company extends Model
         return $this->hasMany(InvestmentProject::class);
     }
 
+    public function allProjects()
+    {
+        return $this->hasMany(InvestmentProject::class)
+            ->withoutGlobalScope('not_deleted');
+    }
+
     public function documents()
     {
         return $this->hasMany(CompanyDocument::class)->latest();
