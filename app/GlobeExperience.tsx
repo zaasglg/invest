@@ -966,7 +966,7 @@ export function GlobeExperience() {
               <button type="button" onClick={goToRegionMap}>Регион</button>
               <a
                 className="project-analysis-link"
-                href="https://www.google.com/"
+                href="https://in-map-turkistan-investor-0728.chatgpt-edu-7368.chatgpt.site/"
                 target="_blank"
                 rel="noreferrer"
                 aria-label="Открыть анализ проекта в новой вкладке"
