@@ -10,7 +10,6 @@ import {
     Map as MapIcon,
     Shield,
     Tags,
-    Trash2,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
@@ -87,11 +86,6 @@ export const projectNavItems: NavItem[] = [
         title: 'Рейтинг',
         href: '/baskarma-rating',
         icon: Award,
-    },
-    {
-        title: 'Өшірілген жобалар',
-        href: investmentProjects.deleted.url(),
-        icon: Trash2,
     },
 ];
 
