@@ -22,6 +22,7 @@ use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
 use App\Support\ProductionPlanValidationRules;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
@@ -630,12 +631,13 @@ class InvestmentProjectController extends Controller
         $currentUser = request()->user();
         $currentRole = $currentUser?->roleModel?->name;
 
-        $project = InvestmentProject::with([
+        $projectQuery = InvestmentProject::with([
             'company.region:id,name',
             'region',
             'projectType',
             'projectTypes',
             'creator',
+            'deleter:id,full_name',
             'curators',
             'investors',
             'executors',
@@ -662,8 +664,13 @@ class InvestmentProjectController extends Controller
             'productionPlans.facts',
             'productionPlans.facts.reporter:id,full_name',
         ])
-            ->withCount('photos')
-            ->find($id);
+            ->withCount('photos');
+
+        if ($currentRole === 'superadmin') {
+            $projectQuery->withoutGlobalScope('not_deleted');
+        }
+
+        $project = $projectQuery->find($id);
 
         if ($currentRole === 'investor'
             && (! $project
@@ -718,6 +725,13 @@ class InvestmentProjectController extends Controller
 
         // Get render/future photos
         $renderPhotos = $project ? $project->photos()->renderPhotos()->latest()->get() : collect();
+
+        if (! $project
+            && InvestmentProject::onlyDeleted()
+                ->whereKey((int) $id)
+                ->exists()) {
+            abort(404);
+        }
 
         if (! $project) {
             // Demo fallback data
@@ -1627,28 +1641,50 @@ class InvestmentProjectController extends Controller
 
     public function destroy(InvestmentProject $investmentProject)
     {
+        $user = request()->user()?->load('roleModel');
+
+        abort_unless(
+            in_array($user?->roleModel?->name, ['superadmin', 'invest'], true),
+            403,
+            'Сізге жобаны өшіруге рұқсат жоқ.'
+        );
+
+        abort_if($investmentProject->is_deleted, 404);
+
         $this->authorizeDistrictAccess($investmentProject);
 
-        abort_if(
-            request()->user()?->load('roleModel')->roleModel?->name === 'moderator',
-            403,
-            'Модератор жобаны жоя алмайды.'
-        );
+        $deletedAt = now();
 
-        KpiLog::activity(
-            projectId: $investmentProject->id,
-            event: 'project.deleted',
-            category: 'project',
-            action: 'Жоба жойылды: "'.$investmentProject->name.'"',
-            subject: $investmentProject,
-            properties: [
-                'project_name' => $investmentProject->name,
-            ]
-        );
+        DB::transaction(function () use ($investmentProject, $user, $deletedAt) {
+            $investmentProject->update([
+                'is_deleted' => true,
+                'deleted_by' => $user->id,
+                'deleted_at' => $deletedAt,
+            ]);
 
-        $investmentProject->delete();
+            KpiLog::activity(
+                projectId: $investmentProject->id,
+                event: 'project.deleted',
+                category: 'project',
+                action: 'Жоба өшірілген жобаларға жіберілді: "'
+                    .$investmentProject->name.'"',
+                subject: $investmentProject,
+                properties: [
+                    'project_name' => $investmentProject->name,
+                    'details' => [
+                        'Өшірілген уақыт' => $deletedAt->toDateTimeString(),
+                        'Өшірген пайдаланушы' => $user->full_name,
+                    ],
+                ]
+            );
+        });
 
-        return redirect()->back()->with('success', 'Жоба жойылды.');
+        return redirect()
+            ->route('investment-projects.index')
+            ->with(
+                'success',
+                'Жоба өшірілген жобалар бөліміне жіберілді.'
+            );
     }
 
     /**
@@ -2330,6 +2366,103 @@ class InvestmentProjectController extends Controller
             'projects' => $projects,
             'filters' => ['search' => $search ?? ''],
         ]);
+    }
+
+    public function deleted(Request $request)
+    {
+        $this->ensureSuperadmin($request->user());
+
+        $validated = $request->validate([
+            'search' => 'nullable|string|max:100',
+        ]);
+        $search = trim((string) ($validated['search'] ?? ''));
+
+        $projects = InvestmentProject::onlyDeleted()
+            ->with([
+                'company',
+                'region',
+                'projectType',
+                'projectTypes',
+                'curators:id,full_name',
+                'deleter:id,full_name',
+            ])
+            ->when(
+                $search !== '',
+                fn ($query) => $query->where(
+                    function ($searchQuery) use ($search): void {
+                        $searchQuery
+                            ->whereLike('name', '%'.$search.'%')
+                            ->orWhereLike('company_name', '%'.$search.'%')
+                            ->orWhereHas(
+                                'company',
+                                fn ($companyQuery) => $companyQuery
+                                    ->whereLike('name', '%'.$search.'%')
+                                    ->orWhereLike('bin', '%'.$search.'%')
+                            );
+                    }
+                )
+            )
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString();
+
+        return Inertia::render('investment-projects/deleted', [
+            'projects' => $projects,
+            'filters' => ['search' => $search],
+        ]);
+    }
+
+    public function restoreDeleted(Request $request, int $projectId)
+    {
+        $user = $request->user();
+        $this->ensureSuperadmin($user);
+
+        $project = InvestmentProject::onlyDeleted()
+            ->with('deleter:id,full_name')
+            ->findOrFail($projectId);
+        $deletedAt = $project->deleted_at?->toDateTimeString();
+        $deletedBy = $project->deleter?->full_name;
+
+        DB::transaction(function () use (
+            $project,
+            $deletedAt,
+            $deletedBy
+        ): void {
+            $project->update([
+                'is_deleted' => false,
+                'deleted_by' => null,
+                'deleted_at' => null,
+            ]);
+
+            KpiLog::activity(
+                projectId: $project->id,
+                event: 'project.restored',
+                category: 'project',
+                action: 'Жоба өшірілген жобалардан қалпына келтірілді: "'
+                    .$project->name.'"',
+                subject: $project,
+                properties: [
+                    'project_name' => $project->name,
+                    'details' => [
+                        'Алдыңғы өшірілген уақыт' => $deletedAt,
+                        'Алдыңғы өшірген пайдаланушы' => $deletedBy,
+                    ],
+                ]
+            );
+        });
+
+        return redirect()
+            ->route('investment-projects.deleted')
+            ->with('success', 'Жоба қалпына келтірілді.');
+    }
+
+    private function ensureSuperadmin(?User $user): void
+    {
+        abort_unless(
+            $user?->loadMissing('roleModel')->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген жобаларды тек супер әкімші көре алады.'
+        );
     }
 
     /**

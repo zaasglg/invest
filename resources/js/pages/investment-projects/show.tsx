@@ -121,6 +121,7 @@ interface InvestmentProject {
     start_date?: string;
     end_date?: string;
     creator?: User;
+    deleter?: User | null;
     curators?: User[];
     investors?: User[];
     executors?: User[];
@@ -139,6 +140,8 @@ interface InvestmentProject {
     infrastructure?: Record<string, Record<string, unknown>> | null;
     created_at: string;
     updated_at?: string;
+    is_deleted?: boolean;
+    deleted_at?: string | null;
 }
 
 interface CompletionFile {
@@ -428,6 +431,9 @@ export default function Show({
     const isInvest = currentRoleName === 'invest';
     const isAkim = currentRoleName === 'akim';
     const isModerator = currentRoleName === 'moderator';
+    const deletedAtLabel = project.deleted_at
+        ? new Date(project.deleted_at).toLocaleString('kk-KZ')
+        : null;
     const isProkuror = currentRoleName === 'prokuror';
     const canViewCompanyDetails = [
         'superadmin',
@@ -982,6 +988,33 @@ export default function Show({
             <Head title={project.name} />
 
             <div className="flex h-full w-full flex-1 flex-col gap-6 bg-slate-50/60 p-4 sm:p-6 print:bg-white print:p-0">
+                {project.is_deleted && isSuperAdmin && (
+                    <div
+                        className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-900 sm:flex-row sm:items-center sm:justify-between"
+                        role="status"
+                    >
+                        <div className="flex items-start gap-3">
+                            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 text-red-600">
+                                <Trash2 className="h-4 w-4" />
+                            </span>
+                            <div>
+                                <p className="font-bold">Бұл жоба өшірілген</p>
+                                <p className="mt-0.5 text-sm text-red-700">
+                                    Барлық деректер сақталған. Өшірген:{' '}
+                                    {project.deleter?.full_name ||
+                                        'пайдаланушы көрсетілмеген'}
+                                    {deletedAtLabel
+                                        ? ` • ${deletedAtLabel}`
+                                        : ''}
+                                </p>
+                            </div>
+                        </div>
+                        <Badge className="w-fit border-0 bg-red-600 text-white hover:bg-red-600">
+                            Өшірілген жоба
+                        </Badge>
+                    </div>
+                )}
+
                 <ProjectPassportOverview
                     project={{
                         id: project.id,

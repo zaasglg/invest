@@ -15,8 +15,12 @@ class InvestmentProjectStatusService
         string $statusUpdate
     ): array {
         return DB::transaction(function () use ($project, $statusUpdate) {
-            $lockedProject = InvestmentProject::query()
-                ->lockForUpdate()
+            $projectQuery = InvestmentProject::query();
+            if ($project->is_deleted) {
+                $projectQuery->withoutGlobalScope('not_deleted');
+            }
+
+            $lockedProject = $projectQuery->lockForUpdate()
                 ->findOrFail($project->id);
 
             $previousStatus = $lockedProject->current_status;
@@ -44,8 +48,12 @@ class InvestmentProjectStatusService
         ?string $status
     ): array {
         return DB::transaction(function () use ($project, $status) {
-            $lockedProject = InvestmentProject::query()
-                ->lockForUpdate()
+            $projectQuery = InvestmentProject::query();
+            if ($project->is_deleted) {
+                $projectQuery->withoutGlobalScope('not_deleted');
+            }
+
+            $lockedProject = $projectQuery->lockForUpdate()
                 ->findOrFail($project->id);
 
             $previousStatus = $lockedProject->current_status;
