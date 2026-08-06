@@ -35,3 +35,26 @@ test('sequence repair migration advances lagging sequences without rewinding the
 
     expect(User::factory()->create()->id)->toBe($futureSequenceValue + 1);
 });
+
+test('default sequence repair handles a sequence without an ownership link', function () {
+    if (DB::getDriverName() !== 'pgsql') {
+        $this->markTestSkipped('PostgreSQL-specific sequence test.');
+    }
+
+    User::factory()->count(3)->create();
+    $maximumUserId = (int) User::query()->max('id');
+
+    DB::statement('ALTER SEQUENCE public.users_id_seq OWNED BY NONE');
+    DB::statement("SELECT setval('public.users_id_seq', 1, true)");
+
+    expect(
+        DB::scalar("SELECT pg_get_serial_sequence('public.users', 'id')")
+    )->toBeNull();
+
+    $migration = require database_path(
+        'migrations/2026_08_06_030000_repair_postgresql_default_sequences.php'
+    );
+    $migration->up();
+
+    expect(User::factory()->create()->id)->toBe($maximumUserId + 1);
+});
