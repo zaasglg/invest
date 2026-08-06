@@ -115,7 +115,7 @@ class IndustrialZoneController extends Controller
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
 
-        $industrialZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
+        $industrialZone->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
             $q->where('is_archived', false)
                 ->when(
                     $isModerator,
@@ -203,11 +203,86 @@ class IndustrialZoneController extends Controller
         return redirect()->route('industrial-zones.index')->with('success', 'ИА жаңартылды.');
     }
 
-    public function destroy(IndustrialZone $industrialZone)
+    public function deleted(Request $request)
     {
-        $industrialZone->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'ИА жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = IndustrialZone::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->whereLike('name', "%{$search}%");
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (IndustrialZone $zone) => [
+                ...$zone->toArray(),
+                'show_url' => route(
+                    'industrial-zones.show',
+                    $zone->id,
+                    false
+                ),
+                'restore_url' => route(
+                    'industrial-zones.restore-deleted',
+                    $zone->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген индустриялық аймақтар',
+                'entityLabel' => 'Индустриялық аймақ',
+                'indexUrl' => route(
+                    'industrial-zones.index',
+                    absolute: false
+                ),
+                'deletedUrl' => route(
+                    'industrial-zones.deleted',
+                    absolute: false
+                ),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(Request $request, int $industrialZoneId)
+    {
+        $this->ensureSuperadmin($request);
+
+        IndustrialZone::onlyDeleted()
+            ->findOrFail($industrialZoneId)
+            ->restoreFromDeletion();
+
+        return redirect()->route('industrial-zones.deleted')->with(
+            'success',
+            'Индустриялық аймақ қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(Request $request, IndustrialZone $industrialZone)
+    {
+        abort_if($industrialZone->is_deleted, 404);
+        $industrialZone->markAsDeletedBy($request->user());
+
+        return redirect()->route('industrial-zones.index')->with(
+            'success',
+            'Индустриялық аймақ өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген индустриялық аймақтарды тек супер әкімші көре алады.'
+        );
     }
 
     /**

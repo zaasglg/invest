@@ -120,7 +120,7 @@ class SubsoilUserController extends Controller
 
     public function show(SubsoilUser $subsoilUser)
     {
-        $subsoilUser->load(['region', 'issues', 'issues.creator:id,full_name', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
+        $subsoilUser->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $subsoilUser->photos()
@@ -283,11 +283,87 @@ class SubsoilUserController extends Controller
         return response()->download($path, $downloadName)->deleteFileAfterSend(true);
     }
 
-    public function destroy(SubsoilUser $subsoilUser)
+    public function deleted(Request $request)
     {
-        $subsoilUser->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'Жер қойнауын пайдаланушы жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = SubsoilUser::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->where(function ($subsoilQuery) use ($search) {
+                $subsoilQuery
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('bin', "%{$search}%");
+            });
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (SubsoilUser $subsoilUser) => [
+                ...$subsoilUser->toArray(),
+                'show_url' => route(
+                    'subsoil-users.show',
+                    $subsoilUser->id,
+                    false
+                ),
+                'restore_url' => route(
+                    'subsoil-users.restore-deleted',
+                    $subsoilUser->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген жер қойнауын пайдаланушылар',
+                'entityLabel' => 'Жер қойнауын пайдаланушы',
+                'indexUrl' => route('subsoil-users.index', absolute: false),
+                'deletedUrl' => route(
+                    'subsoil-users.deleted',
+                    absolute: false
+                ),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(Request $request, int $subsoilUserId)
+    {
+        $this->ensureSuperadmin($request);
+
+        SubsoilUser::onlyDeleted()
+            ->findOrFail($subsoilUserId)
+            ->restoreFromDeletion();
+
+        return redirect()->route('subsoil-users.deleted')->with(
+            'success',
+            'Жер қойнауын пайдаланушы қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(Request $request, SubsoilUser $subsoilUser)
+    {
+        abort_if($subsoilUser->is_deleted, 404);
+        $subsoilUser->markAsDeletedBy($request->user());
+
+        return redirect()->route('subsoil-users.index')->with(
+            'success',
+            'Жер қойнауын пайдаланушы өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген жер қойнауын пайдаланушыларды тек супер әкімші көре алады.'
+        );
     }
 
     /**

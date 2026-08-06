@@ -47,14 +47,50 @@ Route::post('regions/{region}/projects/reorder', [\App\Http\Controllers\RegionCo
 Route::resource('sezs', \App\Http\Controllers\SezController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::get('sezs-deleted', [\App\Http\Controllers\SezController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('sezs.deleted');
+
+Route::post('sezs-deleted/{sezId}/restore', [\App\Http\Controllers\SezController::class, 'restoreDeleted'])
+    ->whereNumber('sezId')
+    ->middleware(['auth', 'role.access'])
+    ->name('sezs.restore-deleted');
+
 Route::resource('industrial-zones', \App\Http\Controllers\IndustrialZoneController::class)
     ->middleware(['auth', 'role.access']);
+
+Route::get('industrial-zones-deleted', [\App\Http\Controllers\IndustrialZoneController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('industrial-zones.deleted');
+
+Route::post('industrial-zones-deleted/{industrialZoneId}/restore', [\App\Http\Controllers\IndustrialZoneController::class, 'restoreDeleted'])
+    ->whereNumber('industrialZoneId')
+    ->middleware(['auth', 'role.access'])
+    ->name('industrial-zones.restore-deleted');
 
 Route::resource('prom-zones', \App\Http\Controllers\PromZoneController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::get('prom-zones-deleted', [\App\Http\Controllers\PromZoneController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('prom-zones.deleted');
+
+Route::post('prom-zones-deleted/{promZoneId}/restore', [\App\Http\Controllers\PromZoneController::class, 'restoreDeleted'])
+    ->whereNumber('promZoneId')
+    ->middleware(['auth', 'role.access'])
+    ->name('prom-zones.restore-deleted');
+
 Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::class)
     ->middleware(['auth', 'role.access']);
+
+Route::get('subsoil-users-deleted', [\App\Http\Controllers\SubsoilUserController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('subsoil-users.deleted');
+
+Route::post('subsoil-users-deleted/{subsoilUserId}/restore', [\App\Http\Controllers\SubsoilUserController::class, 'restoreDeleted'])
+    ->whereNumber('subsoilUserId')
+    ->middleware(['auth', 'role.access'])
+    ->name('subsoil-users.restore-deleted');
 
 Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProjectController::class, 'reorder'])
     ->middleware(['auth', 'role.access'])

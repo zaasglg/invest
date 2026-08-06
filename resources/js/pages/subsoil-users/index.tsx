@@ -26,7 +26,7 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import * as subsoilUsersRoutes from '@/routes/subsoil-users';
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -85,8 +85,12 @@ export default function Index({
     mineralTypes,
     filters,
 }: Props) {
-    const { url } = usePage();
+    const {
+        url,
+        props: { auth },
+    } = usePage<SharedData>();
     const canModify = useCanModify();
+    const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -154,6 +158,17 @@ export default function Index({
                             <SlidersHorizontal data-icon="inline-start" />
                             Сүзгі
                         </Button>
+                        {isSuperadmin && (
+                            <Link href={subsoilUsersRoutes.deleted.url()}>
+                                <Button
+                                    variant="outline"
+                                    className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                >
+                                    <Trash2 data-icon="inline-start" />
+                                    Өшірілгендер
+                                </Button>
+                            </Link>
+                        )}
                         {canModify && (
                             <Link href={subsoilUsersRoutes.create.url()}>
                                 <Button className="bg-gold text-white hover:bg-gold-dark">

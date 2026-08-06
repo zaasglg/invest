@@ -12,6 +12,7 @@ import {
 import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
+import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import InfrastructureList from '@/components/infrastructure-list';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -89,6 +90,9 @@ interface IndustrialZone {
     investment_projects?: InvestmentProject[];
     photos_count?: number;
     created_at: string;
+    is_deleted?: boolean;
+    deleted_at?: string | null;
+    deleter?: { id: number; full_name: string } | null;
 }
 
 interface Photo {
@@ -213,6 +217,12 @@ export default function Show({
                         ID #{industrialZone.id}
                     </span>
                 </div>
+
+                <DeletedEntityNotice
+                    isDeleted={industrialZone.is_deleted}
+                    deletedAt={industrialZone.deleted_at}
+                    deleter={industrialZone.deleter}
+                />
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}

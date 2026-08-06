@@ -7,11 +7,12 @@ import {
     Shield,
     TrendingUp,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 interface Advantage {
-    icon: React.ElementType;
+    icon: LucideIcon;
     title: string;
     description: string;
     color: string;

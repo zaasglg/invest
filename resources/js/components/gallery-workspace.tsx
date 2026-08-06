@@ -1,10 +1,12 @@
 import { Link, router } from '@inertiajs/react';
 import {
     AlertCircle,
+    Archive,
     ArrowLeft,
     CalendarDays,
     Camera,
     CheckCircle2,
+    Clock3,
     Download,
     Eye,
     Image as ImageIcon,
@@ -15,6 +17,7 @@ import {
     Sparkles,
     Trash2,
     Upload,
+    UserRound,
     X,
 } from 'lucide-react';
 import React, { useEffect, useId, useRef, useState } from 'react';
@@ -35,6 +38,8 @@ export interface GalleryPhoto {
     gallery_date: string | null;
     description: string | null;
     created_at: string;
+    deleted_at?: string | null;
+    deleter?: { id: number; full_name: string } | null;
 }
 
 export interface DatedGallery {
@@ -55,9 +60,11 @@ interface GalleryWorkspaceProps {
     mainGallery: GalleryPhoto[];
     datedGallery: DatedGallery;
     renderPhotos: GalleryPhoto[];
+    deletedPhotos?: GalleryPhoto[];
     canEdit: boolean;
     canDelete: boolean;
     canDownload?: boolean;
+    canViewDeleted?: boolean;
     canChooseGalleryDate: boolean;
     defaultDateToToday?: boolean;
     storeUrl: string;
@@ -80,6 +87,117 @@ function formatDate(value: string): string {
         month: 'long',
         year: 'numeric',
     }).format(date);
+}
+
+function formatDateTime(value?: string | null): string {
+    if (!value) return 'Күні белгісіз';
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Күні белгісіз';
+
+    return new Intl.DateTimeFormat('kk-KZ', {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(date);
+}
+
+function DeletedPhotoArchive({
+    photos,
+    canDownload,
+    downloadUrl,
+    onOpen,
+}: {
+    photos: GalleryPhoto[];
+    canDownload: boolean;
+    downloadUrl?: (photo: GalleryPhoto) => string;
+    onOpen: (photos: GalleryPhoto[], index: number) => void;
+}) {
+    return (
+        <Card className="overflow-hidden rounded-3xl border-rose-200/80 bg-rose-50/20 shadow-[0_18px_60px_-45px_rgba(225,29,72,0.45)]">
+            <div className="border-b border-rose-100 bg-gradient-to-r from-rose-50 via-white to-slate-50 px-5 py-5 sm:px-6">
+                <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-rose-600 shadow-sm ring-1 ring-rose-100">
+                        <Archive className="h-5 w-5" />
+                    </div>
+                    <div>
+                        <h2 className="font-bold text-slate-900">
+                            Өшірілген суреттер
+                        </h2>
+                        <p className="text-xs text-slate-500">
+                            Файлдар физикалық жойылмаған және тек супер әкімшіге
+                            көрсетіледі
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <CardContent className="p-4 sm:p-5">
+                {photos.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed border-rose-200 bg-white px-6 py-12 text-center text-sm text-slate-500">
+                        Өшірілген суреттер жоқ
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                        {photos.map((photo, index) => (
+                            <article
+                                key={photo.id}
+                                className="overflow-hidden rounded-2xl border border-rose-100 bg-white shadow-sm"
+                            >
+                                <button
+                                    type="button"
+                                    onClick={() => onOpen(photos, index)}
+                                    className="group relative block aspect-video w-full overflow-hidden bg-slate-100 text-left"
+                                    title="Өшірілген суретті көру"
+                                >
+                                    <img
+                                        src={`/storage/${photo.file_path}`}
+                                        alt={
+                                            photo.description ||
+                                            'Өшірілген галерея суреті'
+                                        }
+                                        className="h-full w-full object-cover opacity-80 grayscale-[25%] transition group-hover:scale-105 group-hover:opacity-100"
+                                        loading="lazy"
+                                    />
+                                    <span className="absolute inset-0 flex items-center justify-center bg-slate-950/15 opacity-0 transition group-hover:opacity-100">
+                                        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-slate-900 shadow-lg">
+                                            <Eye className="h-5 w-5" />
+                                        </span>
+                                    </span>
+                                </button>
+                                <div className="space-y-2 p-3.5">
+                                    {photo.description && (
+                                        <p className="line-clamp-2 text-sm font-medium text-slate-700">
+                                            {photo.description}
+                                        </p>
+                                    )}
+                                    <div className="space-y-1 text-xs text-slate-500">
+                                        <p className="flex items-center gap-1.5">
+                                            <UserRound className="h-3.5 w-3.5 text-rose-500" />
+                                            {photo.deleter?.full_name ||
+                                                'Өшірген адам белгісіз'}
+                                        </p>
+                                        <p className="flex items-center gap-1.5">
+                                            <Clock3 className="h-3.5 w-3.5 text-rose-500" />
+                                            {formatDateTime(photo.deleted_at)}
+                                        </p>
+                                    </div>
+                                    {canDownload && downloadUrl && (
+                                        <a
+                                            href={downloadUrl(photo)}
+                                            className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-700 hover:text-sky-900"
+                                        >
+                                            <Download className="h-3.5 w-3.5" />
+                                            Жүктеу
+                                        </a>
+                                    )}
+                                </div>
+                            </article>
+                        ))}
+                    </div>
+                )}
+            </CardContent>
+        </Card>
+    );
 }
 
 function PhotoCard({
@@ -276,9 +394,11 @@ export default function GalleryWorkspace({
     mainGallery,
     datedGallery,
     renderPhotos,
+    deletedPhotos = [],
     canEdit,
     canDelete,
     canDownload = false,
+    canViewDeleted = false,
     canChooseGalleryDate,
     defaultDateToToday = false,
     storeUrl,
@@ -299,6 +419,7 @@ export default function GalleryWorkspace({
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const [lightboxPhotos, setLightboxPhotos] = useState<GalleryPhoto[]>([]);
     const [lightboxIndex, setLightboxIndex] = useState(0);
+    const [showDeletedPhotos, setShowDeletedPhotos] = useState(false);
 
     useEffect(() => {
         return () => previewUrls.forEach((url) => URL.revokeObjectURL(url));
@@ -394,7 +515,11 @@ export default function GalleryWorkspace({
     };
 
     const handleDelete = (photo: GalleryPhoto) => {
-        if (confirm('Осы фотоны жоюға сенімдісіз бе?')) {
+        if (
+            confirm(
+                'Осы фотоны өшірілген суреттер бөліміне жіберуге сенімдісіз бе? Файл физикалық жойылмайды.',
+            )
+        ) {
             router.delete(destroyUrl(photo));
         }
     };
@@ -437,7 +562,7 @@ export default function GalleryWorkspace({
                         <Camera className="h-4 w-4" />
                         Медиа орталығы
                     </div>
-                    <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl text-white">
+                    <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                         {title}
                     </h1>
                     <p className="mt-2 max-w-3xl truncate text-sm text-slate-300 sm:text-base">
@@ -489,6 +614,34 @@ export default function GalleryWorkspace({
                     );
                 })}
             </section>
+
+            {canViewDeleted && (
+                <section className="space-y-4">
+                    <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                            setShowDeletedPhotos((current) => !current)
+                        }
+                        className="border-rose-200 bg-white text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                    >
+                        <Eye className="h-4 w-4" />
+                        Өшірілген суреттер
+                        <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-bold text-rose-700">
+                            {deletedPhotos.length}
+                        </span>
+                    </Button>
+
+                    {showDeletedPhotos && (
+                        <DeletedPhotoArchive
+                            photos={deletedPhotos}
+                            canDownload={canDownload}
+                            downloadUrl={downloadUrl}
+                            onOpen={openLightbox}
+                        />
+                    )}
+                </section>
+            )}
 
             <div className="grid items-start gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
                 {canEdit && (

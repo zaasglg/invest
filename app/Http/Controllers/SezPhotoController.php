@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Models\Sez;
 use App\Models\SezPhoto;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class SezPhotoController extends Controller
@@ -44,11 +43,22 @@ class SezPhotoController extends Controller
             ->latest()
             ->get();
 
+        $isSuperadmin = request()->user()?->roleModel?->name === 'superadmin';
+        $deletedPhotos = $isSuperadmin
+            ? $sez->allPhotos()
+                ->onlyDeleted()
+                ->with('deleter:id,full_name')
+                ->latest('deleted_at')
+                ->get()
+            : collect();
+
         return Inertia::render('sezs/gallery', [
             'sez' => $sez->load('region'),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
+            'canViewDeleted' => $isSuperadmin,
+            'deletedPhotos' => $deletedPhotos,
         ]);
     }
 
@@ -90,6 +100,8 @@ class SezPhotoController extends Controller
             abort(404);
         }
 
+        abort_if($photo->is_deleted, 404);
+
         $validated = $request->validate([
             'gallery_date' => 'nullable|date',
             'description' => 'nullable|string|max:500',
@@ -107,13 +119,13 @@ class SezPhotoController extends Controller
         $photoModel = SezPhoto::where('sez_id', $sez->id)
             ->findOrFail($photo);
 
-        if (Storage::disk('public')->exists($photoModel->file_path)) {
-            Storage::disk('public')->delete($photoModel->file_path);
-        }
+        abort_if($photoModel->is_deleted, 404);
+        $photoModel->markAsDeletedBy($request->user());
 
-        $photoModel->delete();
-
-        return redirect()->back()->with('success', 'Фото жойылды.');
+        return redirect()->back()->with(
+            'success',
+            'Фото өшірілген суреттер бөліміне жіберілді.'
+        );
     }
 
     private function ensureCanManagePhotos(Request $request): void

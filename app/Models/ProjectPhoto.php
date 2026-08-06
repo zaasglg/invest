@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLogicalDeletion;
 use Illuminate\Database\Eloquent\Model;
 
 class ProjectPhoto extends Model
 {
+    use HasLogicalDeletion;
+
     protected $fillable = [
         'project_id',
         'file_path',
@@ -13,12 +16,17 @@ class ProjectPhoto extends Model
         'gallery_date',
         'description',
         'uploaded_by',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
     {
         return [
             'gallery_date' => 'date',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 

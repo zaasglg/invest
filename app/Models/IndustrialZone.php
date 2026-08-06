@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLogicalDeletion;
 use Illuminate\Database\Eloquent\Model;
 
 class IndustrialZone extends Model
 {
+    use HasLogicalDeletion;
+
     protected $fillable = [
         'name',
         'region_id',
@@ -15,6 +18,9 @@ class IndustrialZone extends Model
         'location',
         'description',
         'geometry',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -24,6 +30,8 @@ class IndustrialZone extends Model
             'infrastructure' => 'array',
             'location' => 'array',
             'geometry' => 'array',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -45,5 +53,11 @@ class IndustrialZone extends Model
     public function photos()
     {
         return $this->hasMany(IndustrialZonePhoto::class);
+    }
+
+    public function allPhotos()
+    {
+        return $this->hasMany(IndustrialZonePhoto::class)
+            ->withoutGlobalScope('not_deleted');
     }
 }

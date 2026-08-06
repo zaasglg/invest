@@ -275,6 +275,12 @@ class InvestmentProject extends Model
         return $this->hasMany(ProjectPhoto::class, 'project_id');
     }
 
+    public function allPhotos()
+    {
+        return $this->hasMany(ProjectPhoto::class, 'project_id')
+            ->withoutGlobalScope('not_deleted');
+    }
+
     public function chatMessages()
     {
         return $this->hasMany(

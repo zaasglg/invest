@@ -40,7 +40,7 @@ export default function DocumentArchiveWorkspace({
                             <FileLock2 className="h-4 w-4" />
                             Қауіпсіз архив
                         </div>
-                        <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
+                        <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl text-white">
                             Өшірілген құжаттар
                         </h1>
                         <p className="mt-2 max-w-2xl truncate text-sm text-slate-300 sm:text-base">

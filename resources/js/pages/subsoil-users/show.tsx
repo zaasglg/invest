@@ -20,6 +20,7 @@ import {
     XCircle,
 } from 'lucide-react';
 import React, { useState, useMemo, useRef } from 'react';
+import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -118,6 +119,9 @@ interface SubsoilUser {
     documents?: Array<{ id: number; name: string }>;
     photos_count?: number;
     created_at: string;
+    is_deleted?: boolean;
+    deleted_at?: string | null;
+    deleter?: { id: number; full_name: string } | null;
 }
 
 interface Props {
@@ -462,6 +466,12 @@ export default function Show({
                 >
                     <ArrowLeft className="mr-1 h-4 w-4" /> Тізімге қайту
                 </Link>
+
+                <DeletedEntityNotice
+                    isDeleted={subsoilUser.is_deleted}
+                    deletedAt={subsoilUser.deleted_at}
+                    deleter={subsoilUser.deleter}
+                />
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}

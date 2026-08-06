@@ -12,6 +12,7 @@ import {
 import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
+import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import InfrastructureList from '@/components/infrastructure-list';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -92,6 +93,9 @@ interface Sez {
     investment_projects?: InvestmentProject[];
     photos_count?: number;
     created_at: string;
+    is_deleted?: boolean;
+    deleted_at?: string | null;
+    deleter?: { id: number; full_name: string } | null;
 }
 
 interface Photo {
@@ -207,6 +211,12 @@ export default function Show({
                 >
                     <ArrowLeft className="size-4" /> Тізімге қайту
                 </Link>
+
+                <DeletedEntityNotice
+                    isDeleted={sez.is_deleted}
+                    deletedAt={sez.deleted_at}
+                    deleter={sez.deleter}
+                />
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}

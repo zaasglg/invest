@@ -115,7 +115,7 @@ class PromZoneController extends Controller
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
 
-        $promZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
+        $promZone->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
             $q->where('is_archived', false)
                 ->when(
                     $isModerator,
@@ -203,11 +203,79 @@ class PromZoneController extends Controller
         return redirect()->route('prom-zones.index')->with('success', 'Пром зона жаңартылды.');
     }
 
-    public function destroy(PromZone $promZone)
+    public function deleted(Request $request)
     {
-        $promZone->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'Пром зона жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = PromZone::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->whereLike('name', "%{$search}%");
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (PromZone $zone) => [
+                ...$zone->toArray(),
+                'show_url' => route('prom-zones.show', $zone->id, false),
+                'restore_url' => route(
+                    'prom-zones.restore-deleted',
+                    $zone->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген пром зоналар',
+                'entityLabel' => 'Пром зона',
+                'indexUrl' => route('prom-zones.index', absolute: false),
+                'deletedUrl' => route(
+                    'prom-zones.deleted',
+                    absolute: false
+                ),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(Request $request, int $promZoneId)
+    {
+        $this->ensureSuperadmin($request);
+
+        PromZone::onlyDeleted()
+            ->findOrFail($promZoneId)
+            ->restoreFromDeletion();
+
+        return redirect()->route('prom-zones.deleted')->with(
+            'success',
+            'Пром зона қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(Request $request, PromZone $promZone)
+    {
+        abort_if($promZone->is_deleted, 404);
+        $promZone->markAsDeletedBy($request->user());
+
+        return redirect()->route('prom-zones.index')->with(
+            'success',
+            'Пром зона өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген пром зоналарды тек супер әкімші көре алады.'
+        );
     }
 
     /**

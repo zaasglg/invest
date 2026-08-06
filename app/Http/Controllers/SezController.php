@@ -109,7 +109,12 @@ class SezController extends Controller
 
     public function show(Sez $sez, InfrastructureUsageService $usageService)
     {
-        $sez->load(['region', 'issues', 'issues.creator:id,full_name'])
+        $sez->load([
+            'region',
+            'deleter:id,full_name',
+            'issues',
+            'issues.creator:id,full_name',
+        ])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $sez->photos()
@@ -224,11 +229,74 @@ class SezController extends Controller
         return redirect()->route('sezs.index')->with('success', 'АЭА жаңартылды.');
     }
 
-    public function destroy(Sez $sez)
+    public function deleted(Request $request)
     {
-        $sez->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'АЭА жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = Sez::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->whereLike('name', "%{$search}%");
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (Sez $sez) => [
+                ...$sez->toArray(),
+                'show_url' => route('sezs.show', $sez->id, false),
+                'restore_url' => route(
+                    'sezs.restore-deleted',
+                    $sez->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген арнайы экономикалық аймақтар',
+                'entityLabel' => 'АЭА',
+                'indexUrl' => route('sezs.index', absolute: false),
+                'deletedUrl' => route('sezs.deleted', absolute: false),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(Request $request, int $sezId)
+    {
+        $this->ensureSuperadmin($request);
+
+        Sez::onlyDeleted()->findOrFail($sezId)->restoreFromDeletion();
+
+        return redirect()->route('sezs.deleted')->with(
+            'success',
+            'АЭА қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(Request $request, Sez $sez)
+    {
+        abort_if($sez->is_deleted, 404);
+        $sez->markAsDeletedBy($request->user());
+
+        return redirect()->route('sezs.index')->with(
+            'success',
+            'АЭА өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген АЭА-ларды тек супер әкімші көре алады.'
+        );
     }
 
     /**
