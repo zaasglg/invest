@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PromZone;
 use App\Models\Region;
 use App\Services\InfrastructureUsageService;
+use App\Services\SectorActivityLogService;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -79,8 +80,10 @@ class PromZoneController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(
+        Request $request,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -102,7 +105,18 @@ class PromZoneController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        PromZone::create($validated);
+        $promZone = PromZone::create($validated);
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'entity.created',
+            category: 'entity',
+            action: 'Пром зона құрылды',
+            subject: $promZone,
+            properties: [
+                'details' => $activity->entitySnapshot($promZone),
+            ]
+        );
 
         return redirect()->route('prom-zones.index')->with('success', 'Пром зона құрылды.');
     }
@@ -115,7 +129,7 @@ class PromZoneController extends Controller
         $isModerator = $user?->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
 
-        $promZone->load(['region', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
+        $promZone->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
             $q->where('is_archived', false)
                 ->when(
                     $isModerator,
@@ -167,8 +181,11 @@ class PromZoneController extends Controller
         ]);
     }
 
-    public function update(Request $request, PromZone $promZone)
-    {
+    public function update(
+        Request $request,
+        PromZone $promZone,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -194,7 +211,24 @@ class PromZoneController extends Controller
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
 
+        $before = $activity->entitySnapshot($promZone);
         $promZone->update($validated);
+        $promZone->refresh();
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'entity.updated',
+            category: 'entity',
+            action: 'Пром зона мәліметтері жаңартылды',
+            subject: $promZone,
+            properties: [
+                'changes' => $activity->changes(
+                    $before,
+                    $activity->entitySnapshot($promZone),
+                    $activity->entityLabels($promZone)
+                ),
+            ]
+        );
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Пром зона жаңартылды.');
@@ -203,11 +237,105 @@ class PromZoneController extends Controller
         return redirect()->route('prom-zones.index')->with('success', 'Пром зона жаңартылды.');
     }
 
-    public function destroy(PromZone $promZone)
+    public function deleted(Request $request)
     {
-        $promZone->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'Пром зона жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = PromZone::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->whereLike('name', "%{$search}%");
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (PromZone $zone) => [
+                ...$zone->toArray(),
+                'show_url' => route('prom-zones.show', $zone->id, false),
+                'restore_url' => route(
+                    'prom-zones.restore-deleted',
+                    $zone->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген пром зоналар',
+                'entityLabel' => 'Пром зона',
+                'indexUrl' => route('prom-zones.index', absolute: false),
+                'deletedUrl' => route(
+                    'prom-zones.deleted',
+                    absolute: false
+                ),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(
+        Request $request,
+        int $promZoneId,
+        SectorActivityLogService $activity
+    ) {
+        $this->ensureSuperadmin($request);
+
+        $promZone = PromZone::onlyDeleted()->findOrFail($promZoneId);
+        $promZone->restoreFromDeletion();
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'entity.restored',
+            category: 'entity',
+            action: 'Пром зона қалпына келтірілді',
+            subject: $promZone
+        );
+
+        return redirect()->route('prom-zones.deleted')->with(
+            'success',
+            'Пром зона қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(
+        Request $request,
+        PromZone $promZone,
+        SectorActivityLogService $activity
+    ) {
+        abort_if($promZone->is_deleted, 404);
+        $promZone->markAsDeletedBy($request->user());
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'entity.deleted',
+            category: 'entity',
+            action: 'Пром зона өшірілген нысандар бөліміне жіберілді',
+            subject: $promZone,
+            properties: [
+                'details' => [
+                    'Өшірілген уақыт' => $promZone->deleted_at,
+                ],
+            ]
+        );
+
+        return redirect()->route('prom-zones.index')->with(
+            'success',
+            'Пром зона өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген пром зоналарды тек супер әкімші көре алады.'
+        );
     }
 
     /**

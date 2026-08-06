@@ -27,7 +27,7 @@ import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as promZonesRoutes from '@/routes/prom-zones';
-import type { PaginatedData } from '@/types';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -56,8 +56,12 @@ interface Props {
 }
 
 export default function Index({ promZones, regions, filters }: Props) {
-    const { url } = usePage();
+    const {
+        url,
+        props: { auth },
+    } = usePage<SharedData>();
     const canModify = useCanModify();
+    const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
     const { data, setData, get } = useForm<Filters>({
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
@@ -129,6 +133,17 @@ export default function Index({ promZones, regions, filters }: Props) {
                             <SlidersHorizontal data-icon="inline-start" />
                             Сүзгі
                         </Button>
+                        {isSuperadmin && (
+                            <Link href={promZonesRoutes.deleted.url()}>
+                                <Button
+                                    variant="outline"
+                                    className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                >
+                                    <Trash2 data-icon="inline-start" />
+                                    Өшірілгендер
+                                </Button>
+                            </Link>
+                        )}
                         {canModify && (
                             <Link href={promZonesRoutes.create.url()}>
                                 <Button className="bg-gold text-white hover:bg-gold-dark">

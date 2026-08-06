@@ -26,7 +26,9 @@ interface Props {
     mainGallery: GalleryPhoto[];
     datedGallery: DatedGallery;
     renderPhotos?: GalleryPhoto[];
+    deletedPhotos?: GalleryPhoto[];
     canDownload: boolean;
+    canViewDeleted?: boolean;
     participantCanCreate?: boolean;
 }
 
@@ -35,7 +37,9 @@ export default function Gallery({
     mainGallery,
     datedGallery,
     renderPhotos = [],
+    deletedPhotos = [],
     canDownload,
+    canViewDeleted = false,
     participantCanCreate = false,
 }: Props) {
     const canModify = useCanModify();
@@ -70,9 +74,11 @@ export default function Gallery({
                 mainGallery={mainGallery}
                 datedGallery={datedGallery}
                 renderPhotos={renderPhotos}
+                deletedPhotos={deletedPhotos}
                 canEdit={canEdit}
                 canDelete={canManageProject}
                 canDownload={canDownload}
+                canViewDeleted={canViewDeleted}
                 canChooseGalleryDate={isSuperadmin}
                 defaultDateToToday
                 storeUrl={store.url(project)}

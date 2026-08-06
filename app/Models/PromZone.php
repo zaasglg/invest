@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLogicalDeletion;
 use Illuminate\Database\Eloquent\Model;
 
 class PromZone extends Model
 {
+    use HasLogicalDeletion;
+
     protected $fillable = [
         'name',
         'region_id',
@@ -15,6 +18,9 @@ class PromZone extends Model
         'location',
         'description',
         'geometry',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -24,6 +30,8 @@ class PromZone extends Model
             'infrastructure' => 'array',
             'location' => 'array',
             'geometry' => 'array',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -45,5 +53,16 @@ class PromZone extends Model
     public function photos()
     {
         return $this->hasMany(PromZonePhoto::class);
+    }
+
+    public function allPhotos()
+    {
+        return $this->hasMany(PromZonePhoto::class)
+            ->withoutGlobalScope('not_deleted');
+    }
+
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
     }
 }

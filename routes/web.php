@@ -47,14 +47,50 @@ Route::post('regions/{region}/projects/reorder', [\App\Http\Controllers\RegionCo
 Route::resource('sezs', \App\Http\Controllers\SezController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::get('sezs-deleted', [\App\Http\Controllers\SezController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('sezs.deleted');
+
+Route::post('sezs-deleted/{sezId}/restore', [\App\Http\Controllers\SezController::class, 'restoreDeleted'])
+    ->whereNumber('sezId')
+    ->middleware(['auth', 'role.access'])
+    ->name('sezs.restore-deleted');
+
 Route::resource('industrial-zones', \App\Http\Controllers\IndustrialZoneController::class)
     ->middleware(['auth', 'role.access']);
+
+Route::get('industrial-zones-deleted', [\App\Http\Controllers\IndustrialZoneController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('industrial-zones.deleted');
+
+Route::post('industrial-zones-deleted/{industrialZoneId}/restore', [\App\Http\Controllers\IndustrialZoneController::class, 'restoreDeleted'])
+    ->whereNumber('industrialZoneId')
+    ->middleware(['auth', 'role.access'])
+    ->name('industrial-zones.restore-deleted');
 
 Route::resource('prom-zones', \App\Http\Controllers\PromZoneController::class)
     ->middleware(['auth', 'role.access']);
 
+Route::get('prom-zones-deleted', [\App\Http\Controllers\PromZoneController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('prom-zones.deleted');
+
+Route::post('prom-zones-deleted/{promZoneId}/restore', [\App\Http\Controllers\PromZoneController::class, 'restoreDeleted'])
+    ->whereNumber('promZoneId')
+    ->middleware(['auth', 'role.access'])
+    ->name('prom-zones.restore-deleted');
+
 Route::resource('subsoil-users', \App\Http\Controllers\SubsoilUserController::class)
     ->middleware(['auth', 'role.access']);
+
+Route::get('subsoil-users-deleted', [\App\Http\Controllers\SubsoilUserController::class, 'deleted'])
+    ->middleware(['auth', 'role.access'])
+    ->name('subsoil-users.deleted');
+
+Route::post('subsoil-users-deleted/{subsoilUserId}/restore', [\App\Http\Controllers\SubsoilUserController::class, 'restoreDeleted'])
+    ->whereNumber('subsoilUserId')
+    ->middleware(['auth', 'role.access'])
+    ->name('subsoil-users.restore-deleted');
 
 Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProjectController::class, 'reorder'])
     ->middleware(['auth', 'role.access'])
@@ -133,6 +169,7 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
 });
 
 Route::prefix('sezs/{sez}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'sez'])->name('sezs.logs');
     Route::get('gallery', [\App\Http\Controllers\SezPhotoController::class, 'index'])->name('sezs.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\SezPhotoController::class, 'store'])->name('sezs.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\SezPhotoController::class, 'update'])->name('sezs.gallery.update');
@@ -145,6 +182,7 @@ Route::prefix('sezs/{sez}')->middleware(['auth', 'role.access'])->group(function
 });
 
 Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'industrialZone'])->name('industrial-zones.logs');
     Route::get('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'index'])->name('industrial-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'store'])->name('industrial-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'update'])->name('industrial-zones.gallery.update');
@@ -157,6 +195,7 @@ Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'role.ac
 });
 
 Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'promZone'])->name('prom-zones.logs');
     Route::get('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'index'])->name('prom-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'store'])->name('prom-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\PromZonePhotoController::class, 'update'])->name('prom-zones.gallery.update');
@@ -169,6 +208,7 @@ Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'role.access'])->gro
 });
 
 Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'subsoilUser'])->name('subsoil-users.logs');
     Route::get('passport', [\App\Http\Controllers\SubsoilUserController::class, 'passport'])->name('subsoil-users.passport');
 
     Route::get('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'index'])->name('subsoil-users.issues.index');

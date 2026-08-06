@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SubsoilDocument;
 use App\Models\SubsoilUser;
 use App\Services\PrivateFileService;
+use App\Services\SectorActivityLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -19,7 +20,8 @@ class SubsoilDocumentController extends Controller
     ];
 
     public function __construct(
-        private readonly PrivateFileService $files
+        private readonly PrivateFileService $files,
+        private readonly SectorActivityLogService $activity
     ) {}
 
     public function index(SubsoilUser $subsoilUser)
@@ -94,7 +96,7 @@ class SubsoilDocumentController extends Controller
                 'local'
             );
 
-            SubsoilDocument::create([
+            $document = SubsoilDocument::create([
                 'subsoil_user_id' => $subsoilUser->id,
                 'name' => $validated['name'],
                 'file_path' => $path,
@@ -105,6 +107,22 @@ class SubsoilDocumentController extends Controller
                 'approved_by' => $isCompleted ? $user?->id : null,
                 'approved_at' => $isCompleted ? now() : null,
             ]);
+
+            $this->activity->record(
+                auditable: $subsoilUser,
+                event: 'document.uploaded',
+                category: 'document',
+                action: 'Құжат жүктелді: "'.$document->name.'"',
+                subject: $document,
+                properties: [
+                    'details' => [
+                        'Құжат атауы' => $document->name,
+                        'Түрі' => $document->type,
+                        'Орындалған құжат' => $document->is_completed,
+                        'Дереккөзі' => $document->source,
+                    ],
+                ]
+            );
         }
 
         return redirect()->back()->with('success', 'Құжат жүктелді.');
@@ -122,6 +140,21 @@ class SubsoilDocumentController extends Controller
             && request()->user()?->roleModel?->name !== 'superadmin') {
             abort(404);
         }
+
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: 'document.downloaded',
+            category: 'download',
+            action: 'Құжат жүктелді: "'.$document->name.'"',
+            subject: $document,
+            properties: [
+                'details' => [
+                    'Құжат атауы' => $document->name,
+                    'Түрі' => $document->type,
+                    'Өшірілген құжат' => $document->is_deleted,
+                ],
+            ]
+        );
 
         return $this->files->download(
             $document->file_path,
@@ -142,6 +175,21 @@ class SubsoilDocumentController extends Controller
             'deleted_by' => request()->user()?->id,
             'deleted_at' => now(),
         ]);
+
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: 'document.deleted',
+            category: 'document',
+            action: 'Құжат өшірілген құжаттар бөліміне жіберілді',
+            subject: $document,
+            properties: [
+                'details' => [
+                    'Құжат атауы' => $document->name,
+                    'Түрі' => $document->type,
+                    'Өшірілген уақыт' => $document->deleted_at,
+                ],
+            ]
+        );
 
         return redirect()->back()->with(
             'success',

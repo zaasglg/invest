@@ -2,22 +2,30 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLogicalDeletion;
 use Illuminate\Database\Eloquent\Model;
 
 class SubsoilPhoto extends Model
 {
+    use HasLogicalDeletion;
+
     protected $fillable = [
         'subsoil_user_id',
         'file_path',
         'photo_type',
         'gallery_date',
         'description',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
     {
         return [
             'gallery_date' => 'date',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 

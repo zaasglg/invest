@@ -2,10 +2,13 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\HasLogicalDeletion;
 use Illuminate\Database\Eloquent\Model;
 
 class SubsoilUser extends Model
 {
+    use HasLogicalDeletion;
+
     protected $fillable = [
         'name',
         'bin',
@@ -17,6 +20,9 @@ class SubsoilUser extends Model
         'license_start',
         'license_end',
         'location',
+        'is_deleted',
+        'deleted_by',
+        'deleted_at',
     ];
 
     protected function casts(): array
@@ -25,6 +31,8 @@ class SubsoilUser extends Model
             'license_start' => 'date',
             'license_end' => 'date',
             'location' => 'array',
+            'is_deleted' => 'boolean',
+            'deleted_at' => 'datetime',
         ];
     }
 
@@ -41,6 +49,17 @@ class SubsoilUser extends Model
     public function photos()
     {
         return $this->hasMany(SubsoilPhoto::class);
+    }
+
+    public function allPhotos()
+    {
+        return $this->hasMany(SubsoilPhoto::class)
+            ->withoutGlobalScope('not_deleted');
+    }
+
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
     }
 
     public function documents()

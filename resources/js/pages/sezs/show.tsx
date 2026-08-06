@@ -8,10 +8,12 @@ import {
     Activity,
     Layers,
     AlertTriangle,
+    ScrollText,
 } from 'lucide-react';
 import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
+import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import InfrastructureList from '@/components/infrastructure-list';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
@@ -30,7 +32,8 @@ import ZoneTerritoryMapCard from '@/components/zone-territory-map-card';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { cn, formatMoneyCompact } from '@/lib/utils';
-import type { PaginatedData } from '@/types';
+import { logs as activityLogs } from '@/routes/sezs';
+import type { PaginatedData, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -92,6 +95,9 @@ interface Sez {
     investment_projects?: InvestmentProject[];
     photos_count?: number;
     created_at: string;
+    is_deleted?: boolean;
+    deleted_at?: string | null;
+    deleter?: { id: number; full_name: string } | null;
 }
 
 interface Photo {
@@ -124,8 +130,12 @@ export default function Show({
     mainGallery = [],
     renderPhotos = [],
 }: Props) {
-    const { url } = usePage();
+    const {
+        url,
+        props: { auth },
+    } = usePage<SharedData>();
     const canModify = useCanModify();
+    const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
 
     const statusMap: Record<string, { label: string; color: string }> = {
         active: {
@@ -207,6 +217,12 @@ export default function Show({
                 >
                     <ArrowLeft className="size-4" /> Тізімге қайту
                 </Link>
+
+                <DeletedEntityNotice
+                    isDeleted={sez.is_deleted}
+                    deletedAt={sez.deleted_at}
+                    deleter={sez.deleter}
+                />
 
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}
@@ -495,6 +511,20 @@ export default function Show({
                                         )}
                                     </Button>
                                 </Link>
+                                {isSuperadmin && (
+                                    <Link
+                                        href={activityLogs.url(sez)}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ScrollText className="mr-2 h-4 w-4" />
+                                            Әрекеттер тарихы
+                                        </Button>
+                                    </Link>
+                                )}
                             </CardContent>
                         </Card>
 

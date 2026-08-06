@@ -25,6 +25,8 @@ interface Props {
     mainGallery: GalleryPhoto[];
     datedGallery: DatedGallery;
     renderPhotos?: GalleryPhoto[];
+    deletedPhotos?: GalleryPhoto[];
+    canViewDeleted?: boolean;
 }
 
 export default function Gallery({
@@ -32,6 +34,8 @@ export default function Gallery({
     mainGallery,
     datedGallery,
     renderPhotos = [],
+    deletedPhotos = [],
+    canViewDeleted = false,
 }: Props) {
     const { auth } = usePage<SharedData>().props;
     const roleName = (auth.user?.role_model?.name || '').toLowerCase();
@@ -59,8 +63,10 @@ export default function Gallery({
                 mainGallery={mainGallery}
                 datedGallery={datedGallery}
                 renderPhotos={renderPhotos}
+                deletedPhotos={deletedPhotos}
                 canEdit={canManagePhotos}
                 canDelete={canManagePhotos}
+                canViewDeleted={canViewDeleted}
                 canChooseGalleryDate={canManagePhotos}
                 storeUrl={store.url(sez)}
                 destroyUrl={(photo) =>

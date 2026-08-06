@@ -6,6 +6,7 @@ use App\Models\Region;
 use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\PrivateFileService;
+use App\Services\SectorActivityLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -86,8 +87,10 @@ class SubsoilUserController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(
+        Request $request,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -113,14 +116,25 @@ class SubsoilUserController extends Controller
         ]);
         $validated['bin'] = $validated['bin'] ?? 'БСН жоқ';
 
-        SubsoilUser::create($validated);
+        $subsoilUser = SubsoilUser::create($validated);
+
+        $activity->record(
+            auditable: $subsoilUser,
+            event: 'entity.created',
+            category: 'entity',
+            action: 'Жер қойнауын пайдаланушы құрылды',
+            subject: $subsoilUser,
+            properties: [
+                'details' => $activity->entitySnapshot($subsoilUser),
+            ]
+        );
 
         return redirect()->route('subsoil-users.index')->with('success', 'Жер қойнауын пайдаланушы құрылды.');
     }
 
     public function show(SubsoilUser $subsoilUser)
     {
-        $subsoilUser->load(['region', 'issues', 'issues.creator:id,full_name', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
+        $subsoilUser->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'documents', 'tasks.assignee', 'tasks.completions.submitter', 'tasks.completions.files'])
             ->loadCount('photos');
 
         $mainGalleryPhotos = $subsoilUser->photos()
@@ -175,8 +189,11 @@ class SubsoilUserController extends Controller
         ]);
     }
 
-    public function update(Request $request, SubsoilUser $subsoilUser)
-    {
+    public function update(
+        Request $request,
+        SubsoilUser $subsoilUser,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -206,7 +223,24 @@ class SubsoilUserController extends Controller
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
 
+        $before = $activity->entitySnapshot($subsoilUser);
         $subsoilUser->update($validated);
+        $subsoilUser->refresh();
+
+        $activity->record(
+            auditable: $subsoilUser,
+            event: 'entity.updated',
+            category: 'entity',
+            action: 'Жер қойнауын пайдаланушы мәліметтері жаңартылды',
+            subject: $subsoilUser,
+            properties: [
+                'changes' => $activity->changes(
+                    $before,
+                    $activity->entitySnapshot($subsoilUser),
+                    $activity->entityLabels($subsoilUser)
+                ),
+            ]
+        );
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
@@ -215,8 +249,10 @@ class SubsoilUserController extends Controller
         return redirect()->route('subsoil-users.show', $subsoilUser->id)->with('success', 'Жер қойнауын пайдаланушы жаңартылды.');
     }
 
-    public function passport(SubsoilUser $subsoilUser)
-    {
+    public function passport(
+        SubsoilUser $subsoilUser,
+        SectorActivityLogService $activity
+    ) {
         $subsoilUser->load(['region', 'documents', 'photos', 'issues']);
 
         $zip = new ZipArchive;
@@ -278,16 +314,133 @@ class SubsoilUserController extends Controller
 
         $zip->close();
 
+        $activity->record(
+            auditable: $subsoilUser,
+            event: 'passport.downloaded',
+            category: 'download',
+            action: 'Объект паспорты жүктелді',
+            subject: $subsoilUser,
+            properties: [
+                'details' => [
+                    'Архивтегі файл саны' => $galleryIndex + $renderIndex
+                        + $subsoilUser->documents->count(),
+                ],
+            ]
+        );
+
         $downloadName = 'Төлқұжат_Жер_қойнауын_пайдаланушы_'.preg_replace('/[^\p{L}\p{N}\s\-_]/u', '', $subsoilUser->name).'.zip';
 
         return response()->download($path, $downloadName)->deleteFileAfterSend(true);
     }
 
-    public function destroy(SubsoilUser $subsoilUser)
+    public function deleted(Request $request)
     {
-        $subsoilUser->delete();
+        $this->ensureSuperadmin($request);
 
-        return redirect()->back()->with('success', 'Жер қойнауын пайдаланушы жойылды.');
+        $search = trim((string) $request->input('search', ''));
+        $query = SubsoilUser::onlyDeleted()
+            ->with(['region:id,name', 'deleter:id,full_name']);
+
+        if ($search !== '') {
+            $query->where(function ($subsoilQuery) use ($search) {
+                $subsoilQuery
+                    ->whereLike('name', "%{$search}%")
+                    ->orWhereLike('bin', "%{$search}%");
+            });
+        }
+
+        $items = $query
+            ->latest('deleted_at')
+            ->paginate(15)
+            ->withQueryString()
+            ->through(fn (SubsoilUser $subsoilUser) => [
+                ...$subsoilUser->toArray(),
+                'show_url' => route(
+                    'subsoil-users.show',
+                    $subsoilUser->id,
+                    false
+                ),
+                'restore_url' => route(
+                    'subsoil-users.restore-deleted',
+                    $subsoilUser->id,
+                    false
+                ),
+            ]);
+
+        return Inertia::render('deleted-entities/index', [
+            'items' => $items,
+            'filters' => ['search' => $search],
+            'config' => [
+                'title' => 'Өшірілген жер қойнауын пайдаланушылар',
+                'entityLabel' => 'Жер қойнауын пайдаланушы',
+                'indexUrl' => route('subsoil-users.index', absolute: false),
+                'deletedUrl' => route(
+                    'subsoil-users.deleted',
+                    absolute: false
+                ),
+            ],
+        ]);
+    }
+
+    public function restoreDeleted(
+        Request $request,
+        int $subsoilUserId,
+        SectorActivityLogService $activity
+    ) {
+        $this->ensureSuperadmin($request);
+
+        $subsoilUser = SubsoilUser::onlyDeleted()
+            ->findOrFail($subsoilUserId);
+        $subsoilUser->restoreFromDeletion();
+
+        $activity->record(
+            auditable: $subsoilUser,
+            event: 'entity.restored',
+            category: 'entity',
+            action: 'Жер қойнауын пайдаланушы қалпына келтірілді',
+            subject: $subsoilUser
+        );
+
+        return redirect()->route('subsoil-users.deleted')->with(
+            'success',
+            'Жер қойнауын пайдаланушы қалпына келтірілді.'
+        );
+    }
+
+    public function destroy(
+        Request $request,
+        SubsoilUser $subsoilUser,
+        SectorActivityLogService $activity
+    ) {
+        abort_if($subsoilUser->is_deleted, 404);
+        $subsoilUser->markAsDeletedBy($request->user());
+
+        $activity->record(
+            auditable: $subsoilUser,
+            event: 'entity.deleted',
+            category: 'entity',
+            action: 'Жер қойнауын пайдаланушы өшірілген нысандар бөліміне жіберілді',
+            subject: $subsoilUser,
+            properties: [
+                'details' => [
+                    'Өшірілген уақыт' => $subsoilUser->deleted_at,
+                ],
+            ]
+        );
+
+        return redirect()->route('subsoil-users.index')->with(
+            'success',
+            'Жер қойнауын пайдаланушы өшірілген нысандар бөліміне жіберілді.'
+        );
+    }
+
+    private function ensureSuperadmin(Request $request): void
+    {
+        abort_unless(
+            $request->user()?->roleModel?->name === 'superadmin',
+            403,
+            'Өшірілген жер қойнауын пайдаланушыларды тек супер әкімші көре алады.'
+        );
     }
 
     /**

@@ -54,12 +54,23 @@ class ProjectPhotoController extends Controller
             ->latest()
             ->get();
 
+        $isSuperadmin = $this->isSuperAdmin($user);
+        $deletedPhotos = $isSuperadmin
+            ? $investmentProject->allPhotos()
+                ->onlyDeleted()
+                ->with('deleter:id,full_name')
+                ->latest('deleted_at')
+                ->get()
+            : collect();
+
         return Inertia::render('investment-projects/gallery', [
             'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'mainGallery' => $mainGalleryPhotos,
             'datedGallery' => $datedGalleryPhotos,
             'renderPhotos' => $renderPhotos,
             'canDownload' => $canDownload,
+            'canViewDeleted' => $isSuperadmin,
+            'deletedPhotos' => $deletedPhotos,
             'participantCanCreate' => $this->participantCanCreate(
                 $user,
                 $investmentProject
@@ -74,6 +85,10 @@ class ProjectPhotoController extends Controller
         }
 
         $user = Auth::user();
+
+        if ($photo->is_deleted && ! $this->isSuperAdmin($user)) {
+            abort(404);
+        }
 
         if (! $user->canDownloadFromProject($investmentProject)) {
             abort(403, 'Сіздің бұл жобаның фотосуреттеріне қол жеткізуіңіз жоқ.');
@@ -167,6 +182,8 @@ class ProjectPhotoController extends Controller
             abort(404);
         }
 
+        abort_if($photo->is_deleted, 404);
+
         $user = Auth::user();
 
         if ($user->roleModel?->name === 'investor') {
@@ -240,19 +257,14 @@ class ProjectPhotoController extends Controller
         $photoModel = ProjectPhoto::where('project_id', $investmentProject->id)
             ->findOrFail($photo);
 
-        // Delete file from storage
-        if (Storage::disk('public')->exists($photoModel->file_path)) {
-            Storage::disk('public')->delete($photoModel->file_path);
-        }
-
-        // Delete photo record
-        $photoModel->delete();
+        abort_if($photoModel->is_deleted, 404);
+        $photoModel->markAsDeletedBy($user);
 
         KpiLog::activity(
             projectId: $investmentProject->id,
             event: 'photo.deleted',
             category: 'photo',
-            action: 'Фото жойылды',
+            action: 'Фото өшірілген суреттер бөліміне жіберілді',
             subject: $photoModel,
             properties: [
                 'project_name' => $investmentProject->name,
@@ -264,7 +276,10 @@ class ProjectPhotoController extends Controller
             ]
         );
 
-        return redirect()->back()->with('success', 'Фото жойылды.');
+        return redirect()->back()->with(
+            'success',
+            'Фото өшірілген суреттер бөліміне жіберілді.'
+        );
     }
 
     private function participantCanCreate(

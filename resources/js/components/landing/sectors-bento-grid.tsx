@@ -6,13 +6,14 @@ import {
     Mountain,
     Wheat,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 
 interface Sector {
     title: string;
     description: string;
-    icon: React.ElementType;
+    icon: LucideIcon;
     stats: string;
     statsLabel: string;
     gradient: string;

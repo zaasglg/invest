@@ -8,13 +8,15 @@ use App\Models\SubsoilTaskCompletionFile;
 use App\Models\SubsoilUser;
 use App\Services\CompletionWorkflowService;
 use App\Services\PrivateFileService;
+use App\Services\SectorActivityLogService;
 use Illuminate\Http\Request;
 
 class SubsoilTaskCompletionController extends Controller
 {
     public function __construct(
         private readonly PrivateFileService $files,
-        private readonly CompletionWorkflowService $workflow
+        private readonly CompletionWorkflowService $workflow,
+        private readonly SectorActivityLogService $activity
     ) {}
 
     public function store(
@@ -46,12 +48,31 @@ class SubsoilTaskCompletionController extends Controller
         $documents = $request->file('documents', []);
         $photos = $request->file('photos', []);
         $this->workflow->ensureUploadBudget($documents, $photos);
-        $this->workflow->submitSubsoil(
+        $completion = $this->workflow->submitSubsoil(
             $task,
             $user,
             $validated['comment'] ?? null,
             $documents,
             $photos
+        );
+
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: 'completion.submitted',
+            category: 'completion',
+            action: 'Тапсырма нәтижесі тексеруге жіберілді: "'
+                .$task->title.'"',
+            subject: $completion,
+            properties: [
+                'details' => [
+                    'Тапсырма' => $task->title,
+                    'Пікір' => $validated['comment'] ?? null,
+                    'Құжат саны' => count($documents),
+                    'Фото саны' => count($photos),
+                    'Күйі' => 'pending',
+                ],
+            ],
+            actor: $user
         );
 
         return back()->with(
@@ -74,6 +95,20 @@ class SubsoilTaskCompletionController extends Controller
         );
         abort_unless($file->type === 'photo', 404);
 
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: 'completion.file_previewed',
+            category: 'download',
+            action: 'Орындалу нәтижесінің фотосы ашылды',
+            subject: $file,
+            properties: [
+                'details' => [
+                    'Тапсырма' => $task->title,
+                    'Файл атауы' => $file->file_name,
+                ],
+            ]
+        );
+
         return $this->files->inline($file->file_path, $file->file_name);
     }
 
@@ -88,6 +123,21 @@ class SubsoilTaskCompletionController extends Controller
             $task,
             $completion,
             $file
+        );
+
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: 'completion.file_downloaded',
+            category: 'download',
+            action: 'Орындалу нәтижесінің файлы жүктелді',
+            subject: $file,
+            properties: [
+                'details' => [
+                    'Тапсырма' => $task->title,
+                    'Файл атауы' => $file->file_name,
+                    'Файл түрі' => $file->type,
+                ],
+            ]
         );
 
         return $this->files->download($file->file_path, $file->file_name);
@@ -130,6 +180,29 @@ class SubsoilTaskCompletionController extends Controller
             $user,
             $validated['status'],
             $validated['reviewer_comment'] ?? null
+        );
+
+        $statusLabel = $validated['status'] === 'approved'
+            ? 'қабылданды'
+            : 'қабылданбады';
+        $this->activity->record(
+            auditable: $subsoilUser,
+            event: $validated['status'] === 'approved'
+                ? 'completion.approved'
+                : 'completion.rejected',
+            category: 'completion',
+            action: 'Тапсырма нәтижесі '.$statusLabel.': "'
+                .$task->title.'"',
+            subject: $completion,
+            properties: [
+                'details' => [
+                    'Тапсырма' => $task->title,
+                    'Шешім' => $validated['status'],
+                    'Тексеруші пікірі' => $validated['reviewer_comment']
+                        ?? null,
+                ],
+            ],
+            actor: $user
         );
 
         return back()->with('success', 'Тексеру нәтижесі сақталды.');
