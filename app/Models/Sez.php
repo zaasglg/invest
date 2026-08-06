@@ -60,4 +60,9 @@ class Sez extends Model
         return $this->hasMany(SezPhoto::class)
             ->withoutGlobalScope('not_deleted');
     }
+
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
+    }
 }

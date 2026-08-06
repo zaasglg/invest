@@ -13,8 +13,8 @@ class StandardIssueWorkflowService
         Model $owner,
         array $attributes,
         ?int $creatorId
-    ): void {
-        $owner->issues()->create([
+    ): Model {
+        return $owner->issues()->create([
             ...$attributes,
             'created_by' => $creatorId,
         ]);
@@ -27,12 +27,14 @@ class StandardIssueWorkflowService
         Model $issue,
         array $attributes,
         ?int $creatorId
-    ): void {
+    ): Model {
         if ($issue->getAttribute('created_by') === null) {
             $attributes['created_by'] = $creatorId;
         }
 
         $issue->update($attributes);
+
+        return $issue;
     }
 
     public function destroy(Model $issue): void

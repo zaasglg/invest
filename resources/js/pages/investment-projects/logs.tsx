@@ -112,9 +112,23 @@ interface Props {
     actors: ActorOption[];
     filters: LogFilters;
     categoryCounts: Record<string, number>;
+    config?: {
+        title: string;
+        backLabel: string;
+        showUrl: string;
+        logsUrl: string;
+        entityLabel: string;
+        categories: string[];
+    };
 }
 
 const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
+    entity: {
+        label: 'Нысан',
+        icon: Activity,
+        badge: 'bg-blue-100 text-blue-700',
+        iconBox: 'bg-blue-50 text-blue-600',
+    },
     project: {
         label: 'Жоба',
         icon: Activity,
@@ -242,6 +256,7 @@ export default function Logs({
     actors,
     filters,
     categoryCounts,
+    config,
 }: Props) {
     const [search, setSearch] = useState(filters.search);
     const [category, setCategory] = useState(filters.category);
@@ -250,7 +265,14 @@ export default function Logs({
     const [dateTo, setDateTo] = useState(filters.date_to);
     const [expandedLogId, setExpandedLogId] = useState<number | null>(null);
 
-    const baseUrl = `/investment-projects/${project.id}/logs`;
+    const baseUrl =
+        config?.logsUrl ?? `/investment-projects/${project.id}/logs`;
+    const showUrl = config?.showUrl ?? `/investment-projects/${project.id}`;
+    const visibleCategories = config?.categories ?? FILTER_CATEGORIES;
+    const primaryCategory = config ? 'entity' : 'project';
+    const primaryCategoryLabel = config
+        ? `${config.entityLabel} өзгерістері`
+        : 'Жоба өзгерістері';
     const totalActivities = Object.values(categoryCounts).reduce(
         (total, count) => total + Number(count),
         0,
@@ -304,31 +326,32 @@ export default function Logs({
             <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
                 <div className="mb-6">
                     <Link
-                        href={`/investment-projects/${project.id}`}
+                        href={showUrl}
                         className="mb-4 inline-flex items-center text-sm text-gray-500 hover:text-[#0f1b3d]"
                     >
                         <ArrowLeft className="mr-1 h-4 w-4" />
-                        Жобаға қайту
+                        {config?.backLabel ?? 'Жобаға қайту'}
                     </Link>
                     <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
                         <div>
                             <h1 className="flex items-center gap-2 text-2xl font-bold text-[#0f1b3d]">
                                 <ScrollText className="h-6 w-6 text-[#c8a44e]" />
-                                Жоба әрекеттерінің тарихы
+                                {config?.title ?? 'Жоба әрекеттерінің тарихы'}
                             </h1>
                             <p className="mt-1 text-sm text-gray-500">
                                 {project.name}
                                 {project.region?.name
                                     ? ` • ${project.region.name}`
                                     : ''}
-                                {formatProjectTypeNames(project, '')
+                                {!config && formatProjectTypeNames(project, '')
                                     ? ` • ${formatProjectTypeNames(project, '')}`
                                     : ''}
                             </p>
                         </div>
                         <p className="max-w-md text-sm text-gray-500">
-                            Жоба бойынша кім, қашан және қандай өзгеріс жасағаны
-                            осы жерде сақталады.
+                            {config
+                                ? `${config.entityLabel} бойынша кім, қашан және қандай өзгеріс жасағаны осы жерде сақталады.`
+                                : 'Жоба бойынша кім, қашан және қандай өзгеріс жасағаны осы жерде сақталады.'}
                         </p>
                     </div>
                 </div>
@@ -341,8 +364,8 @@ export default function Logs({
                         color="text-blue-600"
                     />
                     <StatCard
-                        label="Жоба өзгерістері"
-                        value={Number(categoryCounts.project || 0)}
+                        label={primaryCategoryLabel}
+                        value={Number(categoryCounts[primaryCategory] || 0)}
                         icon={RefreshCcw}
                         color="text-violet-600"
                     />
@@ -385,7 +408,7 @@ export default function Logs({
                                 className="h-9 rounded-md border border-gray-200 bg-white px-3 text-sm text-gray-700 lg:col-span-2"
                             >
                                 <option value="">Барлық санат</option>
-                                {FILTER_CATEGORIES.map((item) => (
+                                {visibleCategories.map((item) => (
                                     <option key={item} value={item}>
                                         {CATEGORY_CONFIG[item].label} (
                                         {categoryCounts[item] || 0})
@@ -457,7 +480,7 @@ export default function Logs({
                                 <p className="mt-1 text-sm text-gray-400">
                                     {hasActiveFilters
                                         ? 'Сүзгіні өзгертіп көріңіз.'
-                                        : 'Жоба бойынша алғашқы әрекет жасалғанда осы жерде пайда болады.'}
+                                        : `${config?.entityLabel ?? 'Жоба'} бойынша алғашқы әрекет жасалғанда осы жерде пайда болады.`}
                                 </p>
                             </div>
                         ) : (

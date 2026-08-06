@@ -5,13 +5,15 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StandardZoneIssueRequest;
 use App\Models\Sez;
 use App\Models\SezIssue;
+use App\Services\SectorActivityLogService;
 use App\Services\StandardIssueWorkflowService;
 use Inertia\Inertia;
 
 class SezIssueController extends Controller
 {
     public function __construct(
-        private readonly StandardIssueWorkflowService $workflow
+        private readonly StandardIssueWorkflowService $workflow,
+        private readonly SectorActivityLogService $activity
     ) {}
 
     public function index(Sez $sez)
@@ -26,10 +28,27 @@ class SezIssueController extends Controller
 
     public function store(StandardZoneIssueRequest $request, Sez $sez)
     {
-        $this->workflow->create(
+        $issue = $this->workflow->create(
             $sez,
             $request->validated(),
             $request->user()?->id
+        );
+
+        $this->activity->record(
+            auditable: $sez,
+            event: 'issue.created',
+            category: 'issue',
+            action: 'Проблемалық мәселе қосылды',
+            subject: $issue,
+            properties: [
+                'details' => $issue->only([
+                    'title',
+                    'description',
+                    'category',
+                    'severity',
+                    'status',
+                ]),
+            ]
         );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе қосылды.');
@@ -42,10 +61,44 @@ class SezIssueController extends Controller
     ) {
         abort_if($issue->sez_id !== $sez->id, 404);
 
+        $before = $issue->only([
+            'title',
+            'description',
+            'category',
+            'severity',
+            'status',
+        ]);
         $this->workflow->update(
             $issue,
             $request->validated(),
             $request->user()?->id
+        );
+
+        $this->activity->record(
+            auditable: $sez,
+            event: 'issue.updated',
+            category: 'issue',
+            action: 'Проблемалық мәселе жаңартылды',
+            subject: $issue,
+            properties: [
+                'changes' => $this->activity->changes(
+                    $before,
+                    $issue->fresh()->only([
+                        'title',
+                        'description',
+                        'category',
+                        'severity',
+                        'status',
+                    ]),
+                    [
+                        'title' => 'Тақырыбы',
+                        'description' => 'Сипаттама',
+                        'category' => 'Санаты',
+                        'severity' => 'Маңыздылық',
+                        'status' => 'Күйі',
+                    ]
+                ),
+            ]
         );
 
         return redirect()->back()->with('success', 'Проблемалық мәселе жаңартылды.');
@@ -54,6 +107,23 @@ class SezIssueController extends Controller
     public function destroy(Sez $sez, SezIssue $issue)
     {
         abort_if($issue->sez_id !== $sez->id, 404);
+
+        $this->activity->record(
+            auditable: $sez,
+            event: 'issue.deleted',
+            category: 'issue',
+            action: 'Проблемалық мәселе жойылды',
+            subject: $issue,
+            properties: [
+                'details' => $issue->only([
+                    'title',
+                    'description',
+                    'category',
+                    'severity',
+                    'status',
+                ]),
+            ]
+        );
 
         $this->workflow->destroy($issue);
 

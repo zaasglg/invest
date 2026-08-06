@@ -169,6 +169,7 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
 });
 
 Route::prefix('sezs/{sez}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'sez'])->name('sezs.logs');
     Route::get('gallery', [\App\Http\Controllers\SezPhotoController::class, 'index'])->name('sezs.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\SezPhotoController::class, 'store'])->name('sezs.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\SezPhotoController::class, 'update'])->name('sezs.gallery.update');
@@ -181,6 +182,7 @@ Route::prefix('sezs/{sez}')->middleware(['auth', 'role.access'])->group(function
 });
 
 Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'industrialZone'])->name('industrial-zones.logs');
     Route::get('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'index'])->name('industrial-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'store'])->name('industrial-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\IndustrialZonePhotoController::class, 'update'])->name('industrial-zones.gallery.update');
@@ -193,6 +195,7 @@ Route::prefix('industrial-zones/{industrialZone}')->middleware(['auth', 'role.ac
 });
 
 Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'promZone'])->name('prom-zones.logs');
     Route::get('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'index'])->name('prom-zones.gallery.index');
     Route::post('gallery', [\App\Http\Controllers\PromZonePhotoController::class, 'store'])->name('prom-zones.gallery.store');
     Route::put('gallery/{photo}', [\App\Http\Controllers\PromZonePhotoController::class, 'update'])->name('prom-zones.gallery.update');
@@ -205,6 +208,7 @@ Route::prefix('prom-zones/{promZone}')->middleware(['auth', 'role.access'])->gro
 });
 
 Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access'])->group(function () {
+    Route::get('logs', [\App\Http\Controllers\SectorActivityLogController::class, 'subsoilUser'])->name('subsoil-users.logs');
     Route::get('passport', [\App\Http\Controllers\SubsoilUserController::class, 'passport'])->name('subsoil-users.passport');
 
     Route::get('issues', [\App\Http\Controllers\SubsoilIssueController::class, 'index'])->name('subsoil-users.issues.index');

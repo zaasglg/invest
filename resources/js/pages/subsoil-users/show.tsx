@@ -18,6 +18,7 @@ import {
     Upload,
     CheckCircle2,
     XCircle,
+    ScrollText,
 } from 'lucide-react';
 import React, { useState, useMemo, useRef } from 'react';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
@@ -37,6 +38,7 @@ import {
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
+import { logs as activityLogs } from '@/routes/subsoil-users';
 
 interface Region {
     id: number;
@@ -1086,6 +1088,20 @@ export default function Show({
                                         Ауданға өту
                                     </Button>
                                 </Link>
+                                {currentRole === 'superadmin' && (
+                                    <Link
+                                        href={activityLogs.url(subsoilUser)}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ScrollText className="mr-2 h-4 w-4" />
+                                            Әрекеттер тарихы
+                                        </Button>
+                                    </Link>
+                                )}
                                 <a
                                     href={`/subsoil-users/${subsoilUser.id}/passport`}
                                     className="w-full"

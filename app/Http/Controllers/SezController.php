@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\Sez;
 use App\Services\InfrastructureUsageService;
+use App\Services\SectorActivityLogService;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -79,8 +80,10 @@ class SezController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(
+        Request $request,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -102,7 +105,18 @@ class SezController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        Sez::create($validated);
+        $sez = Sez::create($validated);
+
+        $activity->record(
+            auditable: $sez,
+            event: 'entity.created',
+            category: 'entity',
+            action: 'СЭЗ құрылды',
+            subject: $sez,
+            properties: [
+                'details' => $activity->entitySnapshot($sez),
+            ]
+        );
 
         return redirect()->route('sezs.index')->with('success', 'АЭА құрылды.');
     }
@@ -193,8 +207,11 @@ class SezController extends Controller
         ]);
     }
 
-    public function update(Request $request, Sez $sez)
-    {
+    public function update(
+        Request $request,
+        Sez $sez,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -220,7 +237,24 @@ class SezController extends Controller
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
 
+        $before = $activity->entitySnapshot($sez);
         $sez->update($validated);
+        $sez->refresh();
+
+        $activity->record(
+            auditable: $sez,
+            event: 'entity.updated',
+            category: 'entity',
+            action: 'СЭЗ мәліметтері жаңартылды',
+            subject: $sez,
+            properties: [
+                'changes' => $activity->changes(
+                    $before,
+                    $activity->entitySnapshot($sez),
+                    $activity->entityLabels($sez)
+                ),
+            ]
+        );
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'АЭА жаңартылды.');
@@ -267,11 +301,23 @@ class SezController extends Controller
         ]);
     }
 
-    public function restoreDeleted(Request $request, int $sezId)
-    {
+    public function restoreDeleted(
+        Request $request,
+        int $sezId,
+        SectorActivityLogService $activity
+    ) {
         $this->ensureSuperadmin($request);
 
-        Sez::onlyDeleted()->findOrFail($sezId)->restoreFromDeletion();
+        $sez = Sez::onlyDeleted()->findOrFail($sezId);
+        $sez->restoreFromDeletion();
+
+        $activity->record(
+            auditable: $sez,
+            event: 'entity.restored',
+            category: 'entity',
+            action: 'СЭЗ қалпына келтірілді',
+            subject: $sez
+        );
 
         return redirect()->route('sezs.deleted')->with(
             'success',
@@ -279,10 +325,26 @@ class SezController extends Controller
         );
     }
 
-    public function destroy(Request $request, Sez $sez)
-    {
+    public function destroy(
+        Request $request,
+        Sez $sez,
+        SectorActivityLogService $activity
+    ) {
         abort_if($sez->is_deleted, 404);
         $sez->markAsDeletedBy($request->user());
+
+        $activity->record(
+            auditable: $sez,
+            event: 'entity.deleted',
+            category: 'entity',
+            action: 'СЭЗ өшірілген нысандар бөліміне жіберілді',
+            subject: $sez,
+            properties: [
+                'details' => [
+                    'Өшірілген уақыт' => $sez->deleted_at,
+                ],
+            ]
+        );
 
         return redirect()->route('sezs.index')->with(
             'success',

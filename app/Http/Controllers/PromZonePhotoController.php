@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\PromZone;
 use App\Models\PromZonePhoto;
+use App\Services\SectorActivityLogService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -62,8 +63,11 @@ class PromZonePhotoController extends Controller
         ]);
     }
 
-    public function store(Request $request, PromZone $promZone)
-    {
+    public function store(
+        Request $request,
+        PromZone $promZone,
+        SectorActivityLogService $activity
+    ) {
         $this->ensureCanManagePhotos($request);
 
         $validated = $request->validate([
@@ -77,23 +81,45 @@ class PromZonePhotoController extends Controller
         $galleryDate = $validated['gallery_date'] ?? null;
         $photoType = $validated['photo_type'] ?? 'gallery';
 
+        $photoIds = [];
         foreach ($validated['photos'] as $photo) {
             $path = $photo->store('prom-zone-photos/'.$promZone->id, 'public');
 
-            PromZonePhoto::create([
+            $createdPhoto = PromZonePhoto::create([
                 'prom_zone_id' => $promZone->id,
                 'file_path' => $path,
                 'photo_type' => $photoType,
                 'gallery_date' => $galleryDate,
                 'description' => $validated['description'] ?? null,
             ]);
+            $photoIds[] = $createdPhoto->id;
         }
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'photo.uploaded',
+            category: 'photo',
+            action: 'Фотосуреттер қосылды ('.count($photoIds).' фото)',
+            properties: [
+                'subject_ids' => $photoIds,
+                'details' => [
+                    'Фото саны' => count($photoIds),
+                    'Фото түрі' => $photoType,
+                    'Галерея күні' => $galleryDate,
+                    'Сипаттама' => $validated['description'] ?? null,
+                ],
+            ]
+        );
 
         return redirect()->back()->with('success', 'Фотосуреттер жүктелді.');
     }
 
-    public function update(Request $request, PromZone $promZone, PromZonePhoto $photo)
-    {
+    public function update(
+        Request $request,
+        PromZone $promZone,
+        PromZonePhoto $photo,
+        SectorActivityLogService $activity
+    ) {
         $this->ensureCanManagePhotos($request);
 
         if ($photo->prom_zone_id !== $promZone->id) {
@@ -107,13 +133,36 @@ class PromZonePhotoController extends Controller
             'description' => 'nullable|string|max:500',
         ]);
 
+        $before = $photo->only(['gallery_date', 'description']);
         $photo->update($validated);
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'photo.updated',
+            category: 'photo',
+            action: 'Фото мәліметтері жаңартылды',
+            subject: $photo,
+            properties: [
+                'changes' => $activity->changes(
+                    $before,
+                    $photo->fresh()->only(['gallery_date', 'description']),
+                    [
+                        'gallery_date' => 'Галерея күні',
+                        'description' => 'Сипаттама',
+                    ]
+                ),
+            ]
+        );
 
         return redirect()->back()->with('success', 'Фото жаңартылды.');
     }
 
-    public function destroy(Request $request, PromZone $promZone, $photo)
-    {
+    public function destroy(
+        Request $request,
+        PromZone $promZone,
+        $photo,
+        SectorActivityLogService $activity
+    ) {
         $this->ensureCanManagePhotos($request);
 
         $photoModel = PromZonePhoto::where('prom_zone_id', $promZone->id)
@@ -121,6 +170,21 @@ class PromZonePhotoController extends Controller
 
         abort_if($photoModel->is_deleted, 404);
         $photoModel->markAsDeletedBy($request->user());
+
+        $activity->record(
+            auditable: $promZone,
+            event: 'photo.deleted',
+            category: 'photo',
+            action: 'Фото өшірілген суреттер бөліміне жіберілді',
+            subject: $photoModel,
+            properties: [
+                'details' => [
+                    'Фото түрі' => $photoModel->photo_type,
+                    'Галерея күні' => $photoModel->gallery_date,
+                    'Сипаттама' => $photoModel->description,
+                ],
+            ]
+        );
 
         return redirect()->back()->with(
             'success',

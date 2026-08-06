@@ -60,4 +60,9 @@ class PromZone extends Model
         return $this->hasMany(PromZonePhoto::class)
             ->withoutGlobalScope('not_deleted');
     }
+
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
+    }
 }

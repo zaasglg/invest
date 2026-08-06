@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\IndustrialZone;
 use App\Models\Region;
 use App\Services\InfrastructureUsageService;
+use App\Services\SectorActivityLogService;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -79,8 +80,10 @@ class IndustrialZoneController extends Controller
         ]);
     }
 
-    public function store(Request $request)
-    {
+    public function store(
+        Request $request,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -102,7 +105,18 @@ class IndustrialZoneController extends Controller
             'description' => 'nullable|string',
         ]);
 
-        IndustrialZone::create($validated);
+        $industrialZone = IndustrialZone::create($validated);
+
+        $activity->record(
+            auditable: $industrialZone,
+            event: 'entity.created',
+            category: 'entity',
+            action: 'Индустриялық аймақ құрылды',
+            subject: $industrialZone,
+            properties: [
+                'details' => $activity->entitySnapshot($industrialZone),
+            ]
+        );
 
         return redirect()->route('industrial-zones.index')->with('success', 'ИА құрылды.');
     }
@@ -167,8 +181,11 @@ class IndustrialZoneController extends Controller
         ]);
     }
 
-    public function update(Request $request, IndustrialZone $industrialZone)
-    {
+    public function update(
+        Request $request,
+        IndustrialZone $industrialZone,
+        SectorActivityLogService $activity
+    ) {
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();
 
@@ -194,7 +211,24 @@ class IndustrialZoneController extends Controller
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
 
+        $before = $activity->entitySnapshot($industrialZone);
         $industrialZone->update($validated);
+        $industrialZone->refresh();
+
+        $activity->record(
+            auditable: $industrialZone,
+            event: 'entity.updated',
+            category: 'entity',
+            action: 'Индустриялық аймақ мәліметтері жаңартылды',
+            subject: $industrialZone,
+            properties: [
+                'changes' => $activity->changes(
+                    $before,
+                    $activity->entitySnapshot($industrialZone),
+                    $activity->entityLabels($industrialZone)
+                ),
+            ]
+        );
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'ИӘ жаңартылды.');
@@ -251,13 +285,24 @@ class IndustrialZoneController extends Controller
         ]);
     }
 
-    public function restoreDeleted(Request $request, int $industrialZoneId)
-    {
+    public function restoreDeleted(
+        Request $request,
+        int $industrialZoneId,
+        SectorActivityLogService $activity
+    ) {
         $this->ensureSuperadmin($request);
 
-        IndustrialZone::onlyDeleted()
-            ->findOrFail($industrialZoneId)
-            ->restoreFromDeletion();
+        $industrialZone = IndustrialZone::onlyDeleted()
+            ->findOrFail($industrialZoneId);
+        $industrialZone->restoreFromDeletion();
+
+        $activity->record(
+            auditable: $industrialZone,
+            event: 'entity.restored',
+            category: 'entity',
+            action: 'Индустриялық аймақ қалпына келтірілді',
+            subject: $industrialZone
+        );
 
         return redirect()->route('industrial-zones.deleted')->with(
             'success',
@@ -265,10 +310,26 @@ class IndustrialZoneController extends Controller
         );
     }
 
-    public function destroy(Request $request, IndustrialZone $industrialZone)
-    {
+    public function destroy(
+        Request $request,
+        IndustrialZone $industrialZone,
+        SectorActivityLogService $activity
+    ) {
         abort_if($industrialZone->is_deleted, 404);
         $industrialZone->markAsDeletedBy($request->user());
+
+        $activity->record(
+            auditable: $industrialZone,
+            event: 'entity.deleted',
+            category: 'entity',
+            action: 'Индустриялық аймақ өшірілген нысандар бөліміне жіберілді',
+            subject: $industrialZone,
+            properties: [
+                'details' => [
+                    'Өшірілген уақыт' => $industrialZone->deleted_at,
+                ],
+            ]
+        );
 
         return redirect()->route('industrial-zones.index')->with(
             'success',

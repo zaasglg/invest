@@ -60,4 +60,9 @@ class IndustrialZone extends Model
         return $this->hasMany(IndustrialZonePhoto::class)
             ->withoutGlobalScope('not_deleted');
     }
+
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
+    }
 }

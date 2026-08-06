@@ -57,6 +57,11 @@ class SubsoilUser extends Model
             ->withoutGlobalScope('not_deleted');
     }
 
+    public function activityLogs()
+    {
+        return $this->morphMany(SectorActivityLog::class, 'auditable');
+    }
+
     public function documents()
     {
         return $this->hasMany(SubsoilDocument::class)->active();

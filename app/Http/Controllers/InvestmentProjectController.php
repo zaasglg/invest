@@ -18,6 +18,7 @@ use App\Services\PrivateFileService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
 use App\Services\ProjectProductionService;
+use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
 use App\Support\ProductionPlanValidationRules;
@@ -44,7 +45,8 @@ class InvestmentProjectController extends Controller
         private readonly ProjectPassportSummaryService $passportSummary,
         private readonly ProjectProductionService $production,
         private readonly SortOrderService $sortOrder,
-        private readonly ProjectExecutorAssignmentService $projectExecutors
+        private readonly ProjectExecutorAssignmentService $projectExecutors,
+        private readonly SectorActivityLogService $sectorActivity
     ) {}
 
     public function index(Request $request)
@@ -603,9 +605,25 @@ class InvestmentProjectController extends Controller
         $this->syncExecutorsWithIspolnitel($project, $executorIds);
 
         // Sync many-to-many связи с секторами
-        $project->sezs()->sync($sezIds);
-        $project->industrialZones()->sync($izIds);
-        $project->promZones()->sync($promZoneIds);
+        $sezChanges = $project->sezs()->sync($sezIds);
+        $industrialZoneChanges = $project->industrialZones()->sync($izIds);
+        $promZoneChanges = $project->promZones()->sync($promZoneIds);
+
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $project,
+            Sez::class,
+            $sezChanges
+        );
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $project,
+            IndustrialZone::class,
+            $industrialZoneChanges
+        );
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $project,
+            PromZone::class,
+            $promZoneChanges
+        );
 
         KpiLog::activity(
             projectId: $project->id,
@@ -1352,9 +1370,29 @@ class InvestmentProjectController extends Controller
         $this->syncExecutorsWithIspolnitel($investmentProject, $executorIds);
 
         // Sync many-to-many связи с секторами
-        $investmentProject->sezs()->sync($sezIds);
-        $investmentProject->industrialZones()->sync($izIds);
-        $investmentProject->promZones()->sync($promZoneIds);
+        $sezChanges = $investmentProject->sezs()->sync($sezIds);
+        $industrialZoneChanges = $investmentProject
+            ->industrialZones()
+            ->sync($izIds);
+        $promZoneChanges = $investmentProject
+            ->promZones()
+            ->sync($promZoneIds);
+
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $investmentProject,
+            Sez::class,
+            $sezChanges
+        );
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $investmentProject,
+            IndustrialZone::class,
+            $industrialZoneChanges
+        );
+        $this->sectorActivity->recordProjectMembershipChanges(
+            $investmentProject,
+            PromZone::class,
+            $promZoneChanges
+        );
 
         $investmentProject->refresh();
         $activityAfter = $this->projectActivitySnapshot(

@@ -8,6 +8,7 @@ import {
     Activity,
     Layers,
     AlertTriangle,
+    ScrollText,
 } from 'lucide-react';
 import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
@@ -30,6 +31,8 @@ import ZoneTerritoryMapCard from '@/components/zone-territory-map-card';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { formatMoneyCompact } from '@/lib/utils';
+import { logs as activityLogs } from '@/routes/industrial-zones';
+import type { SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -121,8 +124,12 @@ export default function Show({
     mainGallery = [],
     renderPhotos = [],
 }: Props) {
-    const { url } = usePage();
+    const {
+        url,
+        props: { auth },
+    } = usePage<SharedData>();
     const canModify = useCanModify();
+    const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
 
     const statusMap: Record<string, { label: string; color: string }> = {
         active: {
@@ -503,6 +510,20 @@ export default function Show({
                                         )}
                                     </Button>
                                 </Link>
+                                {isSuperadmin && (
+                                    <Link
+                                        href={activityLogs.url(industrialZone)}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ScrollText className="mr-2 h-4 w-4" />
+                                            Әрекеттер тарихы
+                                        </Button>
+                                    </Link>
+                                )}
                             </CardContent>
                         </Card>
 
