@@ -1057,12 +1057,12 @@ export default function Show({
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-3">
+                        {/* <div className="flex gap-3">
                             <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-sm font-semibold text-emerald-300">
                                 <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс
                                 істеуде
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 </section>
 
