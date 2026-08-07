@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
 import { MathUtils, Path, Shape, Vector3 } from 'three'
+import { index as issuesIndex } from '@/routes/issues'
 import districtsRaw from './data/turkistan-districts.geojson?raw'
 import elevationRaw from './data/turkistan-elevation.json?raw'
 import boundaryRaw from './data/turkistan-region.geojson?raw'
@@ -747,6 +748,9 @@ function DistrictExplorer({
     districtMapModels.find((district) => district.id === selectedDistrictId) ??
     null
   const regionId = selectedDistrict?.regionId ?? null
+  const regionIssuesUrl = issuesIndex(
+    regionId === null ? undefined : { query: { region_id: regionId } },
+  ).url
   const hasSelectedRegion =
     selectedDistrict === null || selectedDistrict.regionId !== null
   const sectorRow = hasSelectedRegion
@@ -948,8 +952,8 @@ function DistrictExplorer({
                         ),
                       )
 
-                return (
-                  <article key={indicator.key}>
+                const content = (
+                  <>
                     <span>{indicator.shortLabel}</span>
                     <strong>
                       {formatAnalyticsValue(value, indicator)}
@@ -961,9 +965,21 @@ function DistrictExplorer({
                         {seriesGrowth.toFixed(1)}% кезең ішінде
                       </p>
                     ) : (
-                      <p>Ағымдағы деректер</p>
+                      <p>Тізімді ашу →</p>
                     )}
-                  </article>
+                  </>
+                )
+
+                return indicator.key === 'problems' ? (
+                  <Link
+                    key={indicator.key}
+                    href={regionIssuesUrl}
+                    className="analytics-kpi-link"
+                  >
+                    <article>{content}</article>
+                  </Link>
+                ) : (
+                  <article key={indicator.key}>{content}</article>
                 )
               })}
             </div>
@@ -990,18 +1006,24 @@ function DistrictExplorer({
                 className="indicator-tabs"
                 aria-label="Көрсеткішті таңдау"
               >
-                {indicatorDefinitions.map((indicator) => (
-                  <button
-                    key={indicator.key}
-                    type="button"
-                    className={
-                      activeIndicatorKey === indicator.key ? 'is-active' : ''
-                    }
-                    onClick={() => setActiveIndicatorKey(indicator.key)}
-                  >
-                    {indicator.shortLabel}
-                  </button>
-                ))}
+                {indicatorDefinitions.map((indicator) =>
+                  indicator.key === 'problems' ? (
+                    <Link key={indicator.key} href={regionIssuesUrl}>
+                      {indicator.shortLabel}
+                    </Link>
+                  ) : (
+                    <button
+                      key={indicator.key}
+                      type="button"
+                      className={
+                        activeIndicatorKey === indicator.key ? 'is-active' : ''
+                      }
+                      onClick={() => setActiveIndicatorKey(indicator.key)}
+                    >
+                      {indicator.shortLabel}
+                    </button>
+                  ),
+                )}
               </div>
 
               <AnalyticsBarChart

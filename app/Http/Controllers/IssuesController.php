@@ -225,7 +225,7 @@ class IssuesController extends Controller
                     'severity' => $issue->severity,
                     'status' => $issue->status,
                     'entity_id' => $issue->subsoil_user_id,
-                    'entity_name' => $issue->subsoilUser?->company_name ?? 'Белгісіз компания',
+                    'entity_name' => $issue->subsoilUser?->name ?? 'Белгісіз жер қойнауын пайдаланушы',
                     'region_name' => $issue->subsoilUser?->region?->name ?? null,
                     'created_at' => $issue->created_at,
                     'creator_full_name' => $issue->creator?->full_name,
