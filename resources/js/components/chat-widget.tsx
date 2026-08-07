@@ -284,7 +284,7 @@ export function ChatWidget() {
                     type="button"
                     size="icon"
                     aria-label="AI-көмекшіні ашу"
-                    className="chat-widget-fab group fixed bottom-4 left-4 z-[1000] h-14 w-14 rounded-full border border-[#c8a44e]/50 bg-[#0f1b3d] p-0 text-white shadow-[0_14px_35px_rgba(15,27,61,0.32)] transition-all hover:-translate-y-0.5 hover:border-[#c8a44e] hover:bg-[#17284f] sm:bottom-6 sm:left-6"
+                    className="chat-widget-fab group fixed bottom-4 left-4 z-[1000] h-14 w-14 rounded-full border border-[#c8a44e]/50 bg-[#0f1b3d] p-0 text-white shadow-[0_14px_35px_rgba(15,27,61,0.32)] transition-all hover:-translate-y-0.5 hover:border-[#c8a44e] hover:bg-[#17284f] sm:bottom-6 sm:left-6 print:hidden"
                 >
                     <span className="relative flex h-8 w-8 items-center justify-center rounded-full bg-[#c8a44e]/15 text-[#e3c97a]">
                         <BotMessageSquare className="h-5 w-5" />
@@ -295,7 +295,7 @@ export function ChatWidget() {
 
             {/* Чат терезесі */}
             {isOpen && (
-                <Card className="chat-widget-panel fixed bottom-3 left-3 z-[1000] flex h-[min(600px,calc(100dvh-1.5rem))] w-[calc(100vw-1.5rem)] flex-col overflow-hidden shadow-2xl sm:bottom-6 sm:left-6 sm:w-[400px]">
+                <Card className="chat-widget-panel fixed bottom-3 left-3 z-[1000] flex h-[min(600px,calc(100dvh-1.5rem))] w-[calc(100vw-1.5rem)] flex-col overflow-hidden shadow-2xl sm:bottom-6 sm:left-6 sm:w-[400px] print:hidden">
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b pb-4">
                         <div className="flex items-center gap-2">
                             <BotMessageSquare className="h-5 w-5" />

@@ -150,7 +150,7 @@ export function ProactiveAssistantWidget() {
                     size="icon"
                     aria-label="Іс-қимыл көмекшісін ашу"
                     onClick={handleOpen}
-                    className="group fixed bottom-20 left-4 z-[1000] h-14 w-14 rounded-full border border-sky-300/50 bg-white p-0 text-[#0f1b3d] shadow-[0_14px_35px_rgba(15,27,61,0.2)] transition-all hover:-translate-y-0.5 hover:border-[#c8a44e] hover:bg-[#fffdf7] sm:bottom-24 sm:left-6"
+                    className="group fixed bottom-20 left-4 z-[1000] h-14 w-14 rounded-full border border-sky-300/50 bg-white p-0 text-[#0f1b3d] shadow-[0_14px_35px_rgba(15,27,61,0.2)] transition-all hover:-translate-y-0.5 hover:border-[#c8a44e] hover:bg-[#fffdf7] sm:bottom-24 sm:left-6 print:hidden"
                 >
                     <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-[#f5e8bd] to-[#c8a44e] shadow-inner">
                         <Sparkles className="h-5 w-5" />
@@ -165,7 +165,7 @@ export function ProactiveAssistantWidget() {
             )}
 
             {isOpen && (
-                <Card className="fixed bottom-20 left-3 z-[1001] flex h-[min(560px,calc(100dvh-6rem))] w-[calc(100vw-1.5rem)] flex-col overflow-hidden border-[#c8a44e]/30 shadow-2xl sm:bottom-24 sm:left-6 sm:w-[390px]">
+                <Card className="fixed bottom-20 left-3 z-[1001] flex h-[min(560px,calc(100dvh-6rem))] w-[calc(100vw-1.5rem)] flex-col overflow-hidden border-[#c8a44e]/30 shadow-2xl sm:bottom-24 sm:left-6 sm:w-[390px] print:hidden">
                     <CardHeader className="border-b bg-[#0f1b3d] px-5 py-4 text-white">
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex min-w-0 items-center gap-3">

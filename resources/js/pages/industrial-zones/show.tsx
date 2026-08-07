@@ -14,6 +14,7 @@ import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
+import DetailSectionNav from '@/components/detail-section-nav';
 import InfrastructureList from '@/components/infrastructure-list';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -231,11 +232,42 @@ export default function Show({
                     deleter={industrialZone.deleter}
                 />
 
+                <DetailSectionNav
+                    ariaLabel="Индустриялық аймақ бөлімдері"
+                    items={[
+                        {
+                            label: 'Шолу',
+                            href: '#zone-overview',
+                            icon: Layers,
+                        },
+                        {
+                            label: 'Карта',
+                            href: '#zone-map',
+                            icon: MapPin,
+                        },
+                        {
+                            label: 'Жобалар',
+                            href: '#zone-projects',
+                            icon: Building2,
+                            count: projects.length,
+                        },
+                        {
+                            label: 'Мәселелер',
+                            href: '#zone-issues',
+                            icon: AlertTriangle,
+                            count: issues.length,
+                        },
+                    ]}
+                />
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}
                     <div className="flex min-w-0 flex-col gap-6">
                         {/* Banner + Info + Description */}
-                        <Card className="overflow-hidden border-slate-200/80 py-0 shadow-none">
+                        <Card
+                            id="zone-overview"
+                            className="scroll-mt-24 overflow-hidden border-slate-200/80 py-0 shadow-none"
+                        >
                             <header className="relative overflow-hidden border-b border-slate-200 bg-navy px-6 py-7 text-white sm:px-8">
                                 <div className="absolute inset-y-0 right-0 w-1/3 border-l border-white/5 bg-[linear-gradient(90deg,transparent,rgba(200,164,78,0.08))]" />
                                 <div className="relative flex items-start justify-between gap-5">
@@ -247,7 +279,7 @@ export default function Show({
                                             <p className="mb-1 text-[11px] font-bold text-gold uppercase">
                                                 Индустриялық аймақ
                                             </p>
-                                            <h1 className="text-2xl leading-tight font-extrabold text-balance sm:text-3xl">
+                                            <h1 className="text-2xl leading-tight font-extrabold text-balance sm:text-3xl text-white">
                                                 {industrialZone.name}
                                             </h1>
                                             <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-300">
@@ -346,14 +378,19 @@ export default function Show({
                             </div>
                         </Card>
 
-                        <ZoneTerritoryMapCard
-                            entity={industrialZone}
-                            entityType="iz"
-                            projects={projects}
-                        />
+                        <section id="zone-map" className="scroll-mt-24">
+                            <ZoneTerritoryMapCard
+                                entity={industrialZone}
+                                entityType="iz"
+                                projects={projects}
+                            />
+                        </section>
 
                         {/* Investment Projects */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="zone-projects"
+                            className="scroll-mt-24 shadow-none"
+                        >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <Building2 className="h-5 w-5 text-gray-500" />
@@ -530,7 +567,10 @@ export default function Show({
                         <AreaOccupancyCard usage={areaUsage} />
 
                         {/* Issues */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="zone-issues"
+                            className="scroll-mt-24 shadow-none"
+                        >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <AlertTriangle className="h-5 w-5 text-gray-500" />

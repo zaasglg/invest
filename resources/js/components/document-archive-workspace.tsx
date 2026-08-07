@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import DeletedDocumentsList from '@/components/deleted-documents-list';
 import type { AuditableDocument } from '@/components/document-details-dialog';
+import { PageContainer } from '@/components/ui/page';
 
 interface DocumentArchiveWorkspaceProps {
     entityName: string;
@@ -23,7 +24,7 @@ export default function DocumentArchiveWorkspace({
     downloadUrl,
 }: DocumentArchiveWorkspaceProps) {
     return (
-        <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+        <PageContainer width="standard">
             <section className="relative overflow-hidden rounded-[28px] bg-[#0b1533] px-5 py-6 text-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.9)] sm:px-8 sm:py-8">
                 <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-rose-500/20 blur-3xl" />
                 <div className="absolute -bottom-28 left-1/3 h-64 w-64 rounded-full bg-indigo-500/15 blur-3xl" />
@@ -40,7 +41,7 @@ export default function DocumentArchiveWorkspace({
                             <FileLock2 className="h-4 w-4" />
                             Қауіпсіз архив
                         </div>
-                        <h1 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl text-white">
+                        <h1 className="mt-3 text-2xl font-bold tracking-tight text-white sm:text-3xl">
                             Өшірілген құжаттар
                         </h1>
                         <p className="mt-2 max-w-2xl truncate text-sm text-slate-300 sm:text-base">
@@ -97,6 +98,6 @@ export default function DocumentArchiveWorkspace({
                 documents={documents}
                 downloadUrl={downloadUrl}
             />
-        </div>
+        </PageContainer>
     );
 }

@@ -26,6 +26,7 @@ import {
     MessageCircle,
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
+import DetailSectionNav from '@/components/detail-section-nav';
 import ProductionMonitoringCard from '@/components/investment-projects/production-monitoring-card';
 import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
 import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
@@ -35,6 +36,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageContainer } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -987,7 +989,10 @@ export default function Show({
         >
             <Head title={project.name} />
 
-            <div className="flex h-full w-full flex-1 flex-col gap-6 bg-slate-50/60 p-4 sm:p-6 print:bg-white print:p-0">
+            <PageContainer
+                width="wide"
+                className="project-print-document print:max-w-none print:p-0"
+            >
                 {project.is_deleted && isSuperAdmin && (
                     <div
                         className="flex flex-col gap-3 rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-red-900 sm:flex-row sm:items-center sm:justify-between"
@@ -1041,13 +1046,44 @@ export default function Show({
                     canSeeOperationalDetails={!isRestrictedView}
                 />
 
+                <DetailSectionNav
+                    ariaLabel="Жоба бөлімдері"
+                    items={[
+                        {
+                            label: 'Паспорт',
+                            href: '#passport-overview',
+                            icon: Presentation,
+                        },
+                        {
+                            label: 'Негізгі мәлімет',
+                            href: '#project-details',
+                            icon: FileText,
+                        },
+                        {
+                            label: 'Жол картасы',
+                            href: '#project-roadmap',
+                            icon: Activity,
+                            count: tasks.length,
+                        },
+                        {
+                            label: 'Команда',
+                            href: '#project-team',
+                            icon: Users,
+                            count:
+                                (project.curators?.length ?? 0) +
+                                (project.investors?.length ?? 0) +
+                                (project.executors?.length ?? 0),
+                        },
+                    ]}
+                />
+
                 <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px] print:block">
                     {/* Main Content */}
                     <div className="min-w-0 space-y-6">
                         {/* Project Banner + Info */}
                         <Card
                             id="project-details"
-                            className="scroll-mt-6 overflow-hidden py-0 shadow-none"
+                            className="scroll-mt-24 overflow-hidden py-0 shadow-none"
                         >
                             {/* Banner Header */}
                             <div className="border-b border-slate-200 bg-white px-6 py-4">
@@ -1532,7 +1568,7 @@ export default function Show({
                         {!isRestrictedView && (
                             <Card
                                 id="project-roadmap"
-                                className="scroll-mt-6 overflow-hidden py-0 shadow-none"
+                                className="scroll-mt-24 overflow-hidden py-0 shadow-none"
                             >
                                 <div className="bg-[#0f1b3d] px-6 py-4">
                                     <div className="flex items-center justify-between">
@@ -1936,7 +1972,7 @@ export default function Show({
                         {/* Executors Card */}
                         <Card
                             id="project-team"
-                            className="scroll-mt-6 shadow-none"
+                            className="scroll-mt-24 shadow-none"
                         >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
@@ -3211,7 +3247,7 @@ export default function Show({
                             </div>
                         );
                     })()}
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

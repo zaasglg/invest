@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PageContainer } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import type { PaginatedData } from '@/types';
@@ -323,7 +324,7 @@ export default function Logs({
         <AppLayout>
             <Head title={`Әрекеттер тарихы — ${project.name}`} />
 
-            <div className="mx-auto max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+            <PageContainer width="standard">
                 <div className="mb-6">
                     <Link
                         href={showUrl}
@@ -627,7 +628,7 @@ export default function Logs({
                 <div className="mt-4">
                     <Pagination paginator={logs} preserveScroll />
                 </div>
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

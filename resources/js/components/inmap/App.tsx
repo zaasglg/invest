@@ -4,6 +4,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
 import { MathUtils, Path, Shape, Vector3 } from 'three'
+import { index as issuesIndex } from '@/routes/issues'
 import districtsRaw from './data/turkistan-districts.geojson?raw'
 import elevationRaw from './data/turkistan-elevation.json?raw'
 import boundaryRaw from './data/turkistan-region.geojson?raw'
@@ -159,11 +160,11 @@ const indicatorDefinitions: IndicatorDefinition[] = [
 ]
 
 const problemSectorLabels = [
+  { key: 'all_projects' as const, label: 'Жобалар' },
   { key: 'sez' as const, label: 'АЭА' },
   { key: 'iz' as const, label: 'ИА' },
   { key: 'prom' as const, label: 'Өнеркәсіп' },
   { key: 'nedro' as const, label: 'Жер қойнауы' },
-  { key: 'invest' as const, label: 'Инвестиция' },
 ]
 
 const emptySectorRow: SectorRow = {
@@ -747,6 +748,9 @@ function DistrictExplorer({
     districtMapModels.find((district) => district.id === selectedDistrictId) ??
     null
   const regionId = selectedDistrict?.regionId ?? null
+  const regionIssuesUrl = issuesIndex(
+    regionId === null ? undefined : { query: { region_id: regionId } },
+  ).url
   const hasSelectedRegion =
     selectedDistrict === null || selectedDistrict.regionId !== null
   const sectorRow = hasSelectedRegion
@@ -755,6 +759,12 @@ function DistrictExplorer({
   const sectorData = hasSelectedRegion
     ? getSectorData(sectorSummary, regionId)
     : emptySectorData
+  const totalProblemCount =
+    sectorRow.problemCount +
+    sectorData.sez.problemCount +
+    sectorData.iz.problemCount +
+    sectorData.prom.problemCount +
+    sectorData.nedro.problemCount
   const yearly = hasSelectedRegion
     ? getYearlySeries(regionYearly, regionId)
     : {
@@ -772,13 +782,16 @@ function DistrictExplorer({
     investment: toDisplayValue('investment', sectorRow.investment),
     projects: sectorRow.projectCount ?? 0,
     jobs: sectorRow.jobCount ?? 0,
-    problems: sectorRow.problemCount,
+    problems: totalProblemCount,
   }
 
   const chartValues =
     activeIndicatorKey === 'problems'
       ? problemSectorLabels.map((sector) =>
-          toDisplayValue('problems', sectorData[sector.key].problemCount),
+          toDisplayValue(
+            'problems',
+            sectorData[sector.key]?.problemCount ?? 0,
+          ),
         )
       : yearly[activeIndicatorKey].map((value) =>
           toDisplayValue(activeIndicatorKey, value),
@@ -948,8 +961,8 @@ function DistrictExplorer({
                         ),
                       )
 
-                return (
-                  <article key={indicator.key}>
+                const content = (
+                  <>
                     <span>{indicator.shortLabel}</span>
                     <strong>
                       {formatAnalyticsValue(value, indicator)}
@@ -961,9 +974,21 @@ function DistrictExplorer({
                         {seriesGrowth.toFixed(1)}% кезең ішінде
                       </p>
                     ) : (
-                      <p>Ағымдағы деректер</p>
+                      <p>Жоба + 4 сектор →</p>
                     )}
-                  </article>
+                  </>
+                )
+
+                return indicator.key === 'problems' ? (
+                  <Link
+                    key={indicator.key}
+                    href={regionIssuesUrl}
+                    className="analytics-kpi-link"
+                  >
+                    <article>{content}</article>
+                  </Link>
+                ) : (
+                  <article key={indicator.key}>{content}</article>
                 )
               })}
             </div>
@@ -990,18 +1015,24 @@ function DistrictExplorer({
                 className="indicator-tabs"
                 aria-label="Көрсеткішті таңдау"
               >
-                {indicatorDefinitions.map((indicator) => (
-                  <button
-                    key={indicator.key}
-                    type="button"
-                    className={
-                      activeIndicatorKey === indicator.key ? 'is-active' : ''
-                    }
-                    onClick={() => setActiveIndicatorKey(indicator.key)}
-                  >
-                    {indicator.shortLabel}
-                  </button>
-                ))}
+                {indicatorDefinitions.map((indicator) =>
+                  indicator.key === 'problems' ? (
+                    <Link key={indicator.key} href={regionIssuesUrl}>
+                      {indicator.shortLabel}
+                    </Link>
+                  ) : (
+                    <button
+                      key={indicator.key}
+                      type="button"
+                      className={
+                        activeIndicatorKey === indicator.key ? 'is-active' : ''
+                      }
+                      onClick={() => setActiveIndicatorKey(indicator.key)}
+                    >
+                      {indicator.shortLabel}
+                    </button>
+                  ),
+                )}
               </div>
 
               <AnalyticsBarChart

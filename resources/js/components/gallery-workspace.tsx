@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageContainer } from '@/components/ui/page';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
@@ -546,7 +547,7 @@ export default function GalleryWorkspace({
     ];
 
     return (
-        <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-6 p-4 sm:p-6 lg:p-8">
+        <PageContainer width="standard">
             <section className="relative overflow-hidden rounded-[28px] bg-[#0b1533] px-5 py-6 text-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.9)] sm:px-8 sm:py-8">
                 <div className="absolute -top-24 -right-20 h-64 w-64 rounded-full bg-violet-500/20 blur-3xl" />
                 <div className="absolute -bottom-32 left-1/3 h-72 w-72 rounded-full bg-cyan-400/15 blur-3xl" />
@@ -944,6 +945,6 @@ export default function GalleryWorkspace({
                 isOpen={lightboxOpen}
                 onClose={() => setLightboxOpen(false)}
             />
-        </div>
+        </PageContainer>
     );
 }

@@ -158,7 +158,7 @@ export default function ProjectPassportOverview({
     return (
         <section
             id="passport-overview"
-            className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
+            className="project-passport-overview scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
         >
             <div className="relative overflow-hidden bg-gradient-to-br from-[#0b1735] via-[#122752] to-[#1b3b73] px-5 py-6 text-white sm:px-7 sm:py-7">
                 <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-[#c8a44e]/15 blur-2xl" />

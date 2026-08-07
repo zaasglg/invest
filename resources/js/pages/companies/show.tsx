@@ -16,8 +16,10 @@ import {
     Trash2,
     UserRound,
 } from 'lucide-react';
+import DetailSectionNav from '@/components/detail-section-nav';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
+import { PageContainer } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
@@ -141,54 +143,111 @@ export default function Show({
             ]}
         >
             <Head title={company.display_name} />
-            <div className="space-y-6 p-6">
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div className="flex items-start gap-3">
-                        <Button asChild size="icon" variant="outline">
-                            <Link
-                                href={companiesRoutes.index.url()}
-                                aria-label="Артқа"
-                            >
-                                <ArrowLeft className="h-4 w-4" />
-                            </Link>
-                        </Button>
-                        <div>
-                            <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                                {company.display_name}
-                            </h1>
-                            <p className="mt-1 text-sm text-gray-500">
-                                {company.legal_form_label} ·{' '}
-                                {company.status_label} · {projectCount} жоба
-                            </p>
+            <PageContainer width="standard">
+                <section className="relative overflow-hidden rounded-[28px] bg-navy px-5 py-6 text-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.9)] sm:px-8 sm:py-8">
+                    <div className="pointer-events-none absolute -top-28 -right-20 size-72 rounded-full bg-gold/15 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-36 left-1/3 size-72 rounded-full bg-blue-400/10 blur-3xl" />
+
+                    <div className="relative">
+                        <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-start">
+                            <div className="min-w-0">
+                                <Link
+                                    href={companiesRoutes.index.url()}
+                                    className="mb-5 inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-300 transition hover:bg-white/10 hover:text-white"
+                                >
+                                    <ArrowLeft className="size-3.5" />
+                                    Компаниялар тізімі
+                                </Link>
+                                <p className="text-xs font-bold tracking-[0.16em] text-gold uppercase">
+                                    Инвестор профилі
+                                </p>
+                                <h1 className="mt-3 max-w-4xl text-2xl font-extrabold text-balance text-white sm:text-3xl">
+                                    {company.display_name}
+                                </h1>
+                                <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-slate-300">
+                                    <span>{company.legal_form_label}</span>
+                                    <span className="text-white/30">•</span>
+                                    <span>{company.status_label}</span>
+                                    {company.region?.name && (
+                                        <>
+                                            <span className="text-white/30">
+                                                •
+                                            </span>
+                                            <span>{company.region.name}</span>
+                                        </>
+                                    )}
+                                </p>
+                            </div>
+
+                            {canManage && (
+                                <div className="flex shrink-0 flex-wrap gap-2">
+                                    <Button
+                                        asChild
+                                        className="bg-gold text-white shadow-none hover:bg-gold-dark"
+                                    >
+                                        <Link
+                                            href={companiesRoutes.edit.url(
+                                                company.id,
+                                            )}
+                                        >
+                                            <Pencil className="mr-2 size-4" />
+                                            Өңдеу
+                                        </Link>
+                                    </Button>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        onClick={removeCompany}
+                                        title={
+                                            projectCount > 0
+                                                ? `Компанияға ${projectCount} жоба тіркелген — жоюға болмайды`
+                                                : undefined
+                                        }
+                                        className="border-white/15 bg-white/5 text-rose-200 hover:bg-rose-500/15 hover:text-white"
+                                    >
+                                        <Trash2 className="mr-2 size-4" />
+                                        Жою
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="mt-7 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 lg:grid-cols-4">
+                            {[
+                                {
+                                    label: 'Жобалар',
+                                    value: projectCount,
+                                },
+                                {
+                                    label: 'Профиль',
+                                    value: company.is_profile_complete
+                                        ? 'Толық'
+                                        : 'Толық емес',
+                                },
+                                {
+                                    label: 'Инвестор аккаунты',
+                                    value: company.investor ? 'Ашылған' : 'Жоқ',
+                                },
+                                {
+                                    label: 'Құжаттар',
+                                    value: company.documents.length,
+                                },
+                            ].map((metric) => (
+                                <div
+                                    key={metric.label}
+                                    className="bg-navy/75 px-4 py-4 sm:px-5"
+                                >
+                                    <p className="text-[10px] font-bold tracking-[0.14em] text-slate-400 uppercase">
+                                        {metric.label}
+                                    </p>
+                                    <p className="mt-2 text-lg font-extrabold text-white sm:text-xl">
+                                        {metric.value}
+                                    </p>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    {canManage && (
-                        <div className="flex gap-2">
-                            <Button asChild variant="outline">
-                                <Link
-                                    href={companiesRoutes.edit.url(company.id)}
-                                >
-                                    <Pencil className="mr-2 h-4 w-4" />
-                                    Өңдеу
-                                </Link>
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                onClick={removeCompany}
-                                title={
-                                    projectCount > 0
-                                        ? `Компанияға ${projectCount} жоба тіркелген — жоюға болмайды`
-                                        : undefined
-                                }
-                                className="text-red-600 hover:text-red-700"
-                            >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Жою
-                            </Button>
-                        </div>
-                    )}
-                </div>
+                </section>
 
                 {(!company.is_profile_complete || !company.investor) && (
                     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
@@ -205,9 +264,50 @@ export default function Show({
                     </div>
                 )}
 
+                <DetailSectionNav
+                    ariaLabel="Компания бөлімдері"
+                    items={[
+                        {
+                            label: 'Реквизиттер',
+                            href: '#company-legal',
+                            icon: Building2,
+                        },
+                        ...(company.licenses_and_regulatory_documents ||
+                        company.documents.length > 0
+                            ? [
+                                  {
+                                      label: 'Құжаттар',
+                                      href: '#company-documents',
+                                      icon: FileText,
+                                      count: company.documents.length,
+                                  },
+                              ]
+                            : []),
+                        {
+                            label: 'Байланыс',
+                            href: '#company-contacts',
+                            icon: UserRound,
+                        },
+                        {
+                            label: 'Мекенжайлар',
+                            href: '#company-addresses',
+                            icon: MapPin,
+                        },
+                        {
+                            label: 'Жобалар',
+                            href: '#company-projects',
+                            icon: BriefcaseBusiness,
+                            count: projectCount,
+                        },
+                    ]}
+                />
+
                 <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(300px,1fr)]">
                     <div className="space-y-6">
-                        <section className="rounded-xl border border-gray-200 bg-white p-6">
+                        <section
+                            id="company-legal"
+                            className="scroll-mt-24 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                        >
                             <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">
                                 <Building2 className="h-5 w-5 text-[#b18b35]" />
                                 Заңды реквизиттер
@@ -245,7 +345,10 @@ export default function Show({
 
                         {(company.licenses_and_regulatory_documents ||
                             company.documents.length > 0) && (
-                            <section className="rounded-xl border border-gray-200 bg-white p-6">
+                            <section
+                                id="company-documents"
+                                className="scroll-mt-24 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                            >
                                 <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">
                                     <FileText className="h-5 w-5 text-[#b18b35]" />
                                     Лицензии и нормативные документы
@@ -302,7 +405,10 @@ export default function Show({
                             </section>
                         )}
 
-                        <section className="rounded-xl border border-gray-200 bg-white p-6">
+                        <section
+                            id="company-contacts"
+                            className="scroll-mt-24 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                        >
                             <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">
                                 <UserRound className="h-5 w-5 text-[#b18b35]" />
                                 Басшылық және байланыс
@@ -332,7 +438,10 @@ export default function Show({
                             )}
                         </section>
 
-                        <section className="rounded-xl border border-gray-200 bg-white p-6">
+                        <section
+                            id="company-addresses"
+                            className="scroll-mt-24 rounded-2xl border border-slate-200/80 bg-white p-6 shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                        >
                             <h2 className="mb-5 flex items-center gap-2 font-semibold text-[#0f1b3d]">
                                 <MapPin className="h-5 w-5 text-[#b18b35]" />
                                 Мекенжайлар
@@ -358,7 +467,7 @@ export default function Show({
                         </section>
                     </div>
 
-                    <aside className="space-y-4">
+                    <aside className="space-y-4 xl:sticky xl:top-4 xl:self-start">
                         <div className="rounded-xl border border-amber-200 bg-amber-50 p-5">
                             <p className="flex items-center gap-2 font-semibold text-[#0f1b3d]">
                                 <UserRound className="h-5 w-5 text-amber-700" />
@@ -430,7 +539,10 @@ export default function Show({
                     </aside>
                 </div>
 
-                <section className="overflow-hidden rounded-xl border border-gray-200 bg-white">
+                <section
+                    id="company-projects"
+                    className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                >
                     <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
                         <h2 className="flex items-center gap-2 font-semibold text-[#0f1b3d]">
                             <BriefcaseBusiness className="h-5 w-5 text-[#b18b35]" />
@@ -478,7 +590,7 @@ export default function Show({
                     )}
                 </section>
                 <Pagination paginator={projects} preserveScroll />
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

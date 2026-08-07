@@ -23,17 +23,29 @@ import { cn } from '@/lib/utils';
 
 /* ─── PAGE CONTAINER ──────────────────────────────────────────────────── */
 /** Full-width padded container used as the root of every page body. */
+type PageWidth = 'form' | 'standard' | 'wide' | 'full';
+
+const PAGE_WIDTHS: Record<PageWidth, string> = {
+    form: 'max-w-5xl',
+    standard: 'max-w-7xl',
+    wide: 'max-w-[96rem]',
+    full: 'max-w-none',
+};
+
 export function PageContainer({
     children,
     className,
+    width = 'wide',
 }: {
     children: React.ReactNode;
     className?: string;
+    width?: PageWidth;
 }) {
     return (
         <div
             className={cn(
-                'mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8',
+                'mx-auto flex min-w-0 w-full flex-col gap-5 px-4 py-5 sm:gap-6 sm:px-6 sm:py-6',
+                PAGE_WIDTHS[width],
                 className,
             )}
         >
@@ -47,12 +59,16 @@ export function PageContainer({
 export function PageHeader({
     title,
     subtitle,
+    eyebrow,
+    icon,
     badge,
     action,
     className,
 }: {
     title: string;
     subtitle?: string;
+    eyebrow?: string;
+    icon?: React.ReactNode;
     badge?: React.ReactNode;
     action?: React.ReactNode;
     className?: string;
@@ -60,22 +76,34 @@ export function PageHeader({
     return (
         <div
             className={cn(
-                'flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between',
+                'flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between',
                 className,
             )}
         >
             <div className="min-w-0">
-                <div className="flex items-center gap-3">
-                    <h1 className="truncate text-2xl font-bold tracking-tight text-[#0f1b3d]">
+                {eyebrow && (
+                    <p className="mb-2 text-xs font-bold tracking-wide text-gold-dark uppercase">
+                        {eyebrow}
+                    </p>
+                )}
+                <div className="flex min-w-0 items-center gap-3">
+                    {icon && (
+                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl border border-gold/20 bg-sand-light text-gold-dark shadow-sm">
+                            {icon}
+                        </span>
+                    )}
+                    <h1 className="min-w-0 text-2xl font-extrabold tracking-tight text-navy sm:text-3xl">
                         {title}
                     </h1>
                     {badge}
                 </div>
                 {subtitle && (
-                    <p className="mt-0.5 text-sm text-gray-500">{subtitle}</p>
+                    <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-500">
+                        {subtitle}
+                    </p>
                 )}
             </div>
-            {action && <div className="mt-3 shrink-0 sm:mt-0">{action}</div>}
+            {action && <div className="shrink-0">{action}</div>}
         </div>
     );
 }
@@ -100,7 +128,7 @@ export function StatCard({
     return (
         <div
             className={cn(
-                'rounded-xl border border-gray-100 bg-white p-5 shadow-sm transition-shadow hover:shadow-md',
+                'rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,27,61,0.03),0_18px_45px_-38px_rgba(15,27,61,0.5)] transition-shadow hover:shadow-md',
                 className,
             )}
         >
@@ -109,7 +137,7 @@ export function StatCard({
                     <p className="text-xs font-semibold tracking-wide text-gray-400 uppercase">
                         {label}
                     </p>
-                    <p className="mt-1.5 truncate text-2xl font-extrabold text-[#0f1b3d]">
+                    <p className="mt-1.5 truncate text-2xl font-extrabold text-navy">
                         {value}
                     </p>
                     {description && (
@@ -131,7 +159,7 @@ export function StatCard({
                     )}
                 </div>
                 {icon && (
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0f1b3d]/5 text-[#0f1b3d]">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-navy/5 text-navy">
                         {icon}
                     </div>
                 )}
@@ -202,7 +230,7 @@ export function DataCard({
     return (
         <div
             className={cn(
-                'overflow-hidden rounded-xl border border-gray-100 bg-white shadow-sm',
+                'overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,27,61,0.03),0_18px_45px_-38px_rgba(15,27,61,0.5)]',
                 !noPadding && 'p-5',
                 className,
             )}
@@ -264,7 +292,7 @@ export function SectionHeading({
             )}
         >
             <div>
-                <h3 className="text-base font-bold text-[#0f1b3d]">{title}</h3>
+                <h3 className="text-base font-bold text-navy">{title}</h3>
                 {description && (
                     <p className="mt-0.5 text-sm text-gray-500">
                         {description}
@@ -292,13 +320,13 @@ export function FormCard({
     return (
         <div
             className={cn(
-                'rounded-xl border border-gray-100 bg-white p-6 shadow-sm',
+                'rounded-xl border border-slate-200/80 bg-white p-5 shadow-[0_1px_2px_rgba(15,27,61,0.03),0_18px_45px_-38px_rgba(15,27,61,0.5)] sm:p-6',
                 className,
             )}
         >
             {title && (
                 <div className="mb-5 border-b border-gray-50 pb-4">
-                    <h3 className="text-base font-bold text-[#0f1b3d]">
+                    <h3 className="text-base font-bold text-navy">
                         {title}
                     </h3>
                     {description && (
@@ -366,7 +394,7 @@ export function PrimaryActionLink({
         <Link
             href={href}
             className={cn(
-                'inline-flex items-center gap-2 rounded-lg bg-[#0f1b3d] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-[#1a2d5e] hover:shadow-md',
+                'inline-flex items-center gap-2 rounded-lg bg-navy px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-navy-light hover:shadow-md',
                 className,
             )}
         >

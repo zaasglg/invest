@@ -535,3 +535,111 @@
         opacity: 1;
     }
 }
+
+/* Investment-project passport: predictable A4 output without UI chrome. */
+@media print {
+    @page {
+        size: A4 portrait;
+        margin: 10mm;
+    }
+
+    html,
+    body {
+        width: auto !important;
+        min-width: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    .app-shell,
+    .app-main {
+        display: block !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: #fff !important;
+    }
+
+    .app-main::before {
+        display: none !important;
+    }
+
+    .project-print-document {
+        display: block !important;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: #0f172a;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .project-print-document > * + * {
+        margin-top: 1rem !important;
+    }
+
+    .project-print-document,
+    .project-print-document * {
+        box-sizing: border-box;
+    }
+
+    .project-print-document :is(h1, h2, h3, h4, p, span, li, a, td, th) {
+        max-width: 100%;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }
+
+    .project-print-document :is(.grid, .flex) > * {
+        min-width: 0 !important;
+    }
+
+    .project-print-document :is(img, video, canvas) {
+        max-width: 100% !important;
+        height: auto;
+    }
+
+    .project-print-document .overflow-x-auto {
+        overflow-x: visible !important;
+    }
+
+    .project-print-document table {
+        width: 100% !important;
+        table-layout: fixed;
+    }
+
+    .project-print-document button,
+    .project-print-document [role='dialog'] {
+        display: none !important;
+    }
+
+    .project-passport-overview {
+        overflow: visible !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .project-passport-overview > div {
+        max-width: 100%;
+        overflow: visible !important;
+    }
+
+    .project-passport-overview > div:nth-of-type(2) {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    }
+
+    .project-passport-overview > div:nth-of-type(3) {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .project-passport-overview > div:nth-of-type(2) > div,
+    .project-passport-overview > div:nth-of-type(3) > div {
+        min-width: 0 !important;
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+}

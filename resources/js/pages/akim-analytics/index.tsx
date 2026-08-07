@@ -25,6 +25,7 @@ import {
     CardTitle,
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import { PageContainer } from '@/components/ui/page';
 import {
     Table,
     TableBody,
@@ -387,7 +388,7 @@ export default function AkimAnalytics({ analytics }: Props) {
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Облыс аналитикасы" />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-4 md:p-6">
+            <PageContainer width="wide">
                 <section className="overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-blue-800 p-6 text-white shadow-lg md:p-8">
                     <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
                         <div className="max-w-3xl">
@@ -994,7 +995,7 @@ export default function AkimAnalytics({ analytics }: Props) {
                         </Button>
                     </CardContent>
                 </Card>
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

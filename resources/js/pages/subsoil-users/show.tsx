@@ -22,12 +22,14 @@ import {
 } from 'lucide-react';
 import React, { useState, useMemo, useRef } from 'react';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
+import DetailSectionNav from '@/components/detail-section-nav';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageContainer } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -460,7 +462,7 @@ export default function Show({
         >
             <Head title={subsoilUser.name} />
 
-            <div className="flex h-full w-full flex-1 flex-col gap-6 p-6">
+            <PageContainer width="wide">
                 {/* Back link */}
                 <Link
                     href={`/subsoil-users`}
@@ -475,19 +477,64 @@ export default function Show({
                     deleter={subsoilUser.deleter}
                 />
 
+                <DetailSectionNav
+                    items={[
+                        {
+                            label: 'Жалпы ақпарат',
+                            href: '#subsoil-overview',
+                            icon: Layers,
+                        },
+                        {
+                            label: 'Мәселелер',
+                            href: '#subsoil-issues',
+                            icon: AlertTriangle,
+                            count: issues.length,
+                        },
+                        {
+                            label: 'Жол картасы',
+                            href: '#subsoil-roadmap',
+                            icon: Flag,
+                            count: tasks.length,
+                        },
+                        {
+                            label: 'Құжаттар',
+                            href: `/subsoil-users/${subsoilUser.id}/documents`,
+                            icon: FileText,
+                            count: subsoilUser.documents?.length ?? 0,
+                        },
+                        {
+                            label: 'Галерея',
+                            href: `/subsoil-users/${subsoilUser.id}/gallery`,
+                            icon: ImageIcon,
+                            count: photosCount,
+                        },
+                    ]}
+                />
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
                     {/* Main Content */}
                     <div className="space-y-6 lg:col-span-2">
                         {/* Banner + Info */}
-                        <Card className="overflow-hidden py-0 shadow-none">
+                        <Card
+                            id="subsoil-overview"
+                            className="scroll-mt-24 overflow-hidden border-slate-200 py-0 shadow-sm"
+                        >
                             {/* Banner Header */}
-                            <div className="bg-[#0f1b3d] px-6 py-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-white">
-                                        <Layers className="h-5 w-5" />
-                                        <h1 className="text-xl font-bold">
-                                            {subsoilUser.name}
-                                        </h1>
+                            <div className="relative overflow-hidden bg-[#0f1b3d] px-6 py-6">
+                                <div className="absolute -top-16 -right-12 h-36 w-36 rounded-full bg-[#c8a44e]/20 blur-3xl" />
+                                <div className="relative flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                                    <div className="flex items-center gap-3 text-white">
+                                        <div className="rounded-xl border border-white/15 bg-white/10 p-2.5">
+                                            <Layers className="h-6 w-6" />
+                                        </div>
+                                        <div>
+                                            <p className="mb-1 text-xs font-semibold tracking-[0.16em] text-[#e4c973] uppercase">
+                                                Жер қойнауын пайдалану
+                                            </p>
+                                            <h1 className="text-xl font-bold sm:text-2xl text-white">
+                                                {subsoilUser.name}
+                                            </h1>
+                                        </div>
                                     </div>
                                     {subsoilUser.license_status && (
                                         <Badge
@@ -609,7 +656,10 @@ export default function Show({
                             </div>
 
                             {/* Проблемалық мәселелер */}
-                            <div className="border-t border-gray-200 px-6 py-5">
+                            <div
+                                id="subsoil-issues"
+                                className="scroll-mt-24 border-t border-gray-200 px-6 py-5"
+                            >
                                 <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
                                     <AlertTriangle className="h-5 w-5 text-gray-500" />
                                     Проблемалық мәселелер
@@ -721,7 +771,10 @@ export default function Show({
                         </Card>
 
                         {/* Жол картасы / Roadmap */}
-                        <Card className="overflow-hidden py-0 shadow-none">
+                        <Card
+                            id="subsoil-roadmap"
+                            className="scroll-mt-24 overflow-hidden border-slate-200 py-0 shadow-sm"
+                        >
                             <div className="bg-[#0f1b3d] px-6 py-4">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2 text-white">
@@ -1115,7 +1168,7 @@ export default function Show({
                         </Card>
                     </div>
                 </div>
-            </div>
+            </PageContainer>
 
             {/* Add Task Modal */}
             {showTaskModal && (

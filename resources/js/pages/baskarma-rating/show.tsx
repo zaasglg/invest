@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageContainer } from '@/components/ui/page';
 import {
     Table,
     TableBody,
@@ -202,7 +203,7 @@ export default function BaskarmaRatingShow({
         >
             <Head title={`${user.full_name} — Есеп`} />
 
-            <div className="flex h-full flex-1 flex-col gap-6 p-6">
+            <PageContainer width="standard">
                 {/* Back */}
                 <Link
                     href="/baskarma-rating"
@@ -416,7 +417,7 @@ export default function BaskarmaRatingShow({
                         emptyText="Мерзімі өткен тапсырмалар жоқ"
                     />
                 </div>
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
     ChevronLeft,
     ChevronRight,
     ExternalLink,
@@ -33,12 +34,15 @@ import {
     Pickaxe,
     TrainFront,
     Presentation,
+    MapPinned,
 } from 'lucide-react';
 import React, { useState } from 'react';
+import DetailSectionNav from '@/components/detail-section-nav';
 import Map from '@/components/map';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { PageContainer } from '@/components/ui/page';
 import {
     Table,
     TableBody,
@@ -52,6 +56,7 @@ import AppLayout from '@/layouts/app-layout';
 import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import { index as issuesIndex } from '@/routes/issues';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -746,6 +751,16 @@ export default function Show({
         0,
     );
 
+    const totalIssuesCount =
+        stats.projectIssuesCount +
+        stats.sezIssuesCount +
+        stats.izIssuesCount +
+        stats.promIssuesCount +
+        stats.subsoilIssuesCount;
+    const regionIssuesUrl = issuesIndex({
+        query: { region_id: region.id },
+    }).url;
+
     // Helper to safely get lat/lng
     function getLatLng(
         point: Record<string, unknown> | unknown[] | null,
@@ -925,118 +940,229 @@ export default function Show({
         >
             <Head title={region.name} />
 
-            <div className="flex max-w-[1600px] flex-col gap-6 p-4 md:p-8">
+            <PageContainer width="wide">
                 {isSavingOrder && (
                     <p className="text-sm text-amber-700">
                         Жоба реті сақталуда…
                     </p>
                 )}
                 {/* Header Section */}
-                <div className="flex flex-col items-start justify-between gap-4 border-b border-gray-100 pb-6 md:flex-row md:items-end">
-                    <div>
-                        <div className="mb-2 flex items-center gap-3">
-                            <Globe className="h-8 w-8 text-[#0f1b3d]" />
-                            <h1 className="flex items-center gap-2 text-3xl font-semibold tracking-tight text-[#0f1b3d]">
-                                {region.name}
-                                {selectedSezId &&
-                                    sezs.find(
-                                        (s) => s.id === selectedSezId,
-                                    ) && (
-                                        <>
-                                            <ChevronRight className="h-5 w-5 text-gray-400" />
-                                            <span className="text-violet-600">
-                                                {
-                                                    sezs.find(
-                                                        (s) =>
-                                                            s.id ===
-                                                            selectedSezId,
-                                                    )?.name
-                                                }
-                                            </span>
-                                        </>
-                                    )}
-                                {selectedIzId &&
-                                    industrialZones.find(
-                                        (z) => z.id === selectedIzId,
-                                    ) && (
-                                        <>
-                                            <ChevronRight className="h-5 w-5 text-gray-400" />
-                                            <span className="text-amber-600">
-                                                {
-                                                    industrialZones.find(
-                                                        (z) =>
-                                                            z.id ===
-                                                            selectedIzId,
-                                                    )?.name
-                                                }
-                                            </span>
-                                        </>
-                                    )}
-                                {selectedSubsoilId &&
-                                    subsoilUsers.find(
-                                        (s) => s.id === selectedSubsoilId,
-                                    ) && (
-                                        <>
-                                            <ChevronRight className="h-5 w-5 text-gray-400" />
-                                            <span className="text-gray-600">
-                                                {
-                                                    subsoilUsers.find(
-                                                        (s) =>
-                                                            s.id ===
-                                                            selectedSubsoilId,
-                                                    )?.name
-                                                }
-                                            </span>
-                                        </>
-                                    )}
-                                {selectedPromId &&
-                                    promZones.find(
-                                        (z) => z.id === selectedPromId,
-                                    ) && (
-                                        <>
-                                            <ChevronRight className="h-5 w-5 text-gray-400" />
-                                            <span className="text-emerald-600">
-                                                {
-                                                    promZones.find(
-                                                        (z) =>
-                                                            z.id ===
-                                                            selectedPromId,
-                                                    )?.name
-                                                }
-                                            </span>
-                                        </>
-                                    )}
-                            </h1>
-                        </div>
-                        <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-gray-500">
-                            <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Аумағы:</span>
-                                <span className="text-[#0f1b3d]">
-                                    {formatArea(stats.totalArea)} га
+                <section
+                    id="region-summary"
+                    className="relative overflow-hidden rounded-[28px] bg-navy px-5 py-6 text-white shadow-[0_28px_80px_-40px_rgba(15,23,42,0.9)] sm:px-8 sm:py-8"
+                >
+                    <div className="pointer-events-none absolute -top-28 -right-20 size-72 rounded-full bg-blue-400/15 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-36 left-1/3 size-72 rounded-full bg-gold/10 blur-3xl" />
+                    <div className="relative flex flex-col items-start justify-between gap-5 md:flex-row md:items-end">
+                        <div>
+                            <div className="mb-2 flex items-center gap-3">
+                                <span className="flex size-11 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gold">
+                                    <Globe className="size-5" />
                                 </span>
+                                <h1 className="flex flex-wrap items-center gap-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
+                                    {region.name}
+                                    {selectedSezId &&
+                                        sezs.find(
+                                            (s) => s.id === selectedSezId,
+                                        ) && (
+                                            <>
+                                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                                                <span className="text-violet-600">
+                                                    {
+                                                        sezs.find(
+                                                            (s) =>
+                                                                s.id ===
+                                                                selectedSezId,
+                                                        )?.name
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+                                    {selectedIzId &&
+                                        industrialZones.find(
+                                            (z) => z.id === selectedIzId,
+                                        ) && (
+                                            <>
+                                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                                                <span className="text-amber-600">
+                                                    {
+                                                        industrialZones.find(
+                                                            (z) =>
+                                                                z.id ===
+                                                                selectedIzId,
+                                                        )?.name
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+                                    {selectedSubsoilId &&
+                                        subsoilUsers.find(
+                                            (s) => s.id === selectedSubsoilId,
+                                        ) && (
+                                            <>
+                                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                                                <span className="text-slate-200">
+                                                    {
+                                                        subsoilUsers.find(
+                                                            (s) =>
+                                                                s.id ===
+                                                                selectedSubsoilId,
+                                                        )?.name
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+                                    {selectedPromId &&
+                                        promZones.find(
+                                            (z) => z.id === selectedPromId,
+                                        ) && (
+                                            <>
+                                                <ChevronRight className="h-5 w-5 text-gray-400" />
+                                                <span className="text-emerald-600">
+                                                    {
+                                                        promZones.find(
+                                                            (z) =>
+                                                                z.id ===
+                                                                selectedPromId,
+                                                        )?.name
+                                                    }
+                                                </span>
+                                            </>
+                                        )}
+                                </h1>
                             </div>
-                            {/* <div className="flex items-center gap-2">
+                            <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm font-medium text-slate-300">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400">
+                                        Аумағы:
+                                    </span>
+                                    <span className="text-white">
+                                        {formatArea(stats.totalArea)} га
+                                    </span>
+                                </div>
+                                {/* <div className="flex items-center gap-2">
                                 <span className="text-gray-400">Күйі:</span>
                                 <span className="text-[#0f1b3d]">Жұмыс істеуде</span>
                             </div> */}
-                            <div className="flex items-center gap-2">
-                                <span className="text-gray-400">Облыс:</span>
-                                <span className="flex cursor-pointer items-center text-[#0f1b3d] hover:underline">
-                                    <Link href="/dashboard">
-                                        Түркістан облысы
-                                    </Link>{' '}
-                                    <ChevronRight className="h-4 w-4" />
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-slate-400">
+                                        Облыс:
+                                    </span>
+                                    <span className="flex cursor-pointer items-center text-white hover:underline">
+                                        <Link href="/dashboard">
+                                            Түркістан облысы
+                                        </Link>{' '}
+                                        <ChevronRight className="h-4 w-4" />
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="flex gap-3">
+                            <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-sm font-semibold text-emerald-300">
+                                <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс
+                                істеуде
                             </div>
                         </div>
                     </div>
-                    <div className="flex gap-3">
-                        <div className="flex items-center gap-2 rounded-md border border-green-200 bg-green-50 px-3 py-1.5 text-sm font-medium text-green-700">
-                            <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс
-                            істеуде
-                        </div>
-                    </div>
+                </section>
+
+                <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                    {[
+                        {
+                            label: 'Жалпы аумақ',
+                            value: `${formatArea(stats.totalArea)} га`,
+                            icon: MapPinned,
+                            href: null,
+                        },
+                        {
+                            label: 'Инвестициялық жобалар',
+                            value: stats.projectsCount,
+                            icon: Building2,
+                            href: null,
+                        },
+                        {
+                            label: 'Инвестиция көлемі',
+                            value: formatMoneyCompact(stats.totalInvestment),
+                            icon: Presentation,
+                            href: null,
+                        },
+                        {
+                            label: 'Проблемалық мәселелер',
+                            value: totalIssuesCount,
+                            icon: AlertTriangle,
+                            href: regionIssuesUrl,
+                        },
+                    ].map((metric) => {
+                        const content = (
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                    <p className="text-[10px] font-bold tracking-[0.12em] text-slate-400 uppercase">
+                                        {metric.label}
+                                    </p>
+                                    <p className="mt-3 text-xl font-extrabold text-navy sm:text-2xl">
+                                        {metric.value}
+                                    </p>
+                                </div>
+                                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-sand-light text-gold-dark">
+                                    <metric.icon className="size-4" />
+                                </span>
+                            </div>
+                        );
+
+                        return metric.href ? (
+                            <Link
+                                key={metric.label}
+                                href={metric.href}
+                                className="metric-panel group p-4 transition hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-md sm:p-5"
+                            >
+                                {content}
+                                <span className="mt-4 inline-flex text-xs font-bold text-gold-dark opacity-80 transition group-hover:opacity-100">
+                                    Толық тізімді ашу →
+                                </span>
+                            </Link>
+                        ) : (
+                            <div
+                                key={metric.label}
+                                className="metric-panel p-4 sm:p-5"
+                            >
+                                {content}
+                            </div>
+                        );
+                    })}
                 </div>
+
+                <DetailSectionNav
+                    ariaLabel="Аймақ бөлімдері"
+                    items={[
+                        {
+                            label: 'Интерактивті карта',
+                            href: '#region-map',
+                            icon: MapPinned,
+                        },
+                        {
+                            label: 'Жобалар',
+                            href: '#region-projects',
+                            icon: Presentation,
+                            count: stats.projectsCount,
+                        },
+                        {
+                            label: 'Өңір активтері',
+                            href: '#region-assets',
+                            icon: Factory,
+                            count:
+                                sezs.length +
+                                industrialZones.length +
+                                promZones.length +
+                                subsoilUsers.length,
+                        },
+                        {
+                            label: 'Проблемалық мәселелер',
+                            href: regionIssuesUrl,
+                            icon: AlertTriangle,
+                            count: totalIssuesCount,
+                        },
+                    ]}
+                />
 
                 <Tabs
                     value={activeTab}
@@ -1047,7 +1173,10 @@ export default function Show({
                         {/* Left Column (Map & Projects) */}
                         <div className="space-y-8 lg:col-span-8">
                             {/* Map Container */}
-                            <div className="group relative overflow-hidden rounded-xl border border-gray-100 bg-white">
+                            <div
+                                id="region-map"
+                                className="group relative scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_50px_-42px_rgba(15,27,61,0.55)]"
+                            >
                                 <div className="relative z-0 h-[500px] w-full">
                                     <Map
                                         regions={[region]}
@@ -1218,7 +1347,10 @@ export default function Show({
                             </div>
 
                             {/* Projects / Tabs Section */}
-                            <div className="w-full">
+                            <div
+                                id="region-projects"
+                                className="w-full scroll-mt-24"
+                            >
                                 <TabsContent
                                     value="all"
                                     className="mt-0 space-y-4"
@@ -2244,7 +2376,10 @@ export default function Show({
                         </div>
 
                         {/* Right Column (Sidebar) */}
-                        <div className="space-y-6 lg:col-span-4">
+                        <div
+                            id="region-assets"
+                            className="scroll-mt-24 space-y-6 lg:col-span-4"
+                        >
                             <TabsList className="h-12 w-full justify-start rounded-lg bg-gray-100 p-1">
                                 <TabsTrigger
                                     value="all"
@@ -2310,57 +2445,79 @@ export default function Show({
                                 </TabsTrigger>
                             </TabsList>
 
-                            {/* Common Stats for ALL */}
+                            {/* Region structure for ALL */}
                             <TabsContent value="all" className="mt-0 space-y-6">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="border-b border-gray-100 pb-4">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
-                                            Негізгі көрсеткіштер
+                                            Өңір активтерінің құрылымы
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                                            <div>
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {stats.projectsCount}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Жобалар саны
-                                                </div>
+                                    <CardContent className="space-y-2 p-4">
+                                        {[
+                                            {
+                                                label: 'АЭА',
+                                                count: sezs.length,
+                                                icon: Building2,
+                                            },
+                                            {
+                                                label: 'Индустриялық аймақтар',
+                                                count: industrialZones.length,
+                                                icon: Factory,
+                                            },
+                                            {
+                                                label: 'Өндірістік аймақтар',
+                                                count: promZones.length,
+                                                icon: Factory,
+                                            },
+                                            {
+                                                label: 'Жер қойнауын пайдаланушылар',
+                                                count: subsoilUsers.length,
+                                                icon: Pickaxe,
+                                            },
+                                        ].map((item) => (
+                                            <div
+                                                key={item.label}
+                                                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-3"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                                                    <item.icon className="size-4 text-gold-dark" />
+                                                    {item.label}
+                                                </span>
+                                                <span className="rounded-lg bg-white px-2.5 py-1 text-sm font-extrabold text-navy shadow-sm">
+                                                    {item.count}
+                                                </span>
                                             </div>
-                                            <div className="border-l border-gray-100 pl-4">
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {formatArea(
-                                                        stats.totalArea,
-                                                    )}{' '}
-                                                    <span className="text-sm font-medium text-gray-500">
-                                                        га
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Жалпы аумағы
-                                                </div>
-                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
 
+                                <Card className="overflow-hidden border-amber-200/70 bg-amber-50/40 shadow-none">
+                                    <CardContent className="p-5">
+                                        <div className="flex items-start justify-between gap-4">
                                             <div>
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {formatCurrency(
-                                                        stats.totalInvestment,
-                                                    )}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Инвестициялар
-                                                </div>
+                                                <p className="text-sm font-bold text-navy">
+                                                    Мәселелер құрылымы
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                    Жобалар:{' '}
+                                                    {stats.projectIssuesCount},
+                                                    секторлар:{' '}
+                                                    {totalIssuesCount -
+                                                        stats.projectIssuesCount}
+                                                </p>
                                             </div>
-                                            <div className="border-l border-gray-100 pl-4">
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {stats.projectIssuesCount}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Проблемалық мәселелер
-                                                </div>
-                                            </div>
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg font-extrabold text-amber-700 shadow-sm">
+                                                {totalIssuesCount}
+                                            </span>
                                         </div>
+                                        <Link
+                                            href={regionIssuesUrl}
+                                            className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-amber-800 transition hover:text-navy"
+                                        >
+                                            <AlertTriangle className="size-4" />
+                                            Барлық мәселелерді ашу →
+                                        </Link>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -3114,7 +3271,7 @@ export default function Show({
                         </div>
                     </div>
                 </Tabs>
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

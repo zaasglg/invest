@@ -172,7 +172,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     return (
         <>
             {/* ── Main nav bar ── */}
-            <div className="border-b border-white/10 bg-[#081224]">
+            <div className="border-b border-white/10 bg-[#081224] print:hidden">
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Logo */}
                     <Link
@@ -408,7 +408,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
 
             {/* ── Breadcrumb bar ── */}
             {breadcrumbs.length > 1 && (
-                <div className="border-b border-gray-100 bg-white">
+                <div className="border-b border-gray-100 bg-white print:hidden">
                     <div className="mx-auto flex h-11 items-center px-4 md:max-w-7xl">
                         <Breadcrumbs breadcrumbs={breadcrumbs} />
                     </div>
