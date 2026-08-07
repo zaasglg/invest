@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
+import { show as regionShow } from '@/routes/regions';
 import type { BreadcrumbItem } from '@/types';
 
 interface Region {
@@ -69,6 +70,7 @@ const statusMap: Record<string, { label: string; color: string }> = {
 };
 
 const typeColorMap: Record<string, string> = {
+    all_projects: 'bg-blue-100 text-blue-800',
     invest: 'bg-indigo-100 text-indigo-800',
     sez: 'bg-purple-100 text-purple-800',
     iz: 'bg-cyan-100 text-cyan-800',
@@ -76,19 +78,9 @@ const typeColorMap: Record<string, string> = {
     nedro: 'bg-orange-100 text-orange-800',
 };
 
-const breadcrumbs: BreadcrumbItem[] = [
-    {
-        title: 'Статистика',
-        href: dashboard().url,
-    },
-    {
-        title: 'Проблемалық мәселелер',
-        href: '/issues',
-    },
-];
-
 function getEntityLink(type: string, entityId: number): string {
     switch (type) {
+        case 'all_projects':
         case 'invest':
             return `/investment-projects/${entityId}/issues`;
         case 'sez':
@@ -111,6 +103,30 @@ export default function IssuesIndex({
     sectorLabels,
 }: Props) {
     const [filtersOpen, setFiltersOpen] = useState(false);
+    const selectedRegion = filters.region_id
+        ? regions.find((region) => region.id === filters.region_id)
+        : null;
+    const backUrl = selectedRegion
+        ? regionShow(selectedRegion.id).url
+        : dashboard().url;
+    const breadcrumbs: BreadcrumbItem[] = [
+        {
+            title: 'Статистика',
+            href: dashboard().url,
+        },
+        ...(selectedRegion
+            ? [
+                  {
+                      title: selectedRegion.name,
+                      href: regionShow(selectedRegion.id).url,
+                  },
+              ]
+            : []),
+        {
+            title: 'Проблемалық мәселелер',
+            href: '/issues',
+        },
+    ];
 
     const handleFilterChange = (key: string, value: string | null) => {
         const params: Record<string, string | null> = {
@@ -135,11 +151,17 @@ export default function IssuesIndex({
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Проблемалық мәселелер" />
+            <Head
+                title={
+                    selectedRegion
+                        ? `${selectedRegion.name} — проблемалық мәселелер`
+                        : 'Проблемалық мәселелер'
+                }
+            />
             <div className="page-surface flex h-full flex-1 flex-col gap-6">
                 <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div className="flex items-center gap-3">
-                        <Link href={dashboard().url}>
+                        <Link href={backUrl}>
                             <Button variant="ghost" size="icon">
                                 <ArrowLeft className="h-5 w-5" />
                             </Button>
@@ -149,8 +171,10 @@ export default function IssuesIndex({
                                 Проблемалық мәселелер
                             </h1>
                             <p className="text-sm text-muted-foreground">
-                                Барлық секторлардағы проблемалық мәселелер (
-                                {issues.length})
+                                {selectedRegion
+                                    ? `${selectedRegion.name} бойынша барлық секторлардағы мәселелер`
+                                    : 'Барлық секторлардағы проблемалық мәселелер'}{' '}
+                                ({issues.length})
                             </p>
                         </div>
                     </div>

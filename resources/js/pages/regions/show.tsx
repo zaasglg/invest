@@ -56,6 +56,7 @@ import AppLayout from '@/layouts/app-layout';
 import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import { index as issuesIndex } from '@/routes/issues';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -750,6 +751,16 @@ export default function Show({
         0,
     );
 
+    const totalIssuesCount =
+        stats.projectIssuesCount +
+        stats.sezIssuesCount +
+        stats.izIssuesCount +
+        stats.promIssuesCount +
+        stats.subsoilIssuesCount;
+    const regionIssuesUrl = issuesIndex({
+        query: { region_id: region.id },
+    }).url;
+
     // Helper to safely get lat/lng
     function getLatLng(
         point: Record<string, unknown> | unknown[] | null,
@@ -1061,32 +1072,28 @@ export default function Show({
                             label: 'Жалпы аумақ',
                             value: `${formatArea(stats.totalArea)} га`,
                             icon: MapPinned,
+                            href: null,
                         },
                         {
                             label: 'Инвестициялық жобалар',
                             value: stats.projectsCount,
                             icon: Building2,
+                            href: null,
                         },
                         {
                             label: 'Инвестиция көлемі',
                             value: formatMoneyCompact(stats.totalInvestment),
                             icon: Presentation,
+                            href: null,
                         },
                         {
                             label: 'Проблемалық мәселелер',
-                            value:
-                                stats.projectIssuesCount +
-                                stats.sezIssuesCount +
-                                stats.izIssuesCount +
-                                stats.promIssuesCount +
-                                stats.subsoilIssuesCount,
+                            value: totalIssuesCount,
                             icon: AlertTriangle,
+                            href: regionIssuesUrl,
                         },
-                    ].map((metric) => (
-                        <div
-                            key={metric.label}
-                            className="metric-panel p-4 sm:p-5"
-                        >
+                    ].map((metric) => {
+                        const content = (
                             <div className="flex items-start justify-between gap-3">
                                 <div className="min-w-0">
                                     <p className="text-[10px] font-bold tracking-[0.12em] text-slate-400 uppercase">
@@ -1100,8 +1107,28 @@ export default function Show({
                                     <metric.icon className="size-4" />
                                 </span>
                             </div>
-                        </div>
-                    ))}
+                        );
+
+                        return metric.href ? (
+                            <Link
+                                key={metric.label}
+                                href={metric.href}
+                                className="metric-panel group p-4 transition hover:-translate-y-0.5 hover:border-gold/40 hover:shadow-md sm:p-5"
+                            >
+                                {content}
+                                <span className="mt-4 inline-flex text-xs font-bold text-gold-dark opacity-80 transition group-hover:opacity-100">
+                                    Толық тізімді ашу →
+                                </span>
+                            </Link>
+                        ) : (
+                            <div
+                                key={metric.label}
+                                className="metric-panel p-4 sm:p-5"
+                            >
+                                {content}
+                            </div>
+                        );
+                    })}
                 </div>
 
                 <DetailSectionNav
@@ -1127,6 +1154,12 @@ export default function Show({
                                 industrialZones.length +
                                 promZones.length +
                                 subsoilUsers.length,
+                        },
+                        {
+                            label: 'Проблемалық мәселелер',
+                            href: regionIssuesUrl,
+                            icon: AlertTriangle,
+                            count: totalIssuesCount,
                         },
                     ]}
                 />
@@ -2412,57 +2445,79 @@ export default function Show({
                                 </TabsTrigger>
                             </TabsList>
 
-                            {/* Common Stats for ALL */}
+                            {/* Region structure for ALL */}
                             <TabsContent value="all" className="mt-0 space-y-6">
                                 <Card className="border-gray-100 shadow-none">
                                     <CardHeader className="border-b border-gray-100 pb-4">
                                         <CardTitle className="text-base font-semibold text-[#0f1b3d]">
-                                            Негізгі көрсеткіштер
+                                            Өңір активтерінің құрылымы
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="p-6">
-                                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                                            <div>
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {stats.projectsCount}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Жобалар саны
-                                                </div>
+                                    <CardContent className="space-y-2 p-4">
+                                        {[
+                                            {
+                                                label: 'АЭА',
+                                                count: sezs.length,
+                                                icon: Building2,
+                                            },
+                                            {
+                                                label: 'Индустриялық аймақтар',
+                                                count: industrialZones.length,
+                                                icon: Factory,
+                                            },
+                                            {
+                                                label: 'Өндірістік аймақтар',
+                                                count: promZones.length,
+                                                icon: Factory,
+                                            },
+                                            {
+                                                label: 'Жер қойнауын пайдаланушылар',
+                                                count: subsoilUsers.length,
+                                                icon: Pickaxe,
+                                            },
+                                        ].map((item) => (
+                                            <div
+                                                key={item.label}
+                                                className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-3"
+                                            >
+                                                <span className="flex items-center gap-2 text-sm font-semibold text-slate-600">
+                                                    <item.icon className="size-4 text-gold-dark" />
+                                                    {item.label}
+                                                </span>
+                                                <span className="rounded-lg bg-white px-2.5 py-1 text-sm font-extrabold text-navy shadow-sm">
+                                                    {item.count}
+                                                </span>
                                             </div>
-                                            <div className="border-l border-gray-100 pl-4">
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {formatArea(
-                                                        stats.totalArea,
-                                                    )}{' '}
-                                                    <span className="text-sm font-medium text-gray-500">
-                                                        га
-                                                    </span>
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Жалпы аумағы
-                                                </div>
-                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
 
+                                <Card className="overflow-hidden border-amber-200/70 bg-amber-50/40 shadow-none">
+                                    <CardContent className="p-5">
+                                        <div className="flex items-start justify-between gap-4">
                                             <div>
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {formatCurrency(
-                                                        stats.totalInvestment,
-                                                    )}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Инвестициялар
-                                                </div>
+                                                <p className="text-sm font-bold text-navy">
+                                                    Мәселелер құрылымы
+                                                </p>
+                                                <p className="mt-1 text-xs leading-5 text-slate-500">
+                                                    Жобалар:{' '}
+                                                    {stats.projectIssuesCount},
+                                                    секторлар:{' '}
+                                                    {totalIssuesCount -
+                                                        stats.projectIssuesCount}
+                                                </p>
                                             </div>
-                                            <div className="border-l border-gray-100 pl-4">
-                                                <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                    {stats.projectIssuesCount}
-                                                </div>
-                                                <div className="text-xs font-medium text-gray-500">
-                                                    Проблемалық мәселелер
-                                                </div>
-                                            </div>
+                                            <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-white text-lg font-extrabold text-amber-700 shadow-sm">
+                                                {totalIssuesCount}
+                                            </span>
                                         </div>
+                                        <Link
+                                            href={regionIssuesUrl}
+                                            className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-amber-800 transition hover:text-navy"
+                                        >
+                                            <AlertTriangle className="size-4" />
+                                            Барлық мәселелерді ашу →
+                                        </Link>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
