@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { PageContainer, PageHeader } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -444,13 +445,15 @@ export default function Edit({
         >
             <Head title="Жобаны өңдеу" />
 
-            <div className="flex h-full flex-col p-6">
-                <h1 className="mb-6 text-2xl font-bold text-[#0f1b3d]">
-                    Жобаны өңдеу
-                </h1>
+            <PageContainer width="wide">
+                <PageHeader
+                    eyebrow="Инвестициялық жобалар"
+                    title="Жобаны өңдеу"
+                    subtitle="Жоба деректерін, компанияны, инвестицияны немесе іске асыру көрсеткіштерін жаңартыңыз."
+                />
 
                 {/* Step Indicator */}
-                <div className="mb-8">
+                <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
                     <div className="flex items-center justify-between">
                         {steps.map((step, index) => (
                             <div
@@ -1872,7 +1875,7 @@ export default function Edit({
                         </div>
                     </div>
                 </form>
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

@@ -14,6 +14,7 @@ import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
 import type { AreaUsage } from '@/components/area-occupancy-card';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
+import DetailSectionNav from '@/components/detail-section-nav';
 import InfrastructureList from '@/components/infrastructure-list';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -219,21 +220,58 @@ export default function Show({
                     deleter={promZone.deleter}
                 />
 
+                <DetailSectionNav
+                    ariaLabel="Пром аймақ бөлімдері"
+                    items={[
+                        {
+                            label: 'Шолу',
+                            href: '#zone-overview',
+                            icon: Layers,
+                        },
+                        {
+                            label: 'Карта',
+                            href: '#zone-map',
+                            icon: MapPin,
+                        },
+                        {
+                            label: 'Жобалар',
+                            href: '#zone-projects',
+                            icon: Building2,
+                            count: projects.length,
+                        },
+                        {
+                            label: 'Мәселелер',
+                            href: '#zone-issues',
+                            icon: AlertTriangle,
+                            count: issues.length,
+                        },
+                    ]}
+                />
+
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
                     {/* Main Content */}
                     <div className="flex min-w-0 flex-col gap-6">
                         {/* Banner + Info + Description */}
-                        <Card className="overflow-hidden border-slate-200/80 py-0 shadow-none">
+                        <Card
+                            id="zone-overview"
+                            className="scroll-mt-24 overflow-hidden border-slate-200/80 py-0 shadow-none"
+                        >
                             {/* Banner Header */}
-                            <div className="border-b border-slate-200 bg-white px-6 py-5">
+                            <div className="relative overflow-hidden border-b border-white/10 bg-navy px-6 py-6 text-white">
+                                <div className="pointer-events-none absolute inset-y-0 right-0 w-1/3 bg-gradient-to-l from-gold/10 to-transparent" />
                                 <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-3 text-navy">
-                                        <span className="flex size-10 items-center justify-center rounded-md bg-navy text-gold">
+                                    <div className="relative flex min-w-0 items-center gap-3 text-white">
+                                        <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-gold">
                                             <Layers className="size-5" />
                                         </span>
-                                        <h1 className="text-xl font-extrabold sm:text-2xl">
-                                            {promZone.name}
-                                        </h1>
+                                        <div className="min-w-0">
+                                            <p className="mb-1 text-[10px] font-bold tracking-[0.14em] text-gold uppercase">
+                                                Өндірістік аймақ
+                                            </p>
+                                            <h1 className="text-xl font-extrabold text-balance text-white sm:text-2xl">
+                                                {promZone.name}
+                                            </h1>
+                                        </div>
                                     </div>
                                     <Badge
                                         className={`${statusMap[promZone.status]?.color || 'bg-gray-100 text-gray-800'} border-0 px-3 py-1 text-sm font-medium`}
@@ -336,14 +374,19 @@ export default function Show({
                             </div>
                         </Card>
 
-                        <ZoneTerritoryMapCard
-                            entity={promZone}
-                            entityType="prom"
-                            projects={projects}
-                        />
+                        <section id="zone-map" className="scroll-mt-24">
+                            <ZoneTerritoryMapCard
+                                entity={promZone}
+                                entityType="prom"
+                                projects={projects}
+                            />
+                        </section>
 
                         {/* Investment Projects */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="zone-projects"
+                            className="scroll-mt-24 shadow-none"
+                        >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <Building2 className="h-5 w-5 text-gray-500" />
@@ -520,7 +563,10 @@ export default function Show({
                         <AreaOccupancyCard usage={areaUsage} />
 
                         {/* Issues */}
-                        <Card className="shadow-none">
+                        <Card
+                            id="zone-issues"
+                            className="scroll-mt-24 shadow-none"
+                        >
                             <CardHeader>
                                 <CardTitle className="flex items-center gap-2 text-lg">
                                     <AlertTriangle className="h-5 w-5 text-gray-500" />

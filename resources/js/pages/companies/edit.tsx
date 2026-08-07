@@ -1,6 +1,7 @@
 import { Head } from '@inertiajs/react';
 import CompanyForm from '@/components/companies/company-form';
 import type { CompanyFormValue } from '@/components/companies/company-form';
+import { PageContainer, PageHeader } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
 
 interface RegionOption {
@@ -35,16 +36,12 @@ export default function Edit({
             ]}
         >
             <Head title="Компанияны өңдеу" />
-            <div className="mx-auto w-full max-w-5xl space-y-6 p-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Компанияны өңдеу
-                    </h1>
-                    <p className="mt-1 text-sm text-gray-500">
-                        Өзгертілген атау оған тіркелген жобаларда автоматты
-                        жаңартылады.
-                    </p>
-                </div>
+            <PageContainer width="form">
+                <PageHeader
+                    eyebrow="Компаниялар"
+                    title="Компанияны өңдеу"
+                    subtitle="Өзгертілген атау оған тіркелген жобаларда автоматты жаңартылады."
+                />
                 <CompanyForm
                     company={company}
                     regions={regions}
@@ -54,7 +51,7 @@ export default function Edit({
                     method="put"
                     submitLabel="Өзгерістерді сақтау"
                 />
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }

@@ -1,5 +1,6 @@
 import { Head } from '@inertiajs/react';
 import CompanyForm from '@/components/companies/company-form';
+import { PageContainer, PageHeader } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
 
 interface RegionOption {
@@ -24,16 +25,12 @@ export default function Create({ regions, legalForms, statuses }: Props) {
             ]}
         >
             <Head title="Жаңа компания" />
-            <div className="mx-auto w-full max-w-5xl space-y-6 p-6">
-                <div>
-                    <h1 className="text-2xl font-bold text-[#0f1b3d]">
-                        Жаңа компания
-                    </h1>
-                    <p className="mt-1 text-sm text-gray-500">
-                        Компанияның заңды реквизиттері мен байланыс деректерін
-                        толық енгізіңіз.
-                    </p>
-                </div>
+            <PageContainer width="form">
+                <PageHeader
+                    eyebrow="Компаниялар"
+                    title="Жаңа компания"
+                    subtitle="Компанияның заңды реквизиттері мен байланыс деректерін толық енгізіңіз."
+                />
                 <CompanyForm
                     regions={regions}
                     legalForms={legalForms}
@@ -42,7 +39,7 @@ export default function Create({ regions, legalForms, statuses }: Props) {
                     method="post"
                     submitLabel="Компанияны сақтау"
                 />
-            </div>
+            </PageContainer>
         </AppLayout>
     );
 }
