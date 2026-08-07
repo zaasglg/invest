@@ -946,6 +946,34 @@ class InvestmentProjectController extends Controller
 
         $restrictedSectorType = $user?->restrictedSectorType();
 
+        $companies = Company::query()
+            ->withExists('investor')
+            ->where(function ($query) use ($investmentProject) {
+                $query
+                    ->where(function ($availableQuery) {
+                        $availableQuery
+                            ->active()
+                            ->profileComplete()
+                            ->whereHas('investor');
+                    })
+                    ->when(
+                        $investmentProject->company_id,
+                        fn ($companyQuery, $companyId) => $companyQuery
+                            ->orWhere('companies.id', $companyId)
+                    );
+            })
+            ->orderBy('name')
+            ->get();
+
+        $companies->each(function (Company $company): void {
+            $company->setAttribute(
+                'is_project_selectable',
+                $company->status === 'active'
+                    && $company->is_profile_complete
+                    && (bool) $company->investor_exists
+            );
+        });
+
         return Inertia::render('investment-projects/edit', [
             'project' => $projectData,
             'regions' => $regions,
@@ -960,23 +988,7 @@ class InvestmentProjectController extends Controller
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
-            'companies' => Company::query()
-                ->where(function ($query) use ($investmentProject) {
-                    $query
-                        ->where(function ($availableQuery) {
-                            $availableQuery
-                                ->active()
-                                ->profileComplete()
-                                ->whereHas('investor');
-                        })
-                        ->when(
-                            $investmentProject->company_id,
-                            fn ($companyQuery, $companyId) => $companyQuery
-                                ->orWhere('companies.id', $companyId)
-                        );
-                })
-                ->orderBy('name')
-                ->get(),
+            'companies' => $companies,
         ]);
     }
 
@@ -1297,12 +1309,12 @@ class InvestmentProjectController extends Controller
             === (int) $company?->id;
 
         if (! $company
-            || ! $company->investor()->exists()
             || (! $keepsCurrentCompany
                 && ($company->status !== 'active'
-                    || ! $company->is_profile_complete))) {
+                    || ! $company->is_profile_complete
+                    || ! $company->investor()->exists()))) {
             throw ValidationException::withMessages([
-                'company_id' => 'Компания белсенді, толық және инвестор аккаунтымен бірге болуы керек.',
+                'company_id' => 'Тек белсенді, ақпараты толық және инвестор аккаунты бар компанияны таңдаңыз.',
             ]);
         }
 

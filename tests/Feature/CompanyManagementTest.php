@@ -391,6 +391,91 @@ test('project creation uses an active complete company and syncs its name', func
         ->assertSessionHasErrors('company_id');
 });
 
+test('legacy project keeps an incomplete company while other fields are edited', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $projectType = ProjectType::create(['name' => 'Legacy project type']);
+
+    $currentCompany = Company::create([
+        'legal_form' => 'other',
+        'name' => 'A Legacy Current Company',
+        'status' => 'active',
+    ]);
+    $replacementCompany = Company::factory()->create([
+        'region_id' => $region->id,
+        'name' => 'B Complete Replacement Company',
+        'bin' => '555555555555',
+    ]);
+    createCompanyManagementInvestor($replacementCompany);
+
+    $incompleteReplacement = Company::create([
+        'legal_form' => 'other',
+        'name' => 'C Incomplete Replacement Company',
+        'status' => 'active',
+    ]);
+    createCompanyManagementInvestor($incompleteReplacement);
+
+    $project = InvestmentProject::create([
+        'name' => 'Legacy company project',
+        'company_id' => $currentCompany->id,
+        'company_name' => $currentCompany->display_name,
+        'region_id' => $region->id,
+        'project_type_id' => $projectType->id,
+        'total_investment' => 1000000,
+        'status' => 'plan',
+        'created_by' => $user->id,
+    ]);
+    $project->projectTypes()->sync([$projectType->id]);
+
+    $this->actingAs($user)
+        ->get(route('investment-projects.edit', $project))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/edit')
+            ->has('companies', 2)
+            ->where('companies.0.id', $currentCompany->id)
+            ->where('companies.0.is_project_selectable', false)
+            ->where('companies.1.id', $replacementCompany->id)
+            ->where('companies.1.is_project_selectable', true)
+        );
+
+    $payload = [
+        'name' => 'Updated legacy company project',
+        'company_id' => $currentCompany->id,
+        'region_id' => $region->id,
+        'project_type_ids' => [$projectType->id],
+        'total_investment' => 2000000,
+        'status' => 'implementation',
+    ];
+
+    $this->actingAs($user)
+        ->put(route('investment-projects.update', $project), $payload)
+        ->assertRedirect(route('investment-projects.show', $project));
+
+    $project->refresh();
+
+    expect($project->name)->toBe('Updated legacy company project')
+        ->and($project->company_id)->toBe($currentCompany->id);
+
+    $this->actingAs($user)
+        ->put(route('investment-projects.update', $project), [
+            ...$payload,
+            'company_id' => $incompleteReplacement->id,
+        ])
+        ->assertSessionHasErrors('company_id');
+
+    expect($project->fresh()->company_id)->toBe($currentCompany->id);
+
+    $this->actingAs($user)
+        ->put(route('investment-projects.update', $project), [
+            ...$payload,
+            'company_id' => $replacementCompany->id,
+        ])
+        ->assertRedirect(route('investment-projects.show', $project));
+
+    expect($project->fresh()->company_id)->toBe($replacementCompany->id);
+});
+
 test('project creation and editing support multiple project types', function () {
     $user = createCompanyManagementUser('superadmin');
     $region = createCompanyManagementRegion();
