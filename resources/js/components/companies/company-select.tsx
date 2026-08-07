@@ -21,6 +21,7 @@ export interface CompanyOption {
     status: string;
     status_label: string;
     is_profile_complete: boolean;
+    is_project_selectable?: boolean;
 }
 
 interface Props {
@@ -103,6 +104,9 @@ export default function CompanySelect({
                         >
                             {company.display_name}
                             {company.bin ? ` · ${company.bin}` : ''}
+                            {company.is_project_selectable === false
+                                ? ' · Ақпараты жеткіліксіз'
+                                : ''}
                         </SelectItem>
                     ))}
                 </SelectContent>
@@ -119,10 +123,11 @@ export default function CompanySelect({
                             БСН/БИН: {selectedCompany.bin || 'толтырылмаған'} ·{' '}
                             {selectedCompany.legal_form_label}
                         </p>
-                        {!selectedCompany.is_profile_complete && (
+                        {selectedCompany.is_project_selectable === false && (
                             <p className="mt-1 font-medium text-amber-700">
-                                Бұл ескі компанияның карточкасы толық
-                                толтырылмаған.
+                                Компания ақпараты жеткіліксіз. Әкімшіге
+                                хабарласыңыз. Компанияны ауыстырмай жобаның
+                                басқа деректерін өзгерте аласыз.
                             </p>
                         )}
                     </div>
