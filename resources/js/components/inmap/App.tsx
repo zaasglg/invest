@@ -160,11 +160,11 @@ const indicatorDefinitions: IndicatorDefinition[] = [
 ]
 
 const problemSectorLabels = [
+  { key: 'all_projects' as const, label: 'Жобалар' },
   { key: 'sez' as const, label: 'АЭА' },
   { key: 'iz' as const, label: 'ИА' },
   { key: 'prom' as const, label: 'Өнеркәсіп' },
   { key: 'nedro' as const, label: 'Жер қойнауы' },
-  { key: 'invest' as const, label: 'Инвестиция' },
 ]
 
 const emptySectorRow: SectorRow = {
@@ -759,6 +759,12 @@ function DistrictExplorer({
   const sectorData = hasSelectedRegion
     ? getSectorData(sectorSummary, regionId)
     : emptySectorData
+  const totalProblemCount =
+    sectorRow.problemCount +
+    sectorData.sez.problemCount +
+    sectorData.iz.problemCount +
+    sectorData.prom.problemCount +
+    sectorData.nedro.problemCount
   const yearly = hasSelectedRegion
     ? getYearlySeries(regionYearly, regionId)
     : {
@@ -776,13 +782,16 @@ function DistrictExplorer({
     investment: toDisplayValue('investment', sectorRow.investment),
     projects: sectorRow.projectCount ?? 0,
     jobs: sectorRow.jobCount ?? 0,
-    problems: sectorRow.problemCount,
+    problems: totalProblemCount,
   }
 
   const chartValues =
     activeIndicatorKey === 'problems'
       ? problemSectorLabels.map((sector) =>
-          toDisplayValue('problems', sectorData[sector.key].problemCount),
+          toDisplayValue(
+            'problems',
+            sectorData[sector.key]?.problemCount ?? 0,
+          ),
         )
       : yearly[activeIndicatorKey].map((value) =>
           toDisplayValue(activeIndicatorKey, value),
@@ -965,7 +974,7 @@ function DistrictExplorer({
                         {seriesGrowth.toFixed(1)}% кезең ішінде
                       </p>
                     ) : (
-                      <p>Тізімді ашу →</p>
+                      <p>Жоба + 4 сектор →</p>
                     )}
                   </>
                 )
