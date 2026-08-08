@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page';
@@ -31,7 +32,7 @@ import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
 import { index as issuesIndex } from '@/routes/issues';
 import { show as regionShow } from '@/routes/regions';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, PaginatedData } from '@/types';
 
 interface Region {
     id: number;
@@ -59,10 +60,18 @@ interface Filters {
     region_id: number | null;
 }
 
+interface IssueStats {
+    total: number;
+    open: number;
+    in_progress: number;
+    resolved: number;
+}
+
 interface Props {
-    issues: Issue[];
+    issues: PaginatedData<Issue>;
     regions: Region[];
     filters: Filters;
+    issueStats: IssueStats;
     sectorLabels: Record<string, string>;
 }
 
@@ -182,6 +191,7 @@ export default function IssuesIndex({
     issues,
     regions,
     filters,
+    issueStats,
     sectorLabels,
 }: Props) {
     const selectedRegion = filters.region_id
@@ -213,14 +223,7 @@ export default function IssuesIndex({
         },
     ];
 
-    const openCount = issues.filter((issue) => issue.status === 'open').length;
-    const inProgressCount = issues.filter(
-        (issue) => issue.status === 'in_progress',
-    ).length;
-    const resolvedCount = issues.filter(
-        (issue) => issue.status === 'resolved',
-    ).length;
-    const groupedIssues = issues.reduce<Record<string, Issue[]>>(
+    const groupedIssues = issues.data.reduce<Record<string, Issue[]>>(
         (groups, issue) => {
             const regionName = issue.region_name || 'Аймағы көрсетілмеген';
             (groups[regionName] ??= []).push(issue);
@@ -279,7 +282,7 @@ export default function IssuesIndex({
                                 <p className="text-xs font-bold tracking-[0.16em] text-[#e4c973] uppercase">
                                     Бақылау орталығы
                                 </p>
-                                <h1 className="mt-2 text-2xl font-extrabold tracking-tight sm:text-3xl text-white">
+                                <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                                     Проблемалық мәселелер
                                 </h1>
                                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
@@ -301,25 +304,25 @@ export default function IssuesIndex({
                     {[
                         {
                             label: 'Барлық мәселе',
-                            value: issues.length,
+                            value: issueStats.total,
                             icon: AlertTriangle,
                             iconClassName: 'bg-slate-100 text-slate-700',
                         },
                         {
                             label: 'Ашық',
-                            value: openCount,
+                            value: issueStats.open,
                             icon: CircleDot,
                             iconClassName: 'bg-rose-50 text-rose-700',
                         },
                         {
                             label: 'Орындалуда',
-                            value: inProgressCount,
+                            value: issueStats.in_progress,
                             icon: Clock3,
                             iconClassName: 'bg-amber-50 text-amber-700',
                         },
                         {
                             label: 'Шешілген',
-                            value: resolvedCount,
+                            value: issueStats.resolved,
                             icon: CheckCircle2,
                             iconClassName: 'bg-emerald-50 text-emerald-700',
                         },
@@ -458,11 +461,12 @@ export default function IssuesIndex({
                             variant="secondary"
                             className="w-fit rounded-full px-3 py-1.5 text-xs"
                         >
-                            {issues.length} нәтиже
+                            {issues.from ?? 0}–{issues.to ?? 0} / {issues.total}{' '}
+                            нәтиже
                         </Badge>
                     </div>
 
-                    {issues.length === 0 ? (
+                    {issues.data.length === 0 ? (
                         <div className="rounded-3xl border border-dashed border-slate-200 bg-white px-6 py-16 text-center">
                             <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                                 <CheckCircle2 className="size-7" />
@@ -651,6 +655,8 @@ export default function IssuesIndex({
                             ),
                         )
                     )}
+
+                    <Pagination paginator={issues} />
                 </section>
             </PageContainer>
         </AppLayout>
