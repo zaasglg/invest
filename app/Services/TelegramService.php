@@ -27,8 +27,7 @@ class TelegramService
         }
 
         try {
-            $response = Http::withoutVerifying()
-                ->timeout(10)
+            $response = Http::timeout(10)
                 ->retry(3, 1000)
                 ->post("{$this->apiUrl}/sendMessage", [
                     'chat_id' => $chatId,
@@ -119,7 +118,7 @@ class TelegramService
         }
 
         try {
-            $response = Http::withoutVerifying()->get("{$this->apiUrl}/getUpdates", [
+            $response = Http::get("{$this->apiUrl}/getUpdates", [
                 'offset' => $offset,
                 'limit' => 100,
             ]);

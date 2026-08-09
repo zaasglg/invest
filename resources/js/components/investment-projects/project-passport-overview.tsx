@@ -158,7 +158,7 @@ export default function ProjectPassportOverview({
     return (
         <section
             id="passport-overview"
-            className="project-passport-overview scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
+            className="project-passport-overview min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
         >
             <div className="relative overflow-hidden bg-gradient-to-br from-[#0b1735] via-[#122752] to-[#1b3b73] px-5 py-6 text-white sm:px-7 sm:py-7">
                 <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-[#c8a44e]/15 blur-2xl" />
@@ -220,27 +220,27 @@ export default function ProjectPassportOverview({
                     </div>
 
                     <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                        <div className="max-w-4xl">
+                        <div className="max-w-4xl min-w-0">
                             <div className="mb-3 flex flex-wrap items-center gap-2">
                                 <span className="rounded-md border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-semibold tracking-wide text-white/80 uppercase">
                                     Жоба паспорты № {project.id}
                                 </span>
                                 <Badge
-                                    className={`${project.statusClassName} border-0 px-2.5 py-1`}
+                                    className={`${project.statusClassName} max-w-full border-0 px-2.5 py-1 [overflow-wrap:anywhere] break-words whitespace-normal`}
                                 >
                                     {project.statusLabel}
                                 </Badge>
                             </div>
-                            <h1 className="text-2xl leading-tight font-bold tracking-tight text-white sm:text-3xl">
+                            <h1 className="min-w-0 text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere] break-words text-white sm:text-3xl">
                                 {project.name}
                             </h1>
                             <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
-                                <span className="inline-flex items-center gap-1.5">
-                                    <MapPin className="h-4 w-4 text-[#dec36e]" />
+                                <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 [overflow-wrap:anywhere] break-words">
+                                    <MapPin className="h-4 w-4 shrink-0 text-[#dec36e]" />
                                     {project.regionName}
                                 </span>
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Building2 className="h-4 w-4 text-[#dec36e]" />
+                                <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 [overflow-wrap:anywhere] break-words">
+                                    <Building2 className="h-4 w-4 shrink-0 text-[#dec36e]" />
                                     {project.projectTypeName}
                                 </span>
                                 <span className="inline-flex items-center gap-1.5">
@@ -422,7 +422,7 @@ export default function ProjectPassportOverview({
                                     .map((reason) => (
                                         <li
                                             key={reason}
-                                            className="flex items-start gap-2"
+                                            className="flex min-w-0 items-start gap-2 [overflow-wrap:anywhere] break-words"
                                         >
                                             <span
                                                 className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${healthStyle.progress}`}
@@ -442,7 +442,7 @@ export default function ProjectPassportOverview({
                     </div>
                     {summary.next_milestone ? (
                         <div className="mt-3">
-                            <p className="line-clamp-2 text-sm font-medium text-slate-800">
+                            <p className="line-clamp-2 min-w-0 text-sm font-medium [overflow-wrap:anywhere] break-words text-slate-800">
                                 {summary.next_milestone.title}
                             </p>
                             <p

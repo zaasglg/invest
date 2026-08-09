@@ -169,13 +169,13 @@ function ProductionPlanComparison({ plan }: { plan: ProductionPlanInput }) {
     return (
         <section className="overflow-hidden rounded-lg border border-gray-200">
             <div className="flex flex-col gap-3 bg-gray-50 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div>
-                    <h3 className="flex items-center gap-2 font-semibold text-[#0f1b3d]">
-                        <Factory className="size-4 text-[#c8a44e]" />
+                <div className="min-w-0">
+                    <h3 className="flex min-w-0 items-center gap-2 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                        <Factory className="size-4 shrink-0 text-[#c8a44e]" />
                         {plan.product_name}
                     </h3>
                     {plan.legacy_value && !plan.is_complete && (
-                        <p className="mt-1 text-sm text-amber-700">
+                        <p className="mt-1 text-sm [overflow-wrap:anywhere] break-words text-amber-700">
                             Бұрынғы қуаттылық: {plan.legacy_value}
                         </p>
                     )}

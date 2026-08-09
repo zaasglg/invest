@@ -105,7 +105,10 @@ export default function ProjectGallerySlider({
                     {/* Date & description overlay */}
                     <div className="absolute right-0 bottom-0 left-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                         <div className="flex items-end justify-between gap-4">
-                            <p className="truncate text-sm text-white">
+                            <p
+                                className="min-w-0 flex-1 truncate text-sm text-white"
+                                title={currentPhoto.description || undefined}
+                            >
                                 {currentPhoto.description || ''}
                             </p>
                             {(currentPhoto.gallery_date ||
@@ -371,8 +374,8 @@ function PhotoLightbox({
                 />
 
                 {currentPhoto.description && zoom === 1 && (
-                    <div className="absolute bottom-20 left-1/2 max-w-2xl -translate-x-1/2 px-4">
-                        <p className="rounded-lg bg-black/50 px-4 py-2 text-center text-sm text-white">
+                    <div className="absolute bottom-20 left-1/2 w-full max-w-2xl min-w-0 -translate-x-1/2 px-4">
+                        <p className="rounded-lg bg-black/50 px-4 py-2 text-center text-sm [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-white">
                             {currentPhoto.description}
                         </p>
                     </div>
