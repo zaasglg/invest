@@ -13,6 +13,8 @@ use App\Models\SubsoilTaskCompletion;
 use App\Models\SubsoilUser;
 use App\Models\TaskCompletion;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -176,6 +178,8 @@ test('deleting the last task keeps the automatic district executor attached', fu
 });
 
 test('completion review is authorized once and duplicate submissions are blocked', function () {
+    Storage::fake('local');
+
     $admin = createAuthorizationTestUser('superadmin');
     $executor = createAuthorizationTestUser('ispolnitel');
     $region = createAuthorizationTestRegion();
@@ -237,14 +241,92 @@ test('completion review is authorized once and duplicate submissions are blocked
     );
 
     $this->actingAs($executor)
-        ->post($submitRoute, ['comment' => 'Бірінші нәтиже'])
+        ->post($submitRoute, [
+            'comment' => 'Бірінші нәтиже',
+            'documents' => [UploadedFile::fake()->create(
+                'first-result.pdf',
+                10,
+                'application/pdf'
+            )],
+        ])
         ->assertRedirect();
 
     $this->actingAs($executor)
-        ->post($submitRoute, ['comment' => 'Қайталанған нәтиже'])
+        ->post($submitRoute, [
+            'comment' => 'Қайталанған нәтиже',
+            'documents' => [UploadedFile::fake()->create(
+                'duplicate-result.pdf',
+                10,
+                'application/pdf'
+            )],
+        ])
         ->assertStatus(409);
 
     expect($secondTask->completions()->count())->toBe(1);
+});
+
+test('project task completion requires a real document while photos remain optional', function () {
+    Storage::fake('local');
+
+    $admin = createAuthorizationTestUser('superadmin');
+    $executor = createAuthorizationTestUser('ispolnitel');
+    $region = createAuthorizationTestRegion();
+    $project = createAuthorizationTestProject($admin, $region);
+    $project->executors()->attach($executor);
+
+    $task = ProjectTask::create([
+        'project_id' => $project->id,
+        'title' => 'Құжаты міндетті тапсырма',
+        'assigned_to' => $executor->id,
+        'created_by' => $admin->id,
+        'status' => 'new',
+        'approval_status' => 'approved',
+    ]);
+    $submitRoute = route(
+        'investment-projects.tasks.completions.store',
+        [$project, $task]
+    );
+
+    $this->actingAs($executor)
+        ->post($submitRoute, ['comment' => 'Файлсыз нәтиже'])
+        ->assertSessionHasErrors('documents');
+
+    $this->post($submitRoute, [
+        'comment' => 'Тек суреті бар нәтиже',
+        'photos' => [UploadedFile::fake()->image('evidence.jpg')],
+    ])->assertSessionHasErrors('documents');
+
+    $this->post($submitRoute, [
+        'comment' => 'Суретті құжат ретінде жіберу әрекеті',
+        'documents' => [UploadedFile::fake()->image('not-a-document.jpg')],
+    ])->assertSessionHasErrors('documents.0');
+
+    expect($task->completions()->count())->toBe(0);
+
+    $this->post($submitRoute, [
+        'comment' => 'Құжатпен жіберілген нәтиже',
+        'documents' => [UploadedFile::fake()->create(
+            'completion-report.pdf',
+            10,
+            'application/pdf'
+        )],
+    ])->assertRedirect()->assertSessionHasNoErrors();
+
+    expect($task->completions()->count())->toBe(1)
+        ->and(
+            $task->completions()
+                ->sole()
+                ->files()
+                ->where('type', 'document')
+                ->count()
+        )->toBe(1)
+        ->and(
+            $task->completions()
+                ->sole()
+                ->files()
+                ->where('type', 'photo')
+                ->count()
+        )->toBe(0);
 });
 
 test('subsoil completion review rejects unauthorized and repeated decisions', function () {

@@ -846,6 +846,14 @@ export default function Show({
         e.preventDefault();
         if (!completionTaskId) return;
 
+        if (completionDocuments.length === 0) {
+            setCompletionFileError(
+                'Тапсырманы орындауға жіберу үшін кемінде бір құжат тіркеу міндетті.',
+            );
+            completionDocRef.current?.focus();
+            return;
+        }
+
         // Check total size of all files
         const allFiles = [...completionDocuments, ...completionPhotos];
         const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
@@ -878,7 +886,16 @@ export default function Show({
                     setCompletionPhotos([]);
                     setIsSubmittingCompletion(false);
                 },
-                onError: () => setIsSubmittingCompletion(false),
+                onError: (errors) => {
+                    setIsSubmittingCompletion(false);
+                    const fileError =
+                        errors.documents ??
+                        errors['documents.0'] ??
+                        errors.photos ??
+                        errors['photos.0'];
+
+                    if (fileError) setCompletionFileError(fileError);
+                },
             },
         );
     };
@@ -2633,7 +2650,10 @@ export default function Show({
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
-                                        Құжаттар (файлдар)
+                                        Құжаттар (міндетті)
+                                        <span className="ml-1 text-red-500">
+                                            *
+                                        </span>
                                         <span className="ml-1 font-normal text-gray-400">
                                             (макс.{' '}
                                             {MAX_COMPLETION_FILE_SIZE /
@@ -2646,9 +2666,15 @@ export default function Show({
                                         ref={completionDocRef}
                                         type="file"
                                         multiple
+                                        required
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
                                         onChange={handleCompletionDocChange}
                                         className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-700 hover:file:bg-cyan-100"
                                     />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Кемінде бір құжат тіркеңіз. Сурет
+                                        құжаттың орнын алмастырмайды.
+                                    </p>
                                     {completionDocuments.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
                                             {completionDocuments.length} құжат
@@ -2660,7 +2686,7 @@ export default function Show({
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
-                                        Суреттер
+                                        Суреттер (міндетті емес)
                                         <span className="ml-1 font-normal text-gray-400">
                                             (макс.{' '}
                                             {MAX_COMPLETION_FILE_SIZE /
@@ -2706,7 +2732,8 @@ export default function Show({
                                         className="bg-emerald-500 px-8 hover:bg-emerald-600"
                                         disabled={
                                             isSubmittingCompletion ||
-                                            !!completionFileError
+                                            !!completionFileError ||
+                                            completionDocuments.length === 0
                                         }
                                     >
                                         {isSubmittingCompletion
