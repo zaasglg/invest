@@ -27,7 +27,6 @@ import {
     Droplets,
     Car,
     Wifi,
-    CheckCircle2,
     Factory,
     Building2,
     Pickaxe,
@@ -243,6 +242,9 @@ export default function Show({
             .user?.role_model?.name === 'invest';
 
     const [activeTab, setActiveTab] = useState('all');
+    const [baseLayer, setBaseLayer] = useState<'standard' | 'satellite'>(
+        'standard',
+    );
     const [selectedEntityId, setSelectedEntityId] = useState<number | null>(
         null,
     );
@@ -1101,6 +1103,7 @@ export default function Show({
                                             mapSelectedEntityType
                                         }
                                         selectedProjectId={selectedProjectId}
+                                        baseLayer={baseLayer}
                                         zoom={13}
                                         center={mapCenter}
                                         className="h-full w-full"
@@ -1111,6 +1114,39 @@ export default function Show({
                                         onEntitySelect={handleMapEntitySelect}
                                         onProjectSelect={handleProjectSelect}
                                     />
+                                </div>
+
+                                <div
+                                    aria-label="Карта түрін таңдау"
+                                    className="absolute top-3 left-14 z-[450] inline-flex rounded-xl border border-white/70 bg-slate-100/95 p-1 shadow-lg backdrop-blur-sm"
+                                    role="group"
+                                >
+                                    {(
+                                        [
+                                            ['standard', 'Қалыпты'],
+                                            ['satellite', 'Спутник'],
+                                        ] as const
+                                    ).map(([value, label]) => {
+                                        const isActive = baseLayer === value;
+
+                                        return (
+                                            <button
+                                                key={value}
+                                                aria-pressed={isActive}
+                                                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                                                    isActive
+                                                        ? 'bg-white text-navy shadow-sm ring-1 ring-slate-200'
+                                                        : 'text-slate-500 hover:text-navy'
+                                                }`}
+                                                type="button"
+                                                onClick={() =>
+                                                    setBaseLayer(value)
+                                                }
+                                            >
+                                                {label}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
 
                                 <div className="absolute bottom-4 left-4 z-[400] space-y-1.5 rounded-lg border border-gray-100 bg-white/90 p-3 text-sm backdrop-blur-sm">

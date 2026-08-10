@@ -606,7 +606,7 @@ export default function Map({
     subsoilUsers = [],
     selectedEntityId = null,
     selectedEntityType = null,
-    selectedProjectId = null,
+    selectedProjectId,
     selectedRegion = null,
     regionStats,
     fitBounds = false,
@@ -855,22 +855,27 @@ export default function Map({
         promZones,
         subsoilUsers,
     ]);
-    // Sync external selectedProjectId with activePlot
+    // Keep externally controlled project selection in sync. Maps that omit
+    // selectedProjectId continue to manage their project popup internally.
     useEffect(() => {
-        if (selectedProjectId !== null) {
-            const targetPlot = plots.find((p) => p.id === selectedProjectId);
-            if (targetPlot) {
-                setActivePlot(targetPlot);
-                setActiveRegion(null);
-                setActiveEntity(null);
-            }
-        } else {
-            // Only clear if the currently active plot was set externally
-            if (activePlot && selectedProjectId === null) {
-                // Don't clear — let internal clicks manage themselves
-            }
+        if (selectedProjectId === undefined) {
+            return;
         }
-    }, [activePlot, selectedProjectId, plots]);
+
+        if (selectedProjectId === null) {
+            setActivePlot(null);
+
+            return;
+        }
+
+        const targetPlot = plots.find((plot) => plot.id === selectedProjectId);
+
+        if (targetPlot) {
+            setActivePlot(targetPlot);
+            setActiveRegion(null);
+            setActiveEntity(null);
+        }
+    }, [selectedProjectId, plots]);
 
     useEffect(() => {
         const projectPlots: Plot[] = projects
@@ -1576,11 +1581,14 @@ export default function Map({
                                         interactive={false}
                                         pathOptions={{
                                             color: statusColors.color,
-                                            weight: 11,
-                                            opacity: 0.3,
+                                            weight: 8,
+                                            opacity: 0.72,
+                                            dashArray: '8, 7',
                                             fillOpacity: 0,
+                                            lineCap: 'round',
+                                            lineJoin: 'round',
                                             className:
-                                                'map-live-halo map-live-halo--project',
+                                                'map-project-selection-outline',
                                         }}
                                     />
                                 )}
@@ -1589,7 +1597,7 @@ export default function Map({
                                     pathOptions={{
                                         color: statusColors.color,
                                         weight: isSelected
-                                            ? 4
+                                            ? 3
                                             : shouldMute
                                               ? 2
                                               : 3,
@@ -1604,7 +1612,7 @@ export default function Map({
                                               ? '4, 6'
                                               : undefined,
                                         fillOpacity: isSelected
-                                            ? 0.6 // More opaque when selected
+                                            ? 0.28
                                             : shouldMute
                                               ? 0.1
                                               : 0.5, // More visible generally
@@ -1767,7 +1775,10 @@ export default function Map({
                             variant="ghost"
                             size="icon"
                             className="h-7 w-7 shrink-0 rounded-full text-white/70 hover:bg-white/10 hover:text-white"
-                            onClick={() => setActivePlot(null)}
+                            onClick={() => {
+                                setActivePlot(null);
+                                onProjectSelect?.(null);
+                            }}
                         >
                             <X className="h-4 w-4" />
                         </Button>
