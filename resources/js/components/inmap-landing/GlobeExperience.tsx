@@ -7,17 +7,24 @@ import {
     geoPath,
     type GeoProjection,
 } from 'd3-geo';
-import { ArrowDown, ArrowUpRight, ExternalLink, LogIn, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+    ArrowDown,
+    ArrowLeft,
+    ArrowUpRight,
+    ChevronDown,
+    ExternalLink,
+    LogIn,
+    Search,
+    X,
+} from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { feature } from 'topojson-client';
 import worldData from 'world-atlas/countries-110m.json';
 
 import { login } from '@/routes';
-// Imported statically on purpose: as a `lazy()` boundary, RegionMap3D's chunk
-// statically imports code that Rollup places in the welcome page chunk, which
-// costs that chunk its facade and drops `resources/js/pages/welcome.tsx` from
-// the Vite manifest (Laravel then cannot resolve the page). Rendering is still
-// deferred by `regionMapRequested`, so the district GeoJSON fetch stays lazy.
+import { AssetsExplorer } from './AssetsExplorer';
+// Keep the landing subcomponents in the welcome page chunk. A lazy boundary
+// here can make Rollup drop the Inertia page facade from Vite's manifest.
 import { RegionMap3D } from './RegionMap3D';
 
 const KAZAKHSTAN_ID = '398';
@@ -28,12 +35,126 @@ type TradeDirection = 'export' | 'import';
 type TradePartner = {
     id: string;
     name: string;
-    coordinates: [number, number];
+    mapId?: string | null;
+    coordinates: [number, number] | null;
     turnover: number;
     export: number;
     import: number;
-    exportProducts: Array<{ name: string; value: number }>;
-    importProducts: Array<{ name: string; value: number }>;
+    turnoverShare?: number;
+    exportShare?: number;
+    importShare?: number;
+    rank?: number;
+    period?: string;
+    previous?: { turnover: number; export: number; import: number } | null;
+    annual?: {
+        '2024': { turnover: number; export: number; import: number } | null;
+        '2025': { turnover: number; export: number; import: number } | null;
+    };
+    growth?: {
+        turnover: number | null;
+        export: number | null;
+        import: number | null;
+    } | null;
+    exportProducts: Array<{ code?: string; name: string; value: number }>;
+    importProducts: Array<{ code?: string; name: string; value: number }>;
+};
+
+type RawTradeMetric = {
+    turnover: number;
+    export: number;
+    import: number;
+    turnoverShare: number;
+    exportShare: number;
+    importShare: number;
+};
+
+type RawTradeDataset = {
+    metadata: {
+        source: string;
+        sourcePage: string;
+        currentPeriod: string;
+        productPeriod: string;
+        publishedAt: string;
+    };
+    coverage: {
+        partners: number;
+        currentPartners: number;
+        mappedPartners: number;
+    };
+    totals: {
+        current: { '2025': RawTradeMetric; '2026': RawTradeMetric };
+        currentGrowth: {
+            turnover: number | null;
+            export: number | null;
+            import: number | null;
+        };
+    };
+    partners: Array<{
+        key: string;
+        mapId: string | null;
+        nameRu: string;
+        coordinates: [number, number] | null;
+        rank: number;
+        annual: {
+            '2024': RawTradeMetric | null;
+            '2025': RawTradeMetric | null;
+        };
+        current: {
+            '2025': RawTradeMetric | null;
+            '2026': RawTradeMetric | null;
+        };
+        currentGrowth: {
+            turnover: number | null;
+            export: number | null;
+            import: number | null;
+        } | null;
+        annualGrowth: {
+            turnover: number | null;
+            export: number | null;
+            import: number | null;
+        } | null;
+        products2025: {
+            export: Array<{ code: string; name: string; value: number }>;
+            import: Array<{ code: string; name: string; value: number }>;
+        };
+    }>;
+};
+
+type KdbCountryProfile = {
+    iso3: string;
+    nameRu: string;
+    latestYear: number;
+    annual: Array<{
+        year: number;
+        marketImport: number;
+        fromKazakhstan: number | null;
+        kazakhstanShare: number | null;
+    }>;
+    categories: Array<{
+        type: string | null;
+        category: string;
+        processing: string | null;
+        marketImport: number;
+        fromKazakhstan: number | null;
+        kazakhstanShare: number | null;
+    }>;
+    products: Array<{
+        code: string;
+        name: string;
+        marketImport: number;
+        fromKazakhstan: number | null;
+        kazakhstanShare: number | null;
+    }>;
+};
+
+type RawKdbDataset = {
+    metadata: {
+        source: string;
+        sourcePage: string;
+        lastRefreshAt: string | null;
+        latestYear: number;
+    };
+    countries: Record<string, KdbCountryProfile>;
 };
 
 const TRADE_PARTNERS: TradePartner[] = [
@@ -215,9 +336,57 @@ const TRADE_PARTNERS: TradePartner[] = [
     },
 ];
 
-const TRADE_TOTALS = { turnover: 44.9, export: 24, import: 20.9 };
+const TRADE_TOTALS = {
+    turnover: 56.35,
+    export: 30.36,
+    import: 25.99,
+    growth: 4.35,
+};
 const REGION_MAP_TRANSITION_START = 0.7;
 const REGION_MAP_TRANSITION_LENGTH = 0.295;
+
+const formatTradeValue = (value: number) => {
+    if (value <= 0) return '$0';
+    if (value >= 1) {
+        return `$${value.toLocaleString('ru-RU', { maximumFractionDigits: value >= 10 ? 1 : 2 })} млрд`;
+    }
+
+    const millions = value * 1000;
+    if (millions >= 0.001) {
+        const maximumFractionDigits =
+            millions >= 10
+                ? 1
+                : millions >= 1
+                  ? 2
+                  : millions >= 0.1
+                    ? 1
+                    : millions >= 0.01
+                      ? 2
+                      : 3;
+        return `$${millions.toLocaleString('ru-RU', { maximumFractionDigits })} млн`;
+    }
+
+    const thousands = value * 1_000_000;
+    if (thousands >= 1) {
+        return `$${thousands.toLocaleString('ru-RU', { maximumFractionDigits: 1 })} тыс.`;
+    }
+    return `$${Math.round(value * 1_000_000_000).toLocaleString('ru-RU')}`;
+};
+
+const formatGrowth = (value?: number | null) =>
+    value == null || !Number.isFinite(value)
+        ? '—'
+        : `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+
+const formatMillionUsd = (value?: number | null) =>
+    value == null || !Number.isFinite(value)
+        ? '—'
+        : formatTradeValue(value / 1000);
+
+const formatPercent = (value?: number | null) =>
+    value == null || !Number.isFinite(value)
+        ? '—'
+        : `${value.toLocaleString('ru-RU', { maximumFractionDigits: value >= 1 ? 2 : 4 })}%`;
 
 const clamp = (value: number, min = 0, max = 1) =>
     Math.min(max, Math.max(min, value));
@@ -231,16 +400,224 @@ export function GlobeExperience() {
     const storyRef = useRef<HTMLElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const tradeTooltipRef = useRef<HTMLDivElement>(null);
+    const tradePickerRef = useRef<HTMLDivElement>(null);
     const progressRef = useRef(0);
     const [progress, setProgress] = useState(0);
+    const [tradePartners, setTradePartners] =
+        useState<TradePartner[]>(TRADE_PARTNERS);
+    const [tradeSummary, setTradeSummary] = useState({
+        ...TRADE_TOTALS,
+        period: 'январь–май 2026',
+        partnerCount: TRADE_PARTNERS.length,
+        source: 'Бюро национальной статистики',
+        sourcePage:
+            'https://stat.gov.kz/ru/industries/economy/foreign-market/spreadsheets/',
+        publishedAt: '2026-07-15',
+    });
+    const [tradeDataState, setTradeDataState] = useState<
+        'loading' | 'ready' | 'fallback'
+    >('loading');
+    const [countryPickerOpen, setCountryPickerOpen] = useState(false);
+    const [countrySearch, setCountrySearch] = useState('');
     const [selectedTradeId, setSelectedTradeId] = useState<string | null>(null);
     const [tradeDirection, setTradeDirection] =
         useState<TradeDirection>('export');
+    const [tradeDetailOpen, setTradeDetailOpen] = useState(false);
+    const [detailDataSource, setDetailDataSource] = useState<'bns' | 'kdb'>(
+        'bns',
+    );
+    const [kdbProfiles, setKdbProfiles] = useState<
+        Record<string, KdbCountryProfile>
+    >({});
+    const [kdbMetadata, setKdbMetadata] = useState<
+        RawKdbDataset['metadata'] | null
+    >(null);
+    const [kdbDataState, setKdbDataState] = useState<
+        'loading' | 'ready' | 'unavailable'
+    >('loading');
+    const [assetsOpen, setAssetsOpen] = useState(false);
+    const closeAssets = useCallback(() => setAssetsOpen(false), []);
 
-    const selectedTrade = TRADE_PARTNERS.find(
+    const selectedTrade = tradePartners.find(
         (partner) => partner.id === selectedTradeId,
     );
     const regionMapRequested = progress > 0.58;
+    const filteredTradePartners = tradePartners
+        .filter((partner) =>
+            partner.name
+                .toLocaleLowerCase('ru-RU')
+                .includes(countrySearch.trim().toLocaleLowerCase('ru-RU')),
+        )
+        .slice(0, 60);
+
+    const openTradePartner = (partnerId: string) => {
+        setTradeDirection('export');
+        setTradeDetailOpen(false);
+        setDetailDataSource('bns');
+        setSelectedTradeId(partnerId);
+        setCountryPickerOpen(false);
+        setCountrySearch('');
+    };
+
+    useEffect(() => {
+        const controller = new AbortController();
+        fetch('/data/trade/kazakhstan-trade.json', {
+            signal: controller.signal,
+        })
+            .then((response) => {
+                if (!response.ok)
+                    throw new Error(
+                        `Trade dataset returned ${response.status}`,
+                    );
+                return response.json() as Promise<RawTradeDataset>;
+            })
+            .then((dataset) => {
+                const partners = dataset.partners
+                    .map((partner): TradePartner | null => {
+                        const latest =
+                            partner.current['2026'] ?? partner.annual['2025'];
+                        if (!latest || latest.turnover <= 0) return null;
+                        const previous = partner.current['2026']
+                            ? partner.current['2025']
+                            : partner.annual['2024'];
+                        return {
+                            id: partner.key,
+                            mapId: partner.mapId,
+                            name: partner.nameRu,
+                            coordinates: partner.coordinates,
+                            turnover: latest.turnover / 1000,
+                            export: latest.export / 1000,
+                            import: latest.import / 1000,
+                            turnoverShare: latest.turnoverShare,
+                            exportShare: latest.exportShare,
+                            importShare: latest.importShare,
+                            rank: partner.rank,
+                            period: partner.current['2026']
+                                ? dataset.metadata.currentPeriod
+                                : '2025 год',
+                            previous: previous
+                                ? {
+                                      turnover: previous.turnover / 1000,
+                                      export: previous.export / 1000,
+                                      import: previous.import / 1000,
+                                  }
+                                : null,
+                            annual: {
+                                '2024': partner.annual['2024']
+                                    ? {
+                                          turnover:
+                                              partner.annual['2024'].turnover /
+                                              1000,
+                                          export:
+                                              partner.annual['2024'].export /
+                                              1000,
+                                          import:
+                                              partner.annual['2024'].import /
+                                              1000,
+                                      }
+                                    : null,
+                                '2025': partner.annual['2025']
+                                    ? {
+                                          turnover:
+                                              partner.annual['2025'].turnover /
+                                              1000,
+                                          export:
+                                              partner.annual['2025'].export /
+                                              1000,
+                                          import:
+                                              partner.annual['2025'].import /
+                                              1000,
+                                      }
+                                    : null,
+                            },
+                            growth: partner.current['2026']
+                                ? partner.currentGrowth
+                                : partner.annualGrowth,
+                            exportProducts: partner.products2025.export.map(
+                                (product) => ({
+                                    ...product,
+                                    value: product.value / 1000,
+                                }),
+                            ),
+                            importProducts: partner.products2025.import.map(
+                                (product) => ({
+                                    ...product,
+                                    value: product.value / 1000,
+                                }),
+                            ),
+                        };
+                    })
+                    .filter(
+                        (partner): partner is TradePartner => partner !== null,
+                    );
+                const total = dataset.totals.current['2026'];
+                setTradePartners(partners);
+                setTradeSummary({
+                    turnover: total.turnover / 1000,
+                    export: total.export / 1000,
+                    import: total.import / 1000,
+                    growth: dataset.totals.currentGrowth.turnover ?? 0,
+                    period: dataset.metadata.currentPeriod,
+                    partnerCount: dataset.coverage.currentPartners,
+                    source: dataset.metadata.source,
+                    sourcePage: dataset.metadata.sourcePage,
+                    publishedAt: dataset.metadata.publishedAt,
+                });
+                setTradeDataState('ready');
+            })
+            .catch((error) => {
+                if (
+                    error instanceof DOMException &&
+                    error.name === 'AbortError'
+                )
+                    return;
+                setTradeDataState('fallback');
+            });
+        return () => controller.abort();
+    }, []);
+
+    useEffect(() => {
+        const controller = new AbortController();
+        fetch('/data/trade/kdb-import-profile.json', {
+            signal: controller.signal,
+        })
+            .then((response) => {
+                if (!response.ok)
+                    throw new Error(`BRK dataset returned ${response.status}`);
+                return response.json() as Promise<RawKdbDataset>;
+            })
+            .then((dataset) => {
+                setKdbProfiles(dataset.countries);
+                setKdbMetadata(dataset.metadata);
+                setKdbDataState('ready');
+            })
+            .catch((error) => {
+                if (
+                    error instanceof DOMException &&
+                    error.name === 'AbortError'
+                )
+                    return;
+                setKdbDataState('unavailable');
+            });
+        return () => controller.abort();
+    }, []);
+
+    useEffect(() => {
+        if (!countryPickerOpen) return;
+        const closePicker = (event: PointerEvent) => {
+            if (!tradePickerRef.current?.contains(event.target as Node))
+                setCountryPickerOpen(false);
+        };
+        const closePickerOnEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') setCountryPickerOpen(false);
+        };
+        document.addEventListener('pointerdown', closePicker);
+        window.addEventListener('keydown', closePickerOnEscape);
+        return () => {
+            document.removeEventListener('pointerdown', closePicker);
+            window.removeEventListener('keydown', closePickerOnEscape);
+        };
+    }, [countryPickerOpen]);
 
     useEffect(() => {
         if (!selectedTradeId) return;
@@ -276,13 +653,18 @@ export function GlobeExperience() {
         const kazakhstan = countries.features.find(
             (country) => String(country.id).padStart(3, '0') === KAZAKHSTAN_ID,
         );
-        const tradeCountries = TRADE_PARTNERS.flatMap((partner) => {
+        const tradeCountries = tradePartners.flatMap((partner) => {
+            const mapId = partner.mapId ?? partner.id;
             const country = countries.features.find(
                 (featureItem) =>
-                    String(featureItem.id).padStart(3, '0') === partner.id,
+                    String(featureItem.id).padStart(3, '0') === mapId,
             );
             return country ? [{ partner, country }] : [];
         });
+        const maxTradeTurnover = Math.max(
+            1,
+            ...tradeCountries.map(({ partner }) => partner.turnover),
+        );
         let turkestanRegion: {
             type: string;
             features: Array<{ type: string }>;
@@ -372,7 +754,7 @@ export function GlobeExperience() {
             hoveredTradeId = match?.partner.id || null;
             const tooltip = tradeTooltipRef.current;
             if (tooltip && point && match) {
-                tooltip.textContent = `${match.partner.name} · $${match.partner.turnover.toFixed(1)} млрд`;
+                tooltip.textContent = `${match.partner.name} · ${formatTradeValue(match.partner.turnover)}`;
                 tooltip.style.left = `${Math.min(width - 190, point[0] + 16)}px`;
                 tooltip.style.top = `${Math.max(104, point[1] - 8)}px`;
                 tooltip.style.opacity = '1';
@@ -449,6 +831,7 @@ export function GlobeExperience() {
             const match = updateHoveredPartner(clickPoint);
             if (dragDistance < 7 && match) {
                 setTradeDirection('export');
+                setTradeDetailOpen(false);
                 setSelectedTradeId(match.partner.id);
             }
         };
@@ -622,21 +1005,28 @@ export function GlobeExperience() {
             if (tradeVisibility > 0.01) {
                 tradeCountries.forEach(({ partner, country }) => {
                     const isHovered = partner.id === hoveredTradeId;
+                    const isSelected = partner.id === selectedTradeId;
+                    const intensity =
+                        Math.log1p(partner.turnover) /
+                        Math.log1p(maxTradeTurnover);
                     context.save();
                     context.beginPath();
                     path(country as never);
-                    context.fillStyle = isHovered
-                        ? `rgba(165, 239, 82, ${0.42 * tradeVisibility})`
-                        : `rgba(98, 200, 224, ${0.11 * tradeVisibility})`;
+                    context.fillStyle =
+                        isHovered || isSelected
+                            ? `rgba(165, 239, 82, ${0.5 * tradeVisibility})`
+                            : `rgba(98, 200, 224, ${(0.07 + intensity * 0.3) * tradeVisibility})`;
                     context.fill();
-                    context.shadowColor = isHovered
-                        ? 'rgba(165, 239, 82, .7)'
-                        : 'transparent';
-                    context.shadowBlur = isHovered ? 18 : 0;
-                    context.strokeStyle = isHovered
-                        ? `rgba(224, 255, 190, ${0.95 * tradeVisibility})`
-                        : `rgba(132, 220, 229, ${0.5 * tradeVisibility})`;
-                    context.lineWidth = isHovered ? 1.8 : 0.8;
+                    context.shadowColor =
+                        isHovered || isSelected
+                            ? 'rgba(165, 239, 82, .7)'
+                            : 'transparent';
+                    context.shadowBlur = isHovered || isSelected ? 18 : 0;
+                    context.strokeStyle =
+                        isHovered || isSelected
+                            ? `rgba(224, 255, 190, ${0.95 * tradeVisibility})`
+                            : `rgba(132, 220, 229, ${(0.25 + intensity * 0.45) * tradeVisibility})`;
+                    context.lineWidth = isHovered || isSelected ? 1.8 : 0.65;
                     context.stroke();
                     context.restore();
                 });
@@ -695,6 +1085,7 @@ export function GlobeExperience() {
                     direction: TradeDirection,
                     partnerIndex: number,
                 ) => {
+                    if (!partner.coordinates) return;
                     const end = projection(partner.coordinates);
                     if (
                         !end ||
@@ -717,10 +1108,15 @@ export function GlobeExperience() {
                         direction === 'export'
                             ? '165, 239, 82'
                             : '98, 200, 224';
-                    const emphasis =
-                        !hoveredTradeId || hoveredTradeId === partner.id
+                    const routeIntensity =
+                        Math.log1p(partner.turnover) /
+                        Math.log1p(maxTradeTurnover);
+                    const focusedId = hoveredTradeId ?? selectedTradeId;
+                    const emphasis = focusedId
+                        ? focusedId === partner.id
                             ? 1
-                            : 0.12;
+                            : 0.035
+                        : 0.12 + routeIntensity * 0.58;
 
                     context.save();
                     context.beginPath();
@@ -731,10 +1127,10 @@ export function GlobeExperience() {
                         end[0],
                         end[1],
                     );
-                    context.strokeStyle = `rgba(${color}, ${0.48 * tradeVisibility * emphasis})`;
+                    context.strokeStyle = `rgba(${color}, ${0.42 * tradeVisibility * emphasis})`;
                     context.lineWidth =
-                        (direction === 'export' ? 1.25 : 1.05) *
-                        (hoveredTradeId === partner.id ? 1.5 : 1);
+                        (direction === 'export' ? 0.9 : 0.75) +
+                        routeIntensity * 0.5;
                     context.setLineDash(
                         direction === 'export' ? [7, 6] : [2, 6],
                     );
@@ -755,15 +1151,24 @@ export function GlobeExperience() {
                         routeProgress * routeProgress * end[1];
                     context.setLineDash([]);
                     context.shadowColor = `rgba(${color}, .8)`;
-                    context.shadowBlur = 10;
-                    context.fillStyle = `rgba(${color}, ${tradeVisibility * emphasis})`;
+                    context.shadowBlur = focusedId === partner.id ? 12 : 5;
+                    context.fillStyle = `rgba(${color}, ${tradeVisibility * Math.min(1, emphasis * 1.35)})`;
                     context.beginPath();
-                    context.arc(pointX, pointY, 2.5, 0, Math.PI * 2);
+                    context.arc(
+                        pointX,
+                        pointY,
+                        1.25 + routeIntensity * 1.5,
+                        0,
+                        Math.PI * 2,
+                    );
                     context.fill();
                     context.restore();
                 };
 
-                TRADE_PARTNERS.forEach((partner, partnerIndex) => {
+                const routePartners = tradePartners.filter(
+                    (partner) => partner.coordinates,
+                );
+                routePartners.forEach((partner, partnerIndex) => {
                     drawRoute(partner, 'export', partnerIndex);
                     drawRoute(partner, 'import', partnerIndex);
                 });
@@ -837,7 +1242,7 @@ export function GlobeExperience() {
             document.removeEventListener('visibilitychange', updateVisibility);
             regionController.abort();
         };
-    }, []);
+    }, [selectedTradeId, tradePartners]);
 
     const heroFade = 1 - ease(clamp((progress - 0.05) / 0.32));
     const countryReveal =
@@ -878,14 +1283,46 @@ export function GlobeExperience() {
         window.scrollTo({ top: target, behavior: 'smooth' });
     };
 
-    const selectedProducts = selectedTrade?.[`${tradeDirection}Products`];
     const selectedVolume = selectedTrade?.[tradeDirection] || 0;
     const selectedShare =
-        (selectedVolume / (tradeDirection === 'export' ? 79.2295 : 65.431)) *
-        100;
+        tradeDirection === 'export'
+            ? (selectedTrade?.exportShare ?? 0)
+            : (selectedTrade?.importShare ?? 0);
+    const selectedBalance = selectedTrade
+        ? selectedTrade.export - selectedTrade.import
+        : 0;
+    const annualMax = Math.max(
+        0.001,
+        selectedTrade?.annual?.['2024']?.turnover ?? 0,
+        selectedTrade?.annual?.['2025']?.turnover ?? 0,
+    );
+    const selectedProducts = selectedTrade?.[`${tradeDirection}Products`] ?? [];
     const productMax = Math.max(
         0.001,
-        ...(selectedProducts?.map((product) => product.value) || [0]),
+        ...selectedProducts.map((product) => product.value),
+    );
+    const selectedKdbProfile = selectedTrade
+        ? kdbProfiles[selectedTrade.id]
+        : undefined;
+    const latestKdbMetric = selectedKdbProfile?.annual.find(
+        (metric) => metric.year === selectedKdbProfile.latestYear,
+    );
+    const kdbAnnualMax = Math.max(
+        0.001,
+        ...(selectedKdbProfile?.annual.map((metric) => metric.marketImport) ??
+            []),
+    );
+    const kdbCategoryMax = Math.max(
+        0.001,
+        ...(selectedKdbProfile?.categories.map(
+            (category) => category.marketImport,
+        ) ?? []),
+    );
+    const kdbProductMax = Math.max(
+        0.001,
+        ...(selectedKdbProfile?.products.map(
+            (product) => product.marketImport,
+        ) ?? []),
     );
 
     return (
@@ -923,15 +1360,29 @@ export function GlobeExperience() {
                             </button>
                             <a
                                 className="project-analysis-link"
-                                href="https://alpha-turkistan-investor-2026-0722.chatgpt-edu-7368.chatgpt.site"
+                                href="https://turkistan-invest-opportunity-map.chatgpt-edu-7368.chatgpt.site/"
                                 target="_blank"
                                 rel="noreferrer"
                                 aria-label="Открыть анализ проекта в новой вкладке"
                             >
                                 Анализ проекта <ExternalLink size={13} />
                             </a>
+                            <button
+                                className="assets-nav-button"
+                                type="button"
+                                onClick={() => setAssetsOpen(true)}
+                            >
+                                Активы
+                            </button>
                         </nav>
                         <div className="header-actions">
+                            <button
+                                className="lang"
+                                type="button"
+                                aria-label="Выбрать язык"
+                            >
+                                RU <span>⌄</span>
+                            </button>
                             <Link
                                 className="login"
                                 href={login()}
@@ -967,25 +1418,34 @@ export function GlobeExperience() {
                             aria-label="Ключевые показатели внешней торговли Казахстана"
                         >
                             <div className="trade-overview-head">
-                                <span>Внешняя торговля</span>
-                                <b>Январь–апрель 2026</b>
+                                <span>
+                                    Внешняя торговля ·{' '}
+                                    {tradeSummary.partnerCount} партнёров
+                                </span>
+                                <b>{tradeSummary.period}</b>
                             </div>
                             <div className="trade-overview-values">
                                 <div>
                                     <span>Товарооборот</span>
                                     <strong>
-                                        ${TRADE_TOTALS.turnover} млрд
+                                        {formatTradeValue(
+                                            tradeSummary.turnover,
+                                        )}
                                     </strong>
-                                    <em>+7,9%</em>
+                                    <em>{formatGrowth(tradeSummary.growth)}</em>
                                 </div>
                                 <div>
                                     <span>Экспорт</span>
-                                    <strong>${TRADE_TOTALS.export} млрд</strong>
+                                    <strong>
+                                        {formatTradeValue(tradeSummary.export)}
+                                    </strong>
                                     <em className="export">из Казахстана</em>
                                 </div>
                                 <div>
                                     <span>Импорт</span>
-                                    <strong>${TRADE_TOTALS.import} млрд</strong>
+                                    <strong>
+                                        {formatTradeValue(tradeSummary.import)}
+                                    </strong>
                                     <em className="import">в Казахстан</em>
                                 </div>
                             </div>
@@ -996,26 +1456,111 @@ export function GlobeExperience() {
                                 <span>
                                     <i className="import" /> Импорт
                                 </span>
-                                <select
-                                    aria-label="Открыть торговый профиль страны"
-                                    value=""
-                                    onChange={(event) => {
-                                        setTradeDirection('export');
-                                        setSelectedTradeId(event.target.value);
-                                    }}
+                                <div
+                                    className="trade-country-control"
+                                    ref={tradePickerRef}
                                 >
-                                    <option value="" disabled>
-                                        Выбрать страну
-                                    </option>
-                                    {TRADE_PARTNERS.map((partner) => (
-                                        <option
-                                            key={partner.id}
-                                            value={partner.id}
-                                        >
-                                            {partner.name}
-                                        </option>
-                                    ))}
-                                </select>
+                                    <button
+                                        className="trade-country-trigger"
+                                        type="button"
+                                        aria-haspopup="listbox"
+                                        aria-expanded={countryPickerOpen}
+                                        onClick={() =>
+                                            setCountryPickerOpen(
+                                                (open) => !open,
+                                            )
+                                        }
+                                    >
+                                        {tradeDataState === 'loading'
+                                            ? 'Загрузка стран…'
+                                            : 'Выбрать страну'}
+                                        <ChevronDown size={12} />
+                                    </button>
+                                    {countryPickerOpen && (
+                                        <div className="trade-country-dropdown">
+                                            <label>
+                                                <Search size={13} />
+                                                <input
+                                                    autoFocus
+                                                    value={countrySearch}
+                                                    onChange={(event) =>
+                                                        setCountrySearch(
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Введите название страны"
+                                                    aria-label="Поиск страны"
+                                                />
+                                            </label>
+                                            <div
+                                                className="trade-country-list"
+                                                role="listbox"
+                                                aria-label="Торговые партнёры"
+                                            >
+                                                {filteredTradePartners.map(
+                                                    (partner) => (
+                                                        <button
+                                                            key={partner.id}
+                                                            type="button"
+                                                            role="option"
+                                                            aria-selected={
+                                                                partner.id ===
+                                                                selectedTradeId
+                                                            }
+                                                            onClick={() =>
+                                                                openTradePartner(
+                                                                    partner.id,
+                                                                )
+                                                            }
+                                                        >
+                                                            <span>
+                                                                <b>
+                                                                    {
+                                                                        partner.name
+                                                                    }
+                                                                </b>
+                                                                <small>
+                                                                    №
+                                                                    {partner.rank ??
+                                                                        '—'}{' '}
+                                                                    ·{' '}
+                                                                    {
+                                                                        partner.period
+                                                                    }
+                                                                </small>
+                                                            </span>
+                                                            <strong>
+                                                                {formatTradeValue(
+                                                                    partner.turnover,
+                                                                )}
+                                                            </strong>
+                                                        </button>
+                                                    ),
+                                                )}
+                                                {!filteredTradePartners.length && (
+                                                    <p>Страна не найдена</p>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="trade-data-meta">
+                                <span className={tradeDataState}>
+                                    {tradeDataState === 'ready'
+                                        ? 'Данные обновлены'
+                                        : tradeDataState === 'loading'
+                                          ? 'Загружаем данные'
+                                          : 'Резервные данные'}
+                                </span>
+                                <a
+                                    href={tradeSummary.sourcePage}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    Источник: {tradeSummary.source}{' '}
+                                    <ExternalLink size={11} />
+                                </a>
                             </div>
                         </div>
                         <div className="hero-actions">
@@ -1168,14 +1713,23 @@ export function GlobeExperience() {
                             onMouseDown={() => setSelectedTradeId(null)}
                         >
                             <section
-                                className="trade-modal"
+                                className={
+                                    tradeDetailOpen
+                                        ? 'trade-modal detailed'
+                                        : 'trade-modal'
+                                }
                                 role="dialog"
                                 aria-modal="true"
                                 aria-labelledby="trade-modal-title"
                                 onMouseDown={(event) => event.stopPropagation()}
                             >
                                 <div className="trade-modal-topline">
-                                    <span>Торговый профиль · 2025</span>
+                                    <span>
+                                        {tradeDetailOpen
+                                            ? 'Детальные данные'
+                                            : 'Торговый профиль'}{' '}
+                                        · {selectedTrade.period}
+                                    </span>
                                     <button
                                         type="button"
                                         onClick={() => setSelectedTradeId(null)}
@@ -1194,8 +1748,13 @@ export function GlobeExperience() {
                                         </h2>
                                     </div>
                                     <strong>
-                                        ${selectedTrade.turnover.toFixed(2)}{' '}
-                                        млрд<small>товарооборот</small>
+                                        {formatTradeValue(
+                                            selectedTrade.turnover,
+                                        )}
+                                        <small>
+                                            товарооборот · №
+                                            {selectedTrade.rank ?? '—'}
+                                        </small>
                                     </strong>
                                 </div>
 
@@ -1221,8 +1780,9 @@ export function GlobeExperience() {
                                     >
                                         Экспорт из Казахстана{' '}
                                         <b>
-                                            ${selectedTrade.export.toFixed(2)}{' '}
-                                            млрд
+                                            {formatTradeValue(
+                                                selectedTrade.export,
+                                            )}
                                         </b>
                                     </button>
                                     <button
@@ -1242,8 +1802,9 @@ export function GlobeExperience() {
                                     >
                                         Импорт в Казахстан{' '}
                                         <b>
-                                            ${selectedTrade.import.toFixed(2)}{' '}
-                                            млрд
+                                            {formatTradeValue(
+                                                selectedTrade.import,
+                                            )}
                                         </b>
                                     </button>
                                 </div>
@@ -1252,7 +1813,7 @@ export function GlobeExperience() {
                                     <div>
                                         <span>Объём направления</span>
                                         <strong>
-                                            ${selectedVolume.toFixed(2)} млрд
+                                            {formatTradeValue(selectedVolume)}
                                         </strong>
                                     </div>
                                     <div>
@@ -1268,82 +1829,543 @@ export function GlobeExperience() {
                                         </strong>
                                     </div>
                                     <div>
-                                        <span>Торговый баланс</span>
+                                        <span>
+                                            Изменение к сопоставимому периоду
+                                        </span>
                                         <strong
                                             className={
-                                                selectedTrade.export -
-                                                    selectedTrade.import >=
-                                                0
+                                                (selectedTrade.growth?.[
+                                                    tradeDirection
+                                                ] ?? 0) >= 0
                                                     ? 'positive'
                                                     : 'negative'
                                             }
                                         >
-                                            {selectedTrade.export -
-                                                selectedTrade.import >=
-                                            0
-                                                ? '+'
-                                                : ''}
-                                            $
-                                            {(
-                                                selectedTrade.export -
-                                                selectedTrade.import
-                                            ).toFixed(2)}{' '}
-                                            млрд
+                                            {formatGrowth(
+                                                selectedTrade.growth?.[
+                                                    tradeDirection
+                                                ],
+                                            )}
                                         </strong>
                                     </div>
                                 </div>
 
-                                <div className="trade-products-head">
-                                    <div>
-                                        <span>Основные товарные группы</span>
-                                        <h3>
-                                            {tradeDirection === 'export'
-                                                ? 'Что Казахстан поставляет'
-                                                : 'Что Казахстан закупает'}
-                                        </h3>
+                                <div className="trade-balance-line">
+                                    <span>
+                                        Торговый баланс за выбранный период
+                                    </span>
+                                    <strong
+                                        className={
+                                            selectedBalance >= 0
+                                                ? 'positive'
+                                                : 'negative'
+                                        }
+                                    >
+                                        {selectedBalance >= 0 ? '+' : '−'}
+                                        {formatTradeValue(
+                                            Math.abs(selectedBalance),
+                                        )}
+                                    </strong>
+                                </div>
+
+                                {!tradeDetailOpen ? (
+                                    <div className="trade-brief-footer">
+                                        <p>
+                                            Сводка за выбранный период. Годовая
+                                            динамика и товарные отрасли доступны
+                                            в подробном профиле.
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setTradeDetailOpen(true)
+                                            }
+                                        >
+                                            Подробнее <ArrowUpRight size={14} />
+                                        </button>
                                     </div>
-                                    <b>Структура товаров · 2024</b>
-                                </div>
-                                <div className="trade-products">
-                                    {selectedProducts?.map((product, index) => (
-                                        <div key={product.name}>
+                                ) : (
+                                    <div className="trade-detail-content">
+                                        <div className="trade-detail-nav">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setTradeDetailOpen(false)
+                                                }
+                                            >
+                                                <ArrowLeft size={13} /> К сводке
+                                            </button>
                                             <span>
-                                                {String(index + 1).padStart(
-                                                    2,
-                                                    '0',
-                                                )}
+                                                Официальная детализация БНС
                                             </span>
-                                            <div>
-                                                <strong>{product.name}</strong>
-                                                <i>
-                                                    <b
-                                                        style={{
-                                                            width: `${Math.max(5, (product.value / productMax) * 100)}%`,
-                                                        }}
-                                                    />
-                                                </i>
-                                            </div>
-                                            <em>
-                                                $
-                                                {product.value >= 1
-                                                    ? product.value.toFixed(2) +
-                                                      ' млрд'
-                                                    : Math.round(
-                                                          product.value * 1000,
-                                                      ) + ' млн'}
-                                            </em>
                                         </div>
-                                    ))}
-                                </div>
-                                <p className="trade-modal-note">
-                                    Объёмы по странам — официальные итоги 2025
-                                    года. Детализация товарных групп показана по
-                                    последней сопоставимой двусторонней
-                                    структуре за 2024 год.
-                                </p>
+                                        <div
+                                            className="trade-detail-source-tabs"
+                                            role="tablist"
+                                            aria-label="Источник детальных данных"
+                                        >
+                                            <button
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={
+                                                    detailDataSource === 'bns'
+                                                }
+                                                className={
+                                                    detailDataSource === 'bns'
+                                                        ? 'active'
+                                                        : ''
+                                                }
+                                                onClick={() =>
+                                                    setDetailDataSource('bns')
+                                                }
+                                            >
+                                                Торговля Казахстана
+                                                <small>
+                                                    БНС · экспорт и импорт РК
+                                                </small>
+                                            </button>
+                                            <button
+                                                type="button"
+                                                role="tab"
+                                                aria-selected={
+                                                    detailDataSource === 'kdb'
+                                                }
+                                                className={
+                                                    detailDataSource === 'kdb'
+                                                        ? 'active kdb'
+                                                        : ''
+                                                }
+                                                onClick={() =>
+                                                    setDetailDataSource('kdb')
+                                                }
+                                            >
+                                                Импортный рынок страны
+                                                <small>
+                                                    БРК · спрос, доля РК и
+                                                    товары
+                                                </small>
+                                            </button>
+                                        </div>
+                                        {detailDataSource === 'bns' ? (
+                                            <>
+                                                <div className="trade-history-head">
+                                                    <div>
+                                                        <span>
+                                                            Годовая динамика
+                                                        </span>
+                                                        <h3>
+                                                            Товарооборот с
+                                                            партнёром
+                                                        </h3>
+                                                    </div>
+                                                    <b>2024–2025</b>
+                                                </div>
+                                                <div className="trade-history">
+                                                    {(
+                                                        [
+                                                            '2024',
+                                                            '2025',
+                                                        ] as const
+                                                    ).map((year) => {
+                                                        const metric =
+                                                            selectedTrade
+                                                                .annual?.[year];
+                                                        return (
+                                                            <div
+                                                                className="trade-history-year"
+                                                                key={year}
+                                                            >
+                                                                <span>
+                                                                    {year}
+                                                                </span>
+                                                                <div>
+                                                                    <strong>
+                                                                        {metric
+                                                                            ? formatTradeValue(
+                                                                                  metric.turnover,
+                                                                              )
+                                                                            : 'Нет данных'}
+                                                                    </strong>
+                                                                    <i>
+                                                                        <b
+                                                                            style={{
+                                                                                width: `${metric ? Math.max(3, (metric.turnover / annualMax) * 100) : 0}%`,
+                                                                            }}
+                                                                        />
+                                                                    </i>
+                                                                </div>
+                                                                <em>
+                                                                    {metric
+                                                                        ? `${formatTradeValue(metric.export)} экспорт · ${formatTradeValue(metric.import)} импорт`
+                                                                        : '—'}
+                                                                </em>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                                <div className="trade-products-head">
+                                                    <div>
+                                                        <span>
+                                                            Товарные отрасли ·
+                                                            ТН ВЭД
+                                                        </span>
+                                                        <h3>
+                                                            {tradeDirection ===
+                                                            'export'
+                                                                ? 'Что Казахстан экспортирует'
+                                                                : 'Что Казахстан импортирует'}
+                                                        </h3>
+                                                    </div>
+                                                    <b>2025 год</b>
+                                                </div>
+                                                <div className="trade-products">
+                                                    {selectedProducts.map(
+                                                        (product) => (
+                                                            <div
+                                                                key={`${product.code}-${product.name}`}
+                                                            >
+                                                                <span>
+                                                                    {product.code ??
+                                                                        '—'}
+                                                                </span>
+                                                                <div>
+                                                                    <strong>
+                                                                        {
+                                                                            product.name
+                                                                        }
+                                                                    </strong>
+                                                                    <i>
+                                                                        <b
+                                                                            style={{
+                                                                                width: `${Math.max(3, (product.value / productMax) * 100)}%`,
+                                                                            }}
+                                                                        />
+                                                                    </i>
+                                                                </div>
+                                                                <em>
+                                                                    {formatTradeValue(
+                                                                        product.value,
+                                                                    )}
+                                                                </em>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                    {!selectedProducts.length && (
+                                                        <p className="trade-products-empty">
+                                                            Для этого
+                                                            направления товарная
+                                                            детализация
+                                                            отсутствует.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                                <p className="trade-modal-note">
+                                                    Источник: Бюро национальной
+                                                    статистики РК. Товарные
+                                                    позиции показаны на уровне 4
+                                                    знаков ТН ВЭД ЕАЭС; значения
+                                                    округлены только для
+                                                    отображения.
+                                                </p>
+                                            </>
+                                        ) : selectedKdbProfile ? (
+                                            <div className="kdb-profile">
+                                                <div className="kdb-profile-hero">
+                                                    <div>
+                                                        <span>
+                                                            Импортный профиль
+                                                            рынка · БРК
+                                                        </span>
+                                                        <h3>
+                                                            Спрос{' '}
+                                                            {selectedTrade.name}{' '}
+                                                            на товары из мира
+                                                        </h3>
+                                                        <p>
+                                                            Показывает ёмкость
+                                                            рынка страны,
+                                                            фактические поставки
+                                                            из Казахстана и
+                                                            незанятую долю.
+                                                        </p>
+                                                    </div>
+                                                    <b>
+                                                        {
+                                                            selectedKdbProfile.latestYear
+                                                        }{' '}
+                                                        год
+                                                    </b>
+                                                </div>
+
+                                                <div className="kdb-key-metrics">
+                                                    <div>
+                                                        <span>
+                                                            Импорт страны из
+                                                            мира
+                                                        </span>
+                                                        <strong>
+                                                            {formatMillionUsd(
+                                                                latestKdbMetric?.marketImport,
+                                                            )}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span>
+                                                            Поставки из
+                                                            Казахстана
+                                                        </span>
+                                                        <strong>
+                                                            {formatMillionUsd(
+                                                                latestKdbMetric?.fromKazakhstan,
+                                                            )}
+                                                        </strong>
+                                                    </div>
+                                                    <div>
+                                                        <span>
+                                                            Доля Казахстана
+                                                        </span>
+                                                        <strong>
+                                                            {formatPercent(
+                                                                latestKdbMetric?.kazakhstanShare,
+                                                            )}
+                                                        </strong>
+                                                    </div>
+                                                </div>
+
+                                                <div className="trade-history-head kdb-section-head">
+                                                    <div>
+                                                        <span>
+                                                            Динамика рынка
+                                                        </span>
+                                                        <h3>
+                                                            Импорт страны по
+                                                            годам
+                                                        </h3>
+                                                    </div>
+                                                    <b>
+                                                        {
+                                                            selectedKdbProfile
+                                                                .annual[0]?.year
+                                                        }
+                                                        –
+                                                        {
+                                                            selectedKdbProfile.latestYear
+                                                        }
+                                                    </b>
+                                                </div>
+                                                <div className="trade-history kdb-history">
+                                                    {selectedKdbProfile.annual.map(
+                                                        (metric) => (
+                                                            <div
+                                                                className="trade-history-year"
+                                                                key={
+                                                                    metric.year
+                                                                }
+                                                            >
+                                                                <span>
+                                                                    {
+                                                                        metric.year
+                                                                    }
+                                                                </span>
+                                                                <div>
+                                                                    <strong>
+                                                                        {formatMillionUsd(
+                                                                            metric.marketImport,
+                                                                        )}
+                                                                    </strong>
+                                                                    <i>
+                                                                        <b
+                                                                            style={{
+                                                                                width: `${Math.max(3, (metric.marketImport / kdbAnnualMax) * 100)}%`,
+                                                                            }}
+                                                                        />
+                                                                    </i>
+                                                                </div>
+                                                                <em>
+                                                                    {formatMillionUsd(
+                                                                        metric.fromKazakhstan,
+                                                                    )}{' '}
+                                                                    из РК ·{' '}
+                                                                    {formatPercent(
+                                                                        metric.kazakhstanShare,
+                                                                    )}
+                                                                </em>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+
+                                                <div className="trade-products-head kdb-section-head">
+                                                    <div>
+                                                        <span>
+                                                            Структура импорта
+                                                        </span>
+                                                        <h3>
+                                                            Категории и уровень
+                                                            передела
+                                                        </h3>
+                                                    </div>
+                                                    <b>
+                                                        {
+                                                            selectedKdbProfile.latestYear
+                                                        }{' '}
+                                                        год
+                                                    </b>
+                                                </div>
+                                                <div className="kdb-categories">
+                                                    {selectedKdbProfile.categories.map(
+                                                        (category, index) => (
+                                                            <div
+                                                                key={`${category.category}-${category.processing}-${index}`}
+                                                            >
+                                                                <span>
+                                                                    {category.type ??
+                                                                        'Категория'}
+                                                                </span>
+                                                                <div>
+                                                                    <strong>
+                                                                        {
+                                                                            category.category
+                                                                        }
+                                                                        {category.processing
+                                                                            ? ` · ${category.processing}`
+                                                                            : ''}
+                                                                    </strong>
+                                                                    <i>
+                                                                        <b
+                                                                            style={{
+                                                                                width: `${Math.max(3, (category.marketImport / kdbCategoryMax) * 100)}%`,
+                                                                            }}
+                                                                        />
+                                                                    </i>
+                                                                    <small>
+                                                                        {formatMillionUsd(
+                                                                            category.fromKazakhstan,
+                                                                        )}{' '}
+                                                                        из
+                                                                        Казахстана
+                                                                        · доля{' '}
+                                                                        {formatPercent(
+                                                                            category.kazakhstanShare,
+                                                                        )}
+                                                                    </small>
+                                                                </div>
+                                                                <em>
+                                                                    {formatMillionUsd(
+                                                                        category.marketImport,
+                                                                    )}
+                                                                </em>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+
+                                                <div className="trade-products-head kdb-section-head">
+                                                    <div>
+                                                        <span>
+                                                            Товарные позиции ·
+                                                            ТН ВЭД 6 знаков
+                                                        </span>
+                                                        <h3>
+                                                            Крупнейшие сегменты
+                                                            импортного спроса
+                                                        </h3>
+                                                    </div>
+                                                    <b>
+                                                        {
+                                                            selectedKdbProfile.latestYear
+                                                        }{' '}
+                                                        год
+                                                    </b>
+                                                </div>
+                                                <div className="kdb-products">
+                                                    {selectedKdbProfile.products.map(
+                                                        (product) => (
+                                                            <div
+                                                                key={`${product.code}-${product.name}`}
+                                                            >
+                                                                <span>
+                                                                    {
+                                                                        product.code
+                                                                    }
+                                                                </span>
+                                                                <div>
+                                                                    <strong>
+                                                                        {
+                                                                            product.name
+                                                                        }
+                                                                    </strong>
+                                                                    <i>
+                                                                        <b
+                                                                            style={{
+                                                                                width: `${Math.max(3, (product.marketImport / kdbProductMax) * 100)}%`,
+                                                                            }}
+                                                                        />
+                                                                    </i>
+                                                                    <small>
+                                                                        {formatMillionUsd(
+                                                                            product.fromKazakhstan,
+                                                                        )}{' '}
+                                                                        из
+                                                                        Казахстана
+                                                                        · доля{' '}
+                                                                        {formatPercent(
+                                                                            product.kazakhstanShare,
+                                                                        )}
+                                                                    </small>
+                                                                </div>
+                                                                <em>
+                                                                    {formatMillionUsd(
+                                                                        product.marketImport,
+                                                                    )}
+                                                                </em>
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                                <p className="trade-modal-note">
+                                                    Источник:{' '}
+                                                    <a
+                                                        href={
+                                                            kdbMetadata?.sourcePage ??
+                                                            'https://www.kdb.kz/analytics/analiticheskiy-portal-importnogo-profilya-stran-mira/'
+                                                        }
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                    >
+                                                        АО «Банк Развития
+                                                        Казахстана»{' '}
+                                                        <ExternalLink
+                                                            size={11}
+                                                        />
+                                                    </a>
+                                                    . Значения загружены из
+                                                    публичной модели «Импортный
+                                                    профиль» и округлены только
+                                                    для отображения.
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="kdb-profile-empty">
+                                                <strong>
+                                                    {kdbDataState === 'loading'
+                                                        ? 'Загружаем профиль БРК…'
+                                                        : 'Для этой страны профиль БРК не найден'}
+                                                </strong>
+                                                <p>
+                                                    Данные БНС о торговле
+                                                    Казахстана остаются доступны
+                                                    в соседней вкладке.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </section>
                         </div>
                     )}
+
+                    {assetsOpen && <AssetsExplorer onClose={closeAssets} />}
 
                     <button
                         className="scroll-hint"
