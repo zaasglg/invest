@@ -39,14 +39,20 @@ class TaskCompletionController extends Controller
 
         $validated = $request->validate([
             'comment' => 'nullable|string|max:2000',
-            'documents' => 'nullable|array|max:10',
+            'documents' => 'required|array|min:1|max:10',
             'documents.*' => [
+                'required',
                 'file',
                 'max:20480',
-                'mimes:'.PrivateFileService::DOCUMENT_MIMES,
+                'mimes:'.CompletionWorkflowService::PROJECT_DOCUMENT_MIMES,
             ],
             'photos' => 'nullable|array|max:10',
             'photos.*' => 'image|max:20480',
+        ], [
+            'documents.required' => CompletionWorkflowService::PROJECT_DOCUMENT_REQUIRED_MESSAGE,
+            'documents.min' => CompletionWorkflowService::PROJECT_DOCUMENT_REQUIRED_MESSAGE,
+            'documents.*.required' => CompletionWorkflowService::PROJECT_DOCUMENT_REQUIRED_MESSAGE,
+            'documents.*.mimes' => 'Құжат PDF, Word, Excel, PowerPoint, TXT, CSV, ZIP немесе RAR форматында болуы керек. Суретті «Суреттер» бөліміне жүктеңіз.',
         ]);
 
         $documents = $request->file('documents', []);

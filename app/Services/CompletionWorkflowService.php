@@ -27,6 +27,10 @@ class CompletionWorkflowService
 {
     public const MAX_TOTAL_UPLOAD_BYTES = 100 * 1024 * 1024;
 
+    public const PROJECT_DOCUMENT_MIMES = 'pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip,rar';
+
+    public const PROJECT_DOCUMENT_REQUIRED_MESSAGE = 'Тапсырманы орындауға жіберу үшін кемінде бір құжат тіркеу міндетті.';
+
     public function __construct(
         private readonly PrivateFileService $files
     ) {}
@@ -64,6 +68,12 @@ class CompletionWorkflowService
         array $documents,
         array $photos
     ): TaskCompletion {
+        if ($documents === []) {
+            throw ValidationException::withMessages([
+                'documents' => self::PROJECT_DOCUMENT_REQUIRED_MESSAGE,
+            ]);
+        }
+
         $storedPaths = [];
 
         try {

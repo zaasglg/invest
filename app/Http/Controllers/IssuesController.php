@@ -8,7 +8,9 @@ use App\Models\PromZoneIssue;
 use App\Models\Region;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 
 class IssuesController extends Controller
@@ -46,6 +48,15 @@ class IssuesController extends Controller
             $sector = null;
         }
 
+        $perPage = 12;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $fetchLimit = $currentPage * $perPage;
+        $issueStats = [
+            'total' => 0,
+            'open' => 0,
+            'in_progress' => 0,
+            'resolved' => 0,
+        ];
         $issues = collect();
 
         // Get issues based on sector filter
@@ -86,7 +97,8 @@ class IssuesController extends Controller
                     );
                 });
             }
-            $projectIssues = $query->latest()->get()->map(function ($issue) use ($sector) {
+            $this->accumulateIssueStats($issueStats, $query);
+            $projectIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) use ($sector) {
                 return [
                     'id' => $issue->id,
                     'type' => $sector === 'invest' ? 'invest' : 'all_projects',
@@ -118,7 +130,8 @@ class IssuesController extends Controller
                     $q->where('region_id', $regionId);
                 });
             }
-            $sezIssues = $query->latest()->get()->map(function ($issue) {
+            $this->accumulateIssueStats($issueStats, $query);
+            $sezIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) {
                 return [
                     'id' => $issue->id,
                     'type' => 'sez',
@@ -150,7 +163,8 @@ class IssuesController extends Controller
                     $q->where('region_id', $regionId);
                 });
             }
-            $izIssues = $query->latest()->get()->map(function ($issue) {
+            $this->accumulateIssueStats($issueStats, $query);
+            $izIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) {
                 return [
                     'id' => $issue->id,
                     'type' => 'iz',
@@ -182,7 +196,8 @@ class IssuesController extends Controller
                     $q->where('region_id', $regionId);
                 });
             }
-            $promIssues = $query->latest()->get()->map(function ($issue) {
+            $this->accumulateIssueStats($issueStats, $query);
+            $promIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) {
                 return [
                     'id' => $issue->id,
                     'type' => 'prom',
@@ -214,7 +229,8 @@ class IssuesController extends Controller
                     $q->where('region_id', $regionId);
                 });
             }
-            $subsoilIssues = $query->latest()->get()->map(function ($issue) {
+            $this->accumulateIssueStats($issueStats, $query);
+            $subsoilIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) {
                 return [
                     'id' => $issue->id,
                     'type' => 'nedro',
@@ -241,6 +257,17 @@ class IssuesController extends Controller
 
         // Sort by created_at desc
         $issues = $issues->sortByDesc('created_at')->values();
+
+        $issues = new LengthAwarePaginator(
+            $issues->forPage($currentPage, $perPage)->values(),
+            $issueStats['total'],
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
 
         // Get regions for filter
         $regions = Region::where('type', 'district')
@@ -273,7 +300,25 @@ class IssuesController extends Controller
                 'sector' => $sector,
                 'region_id' => $regionId ? (int) $regionId : null,
             ],
+            'issueStats' => $issueStats,
             'sectorLabels' => $sectorLabels,
         ]);
+    }
+
+    private function accumulateIssueStats(array &$stats, Builder $query): void
+    {
+        $counts = (clone $query)
+            ->selectRaw('status, COUNT(*) as aggregate')
+            ->groupBy('status')
+            ->pluck('aggregate', 'status');
+
+        foreach ($counts as $status => $count) {
+            $count = (int) $count;
+            $stats['total'] += $count;
+
+            if (array_key_exists($status, $stats)) {
+                $stats[$status] += $count;
+            }
+        }
     }
 }

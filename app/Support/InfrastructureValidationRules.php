@@ -76,6 +76,7 @@ final class InfrastructureValidationRules
                     "required_if:{$path}.needed,true",
                     'numeric',
                     'min:0',
+                    'max:2000000000',
                 ];
             }
         }

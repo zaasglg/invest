@@ -27,6 +27,7 @@ final class ProductionPlanValidationRules
                 'nullable',
                 'numeric',
                 'gt:0',
+                'max:2000000000',
             ],
             'planned_production.*.unit' => [
                 'required',
@@ -42,6 +43,7 @@ final class ProductionPlanValidationRules
                 'nullable',
                 'numeric',
                 'min:0',
+                'max:2000000000',
             ],
             'planned_production.*.period' => [
                 'required',

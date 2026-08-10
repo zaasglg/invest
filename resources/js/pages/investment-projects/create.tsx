@@ -104,6 +104,35 @@ interface Props {
     restrictedSectorType?: 'sez' | 'industrial_zone' | 'prom_zone' | null;
 }
 
+const PROJECT_FORM_ERROR_FIELDS = [
+    { field: 'name', step: 1 },
+    { field: 'company_id', step: 1 },
+    { field: 'curator_ids', step: 1 },
+    { field: 'region_id', step: 1 },
+    { field: 'project_type_ids', step: 1 },
+    { field: 'project_type_id', focusField: 'project_type_ids', step: 1 },
+    { field: 'sector', step: 1 },
+    { field: 'jobs_count', step: 1 },
+    { field: 'total_investment', step: 1 },
+    {
+        field: 'production_not_applicable',
+        focusField: 'planned_production',
+        step: 1,
+    },
+    { field: 'planned_production', step: 1 },
+    { field: 'status', step: 1 },
+    { field: 'description', step: 2 },
+    { field: 'current_status', step: 2 },
+    { field: 'infrastructure', step: 2 },
+    { field: 'geometry', step: 2 },
+    { field: 'executor_ids', step: 3 },
+    { field: 'start_date', step: 3 },
+    { field: 'end_date', step: 3 },
+] as const;
+
+const matchesErrorField = (errorKey: string, field: string) =>
+    errorKey === field || errorKey.startsWith(`${field}.`);
+
 export default function Create({
     companies,
     regions,
@@ -336,14 +365,73 @@ export default function Create({
         }
     };
 
-    const submit: FormEventHandler = (e) => {
-        e.preventDefault();
-        post(investmentProjects.store.url());
-    };
-
     const [validationErrors, setValidationErrors] = useState<
         Record<string, string>
     >({});
+    const formRef = useRef<HTMLFormElement>(null);
+
+    const handleServerErrors = (serverErrors: Record<string, string>) => {
+        const errorKeys = Object.keys(serverErrors);
+        if (errorKeys.length === 0) return;
+
+        const matchedField = PROJECT_FORM_ERROR_FIELDS.find(({ field }) =>
+            errorKeys.some((errorKey) => matchesErrorField(errorKey, field)),
+        );
+        const targetStep = matchedField?.step ?? 3;
+        const focusField =
+            matchedField && 'focusField' in matchedField
+                ? matchedField.focusField
+                : (matchedField?.field ?? errorKeys[0].split('.')[0]);
+
+        setCurrentStep(targetStep);
+
+        window.requestAnimationFrame(() => {
+            window.requestAnimationFrame(() => {
+                const form = formRef.current;
+                if (!form) return;
+
+                const label = form.querySelector<HTMLLabelElement>(
+                    `label[for="${focusField}"]`,
+                );
+                const target =
+                    form.querySelector<HTMLElement>(`#${focusField}`) ??
+                    form.querySelector<HTMLElement>(
+                        `[data-form-field="${focusField}"]`,
+                    ) ??
+                    label?.parentElement ??
+                    form.querySelector<HTMLElement>(
+                        `[data-form-step="${targetStep}"]`,
+                    );
+
+                if (!target) return;
+
+                target.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center',
+                });
+
+                const focusableSelector =
+                    'input:not([type="hidden"]):not([disabled]), textarea:not([disabled]), select:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+                const focusable = target.matches(focusableSelector)
+                    ? target
+                    : target.querySelector<HTMLElement>(focusableSelector);
+
+                if (focusable) {
+                    focusable.focus({ preventScroll: true });
+                } else {
+                    target.tabIndex = -1;
+                    target.focus({ preventScroll: true });
+                }
+            });
+        });
+    };
+
+    const submit: FormEventHandler = (e) => {
+        e.preventDefault();
+        post(investmentProjects.store.url(), {
+            onError: handleServerErrors,
+        });
+    };
 
     const validateStep1 = (): boolean => {
         const errors: Record<string, string> = {};
@@ -462,10 +550,17 @@ export default function Create({
                     </div>
                 </div>
 
-                <form onSubmit={submit} className="flex flex-1 flex-col">
+                <form
+                    ref={formRef}
+                    onSubmit={submit}
+                    className="flex flex-1 flex-col"
+                >
                     {/* Step 1: Негізгі ақпарат */}
                     {currentStep === 1 && (
-                        <div className="rounded-lg border border-gray-200 bg-white p-6">
+                        <div
+                            data-form-step="1"
+                            className="rounded-lg border border-gray-200 bg-white p-6"
+                        >
                             <div className="mb-6">
                                 <h2 className="text-lg font-semibold text-[#0f1b3d]">
                                     Негізгі ақпарат
@@ -538,7 +633,10 @@ export default function Create({
                                 {canSelectCurators &&
                                     (investUsers.length > 0 ||
                                         requiresCuratorSelection) && (
-                                        <div className="flex flex-col gap-2">
+                                        <div
+                                            data-form-field="curator_ids"
+                                            className="flex flex-col gap-2"
+                                        >
                                             <Label className="text-xs font-medium tracking-wide text-gray-500 uppercase">
                                                 Кураторлар{' '}
                                                 {requiresCuratorSelection && (
@@ -1063,22 +1161,24 @@ export default function Create({
                                     </div>
                                 </div>
 
-                                <PlannedProductionForm
-                                    errors={errors}
-                                    notApplicable={
-                                        data.production_not_applicable
-                                    }
-                                    onChange={(plans) =>
-                                        setData('planned_production', plans)
-                                    }
-                                    onNotApplicableChange={(value) =>
-                                        setData(
-                                            'production_not_applicable',
-                                            value,
-                                        )
-                                    }
-                                    value={data.planned_production}
-                                />
+                                <div data-form-field="planned_production">
+                                    <PlannedProductionForm
+                                        errors={errors}
+                                        notApplicable={
+                                            data.production_not_applicable
+                                        }
+                                        onChange={(plans) =>
+                                            setData('planned_production', plans)
+                                        }
+                                        onNotApplicableChange={(value) =>
+                                            setData(
+                                                'production_not_applicable',
+                                                value,
+                                            )
+                                        }
+                                        value={data.planned_production}
+                                    />
+                                </div>
 
                                 {/* Мәртебесі - full width */}
                                 <div className="flex flex-col gap-2">
@@ -1124,7 +1224,10 @@ export default function Create({
 
                     {/* Step 2: Мәліметтер */}
                     {currentStep === 2 && (
-                        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                        <div
+                            data-form-step="2"
+                            className="grid grid-cols-1 gap-6 lg:grid-cols-2"
+                        >
                             {/* Сол жақ: Сипаттама және Инфрақұрылым */}
                             <div className="space-y-6">
                                 {/* Сипаттама */}
@@ -1196,7 +1299,10 @@ export default function Create({
                                 </div>
 
                                 {/* Инфрақұрылым */}
-                                <div className="rounded-lg border border-gray-200 bg-white p-6">
+                                <div
+                                    data-form-field="infrastructure"
+                                    className="rounded-lg border border-gray-200 bg-white p-6"
+                                >
                                     <div className="mb-4 flex items-center gap-2">
                                         <Info className="h-5 w-5 text-[#0f1b3d]" />
                                         <h3 className="font-semibold text-[#0f1b3d]">
@@ -1237,7 +1343,10 @@ export default function Create({
                             </div>
 
                             {/* Оң жақ: Карта */}
-                            <div className="rounded-lg border border-gray-200 bg-white p-6">
+                            <div
+                                data-form-field="geometry"
+                                className="rounded-lg border border-gray-200 bg-white p-6"
+                            >
                                 <div className="mb-4 flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <MapPin className="h-5 w-5 text-[#0f1b3d]" />
@@ -1270,7 +1379,10 @@ export default function Create({
 
                     {/* Step 3: Қарап шығу */}
                     {currentStep === 3 && (
-                        <div className="rounded-lg border border-gray-200 bg-white p-6">
+                        <div
+                            data-form-step="3"
+                            className="rounded-lg border border-gray-200 bg-white p-6"
+                        >
                             <div className="mb-6">
                                 <h2 className="text-lg font-semibold text-[#0f1b3d]">
                                     Қарап шығу
@@ -1454,7 +1566,10 @@ export default function Create({
                                 </div>
 
                                 {/* Орындаушылар */}
-                                <div className="flex flex-col gap-2">
+                                <div
+                                    data-form-field="executor_ids"
+                                    className="flex flex-col gap-2"
+                                >
                                     <Label className="font-normal text-gray-500">
                                         Орындаушылар
                                     </Label>

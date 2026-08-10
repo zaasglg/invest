@@ -25,6 +25,7 @@ use App\Support\ProductionPlanValidationRules;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use PhpOffice\PhpPresentation\IOFactory;
@@ -454,10 +455,11 @@ class InvestmentProjectController extends Controller
             'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
-            'jobs_count' => 'nullable|integer|min:0',
+            'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
                 'required',
-                'exists:regions,id',
+                'integer',
+                Rule::exists('regions', 'id')->where('type', 'district'),
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('Жобаны тек өз ауданыңызға қосуға болады.');
@@ -473,38 +475,19 @@ class InvestmentProjectController extends Controller
                 $restrictedSectorType ? 'min:1' : 'nullable',
             ],
             'sector.*' => [
+                'bail',
                 'string',
-                function ($attribute, $value, $fail) use ($user, $isDistrictScoped, $restrictedSectorType) {
-                    $parsed = $this->parseSector($value);
-                    $type = $parsed['type'];
-                    $id = $parsed['id'];
-
-                    if ($restrictedSectorType && $type !== $restrictedSectorType) {
-                        $fail('Сіз тек өз секторыңызды таңдай аласыз.');
-
-                        return;
-                    }
-
-                    if (! $isDistrictScoped) {
-                        return;
-                    }
-
-                    if ($type === 'sez') {
-                        if (! Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("АЭА ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    } elseif ($type === 'industrial_zone') {
-                        if (! IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("ИА ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    } elseif ($type === 'prom_zone') {
-                        if (! PromZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Пром зона ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    }
+                'distinct',
+                function ($attribute, $value, $fail) use ($request, $restrictedSectorType) {
+                    $this->validateProjectSector(
+                        $value,
+                        $fail,
+                        $restrictedSectorType,
+                        (int) $request->input('region_id')
+                    );
                 },
             ],
-            'total_investment' => 'required|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0|max:2000000000',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -592,54 +575,67 @@ class InvestmentProjectController extends Controller
         $executorIds = $validated['executor_ids'] ?? [];
         unset($validated['executor_ids'], $validated['sector']);
 
-        $project = InvestmentProject::create($validated);
+        $project = DB::transaction(function () use (
+            $validated,
+            $plannedProduction,
+            $projectTypeIds,
+            $curatorIds,
+            $executorIds,
+            $sezIds,
+            $izIds,
+            $promZoneIds
+        ): InvestmentProject {
+            $project = InvestmentProject::create($validated);
 
-        $this->production->syncPlans($project, $plannedProduction);
+            $this->production->syncPlans($project, $plannedProduction);
 
-        $project->projectTypes()->sync($projectTypeIds);
+            $project->projectTypes()->sync($projectTypeIds);
 
-        // Sync curators (admin-managed, 1+)
-        $project->curators()->sync(array_values(array_unique(array_map('intval', $curatorIds))));
+            // Sync curators (admin-managed, 1+)
+            $project->curators()->sync(array_values(array_unique(array_map('intval', $curatorIds))));
 
-        // Sync executors (auto-include district ispolnitel users)
-        $this->syncExecutorsWithIspolnitel($project, $executorIds);
+            // Sync executors (auto-include district ispolnitel users)
+            $this->syncExecutorsWithIspolnitel($project, $executorIds);
 
-        // Sync many-to-many связи с секторами
-        $sezChanges = $project->sezs()->sync($sezIds);
-        $industrialZoneChanges = $project->industrialZones()->sync($izIds);
-        $promZoneChanges = $project->promZones()->sync($promZoneIds);
+            // Sync many-to-many связи с секторами
+            $sezChanges = $project->sezs()->sync($sezIds);
+            $industrialZoneChanges = $project->industrialZones()->sync($izIds);
+            $promZoneChanges = $project->promZones()->sync($promZoneIds);
 
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $project,
-            Sez::class,
-            $sezChanges
-        );
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $project,
-            IndustrialZone::class,
-            $industrialZoneChanges
-        );
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $project,
-            PromZone::class,
-            $promZoneChanges
-        );
+            $this->sectorActivity->recordProjectMembershipChanges(
+                $project,
+                Sez::class,
+                $sezChanges
+            );
+            $this->sectorActivity->recordProjectMembershipChanges(
+                $project,
+                IndustrialZone::class,
+                $industrialZoneChanges
+            );
+            $this->sectorActivity->recordProjectMembershipChanges(
+                $project,
+                PromZone::class,
+                $promZoneChanges
+            );
 
-        KpiLog::activity(
-            projectId: $project->id,
-            event: 'project.created',
-            category: 'project',
-            action: 'Жаңа жоба құрылды: "'.$project->name.'"',
-            subject: $project,
-            properties: [
-                'project_name' => $project->name,
-                'details' => [
-                    'Компания' => $project->company_name,
-                    'Инвестиция сомасы' => $project->total_investment,
-                    'Жоба статусы' => $project->status,
-                ],
-            ]
-        );
+            KpiLog::activity(
+                projectId: $project->id,
+                event: 'project.created',
+                category: 'project',
+                action: 'Жаңа жоба құрылды: "'.$project->name.'"',
+                subject: $project,
+                properties: [
+                    'project_name' => $project->name,
+                    'details' => [
+                        'Компания' => $project->company_name,
+                        'Инвестиция сомасы' => $project->total_investment,
+                        'Жоба статусы' => $project->status,
+                    ],
+                ]
+            );
+
+            return $project;
+        });
 
         return redirect()->route('investment-projects.index')->with('success', 'Жоба құрылды.');
     }
@@ -1197,10 +1193,11 @@ class InvestmentProjectController extends Controller
             'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
-            'jobs_count' => 'nullable|integer|min:0',
+            'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
                 'required',
-                'exists:regions,id',
+                'integer',
+                Rule::exists('regions', 'id')->where('type', 'district'),
                 function ($attribute, $value, $fail) use ($user, $isDistrictScoped) {
                     if ($isDistrictScoped && (int) $value !== (int) $user->region_id) {
                         $fail('Жобаны тек өз ауданыңызда өзгертуге болады.');
@@ -1216,38 +1213,19 @@ class InvestmentProjectController extends Controller
                 $restrictedSectorType ? 'min:1' : 'nullable',
             ],
             'sector.*' => [
+                'bail',
                 'string',
-                function ($attribute, $value, $fail) use ($user, $isDistrictScoped, $restrictedSectorType) {
-                    $parsed = $this->parseSector($value);
-                    $type = $parsed['type'];
-                    $id = $parsed['id'];
-
-                    if ($restrictedSectorType && $type !== $restrictedSectorType) {
-                        $fail('Сіз тек өз секторыңызды таңдай аласыз.');
-
-                        return;
-                    }
-
-                    if (! $isDistrictScoped) {
-                        return;
-                    }
-
-                    if ($type === 'sez') {
-                        if (! Sez::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("АЭА ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    } elseif ($type === 'industrial_zone') {
-                        if (! IndustrialZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("ИА ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    } elseif ($type === 'prom_zone') {
-                        if (! PromZone::where('id', $id)->where('region_id', $user->region_id)->exists()) {
-                            $fail("Пром зона ({$id}) сіздің ауданыңызда емес.");
-                        }
-                    }
+                'distinct',
+                function ($attribute, $value, $fail) use ($request, $restrictedSectorType) {
+                    $this->validateProjectSector(
+                        $value,
+                        $fail,
+                        $restrictedSectorType,
+                        (int) $request->input('region_id')
+                    );
                 },
             ],
-            'total_investment' => 'required|numeric|min:0',
+            'total_investment' => 'required|numeric|min:0|max:2000000000',
             'status' => 'required|in:plan,implementation,launched,suspended',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -1362,70 +1340,84 @@ class InvestmentProjectController extends Controller
         $executorIds = $validated['executor_ids'] ?? [];
         unset($validated['executor_ids'], $validated['sector']);
 
-        $investmentProject->update($validated);
+        DB::transaction(function () use (
+            $investmentProject,
+            $validated,
+            $plannedProduction,
+            $projectTypeIds,
+            $isSuperAdmin,
+            $curatorIds,
+            $executorIds,
+            $sezIds,
+            $izIds,
+            $promZoneIds,
+            $activityBefore
+        ): void {
+            $investmentProject->update($validated);
 
-        if ($plannedProduction !== null) {
-            $this->production->syncPlans(
+            if ($plannedProduction !== null) {
+                $this->production->syncPlans(
+                    $investmentProject,
+                    $plannedProduction
+                );
+            }
+
+            $investmentProject->projectTypes()->sync($projectTypeIds);
+
+            // Sync curators (superadmin only)
+            if ($isSuperAdmin && $curatorIds !== null) {
+                $investmentProject->curators()->sync($curatorIds);
+            }
+
+            // Sync executors (auto-include district ispolnitel users)
+            $this->syncExecutorsWithIspolnitel($investmentProject, $executorIds);
+
+            // Sync many-to-many связи с секторами
+            $sezChanges = $investmentProject->sezs()->sync($sezIds);
+            $industrialZoneChanges = $investmentProject
+                ->industrialZones()
+                ->sync($izIds);
+            $promZoneChanges = $investmentProject
+                ->promZones()
+                ->sync($promZoneIds);
+
+            $this->sectorActivity->recordProjectMembershipChanges(
                 $investmentProject,
-                $plannedProduction
+                Sez::class,
+                $sezChanges
             );
-        }
+            $this->sectorActivity->recordProjectMembershipChanges(
+                $investmentProject,
+                IndustrialZone::class,
+                $industrialZoneChanges
+            );
+            $this->sectorActivity->recordProjectMembershipChanges(
+                $investmentProject,
+                PromZone::class,
+                $promZoneChanges
+            );
 
-        $investmentProject->projectTypes()->sync($projectTypeIds);
+            $investmentProject->refresh();
+            $activityAfter = $this->projectActivitySnapshot(
+                $investmentProject
+            );
 
-        // Sync curators (superadmin only)
-        if ($isSuperAdmin && $curatorIds !== null) {
-            $investmentProject->curators()->sync($curatorIds);
-        }
-
-        // Sync executors (auto-include district ispolnitel users)
-        $this->syncExecutorsWithIspolnitel($investmentProject, $executorIds);
-
-        // Sync many-to-many связи с секторами
-        $sezChanges = $investmentProject->sezs()->sync($sezIds);
-        $industrialZoneChanges = $investmentProject
-            ->industrialZones()
-            ->sync($izIds);
-        $promZoneChanges = $investmentProject
-            ->promZones()
-            ->sync($promZoneIds);
-
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $investmentProject,
-            Sez::class,
-            $sezChanges
-        );
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $investmentProject,
-            IndustrialZone::class,
-            $industrialZoneChanges
-        );
-        $this->sectorActivity->recordProjectMembershipChanges(
-            $investmentProject,
-            PromZone::class,
-            $promZoneChanges
-        );
-
-        $investmentProject->refresh();
-        $activityAfter = $this->projectActivitySnapshot(
-            $investmentProject
-        );
-
-        KpiLog::activity(
-            projectId: $investmentProject->id,
-            event: 'project.updated',
-            category: 'project',
-            action: 'Жоба мәліметтері жаңартылды',
-            subject: $investmentProject,
-            properties: [
-                'project_name' => $investmentProject->name,
-                'changes' => KpiLog::changes(
-                    $activityBefore,
-                    $activityAfter,
-                    $this->projectActivityLabels()
-                ),
-            ]
-        );
+            KpiLog::activity(
+                projectId: $investmentProject->id,
+                event: 'project.updated',
+                category: 'project',
+                action: 'Жоба мәліметтері жаңартылды',
+                subject: $investmentProject,
+                properties: [
+                    'project_name' => $investmentProject->name,
+                    'changes' => KpiLog::changes(
+                        $activityBefore,
+                        $activityAfter,
+                        $this->projectActivityLabels()
+                    ),
+                ]
+            );
+        });
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
@@ -1511,6 +1503,48 @@ class InvestmentProjectController extends Controller
             'industrial_zones' => 'Индустриялық аймақтар',
             'prom_zones' => 'Өндірістік аймақтар',
         ];
+    }
+
+    private function validateProjectSector(
+        string $value,
+        \Closure $fail,
+        ?string $restrictedSectorType,
+        int $regionId
+    ): void {
+        if (! preg_match(
+            '/\A(sez|industrial_zone|prom_zone)-([1-9]\d*)\z/',
+            $value,
+            $matches
+        )) {
+            $fail('Сектор пішімі жарамсыз.');
+
+            return;
+        }
+
+        $type = $matches[1];
+        $id = (int) $matches[2];
+
+        if ($restrictedSectorType && $type !== $restrictedSectorType) {
+            $fail('Сіз тек өз секторыңызды таңдай аласыз.');
+
+            return;
+        }
+
+        $sector = match ($type) {
+            'sez' => Sez::find($id),
+            'industrial_zone' => IndustrialZone::find($id),
+            'prom_zone' => PromZone::find($id),
+        };
+
+        if (! $sector) {
+            $fail('Таңдалған сектор табылмады.');
+
+            return;
+        }
+
+        if ((int) $sector->region_id !== $regionId) {
+            $fail('Таңдалған сектор жоба ауданына жатпайды.');
+        }
     }
 
     private function parseSector(string $sector): array

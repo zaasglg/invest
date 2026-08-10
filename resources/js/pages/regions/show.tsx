@@ -15,7 +15,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
     ChevronLeft,
@@ -39,6 +39,7 @@ import {
 import React, { useState } from 'react';
 import DetailSectionNav from '@/components/detail-section-nav';
 import Map from '@/components/map';
+import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -57,6 +58,8 @@ import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import { index as issuesIndex } from '@/routes/issues';
+import { show as regionShow } from '@/routes/regions';
+import type { PaginatedData } from '@/types';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -157,9 +160,24 @@ interface Stats {
     subsoilIssuesCount: number;
 }
 
+interface ProjectFilters {
+    tab: 'all' | 'sez' | 'iz' | 'prom' | 'subsoil';
+    entity_type: 'sez' | 'iz' | 'prom' | 'subsoil' | null;
+    entity_id: number | null;
+}
+
+interface ProjectStats {
+    count: number;
+    totalInvestment: number;
+}
+
 interface Props {
     region: Region;
-    projects: InvestmentProject[];
+    projects: PaginatedData<InvestmentProject>;
+    projectMapItems: InvestmentProject[];
+    projectIds: number[];
+    projectFilters: ProjectFilters;
+    projectStats: ProjectStats;
     sezs: Sez[];
     industrialZones: IndustrialZone[];
     promZones: PromZone[];
@@ -229,6 +247,10 @@ function SortableProjectRow({
 export default function Show({
     region,
     projects,
+    projectMapItems,
+    projectIds,
+    projectFilters,
+    projectStats,
     sezs,
     industrialZones,
     promZones,
@@ -243,7 +265,7 @@ export default function Show({
         (auth as { user: { role_model?: { name?: string | null } | null } })
             .user?.role_model?.name === 'invest';
 
-    const [activeTab, setActiveTab] = useState('all');
+    const [activeTab, setActiveTab] = useState(projectFilters.tab);
     const [selectedEntityId, setSelectedEntityId] = useState<number | null>(
         null,
     );
@@ -252,17 +274,25 @@ export default function Show({
     >(null);
     const [mapSelectedEntityId, setMapSelectedEntityId] = useState<
         number | null
-    >(null);
+    >(projectFilters.entity_id);
     const [mapSelectedEntityType, setMapSelectedEntityType] = useState<
         'sez' | 'iz' | 'prom' | 'subsoil' | null
-    >(null);
+    >(projectFilters.entity_type);
 
     // Selected entity IDs per tab for filtering projects
-    const [selectedSezId, setSelectedSezId] = useState<number | null>(null);
-    const [selectedIzId, setSelectedIzId] = useState<number | null>(null);
-    const [selectedPromId, setSelectedPromId] = useState<number | null>(null);
+    const [selectedSezId, setSelectedSezId] = useState<number | null>(
+        projectFilters.entity_type === 'sez' ? projectFilters.entity_id : null,
+    );
+    const [selectedIzId, setSelectedIzId] = useState<number | null>(
+        projectFilters.entity_type === 'iz' ? projectFilters.entity_id : null,
+    );
+    const [selectedPromId, setSelectedPromId] = useState<number | null>(
+        projectFilters.entity_type === 'prom' ? projectFilters.entity_id : null,
+    );
     const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(
-        null,
+        projectFilters.entity_type === 'subsoil'
+            ? projectFilters.entity_id
+            : null,
     );
     const [selectedSubsoilStatus, setSelectedSubsoilStatus] = useState<
         string | null
@@ -271,32 +301,55 @@ export default function Show({
         null,
     );
 
-    // Pagination state
+    // Subsoil entities are still paginated locally; projects use the server paginator.
     const ITEMS_PER_PAGE = 10;
-    const [allPage, setAllPage] = useState(1);
-    const [sezPage, setSezPage] = useState(1);
-    const [izPage, setIzPage] = useState(1);
-    const [promPage, setPromPage] = useState(1);
     const [subsoilPage, setSubsoilPage] = useState(1);
 
-    // Local ordered copy of projects for drag-and-drop reordering
-    const [orderedProjects, setOrderedProjects] =
-        useState<InvestmentProject[]>(projects);
+    // Local ordered copy of the current server page for drag-and-drop reordering.
+    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(
+        projects.data,
+    );
     const [isSavingOrder, setIsSavingOrder] = useState(false);
 
+    React.useEffect(() => {
+        setOrderedProjects(projects.data);
+    }, [projects.data]);
+
+    const navigateProjectView = (
+        tab: ProjectFilters['tab'],
+        entityType: ProjectFilters['entity_type'] = null,
+        entityId: number | null = null,
+    ) => {
+        const query: Record<string, string | number> = {};
+
+        if (tab !== 'all') {
+            query.tab = tab;
+        }
+        if (entityType && entityId) {
+            query.entity_type = entityType;
+            query.entity_id = entityId;
+        }
+
+        router.get(regionShow(region.id).url, query, {
+            preserveScroll: true,
+            preserveState: false,
+            replace: true,
+        });
+    };
+
     const handleTabChange = (tab: string) => {
-        setActiveTab(tab);
+        const nextTab = tab as ProjectFilters['tab'];
+        setActiveTab(nextTab);
         setSelectedSezId(null);
         setSelectedIzId(null);
         setSelectedPromId(null);
         setSelectedSubsoilId(null);
         setSelectedSubsoilStatus(null);
         setSelectedProjectId(null);
-        setAllPage(1);
-        setSezPage(1);
-        setIzPage(1);
-        setPromPage(1);
         setSubsoilPage(1);
+        setMapSelectedEntityId(null);
+        setMapSelectedEntityType(null);
+        navigateProjectView(nextTab);
     };
 
     const handleSelectEntity = (
@@ -305,6 +358,19 @@ export default function Show({
     ) => {
         setSelectedEntityId(id);
         setSelectedEntityType(type);
+        navigateProjectView(type, type, id);
+    };
+
+    const clearEntityFilter = (tab: ProjectFilters['tab'] = activeTab) => {
+        setSelectedSezId(null);
+        setSelectedIzId(null);
+        setSelectedPromId(null);
+        setSelectedSubsoilId(null);
+        setSelectedEntityId(null);
+        setSelectedEntityType(null);
+        setMapSelectedEntityId(null);
+        setMapSelectedEntityType(null);
+        navigateProjectView(tab);
     };
 
     const handleMapEntitySelect = (
@@ -313,7 +379,6 @@ export default function Show({
     ) => {
         setMapSelectedEntityId(id);
         setMapSelectedEntityType(type);
-        setAllPage(1);
         // Sync sidebar selection with map click and switch to appropriate tab
         if (id && type === 'sez') {
             setActiveTab('sez');
@@ -348,6 +413,12 @@ export default function Show({
             setSelectedEntityId(id);
             setSelectedEntityType('subsoil');
         }
+
+        if (id && type) {
+            navigateProjectView(type, type, id);
+        } else {
+            clearEntityFilter(activeTab);
+        }
     };
 
     const handleProjectSelect = (projectId: number | null) => {
@@ -355,11 +426,6 @@ export default function Show({
             setSelectedProjectId(null);
         } else {
             setSelectedProjectId(projectId);
-            // Clear entity selection when selecting a project
-            setSelectedEntityId(null);
-            setSelectedEntityType(null);
-            setMapSelectedEntityId(null);
-            setMapSelectedEntityType(null);
         }
     };
 
@@ -395,17 +461,6 @@ export default function Show({
         );
     }, [orderedProjects, selectedPromId]);
 
-    const subsoilProjects = React.useMemo(() => {
-        if (selectedSubsoilId) {
-            return orderedProjects.filter((p) =>
-                p.subsoil_users?.some((s) => s.id === selectedSubsoilId),
-            );
-        }
-        return orderedProjects.filter(
-            (p) => p.subsoil_users && p.subsoil_users.length > 0,
-        );
-    }, [orderedProjects, selectedSubsoilId]);
-
     // Filtered subsoil users by status
     const filteredSubsoilUsers = React.useMemo(() => {
         if (selectedSubsoilStatus) {
@@ -416,22 +471,10 @@ export default function Show({
         return subsoilUsers;
     }, [subsoilUsers, selectedSubsoilStatus]);
 
-    // Reset pagination when filters change
-    React.useEffect(() => {
-        setSezPage(1);
-    }, [selectedSezId]);
-    React.useEffect(() => {
-        setIzPage(1);
-    }, [selectedIzId]);
-    React.useEffect(() => {
-        setPromPage(1);
-    }, [selectedPromId]);
+    // Reset the local subsoil entity pagination when its filter changes.
     React.useEffect(() => {
         setSubsoilPage(1);
     }, [selectedSubsoilStatus]);
-    React.useEffect(() => {
-        setAllPage(1);
-    }, [mapSelectedEntityId, mapSelectedEntityType]);
 
     // Subsoil status counts
     const subsoilStatusCounts = React.useMemo(() => {
@@ -821,20 +864,11 @@ export default function Show({
         }
     }
 
-    const mapProjects = React.useMemo(() => {
-        if (activeTab === 'sez') return sezProjects;
-        if (activeTab === 'iz') return izProjects;
-        if (activeTab === 'prom') return promProjects;
-        if (activeTab === 'subsoil') return subsoilProjects;
-        return orderedProjects;
-    }, [
-        activeTab,
-        orderedProjects,
-        sezProjects,
-        izProjects,
-        promProjects,
-        subsoilProjects,
-    ]);
+    const mapProjects = projectMapItems;
+    const canReorderProjects =
+        (isSuperAdmin || isInvest) &&
+        activeTab === 'all' &&
+        projectFilters.entity_id === null;
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -858,7 +892,11 @@ export default function Show({
         try {
             await persistOrder(
                 `/regions/${region.id}/projects/reorder`,
-                { project_ids: newOrder.map((p) => p.id) },
+                {
+                    project_ids: newOrder.map((p) => p.id),
+                    page: projects.current_page,
+                    per_page: projects.per_page,
+                },
                 csrfToken,
             );
         } catch {
@@ -872,7 +910,7 @@ export default function Show({
     };
 
     const handleDragEnd = (event: DragEndEvent) => {
-        if ((!isSuperAdmin && !isInvest) || isSavingOrder) return;
+        if (!canReorderProjects || isSavingOrder) return;
         const { active, over } = event;
         if (!over || active.id === over.id) return;
         const oldIndex = orderedProjects.findIndex((p) => p.id === active.id);
@@ -885,11 +923,7 @@ export default function Show({
     const [downloadingPresentations, setDownloadingPresentations] =
         useState(false);
 
-    const handleBulkPresentationDownload = (
-        projectList: InvestmentProject[],
-    ) => {
-        const allIds = projectList.map((p) => p.id);
-
+    const handleBulkPresentationDownload = (allIds: number[]) => {
         if (allIds.length === 0) return;
 
         setDownloadingPresentations(true);
@@ -1057,12 +1091,12 @@ export default function Show({
                                 </div>
                             </div>
                         </div>
-                        <div className="flex gap-3">
+                        {/* <div className="flex gap-3">
                             <div className="flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-sm font-semibold text-emerald-300">
                                 <CheckCircle2 className="h-4 w-4" /> Күйі: Жұмыс
                                 істеуде
                             </div>
-                        </div>
+                        </div> */}
                     </div>
                 </section>
 
@@ -1374,14 +1408,9 @@ export default function Show({
                                                 <Button
                                                     variant="ghost"
                                                     className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    onClick={() => {
-                                                        setMapSelectedEntityId(
-                                                            null,
-                                                        );
-                                                        setMapSelectedEntityType(
-                                                            null,
-                                                        );
-                                                    }}
+                                                    onClick={() =>
+                                                        clearEntityFilter('all')
+                                                    }
                                                 >
                                                     Сүзгіні қалпына келтіру
                                                 </Button>
@@ -1447,7 +1476,7 @@ export default function Show({
                                                                     )
                                                                   : orderedProjects;
                                                     handleBulkPresentationDownload(
-                                                        filteredProjects,
+                                                        projectIds,
                                                     );
                                                 }}
                                             >
@@ -1509,11 +1538,7 @@ export default function Show({
                                                             )
                                                           : orderedProjects;
                                             const paginatedAll =
-                                                filteredProjects.slice(
-                                                    (allPage - 1) *
-                                                        ITEMS_PER_PAGE,
-                                                    allPage * ITEMS_PER_PAGE,
-                                                );
+                                                filteredProjects;
                                             return (
                                                 <>
                                                     <DndContext
@@ -1577,8 +1602,7 @@ export default function Show({
                                                                                         project.id
                                                                                     }
                                                                                     canReorder={
-                                                                                        isSuperAdmin ||
-                                                                                        isInvest
+                                                                                        canReorderProjects
                                                                                     }
                                                                                     onClick={() =>
                                                                                         handleProjectSelect(
@@ -1652,11 +1676,10 @@ export default function Show({
                                                             </TableBody>
                                                         </Table>
                                                     </DndContext>
-                                                    {renderPagination(
-                                                        filteredProjects.length,
-                                                        allPage,
-                                                        setAllPage,
-                                                    )}
+                                                    <Pagination
+                                                        paginator={projects}
+                                                        preserveScroll
+                                                    />
                                                 </>
                                             );
                                         })()}
@@ -1677,11 +1700,9 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() => {
-                                                    setSelectedSezId(null);
-                                                    setSelectedEntityId(null);
-                                                    setSelectedEntityType(null);
-                                                }}
+                                                onClick={() =>
+                                                    clearEntityFilter('sez')
+                                                }
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -1696,7 +1717,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    sezProjects,
+                                                    projectIds,
                                                 )
                                             }
                                         >
@@ -1734,101 +1755,82 @@ export default function Show({
                                                 <TableBody>
                                                     {sezProjects.length > 0 ? (
                                                         <SortableContext
-                                                            items={sezProjects
-                                                                .slice(
-                                                                    (sezPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    sezPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (p) => p.id,
-                                                                )}
+                                                            items={sezProjects.map(
+                                                                (p) => p.id,
+                                                            )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {sezProjects
-                                                                .slice(
-                                                                    (sezPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    sezPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (
-                                                                        project,
-                                                                    ) => (
-                                                                        <SortableProjectRow
-                                                                            key={
-                                                                                project.id
-                                                                            }
-                                                                            id={
-                                                                                project.id
-                                                                            }
-                                                                            isSelected={
-                                                                                selectedProjectId ===
-                                                                                project.id
-                                                                            }
-                                                                            canReorder={
-                                                                                isSuperAdmin ||
-                                                                                isInvest
-                                                                            }
-                                                                            onClick={() =>
-                                                                                handleProjectSelect(
-                                                                                    project.id,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
-                                                                                <Link
-                                                                                    href={`/investment-projects/${project.id}`}
-                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
-                                                                                    onClick={(
-                                                                                        e,
-                                                                                    ) =>
-                                                                                        e.stopPropagation()
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        project.name
-                                                                                    }
-                                                                                </Link>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm text-gray-500">
-                                                                                {getSectorDisplay(
-                                                                                    project,
+                                                            {sezProjects.map(
+                                                                (project) => (
+                                                                    <SortableProjectRow
+                                                                        key={
+                                                                            project.id
+                                                                        }
+                                                                        id={
+                                                                            project.id
+                                                                        }
+                                                                        isSelected={
+                                                                            selectedProjectId ===
+                                                                            project.id
+                                                                        }
+                                                                        canReorder={
+                                                                            canReorderProjects
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleProjectSelect(
+                                                                                project.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                            <Link
+                                                                                href={`/investment-projects/${project.id}`}
+                                                                                className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                onClick={(
+                                                                                    e,
+                                                                                ) =>
+                                                                                    e.stopPropagation()
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    project.name
+                                                                                }
+                                                                            </Link>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm text-gray-500">
+                                                                            {getSectorDisplay(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3">
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                            >
+                                                                                {getStatusLabel(
+                                                                                    project.status,
                                                                                 )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3">
-                                                                                <Badge
-                                                                                    variant="outline"
-                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
-                                                                                >
-                                                                                    {getStatusLabel(
-                                                                                        project.status,
-                                                                                    )}
-                                                                                </Badge>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {formatProjectTypeNames(
-                                                                                    project,
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                                {project.total_investment
-                                                                                    ? formatCurrency(
-                                                                                          Number(
-                                                                                              project.total_investment,
-                                                                                          ),
-                                                                                      )
-                                                                                    : '—'}
-                                                                            </TableCell>
-                                                                        </SortableProjectRow>
-                                                                    ),
-                                                                )}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                            {formatProjectTypeNames(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                            {project.total_investment
+                                                                                ? formatCurrency(
+                                                                                      Number(
+                                                                                          project.total_investment,
+                                                                                      ),
+                                                                                  )
+                                                                                : '—'}
+                                                                        </TableCell>
+                                                                    </SortableProjectRow>
+                                                                ),
+                                                            )}
                                                         </SortableContext>
                                                     ) : (
                                                         <TableRow>
@@ -1843,11 +1845,10 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        {renderPagination(
-                                            sezProjects.length,
-                                            sezPage,
-                                            setSezPage,
-                                        )}
+                                        <Pagination
+                                            paginator={projects}
+                                            preserveScroll
+                                        />
                                     </div>
                                 </TabsContent>
 
@@ -1865,11 +1866,9 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() => {
-                                                    setSelectedIzId(null);
-                                                    setSelectedEntityId(null);
-                                                    setSelectedEntityType(null);
-                                                }}
+                                                onClick={() =>
+                                                    clearEntityFilter('iz')
+                                                }
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -1884,7 +1883,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    izProjects,
+                                                    projectIds,
                                                 )
                                             }
                                         >
@@ -1922,101 +1921,82 @@ export default function Show({
                                                 <TableBody>
                                                     {izProjects.length > 0 ? (
                                                         <SortableContext
-                                                            items={izProjects
-                                                                .slice(
-                                                                    (izPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    izPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (p) => p.id,
-                                                                )}
+                                                            items={izProjects.map(
+                                                                (p) => p.id,
+                                                            )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {izProjects
-                                                                .slice(
-                                                                    (izPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    izPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (
-                                                                        project,
-                                                                    ) => (
-                                                                        <SortableProjectRow
-                                                                            key={
-                                                                                project.id
-                                                                            }
-                                                                            id={
-                                                                                project.id
-                                                                            }
-                                                                            isSelected={
-                                                                                selectedProjectId ===
-                                                                                project.id
-                                                                            }
-                                                                            canReorder={
-                                                                                isSuperAdmin ||
-                                                                                isInvest
-                                                                            }
-                                                                            onClick={() =>
-                                                                                handleProjectSelect(
-                                                                                    project.id,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
-                                                                                <Link
-                                                                                    href={`/investment-projects/${project.id}`}
-                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
-                                                                                    onClick={(
-                                                                                        e,
-                                                                                    ) =>
-                                                                                        e.stopPropagation()
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        project.name
-                                                                                    }
-                                                                                </Link>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm text-gray-500">
-                                                                                {getSectorDisplay(
-                                                                                    project,
+                                                            {izProjects.map(
+                                                                (project) => (
+                                                                    <SortableProjectRow
+                                                                        key={
+                                                                            project.id
+                                                                        }
+                                                                        id={
+                                                                            project.id
+                                                                        }
+                                                                        isSelected={
+                                                                            selectedProjectId ===
+                                                                            project.id
+                                                                        }
+                                                                        canReorder={
+                                                                            canReorderProjects
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleProjectSelect(
+                                                                                project.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                            <Link
+                                                                                href={`/investment-projects/${project.id}`}
+                                                                                className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                onClick={(
+                                                                                    e,
+                                                                                ) =>
+                                                                                    e.stopPropagation()
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    project.name
+                                                                                }
+                                                                            </Link>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm text-gray-500">
+                                                                            {getSectorDisplay(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3">
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                            >
+                                                                                {getStatusLabel(
+                                                                                    project.status,
                                                                                 )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3">
-                                                                                <Badge
-                                                                                    variant="outline"
-                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
-                                                                                >
-                                                                                    {getStatusLabel(
-                                                                                        project.status,
-                                                                                    )}
-                                                                                </Badge>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {formatProjectTypeNames(
-                                                                                    project,
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                                {project.total_investment
-                                                                                    ? formatCurrency(
-                                                                                          Number(
-                                                                                              project.total_investment,
-                                                                                          ),
-                                                                                      )
-                                                                                    : '—'}
-                                                                            </TableCell>
-                                                                        </SortableProjectRow>
-                                                                    ),
-                                                                )}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                            {formatProjectTypeNames(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                            {project.total_investment
+                                                                                ? formatCurrency(
+                                                                                      Number(
+                                                                                          project.total_investment,
+                                                                                      ),
+                                                                                  )
+                                                                                : '—'}
+                                                                        </TableCell>
+                                                                    </SortableProjectRow>
+                                                                ),
+                                                            )}
                                                         </SortableContext>
                                                     ) : (
                                                         <TableRow>
@@ -2031,11 +2011,10 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        {renderPagination(
-                                            izProjects.length,
-                                            izPage,
-                                            setIzPage,
-                                        )}
+                                        <Pagination
+                                            paginator={projects}
+                                            preserveScroll
+                                        />
                                     </div>
                                 </TabsContent>
 
@@ -2053,11 +2032,9 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() => {
-                                                    setSelectedPromId(null);
-                                                    setSelectedEntityId(null);
-                                                    setSelectedEntityType(null);
-                                                }}
+                                                onClick={() =>
+                                                    clearEntityFilter('prom')
+                                                }
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -2072,7 +2049,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    promProjects,
+                                                    projectIds,
                                                 )
                                             }
                                         >
@@ -2110,101 +2087,82 @@ export default function Show({
                                                 <TableBody>
                                                     {promProjects.length > 0 ? (
                                                         <SortableContext
-                                                            items={promProjects
-                                                                .slice(
-                                                                    (promPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    promPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (p) => p.id,
-                                                                )}
+                                                            items={promProjects.map(
+                                                                (p) => p.id,
+                                                            )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {promProjects
-                                                                .slice(
-                                                                    (promPage -
-                                                                        1) *
-                                                                        ITEMS_PER_PAGE,
-                                                                    promPage *
-                                                                        ITEMS_PER_PAGE,
-                                                                )
-                                                                .map(
-                                                                    (
-                                                                        project,
-                                                                    ) => (
-                                                                        <SortableProjectRow
-                                                                            key={
-                                                                                project.id
-                                                                            }
-                                                                            id={
-                                                                                project.id
-                                                                            }
-                                                                            isSelected={
-                                                                                selectedProjectId ===
-                                                                                project.id
-                                                                            }
-                                                                            canReorder={
-                                                                                isSuperAdmin ||
-                                                                                isInvest
-                                                                            }
-                                                                            onClick={() =>
-                                                                                handleProjectSelect(
-                                                                                    project.id,
-                                                                                )
-                                                                            }
-                                                                        >
-                                                                            <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
-                                                                                <Link
-                                                                                    href={`/investment-projects/${project.id}`}
-                                                                                    className="transition-colors hover:text-[#c8a44e] hover:underline"
-                                                                                    onClick={(
-                                                                                        e,
-                                                                                    ) =>
-                                                                                        e.stopPropagation()
-                                                                                    }
-                                                                                >
-                                                                                    {
-                                                                                        project.name
-                                                                                    }
-                                                                                </Link>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm text-gray-500">
-                                                                                {getSectorDisplay(
-                                                                                    project,
+                                                            {promProjects.map(
+                                                                (project) => (
+                                                                    <SortableProjectRow
+                                                                        key={
+                                                                            project.id
+                                                                        }
+                                                                        id={
+                                                                            project.id
+                                                                        }
+                                                                        isSelected={
+                                                                            selectedProjectId ===
+                                                                            project.id
+                                                                        }
+                                                                        canReorder={
+                                                                            canReorderProjects
+                                                                        }
+                                                                        onClick={() =>
+                                                                            handleProjectSelect(
+                                                                                project.id,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        <TableCell className="max-w-[250px] py-3 font-medium break-words text-[#0f1b3d]">
+                                                                            <Link
+                                                                                href={`/investment-projects/${project.id}`}
+                                                                                className="transition-colors hover:text-[#c8a44e] hover:underline"
+                                                                                onClick={(
+                                                                                    e,
+                                                                                ) =>
+                                                                                    e.stopPropagation()
+                                                                                }
+                                                                            >
+                                                                                {
+                                                                                    project.name
+                                                                                }
+                                                                            </Link>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm text-gray-500">
+                                                                            {getSectorDisplay(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3">
+                                                                            <Badge
+                                                                                variant="outline"
+                                                                                className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
+                                                                            >
+                                                                                {getStatusLabel(
+                                                                                    project.status,
                                                                                 )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3">
-                                                                                <Badge
-                                                                                    variant="outline"
-                                                                                    className={`${getStatusBadgeClass(project.status)} rounded-md border px-2 py-0.5 text-xs font-medium shadow-none`}
-                                                                                >
-                                                                                    {getStatusLabel(
-                                                                                        project.status,
-                                                                                    )}
-                                                                                </Badge>
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-sm font-medium text-gray-700">
-                                                                                {formatProjectTypeNames(
-                                                                                    project,
-                                                                                )}
-                                                                            </TableCell>
-                                                                            <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                                {project.total_investment
-                                                                                    ? formatCurrency(
-                                                                                          Number(
-                                                                                              project.total_investment,
-                                                                                          ),
-                                                                                      )
-                                                                                    : '—'}
-                                                                            </TableCell>
-                                                                        </SortableProjectRow>
-                                                                    ),
-                                                                )}
+                                                                            </Badge>
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-sm font-medium text-gray-700">
+                                                                            {formatProjectTypeNames(
+                                                                                project,
+                                                                            )}
+                                                                        </TableCell>
+                                                                        <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
+                                                                            {project.total_investment
+                                                                                ? formatCurrency(
+                                                                                      Number(
+                                                                                          project.total_investment,
+                                                                                      ),
+                                                                                  )
+                                                                                : '—'}
+                                                                        </TableCell>
+                                                                    </SortableProjectRow>
+                                                                ),
+                                                            )}
                                                         </SortableContext>
                                                     ) : (
                                                         <TableRow>
@@ -2219,11 +2177,10 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        {renderPagination(
-                                            promProjects.length,
-                                            promPage,
-                                            setPromPage,
-                                        )}
+                                        <Pagination
+                                            paginator={projects}
+                                            preserveScroll
+                                        />
                                     </div>
                                 </TabsContent>
 
@@ -2296,11 +2253,8 @@ export default function Show({
                                                                             'subsoil',
                                                                         );
                                                                     } else {
-                                                                        setSelectedEntityId(
-                                                                            null,
-                                                                        );
-                                                                        setSelectedEntityType(
-                                                                            null,
+                                                                        clearEntityFilter(
+                                                                            'subsoil',
                                                                         );
                                                                     }
                                                                 }}
@@ -2545,15 +2499,7 @@ export default function Show({
                                                 ? Number(selectedSez.total_area)
                                                 : totalSezArea;
                                             const displayInvestment =
-                                                sezProjects.reduce(
-                                                    (acc, curr) =>
-                                                        acc +
-                                                        Number(
-                                                            curr.total_investment ||
-                                                                0,
-                                                        ),
-                                                    0,
-                                                );
+                                                projectStats.totalInvestment;
                                             const displayIssues = selectedSez
                                                 ? (selectedSez.issues_count ??
                                                   0)
@@ -2562,7 +2508,7 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {sezProjects.length}
+                                                            {projectStats.count}
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -2623,15 +2569,9 @@ export default function Show({
                                                             ? 'border-l-2 border-l-violet-500 bg-violet-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() => {
-                                                        setSelectedSezId(null);
-                                                        setSelectedEntityId(
-                                                            null,
-                                                        );
-                                                        setSelectedEntityType(
-                                                            null,
-                                                        );
-                                                    }}
+                                                    onClick={() =>
+                                                        clearEntityFilter('sez')
+                                                    }
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Building2 className="h-4 w-4 shrink-0 text-violet-500" />
@@ -2738,15 +2678,7 @@ export default function Show({
                                                 ? Number(selectedIz.total_area)
                                                 : totalIzArea;
                                             const displayInvestment =
-                                                izProjects.reduce(
-                                                    (acc, curr) =>
-                                                        acc +
-                                                        Number(
-                                                            curr.total_investment ||
-                                                                0,
-                                                        ),
-                                                    0,
-                                                );
+                                                projectStats.totalInvestment;
                                             const displayIssues = selectedIz
                                                 ? (selectedIz.issues_count ?? 0)
                                                 : stats.izIssuesCount;
@@ -2754,7 +2686,7 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {izProjects.length}
+                                                            {projectStats.count}
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -2815,15 +2747,9 @@ export default function Show({
                                                             ? 'border-l-2 border-l-amber-500 bg-amber-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() => {
-                                                        setSelectedIzId(null);
-                                                        setSelectedEntityId(
-                                                            null,
-                                                        );
-                                                        setSelectedEntityType(
-                                                            null,
-                                                        );
-                                                    }}
+                                                    onClick={() =>
+                                                        clearEntityFilter('iz')
+                                                    }
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Factory className="h-4 w-4 shrink-0 text-amber-500" />
@@ -2937,15 +2863,7 @@ export default function Show({
                                                   )
                                                 : totalPromArea;
                                             const displayInvestment =
-                                                promProjects.reduce(
-                                                    (acc, curr) =>
-                                                        acc +
-                                                        Number(
-                                                            curr.total_investment ||
-                                                                0,
-                                                        ),
-                                                    0,
-                                                );
+                                                projectStats.totalInvestment;
                                             const displayIssues = selectedProm
                                                 ? (selectedProm.issues_count ??
                                                   0)
@@ -2954,9 +2872,7 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {
-                                                                promProjects.length
-                                                            }
+                                                            {projectStats.count}
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -3017,15 +2933,11 @@ export default function Show({
                                                             ? 'border-l-2 border-l-emerald-500 bg-emerald-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() => {
-                                                        setSelectedPromId(null);
-                                                        setSelectedEntityId(
-                                                            null,
-                                                        );
-                                                        setSelectedEntityType(
-                                                            null,
-                                                        );
-                                                    }}
+                                                    onClick={() =>
+                                                        clearEntityFilter(
+                                                            'prom',
+                                                        )
+                                                    }
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Factory className="h-4 w-4 shrink-0 text-emerald-500" />

@@ -385,6 +385,8 @@ test('investor can add project evidence but cannot modify status or remove share
 });
 
 test('assigned investor receives and completes a project roadmap task', function () {
+    Storage::fake('local');
+
     $superadmin = createInvestorTestUser('superadmin');
     $region = createInvestorTestRegion();
     $scope = createInvestorTestCompany($superadmin, $region, 'Task company');
@@ -416,7 +418,14 @@ test('assigned investor receives and completes a project roadmap task', function
             'investment-projects.tasks.completions.store',
             [$project, $task]
         ),
-        ['comment' => 'Инвестор тапсырманы орындады']
+        [
+            'comment' => 'Инвестор тапсырманы орындады',
+            'documents' => [UploadedFile::fake()->create(
+                'investor-result.pdf',
+                10,
+                'application/pdf'
+            )],
+        ]
     )->assertRedirect();
 
     $this->assertDatabaseHas('task_completions', [

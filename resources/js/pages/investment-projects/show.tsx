@@ -308,7 +308,7 @@ function DescriptionTabs({
                 )}
             </div>
             {activeTab === 'description' || !showCurrentStatus ? (
-                <div className="leading-relaxed whitespace-pre-wrap text-gray-700">
+                <div className="leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700">
                     {description || 'Сипаттама жоқ.'}
                 </div>
             ) : (
@@ -320,7 +320,7 @@ function DescriptionTabs({
                                     {statusEntries.map((status, index) => (
                                         <div
                                             key={`${status}-${index}`}
-                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
                                         >
                                             {status}
                                         </div>
@@ -382,7 +382,7 @@ function DescriptionTabs({
                                     {statusEntries.map((status, index) => (
                                         <div
                                             key={`${status}-${index}`}
-                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed whitespace-pre-wrap text-gray-700"
+                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
                                         >
                                             {status}
                                         </div>
@@ -846,6 +846,14 @@ export default function Show({
         e.preventDefault();
         if (!completionTaskId) return;
 
+        if (completionDocuments.length === 0) {
+            setCompletionFileError(
+                'Тапсырманы орындауға жіберу үшін кемінде бір құжат тіркеу міндетті.',
+            );
+            completionDocRef.current?.focus();
+            return;
+        }
+
         // Check total size of all files
         const allFiles = [...completionDocuments, ...completionPhotos];
         const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
@@ -878,7 +886,16 @@ export default function Show({
                     setCompletionPhotos([]);
                     setIsSubmittingCompletion(false);
                 },
-                onError: () => setIsSubmittingCompletion(false),
+                onError: (errors) => {
+                    setIsSubmittingCompletion(false);
+                    const fileError =
+                        errors.documents ??
+                        errors['documents.0'] ??
+                        errors.photos ??
+                        errors['photos.0'];
+
+                    if (fileError) setCompletionFileError(fileError);
+                },
             },
         );
     };
@@ -1141,7 +1158,7 @@ export default function Show({
                                                 <MapPin className="h-3.5 w-3.5" />{' '}
                                                 Аймақ
                                             </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                            <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {project.region?.name ||
                                                     'Көрсетілмеген'}
                                             </p>
@@ -1151,7 +1168,7 @@ export default function Show({
                                                 <FileText className="h-3.5 w-3.5" />{' '}
                                                 Жоба түрі
                                             </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
+                                            <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {formatProjectTypeNames(
                                                     project,
                                                     'Көрсетілмеген',
@@ -1232,13 +1249,13 @@ export default function Show({
                                         <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">
                                             Жоба бастамашысы
                                         </p>
-                                        <h2 className="mt-1 text-lg font-semibold text-[#0f1b3d]">
+                                        <h2 className="mt-1 min-w-0 text-lg font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                             {project.company?.display_name ||
                                                 project.company_name ||
                                                 'Компания көрсетілмеген'}
                                         </h2>
                                         {project.company && (
-                                            <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-xs text-gray-500">
+                                            <div className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-xs [overflow-wrap:anywhere] break-words text-gray-500">
                                                 {project.company.bin && (
                                                     <span>
                                                         БСН/БИН:{' '}
@@ -1306,7 +1323,7 @@ export default function Show({
                                         {sectorDetails.map((detail) => (
                                             <span
                                                 key={detail}
-                                                className="rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium text-blue-900"
+                                                className="max-w-full rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium [overflow-wrap:anywhere] break-words text-blue-900"
                                             >
                                                 {detail}
                                             </span>
@@ -1457,13 +1474,13 @@ export default function Show({
                                                                         className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
                                                                     />
                                                                     <div className="min-w-0">
-                                                                        <p className="font-semibold text-[#0f1b3d]">
+                                                                        <p className="min-w-0 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                                             {
                                                                                 issue.title
                                                                             }
                                                                         </p>
                                                                         {issue.description && (
-                                                                            <p className="mt-1 line-clamp-2 text-sm text-gray-600">
+                                                                            <p className="mt-1 line-clamp-2 min-w-0 text-sm [overflow-wrap:anywhere] break-words text-gray-600">
                                                                                 {
                                                                                     issue.description
                                                                                 }
@@ -1678,7 +1695,7 @@ export default function Show({
                                                             className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
                                                         />
                                                         <div className="min-w-0 flex-1">
-                                                            <p className="font-semibold text-[#0f1b3d]">
+                                                            <p className="min-w-0 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                                 {task.title}:
                                                             </p>
                                                             {/* {task.description && (
@@ -1775,7 +1792,7 @@ export default function Show({
                                                                         {task.approval_status ===
                                                                             'rejected' &&
                                                                             task.approval_comment && (
-                                                                                <p className="mt-1 text-xs text-red-600">
+                                                                                <p className="mt-1 text-xs [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-red-600">
                                                                                     <span className="font-semibold">
                                                                                         Себебі:
                                                                                     </span>{' '}
@@ -1811,7 +1828,7 @@ export default function Show({
                                                                     {latestCompletion.status ===
                                                                         'rejected' &&
                                                                         latestCompletion.reviewer_comment && (
-                                                                            <p className="mt-1 text-xs text-red-600">
+                                                                            <p className="mt-1 text-xs [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-red-600">
                                                                                 <span className="font-semibold">
                                                                                     Себебі:
                                                                                 </span>{' '}
@@ -2613,11 +2630,11 @@ export default function Show({
                                     );
                                     return task ? (
                                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
-                                            <h4 className="text-sm font-semibold text-[#0f1b3d]">
+                                            <h4 className="min-w-0 text-sm font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {task.title}
                                             </h4>
                                             {task.description && (
-                                                <p className="mt-1 text-sm whitespace-pre-wrap text-gray-600">
+                                                <p className="mt-1 text-sm [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-600">
                                                     {task.description}
                                                 </p>
                                             )}
@@ -2633,7 +2650,10 @@ export default function Show({
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <FileText className="mr-1 inline h-4 w-4" />
-                                        Құжаттар (файлдар)
+                                        Құжаттар (міндетті)
+                                        <span className="ml-1 text-red-500">
+                                            *
+                                        </span>
                                         <span className="ml-1 font-normal text-gray-400">
                                             (макс.{' '}
                                             {MAX_COMPLETION_FILE_SIZE /
@@ -2646,9 +2666,15 @@ export default function Show({
                                         ref={completionDocRef}
                                         type="file"
                                         multiple
+                                        required
+                                        accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
                                         onChange={handleCompletionDocChange}
                                         className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-700 hover:file:bg-cyan-100"
                                     />
+                                    <p className="mt-1 text-xs text-gray-500">
+                                        Кемінде бір құжат тіркеңіз. Сурет
+                                        құжаттың орнын алмастырмайды.
+                                    </p>
                                     {completionDocuments.length > 0 && (
                                         <p className="mt-1 text-xs text-gray-500">
                                             {completionDocuments.length} құжат
@@ -2660,7 +2686,7 @@ export default function Show({
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
                                         <ImageIcon className="mr-1 inline h-4 w-4" />
-                                        Суреттер
+                                        Суреттер (міндетті емес)
                                         <span className="ml-1 font-normal text-gray-400">
                                             (макс.{' '}
                                             {MAX_COMPLETION_FILE_SIZE /
@@ -2706,7 +2732,8 @@ export default function Show({
                                         className="bg-emerald-500 px-8 hover:bg-emerald-600"
                                         disabled={
                                             isSubmittingCompletion ||
-                                            !!completionFileError
+                                            !!completionFileError ||
+                                            completionDocuments.length === 0
                                         }
                                     >
                                         {isSubmittingCompletion
@@ -2757,11 +2784,11 @@ export default function Show({
                                         <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Тапсырма
                                         </p>
-                                        <p className="mt-1 font-semibold text-[#0f1b3d]">
+                                        <p className="mt-1 min-w-0 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                             {reviewTask.title}
                                         </p>
                                         {reviewTask.description && (
-                                            <p className="mt-1 text-sm text-gray-600">
+                                            <p className="mt-1 text-sm [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-600">
                                                 {reviewTask.description}
                                             </p>
                                         )}
@@ -2790,7 +2817,7 @@ export default function Show({
                                         <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                             Пікір
                                         </p>
-                                        <p className="mt-1 text-sm whitespace-pre-wrap text-gray-700">
+                                        <p className="mt-1 text-sm [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700">
                                             {reviewCompletion.comment}
                                         </p>
                                     </div>
@@ -2830,7 +2857,12 @@ export default function Show({
                                                                 </div>
                                                             )}
                                                             <div className="min-w-0 flex-1">
-                                                                <p className="truncate text-sm font-medium text-[#0f1b3d]">
+                                                                <p
+                                                                    className="truncate text-sm font-medium text-[#0f1b3d]"
+                                                                    title={
+                                                                        file.file_name
+                                                                    }
+                                                                >
                                                                     {
                                                                         file.file_name
                                                                     }
@@ -2938,7 +2970,7 @@ export default function Show({
                                     <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                         Тапсырма
                                     </p>
-                                    <p className="mt-1 font-medium text-[#0f1b3d]">
+                                    <p className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                         {approvalModalTask.title}
                                     </p>
                                 </div>
@@ -3055,7 +3087,7 @@ export default function Show({
                                             <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                                 Тапсырманы берген
                                             </p>
-                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                            <p className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {creatorName}
                                             </p>
                                         </div>
@@ -3064,11 +3096,11 @@ export default function Show({
                                             <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                                 Тақырып
                                             </p>
-                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                            <p className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {t.title}
                                             </p>
                                             {t.description && (
-                                                <p className="mt-2 text-sm whitespace-pre-wrap text-gray-700">
+                                                <p className="mt-2 text-sm [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700">
                                                     {t.description}
                                                 </p>
                                             )}
@@ -3087,7 +3119,7 @@ export default function Show({
                                             <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                                 Жауапты (исполнитель)
                                             </p>
-                                            <p className="mt-1 font-medium text-[#0f1b3d]">
+                                            <p className="mt-1 min-w-0 font-medium [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
                                                 {assigneeName}
                                             </p>
                                             {t.assignee?.position && (
@@ -3219,7 +3251,7 @@ export default function Show({
                                                                             )}
                                                                         </p>
                                                                         {ev.comment && (
-                                                                            <p className="mt-1 text-xs whitespace-pre-wrap text-gray-600">
+                                                                            <p className="mt-1 text-xs [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-600">
                                                                                 {
                                                                                     ev.comment
                                                                                 }
