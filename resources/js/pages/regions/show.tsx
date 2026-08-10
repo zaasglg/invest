@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
+    ChevronLeft,
     ChevronRight,
     ExternalLink,
     Globe,
@@ -272,6 +273,14 @@ export default function Show({
         null,
     );
 
+    // Local pagination: all records are loaded once, then split in the browser.
+    const ITEMS_PER_PAGE = 10;
+    const [allPage, setAllPage] = useState(1);
+    const [sezPage, setSezPage] = useState(1);
+    const [izPage, setIzPage] = useState(1);
+    const [promPage, setPromPage] = useState(1);
+    const [subsoilPage, setSubsoilPage] = useState(1);
+
     // Local ordered copy of projects for drag-and-drop reordering.
     const [orderedProjects, setOrderedProjects] =
         useState<InvestmentProject[]>(projects);
@@ -287,6 +296,11 @@ export default function Show({
         setSelectedProjectId(null);
         setMapSelectedEntityId(null);
         setMapSelectedEntityType(null);
+        setAllPage(1);
+        setSezPage(1);
+        setIzPage(1);
+        setPromPage(1);
+        setSubsoilPage(1);
     };
 
     const handleSelectEntity = (
@@ -306,6 +320,11 @@ export default function Show({
         setSelectedEntityType(null);
         setMapSelectedEntityId(null);
         setMapSelectedEntityType(null);
+        setAllPage(1);
+        setSezPage(1);
+        setIzPage(1);
+        setPromPage(1);
+        setSubsoilPage(1);
     };
 
     const handleMapEntitySelect = (
@@ -317,6 +336,7 @@ export default function Show({
         // Sync sidebar selection with map click and switch to appropriate tab
         if (id && type === 'sez') {
             setActiveTab('sez');
+            setSezPage(1);
             setSelectedSezId(id);
             setSelectedIzId(null);
             setSelectedPromId(null);
@@ -325,6 +345,7 @@ export default function Show({
             setSelectedEntityType('sez');
         } else if (id && type === 'iz') {
             setActiveTab('iz');
+            setIzPage(1);
             setSelectedIzId(id);
             setSelectedSezId(null);
             setSelectedPromId(null);
@@ -333,6 +354,7 @@ export default function Show({
             setSelectedEntityType('iz');
         } else if (id && type === 'prom') {
             setActiveTab('prom');
+            setPromPage(1);
             setSelectedPromId(id);
             setSelectedSezId(null);
             setSelectedIzId(null);
@@ -341,6 +363,7 @@ export default function Show({
             setSelectedEntityType('prom');
         } else if (id && type === 'subsoil') {
             setActiveTab('subsoil');
+            setSubsoilPage(1);
             setSelectedSubsoilId(id);
             setSelectedSezId(null);
             setSelectedIzId(null);
@@ -415,6 +438,39 @@ export default function Show({
         return subsoilUsers;
     }, [subsoilUsers, selectedSubsoilStatus]);
 
+    const paginatedSezProjects = React.useMemo(
+        () =>
+            sezProjects.slice(
+                (sezPage - 1) * ITEMS_PER_PAGE,
+                sezPage * ITEMS_PER_PAGE,
+            ),
+        [sezPage, sezProjects],
+    );
+    const paginatedIzProjects = React.useMemo(
+        () =>
+            izProjects.slice(
+                (izPage - 1) * ITEMS_PER_PAGE,
+                izPage * ITEMS_PER_PAGE,
+            ),
+        [izPage, izProjects],
+    );
+    const paginatedPromProjects = React.useMemo(
+        () =>
+            promProjects.slice(
+                (promPage - 1) * ITEMS_PER_PAGE,
+                promPage * ITEMS_PER_PAGE,
+            ),
+        [promPage, promProjects],
+    );
+    const paginatedSubsoilUsers = React.useMemo(
+        () =>
+            filteredSubsoilUsers.slice(
+                (subsoilPage - 1) * ITEMS_PER_PAGE,
+                subsoilPage * ITEMS_PER_PAGE,
+            ),
+        [filteredSubsoilUsers, subsoilPage],
+    );
+
     // Subsoil status counts
     const subsoilStatusCounts = React.useMemo(() => {
         const counts: Record<string, number> = {
@@ -449,6 +505,115 @@ export default function Show({
         return new Intl.NumberFormat('kk-KZ', {
             maximumFractionDigits: 2,
         }).format(area);
+    };
+
+    const renderPagination = (
+        totalItems: number,
+        currentPage: number,
+        setPage: (page: number) => void,
+    ) => {
+        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
+
+        if (totalPages <= 1) return null;
+
+        const maxVisible = 5;
+        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+        const endPage = Math.min(totalPages, startPage + maxVisible - 1);
+
+        if (endPage - startPage + 1 < maxVisible) {
+            startPage = Math.max(1, endPage - maxVisible + 1);
+        }
+
+        const pages = Array.from(
+            { length: endPage - startPage + 1 },
+            (_, index) => startPage + index,
+        );
+
+        return (
+            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
+                <span className="text-xs text-gray-500">
+                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
+                    {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} /{' '}
+                    {totalItems}
+                </span>
+                <div className="flex items-center gap-1">
+                    <Button
+                        aria-label="Алдыңғы бет"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === 1}
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setPage(currentPage - 1)}
+                    >
+                        <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {startPage > 1 && (
+                        <>
+                            <Button
+                                className="h-8 w-8 p-0 text-xs"
+                                size="sm"
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setPage(1)}
+                            >
+                                1
+                            </Button>
+                            {startPage > 2 && (
+                                <span className="px-1 text-xs text-gray-400">
+                                    …
+                                </span>
+                            )}
+                        </>
+                    )}
+                    {pages.map((page) => (
+                        <Button
+                            key={page}
+                            className={`h-8 w-8 p-0 text-xs ${
+                                page === currentPage
+                                    ? 'bg-[#0f1b3d] text-white hover:bg-[#0f1b3d]/90'
+                                    : ''
+                            }`}
+                            size="sm"
+                            type="button"
+                            variant={page === currentPage ? 'default' : 'ghost'}
+                            onClick={() => setPage(page)}
+                        >
+                            {page}
+                        </Button>
+                    ))}
+                    {endPage < totalPages && (
+                        <>
+                            {endPage < totalPages - 1 && (
+                                <span className="px-1 text-xs text-gray-400">
+                                    …
+                                </span>
+                            )}
+                            <Button
+                                className="h-8 w-8 p-0 text-xs"
+                                size="sm"
+                                type="button"
+                                variant="ghost"
+                                onClick={() => setPage(totalPages)}
+                            >
+                                {totalPages}
+                            </Button>
+                        </>
+                    )}
+                    <Button
+                        aria-label="Келесі бет"
+                        className="h-8 w-8 p-0"
+                        disabled={currentPage === totalPages}
+                        size="sm"
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setPage(currentPage + 1)}
+                    >
+                        <ChevronRight className="h-4 w-4" />
+                    </Button>
+                </div>
+            </div>
+        );
     };
 
     const getSectorDisplay = (project: InvestmentProject) => {
@@ -1424,7 +1589,11 @@ export default function Show({
                                                             )
                                                           : orderedProjects;
                                             const displayedProjects =
-                                                filteredProjects;
+                                                filteredProjects.slice(
+                                                    (allPage - 1) *
+                                                        ITEMS_PER_PAGE,
+                                                    allPage * ITEMS_PER_PAGE,
+                                                );
                                             return (
                                                 <>
                                                     <DndContext
@@ -1562,6 +1731,11 @@ export default function Show({
                                                             </TableBody>
                                                         </Table>
                                                     </DndContext>
+                                                    {renderPagination(
+                                                        filteredProjects.length,
+                                                        allPage,
+                                                        setAllPage,
+                                                    )}
                                                 </>
                                             );
                                         })()}
@@ -1633,16 +1807,18 @@ export default function Show({
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {sezProjects.length > 0 ? (
+                                                    {paginatedSezProjects.length >
+                                                    0 ? (
                                                         <SortableContext
-                                                            items={sezProjects.map(
-                                                                (p) => p.id,
+                                                            items={paginatedSezProjects.map(
+                                                                (project) =>
+                                                                    project.id,
                                                             )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {sezProjects.map(
+                                                            {paginatedSezProjects.map(
                                                                 (project) => (
                                                                     <SortableProjectRow
                                                                         key={
@@ -1725,6 +1901,11 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
+                                        {renderPagination(
+                                            sezProjects.length,
+                                            sezPage,
+                                            setSezPage,
+                                        )}
                                     </div>
                                 </TabsContent>
 
@@ -1793,16 +1974,18 @@ export default function Show({
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {izProjects.length > 0 ? (
+                                                    {paginatedIzProjects.length >
+                                                    0 ? (
                                                         <SortableContext
-                                                            items={izProjects.map(
-                                                                (p) => p.id,
+                                                            items={paginatedIzProjects.map(
+                                                                (project) =>
+                                                                    project.id,
                                                             )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {izProjects.map(
+                                                            {paginatedIzProjects.map(
                                                                 (project) => (
                                                                     <SortableProjectRow
                                                                         key={
@@ -1885,6 +2068,11 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
+                                        {renderPagination(
+                                            izProjects.length,
+                                            izPage,
+                                            setIzPage,
+                                        )}
                                     </div>
                                 </TabsContent>
 
@@ -1953,16 +2141,18 @@ export default function Show({
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
-                                                    {promProjects.length > 0 ? (
+                                                    {paginatedPromProjects.length >
+                                                    0 ? (
                                                         <SortableContext
-                                                            items={promProjects.map(
-                                                                (p) => p.id,
+                                                            items={paginatedPromProjects.map(
+                                                                (project) =>
+                                                                    project.id,
                                                             )}
                                                             strategy={
                                                                 verticalListSortingStrategy
                                                             }
                                                         >
-                                                            {promProjects.map(
+                                                            {paginatedPromProjects.map(
                                                                 (project) => (
                                                                     <SortableProjectRow
                                                                         key={
@@ -2045,6 +2235,11 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
+                                        {renderPagination(
+                                            promProjects.length,
+                                            promPage,
+                                            setPromPage,
+                                        )}
                                     </div>
                                 </TabsContent>
 
@@ -2066,6 +2261,7 @@ export default function Show({
                                                     setSelectedSubsoilStatus(
                                                         null,
                                                     );
+                                                    setSubsoilPage(1);
                                                 }}
                                             >
                                                 Сүзгіні қалпына келтіру
@@ -2089,9 +2285,9 @@ export default function Show({
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
-                                                {filteredSubsoilUsers.length >
+                                                {paginatedSubsoilUsers.length >
                                                 0 ? (
-                                                    filteredSubsoilUsers.map(
+                                                    paginatedSubsoilUsers.map(
                                                         (su) => (
                                                             <TableRow
                                                                 key={su.id}
@@ -2176,6 +2372,11 @@ export default function Show({
                                                 )}
                                             </TableBody>
                                         </Table>
+                                        {renderPagination(
+                                            filteredSubsoilUsers.length,
+                                            subsoilPage,
+                                            setSubsoilPage,
+                                        )}
                                     </div>
                                 </TabsContent>
                             </div>
@@ -2457,6 +2658,7 @@ export default function Show({
                                                             setSelectedSezId(
                                                                 sez.id,
                                                             );
+                                                            setSezPage(1);
                                                             handleSelectEntity(
                                                                 sez.id,
                                                                 'sez',
@@ -2642,6 +2844,7 @@ export default function Show({
                                                             setSelectedIzId(
                                                                 iz.id,
                                                             );
+                                                            setIzPage(1);
                                                             handleSelectEntity(
                                                                 iz.id,
                                                                 'iz',
@@ -2835,6 +3038,7 @@ export default function Show({
                                                             setSelectedPromId(
                                                                 prom.id,
                                                             );
+                                                            setPromPage(1);
                                                             handleSelectEntity(
                                                                 prom.id,
                                                                 'prom',
@@ -2956,11 +3160,12 @@ export default function Show({
                                                         ? 'border-l-2 border-l-gray-500 bg-gray-50'
                                                         : 'hover:bg-gray-50'
                                                 }`}
-                                                onClick={() =>
+                                                onClick={() => {
                                                     setSelectedSubsoilStatus(
                                                         null,
-                                                    )
-                                                }
+                                                    );
+                                                    setSubsoilPage(1);
+                                                }}
                                             >
                                                 <div className="flex min-w-0 items-center gap-2">
                                                     <Pickaxe className="h-4 w-4 shrink-0 text-gray-500" />
@@ -3017,14 +3222,15 @@ export default function Show({
                                                             ? `${status.bg} border-l-2 ${status.border}`
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() =>
+                                                    onClick={() => {
                                                         setSelectedSubsoilStatus(
                                                             selectedSubsoilStatus ===
                                                                 status.key
                                                                 ? null
                                                                 : status.key,
-                                                        )
-                                                    }
+                                                        );
+                                                        setSubsoilPage(1);
+                                                    }}
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <div
