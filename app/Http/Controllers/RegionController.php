@@ -124,9 +124,9 @@ class RegionController extends Controller
         return redirect()->route('regions.index')->with('success', 'Аймақ құрылды.');
     }
 
-    public function show(Request $request, Region $region)
+    public function show(Region $region)
     {
-        $user = $request->user();
+        $user = request()->user();
         $this->authorizeRegionAccess($region, $user);
 
         $region->load([
@@ -152,6 +152,15 @@ class RegionController extends Controller
         ]);
 
         $projectsQuery = InvestmentProject::active()
+            ->with([
+                'sezs',
+                'industrialZones',
+                'promZones',
+                'subsoilUsers',
+                'projectType',
+                'projectTypes',
+                'executors',
+            ])
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
 
@@ -159,84 +168,15 @@ class RegionController extends Controller
             $this->projectAccess->scopeVisible($projectsQuery, $user);
         }
 
-        $allProjectsQuery = clone $projectsQuery;
-
-        $tab = $request->string('tab')->toString();
-        if (! in_array($tab, ['all', 'sez', 'iz', 'prom', 'subsoil'], true)) {
-            $tab = 'all';
-        }
-
-        $entityType = $request->string('entity_type')->toString();
-        $entityId = $request->integer('entity_id') ?: null;
-        $relationByTab = [
-            'sez' => 'sezs',
-            'iz' => 'industrialZones',
-            'prom' => 'promZones',
-            'subsoil' => 'subsoilUsers',
-        ];
-        $entityIdsByType = [
-            'sez' => $region->sezs->pluck('id'),
-            'iz' => $region->industrialZones->pluck('id'),
-            'prom' => $region->promZones->pluck('id'),
-            'subsoil' => $region->subsoilUsers->pluck('id'),
-        ];
-
-        if ($tab === 'all' || $entityType !== $tab || ! isset($relationByTab[$tab])) {
-            $entityType = null;
-            $entityId = null;
-        } elseif ($entityId && ! $entityIdsByType[$entityType]->contains($entityId)) {
-            $entityId = null;
-        }
-
-        if (isset($relationByTab[$tab])) {
-            $projectsQuery->whereHas(
-                $relationByTab[$tab],
-                fn ($query) => $query->when(
-                    $entityId,
-                    fn ($entityQuery) => $entityQuery->whereKey($entityId)
-                )
-            );
-        }
-
-        $projectRelations = [
-            'sezs:id,name',
-            'industrialZones:id,name',
-            'promZones:id,name',
-            'subsoilUsers:id,name',
-            'projectType:id,name',
-            'projectTypes:id,name',
-            'executors:id,full_name',
-        ];
-
-        $projects = (clone $projectsQuery)
-            ->with($projectRelations)
-            ->paginate(10)
-            ->withQueryString();
-
-        $projectMapItems = (clone $projectsQuery)
-            ->select([
-                'id',
-                'name',
-                'company_name',
-                'description',
-                'status',
-                'total_investment',
-                'start_date',
-                'end_date',
-                'geometry',
-                'project_type_id',
-                'sort_order',
-            ])
-            ->with($projectRelations)
-            ->get();
+        $projects = $projectsQuery->get();
 
         // Stats for "Все" tab
         $totalArea = $region->area ?? 0;
-        $projectsCount = (clone $allProjectsQuery)->count();
-        $totalInvestment = (clone $allProjectsQuery)->sum('total_investment');
+        $projectsCount = $projects->count();
+        $totalInvestment = $projects->sum('total_investment');
         $projectIssuesCount = \App\Models\ProjectIssue::whereIn(
             'project_id',
-            (clone $allProjectsQuery)->reorder()->select('id')
+            $projects->pluck('id')
         )->count();
 
         // Determine which entity sections the invest sub-role can access.
@@ -270,17 +210,6 @@ class RegionController extends Controller
         return Inertia::render('regions/show', [
             'region' => $region,
             'projects' => $projects,
-            'projectMapItems' => $projectMapItems,
-            'projectIds' => $projectMapItems->pluck('id')->values(),
-            'projectFilters' => [
-                'tab' => $tab,
-                'entity_type' => $entityType,
-                'entity_id' => $entityId,
-            ],
-            'projectStats' => [
-                'count' => $projectMapItems->count(),
-                'totalInvestment' => $projectMapItems->sum('total_investment'),
-            ],
             'sezs' => $region->sezs,
             'industrialZones' => $region->industrialZones,
             'promZones' => $region->promZones,
@@ -340,8 +269,6 @@ class RegionController extends Controller
         $validated = $request->validate([
             'project_ids' => 'required|array|min:1',
             'project_ids.*' => 'integer|distinct|exists:investment_projects,id',
-            'page' => 'sometimes|integer|min:1',
-            'per_page' => 'sometimes|integer|min:1|max:100',
         ]);
 
         $projectIds = $validated['project_ids'];
@@ -356,8 +283,7 @@ class RegionController extends Controller
 
         $this->sortOrder->update(
             InvestmentProject::class,
-            array_map('intval', $projectIds),
-            (($validated['page'] ?? 1) - 1) * ($validated['per_page'] ?? 10)
+            array_map('intval', $projectIds)
         );
 
         return response()->noContent();
