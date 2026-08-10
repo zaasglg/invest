@@ -189,7 +189,7 @@ export default function ModelLabClient({ expertName }: { expertName: string }) {
 
   async function train() {
     setSaving(true);
-    setMessage("Обучаем новую версию AlphaRank…");
+    setMessage("Обучаем новую версию модели оценки…");
     const response = await fetch("/api/model/train", { method: "POST" });
     const payload = await response.json() as { error?: string };
     setSaving(false);
@@ -198,7 +198,7 @@ export default function ModelLabClient({ expertName }: { expertName: string }) {
       return;
     }
     await refreshStatus();
-    setMessage("Новая версия AlphaRank обучена и включена для рекомендаций.");
+    setMessage("Новая версия модели обучена и включена для рекомендаций.");
   }
 
   const progress = status ? Math.min(100, status.labelCount / status.minimumLabels * 100) : 0;
@@ -213,7 +213,7 @@ export default function ModelLabClient({ expertName }: { expertName: string }) {
       <section className="lab-status">
         <div><span>Подтверждённые сравнения</span><strong>{status?.labelCount ?? 0} / {status?.minimumLabels ?? 40}</strong></div>
         <i><b style={{ width: `${progress}%` }} /></i>
-        <p>{status?.model ? `Активна AlphaRank Hybrid · ${status.model.labelCount} примеров · точность проверки ${status.model.validationAccuracy}%` : "Сейчас карта использует резервную прозрачную формулу. После достаточного количества меток можно обучить первую собственную модель."}</p>
+        <p>{status?.model ? `Активна калиброванная модель · ${status.model.labelCount} примеров · точность проверки ${status.model.validationAccuracy}%` : "Сейчас карта использует базовую прозрачную методику. После достаточного количества экспертных оценок можно обучить первую калиброванную модель."}</p>
         <button type="button" disabled={saving || !status || status.labelCount < status.minimumLabels} onClick={train}>Обучить и включить новую версию</button>
       </section>
 
@@ -231,7 +231,7 @@ export default function ModelLabClient({ expertName }: { expertName: string }) {
       </section> : <div className="lab-loading">Загружаем пары зон…</div>}
 
       <div className="lab-footer-actions"><button type="button" onClick={() => refreshPair()} disabled={saving || !data}>Пропустить: недостаточно информации</button><span>{message}</span></div>
-      <details className="lab-method"><summary>Как работает AlphaRank Hybrid</summary><p>{ALPHA_RANK_FEATURES.join(" · ")}. Модель обучается отдельно для каждой отрасли, осторожно смешивает экспертные сравнения с проверенной базовой формулой и не переносит сельскохозяйственные предпочтения на заводы. Кадастровые и критические инфраструктурные ограничения остаются обязательными правилами.</p></details>
+      <details className="lab-method"><summary>Как работает методика оценки</summary><p>{ALPHA_RANK_FEATURES.join(" · ")}. Модель обучается отдельно для каждой отрасли, осторожно объединяет экспертные сравнения с проверенной базовой формулой и не переносит сельскохозяйственные предпочтения на заводы. Кадастровые и критические инфраструктурные ограничения остаются обязательными правилами.</p></details>
     </main>
   );
 }

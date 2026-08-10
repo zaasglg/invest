@@ -23,7 +23,7 @@ test("server-renders the bilingual investor onboarding", async () => {
   assert.equal(response.status, 200);
   assert.match(response.headers.get("content-type") ?? "", /^text\/html\b/i);
   const html = await response.text();
-  assert.match(html, /<title>Turkistan Invest — AI-карта возможностей<\/title>/i);
+  assert.match(html, /<title>Turkistan Invest — карта инвестиционной пригодности<\/title>/i);
   assert.match(html, /TURKISTAN INVEST/);
   assert.match(html, /Что вы хотите открыть или производить\?/);
   assert.match(html, /Выберите направление проекта/);
@@ -162,7 +162,7 @@ test("source includes project heatmap, evidence registry, storage and regional i
   assert.match(page, /root\.style\.overflow = "hidden"/);
   assert.match(page, /scrollWheelZoom: !compactLayout/);
   assert.match(page, /scoreWithAlphaRank/);
-  assert.match(page, /alpha-rank-hybrid-v3/);
+  assert.doesNotMatch(page, /AlphaRank Hybrid|Groq AI|AI-карта возможностей/);
   assert.match(styles, /\.advice-scroll \{ height: auto; flex: 1 1 auto; \}/);
   assert.match(styles, /max-height: calc\(100dvh - 48px\)/);
   assert.match(advisor, /GROQ_API_KEY/);

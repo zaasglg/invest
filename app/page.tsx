@@ -123,8 +123,8 @@ type FreeLandPayload = {
 
 const localizedSourceTitles: Partial<Record<string, Record<Locale, string>>> = {
   "alpha-sentinel-2025": {
-    ru: "Спутниковые индексы Alpha Turkistan",
-    kk: "Alpha Turkistan спутниктік индекстері",
+    ru: "Спутниковый анализ Sentinel-2",
+    kk: "Sentinel-2 спутниктік талдауы",
   },
   "osm-overpass": {
     ru: "Электричество, дороги и вода — OpenStreetMap",
@@ -213,8 +213,8 @@ const text = {
     change: "Изменить",
     zonesFound: "подходящих зон",
     source: "Спутник Sentinel‑2 за 2025 год + открытая инфраструктура",
-    aiRules: "Понятная модель оценки",
-    aiGroq: "Заключение Groq AI",
+    aiRules: "Заключение по утверждённым правилам",
+    aiGroq: "Автоматизированное аналитическое заключение",
   },
   kk: {
     subtitle: "Инвесторға арналған навигатор",
@@ -274,17 +274,17 @@ const text = {
     change: "Өзгерту",
     zonesFound: "қолайлы аймақ",
     source: "2025 жылғы Sentinel‑2 спутнигі + ашық инфрақұрылым",
-    aiRules: "Түсінікті бағалау моделі",
-    aiGroq: "Groq AI қорытындысы",
+    aiRules: "Бекітілген ережелер бойынша қорытынды",
+    aiGroq: "Автоматтандырылған талдамалық қорытынды",
   },
 };
 
 const categories: Array<{ id: Category; icon: string; ru: string; kk: string; ruHint: string; kkHint: string }> = [
-  { id: "agriculture", icon: "🌾", ru: "Сельское хозяйство", kk: "Ауыл шаруашылығы", ruHint: "Пшеница, рис, соя, овощи", kkHint: "Бидай, күріш, соя, көкөніс" },
-  { id: "manufacturing", icon: "🏭", ru: "Производство", kk: "Өндіріс", ruHint: "Завод, переработка, стройматериалы", kkHint: "Зауыт, өңдеу, құрылыс материалдары" },
-  { id: "logistics", icon: "🚚", ru: "Логистика", kk: "Логистика", ruHint: "Склад, холодильник, распределение", kkHint: "Қойма, тоңазытқыш, тарату" },
-  { id: "energy", icon: "☀️", ru: "Энергетика", kk: "Энергетика", ruHint: "Солнечная, ветровая, биогаз", kkHint: "Күн, жел, биогаз" },
-  { id: "other", icon: "✦", ru: "Другой проект", kk: "Басқа жоба", ruHint: "Опишите свою идею", kkHint: "Өз идеяңызды жазыңыз" },
+  { id: "agriculture", icon: "АПК", ru: "Сельское хозяйство", kk: "Ауыл шаруашылығы", ruHint: "Пшеница, рис, соя, овощи", kkHint: "Бидай, күріш, соя, көкөніс" },
+  { id: "manufacturing", icon: "ПР", ru: "Производство", kk: "Өндіріс", ruHint: "Завод, переработка, стройматериалы", kkHint: "Зауыт, өңдеу, құрылыс материалдары" },
+  { id: "logistics", icon: "ЛГ", ru: "Логистика", kk: "Логистика", ruHint: "Склад, холодильник, распределение", kkHint: "Қойма, тоңазытқыш, тарату" },
+  { id: "energy", icon: "ЭН", ru: "Энергетика", kk: "Энергетика", ruHint: "Солнечная, ветровая, биогаз", kkHint: "Күн, жел, биогаз" },
+  { id: "other", icon: "ДР", ru: "Другой проект", kk: "Басқа жоба", ruHint: "Опишите свою идею", kkHint: "Өз идеяңызды жазыңыз" },
 ];
 
 const products: Record<Category, Array<{ id: string; ru: string; kk: string }>> = {
@@ -877,7 +877,7 @@ export default function Home() {
         path.bindTooltip(label, { sticky: true });
         path.addTo(layer);
       } else {
-        const symbol = feature.kind === "power" ? "⚡" : feature.kind === "rail" ? "R" : "W";
+        const symbol = feature.kind === "power" ? "E" : feature.kind === "rail" ? "R" : "W";
         const icon = L.divIcon({ className: "network-marker-shell", html: `<div class="network-marker ${feature.kind}">${symbol}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
         L.marker([feature.latitude, feature.longitude], { icon }).bindTooltip(label).addTo(layer);
       }
@@ -986,7 +986,7 @@ export default function Home() {
     const url = URL.createObjectURL(new Blob([content], { type: "text/plain;charset=utf-8" }));
     const anchor = document.createElement("a");
     anchor.href = url;
-    anchor.download = `alpha-turkistan-${selectedCell.cell_id}.txt`;
+    anchor.download = `turkistan-invest-${selectedCell.cell_id}.txt`;
     anchor.click();
     URL.revokeObjectURL(url);
   }
@@ -1002,6 +1002,7 @@ export default function Home() {
     <main className="app-shell">
       <header className="topbar">
         <div className="brand"><span className="brand-mark"><img src="/turkistan-invest-logo.png" alt="" /></span><div><strong>TURKISTAN INVEST</strong><small>{t.subtitle}</small></div></div>
+        <div className="portal-context"><strong>{locale === "ru" ? "Карта инвестиционной пригодности" : "Инвестициялық жарамдылық картасы"}</strong><small>{locale === "ru" ? "Предварительный территориальный анализ" : "Алдын ала аумақтық талдау"}</small></div>
         <div className="top-actions">
           <div className="language-switch" aria-label={t.language}><button type="button" className={locale === "ru" ? "active" : ""} onClick={() => setLocale("ru")}>РУС</button><button type="button" className={locale === "kk" ? "active" : ""} onClick={() => setLocale("kk")}>ҚАЗ</button></div>
           {analysisReady && <button type="button" className="edit-project" onClick={() => { setWizardStep(1); setWizardOpen(true); }}>{t.editProject}</button>}
@@ -1024,7 +1025,7 @@ export default function Home() {
               <div className="top-zone-list">
                 {rankedCells.slice(0, 4).map((item, index) => <button type="button" key={item.cell.cell_id} className={selectedCell?.cell_id === item.cell.cell_id ? "active" : ""} onClick={() => selectCell(item.cell)}><span className="rank">{index + 1}</span><div><strong>{locale === "ru" ? "Зона" : "Аймақ"} {item.cell.cell_id}</strong><small>{item.analysis.constraints.some((constraint) => constraint.blocking) ? (locale === "ru" ? "Есть критическое условие" : "Маңызды шарт бар") : `${locale === "ru" ? "уверенность" : "сенімділік"} ${item.analysis.confidence}%`}</small></div><b>{item.score}</b></button>)}
               </div>
-              <div className="data-source"><span>◎</span><p><strong>{locale === "ru" ? "На чём основана карта" : "Карта неге негізделген"}</strong><small>{t.source}</small></p></div>
+              <div className="data-source"><span>01</span><p><strong>{locale === "ru" ? "Основание расчёта" : "Есептеу негізі"}</strong><small>{t.source}</small></p></div>
               <details className="source-catalog">
                 <summary>{locale === "ru" ? `Источники данных: ${connectedSources} подключено / ${sources.length} изучено` : `Дереккөздер: ${connectedSources} қосылды / ${sources.length} зерттелді`}</summary>
                 <div>{sources.map((source) => <a key={source.id} href={source.url} target="_blank" rel="noreferrer"><span className={`source-status ${source.status}`} /> <strong>{localizedSourceTitle(source, locale)}</strong><small>{source.status === "connected" ? (locale === "ru" ? "используется сейчас" : "қазір қолданылады") : source.status === "credentials_required" ? (locale === "ru" ? "нужен API-ключ" : "API кілті қажет") : source.status === "offline_pipeline" ? (locale === "ru" ? "готово к офлайн-интеграции" : "офлайн біріктіруге дайын") : (locale === "ru" ? "официальная проверка" : "ресми тексеру")}</small></a>)}</div>
@@ -1082,15 +1083,15 @@ export default function Home() {
 
               <section className="connected-data-overview">
                 <div className="connected-data-heading">
-                  <h3>{locale === "ru" ? "Подключённые данные" : "Қосылған деректер"}</h3>
-                  <span>{locale === "ru" ? "обновляются" : "жаңартылады"}</span>
+                  <h3>{locale === "ru" ? "Основания расчёта" : "Есептеу негіздері"}</h3>
+                  <span>{locale === "ru" ? "статус данных" : "деректер күйі"}</span>
                 </div>
                 <div className="connected-data-grid">
-                  <div className={`connected-data-item ${alphaRankModel ? "" : "fallback"}`}><i /><small>AlphaRank Hybrid</small><strong>{alphaRankModel ? `${alphaRankModel.labelCount} · Guard v3` : locale === "ru" ? `Сбор примеров ${alphaRankStatus?.labelCount ?? 0}/${alphaRankStatus?.minimumLabels ?? 40}` : `Мысал жинау ${alphaRankStatus?.labelCount ?? 0}/${alphaRankStatus?.minimumLabels ?? 40}`}</strong></div>
-                  <div className={`connected-data-item groq ${aiAdvice?.provider === "rules" ? "fallback" : ""}`}><i /><small>Groq AI</small><strong>{aiLoading ? (locale === "ru" ? "Проверяем…" : "Тексерілуде…") : aiAdvice?.provider === "groq" ? (locale === "ru" ? "Работает" : "Жұмыс істейді") : (locale === "ru" ? "Резервный режим" : "Қосалқы режим")}</strong></div>
+                  <div className={`connected-data-item ${alphaRankModel ? "" : "fallback"}`}><i /><small>{locale === "ru" ? "Методика оценки" : "Бағалау әдістемесі"}</small><strong>{alphaRankModel ? (locale === "ru" ? `Калибрована · ${alphaRankModel.labelCount} проверок` : `Калибрленген · ${alphaRankModel.labelCount} тексеру`) : (locale === "ru" ? "Базовая методика" : "Базалық әдістеме")}</strong></div>
+                  <div className={`connected-data-item groq ${aiAdvice?.provider === "rules" ? "fallback" : ""}`}><i /><small>{locale === "ru" ? "Аналитическое заключение" : "Талдамалық қорытынды"}</small><strong>{aiLoading ? (locale === "ru" ? "Формируется" : "Қалыптасуда") : (locale === "ru" ? "Доступно" : "Қолжетімді")}</strong></div>
                   <div className={`connected-data-item egov ${freeLand?.meta.status ?? "loading"}`}><i /><small>eGov · {locale === "ru" ? "земли" : "жерлер"}</small><strong>{!freeLand ? (locale === "ru" ? "Загружаем…" : "Жүктелуде…") : freeLand.records.length ? `${freeLand.records.length} ${locale === "ru" ? "записей" : "жазба"}` : freeLand.meta.status === "credentials_required" ? (locale === "ru" ? "Нужен API-ключ" : "API кілті қажет") : freeLand.meta.status === "unavailable" ? (locale === "ru" ? "Нет ответа" : "Жауап жоқ") : (locale === "ru" ? "Подключён" : "Қосылды")}</strong></div>
-                  <div className={`connected-data-item business ${ecosystem && ecosystem.meta.status !== "unavailable" ? "" : "unavailable"}`}><i /><small>in-map API</small><strong>{ecosystemLoading ? "…" : ecosystem ? `${ecosystem.meta.projects} ${locale === "ru" ? "проектов" : "жоба"} · ${ecosystem.meta.companies} ${locale === "ru" ? "компаний" : "компания"}` : (locale === "ru" ? "Нет ответа" : "Жауап жоқ")}</strong></div>
-                  <div className={`connected-data-item assets ${ecosystem?.meta.assets ? "" : "unavailable"}`}><i /><small>in-map · {locale === "ru" ? "активы" : "активтер"}</small><strong>{ecosystemLoading ? "…" : ecosystem ? `${ecosystem.meta.assets} ${locale === "ru" ? "объектов" : "нысан"}` : (locale === "ru" ? "Нет ответа" : "Жауап жоқ")}</strong></div>
+                  <div className={`connected-data-item business ${ecosystem && ecosystem.meta.status !== "unavailable" ? "" : "unavailable"}`}><i /><small>{locale === "ru" ? "Проекты и компании" : "Жобалар мен компаниялар"}</small><strong>{ecosystemLoading ? "…" : ecosystem ? `${ecosystem.meta.projects} / ${ecosystem.meta.companies}` : (locale === "ru" ? "Нет ответа" : "Жауап жоқ")}</strong></div>
+                  <div className={`connected-data-item assets ${ecosystem?.meta.assets ? "" : "unavailable"}`}><i /><small>{locale === "ru" ? "Реестр активов" : "Активтер тізілімі"}</small><strong>{ecosystemLoading ? "…" : ecosystem ? `${ecosystem.meta.assets} ${locale === "ru" ? "объектов" : "нысан"}` : (locale === "ru" ? "Нет ответа" : "Жауап жоқ")}</strong></div>
                   <div className={`connected-data-item climate ${!climateLoading && !climate ? "unavailable" : ""}`}><i /><small>{locale === "ru" ? "Температура" : "Температура"}</small><strong>{climateLoading ? "…" : climate?.temperatureC !== null && climate?.temperatureC !== undefined ? `${climate.temperatureC.toFixed(1)} °C` : "—"}</strong></div>
                   <div className={`connected-data-item climate ${!climateLoading && !climate ? "unavailable" : ""}`}><i /><small>{locale === "ru" ? "Осадки" : "Жауын-шашын"}</small><strong>{climateLoading ? "…" : climate?.precipitationMmDay !== null && climate?.precipitationMmDay !== undefined ? `${climate.precipitationMmDay.toFixed(1)} ${locale === "ru" ? "мм/сут" : "мм/тәул"}` : "—"}</strong></div>
                 </div>
@@ -1098,7 +1099,7 @@ export default function Home() {
               </section>
 
               <section className="score-breakdown">
-                <div className="breakdown-title"><h3>{locale === "ru" ? "Из чего состоит оценка" : "Баға неден тұрады"}</h3><small>{alphaRankModel ? "alpha-rank-hybrid-v3" : "alpha-suitability-v2"}</small></div>
+                <div className="breakdown-title"><h3>{locale === "ru" ? "Структура итоговой оценки" : "Қорытынды баға құрылымы"}</h3><small>{alphaRankModel ? (locale === "ru" ? "методика 3.0" : "әдістеме 3.0") : (locale === "ru" ? "базовая методика 2.0" : "базалық әдістеме 2.0")}</small></div>
                 {([
                   [locale === "ru" ? "Земля и культура" : "Жер және дақыл", selectedAnalysis.components.landAndCrop],
                   [t.power, selectedAnalysis.components.electricity],
@@ -1114,7 +1115,7 @@ export default function Home() {
                 {selectedAnalysis.constraints.map((constraint) => <p className={constraint.blocking ? "blocking" : "caution"} key={constraint.code}><b>{constraint.blocking ? "!" : "i"}</b>{constraintLabel(constraint.code, locale, constraint.distanceKm)}</p>)}
               </section>
               {aiLoading || !aiAdvice ? <div className="advice-loading"><span /><strong>{t.checking}</strong></div> : <>
-                <div className="ai-source"><span>✦</span><div><strong>{aiAdvice.title}</strong><small>{aiAdvice.provider === "groq" ? t.aiGroq : t.aiRules}</small></div></div>
+                <div className="analysis-source"><span>02</span><div><strong>{aiAdvice.title}</strong><small>{aiAdvice.provider === "groq" ? t.aiGroq : t.aiRules}</small></div></div>
                 <p className="advice-summary">{aiAdvice.summary}</p>
                 <section className="human-list plus"><h3><span>+</span>{t.pluses}</h3>{aiAdvice.pluses.map((item) => <p key={item}>{item}</p>)}</section>
                 <section className="human-list minus"><h3><span>!</span>{t.minuses}</h3>{aiAdvice.minuses.map((item) => <p key={item}>{item}</p>)}</section>
@@ -1123,14 +1124,14 @@ export default function Home() {
 
               <section className="facts-section">
                 <h3>{locale === "ru" ? "Что находится рядом" : "Жақын жерде не бар"}</h3>
-                <div className="fact-row"><span className="fact-icon power">⚡</span><div><small>{t.power}</small><strong>{selectedAnalysis.distances.powerKm !== null ? `${selectedAnalysis.distances.powerKm} км` : locale === "ru" ? "Нет данных" : "Дерек жоқ"}</strong><em>{locale === "ru" ? "до нанесённой линии/подстанции; мощность не подтверждена" : "картадағы желіге/қосалқы станцияға дейін; қуат расталмаған"}</em></div></div>
+                <div className="fact-row"><span className="fact-icon power">E</span><div><small>{t.power}</small><strong>{selectedAnalysis.distances.powerKm !== null ? `${selectedAnalysis.distances.powerKm} км` : locale === "ru" ? "Нет данных" : "Дерек жоқ"}</strong><em>{locale === "ru" ? "до нанесённой линии/подстанции; мощность не подтверждена" : "картадағы желіге/қосалқы станцияға дейін; қуат расталмаған"}</em></div></div>
                 <div className="fact-row"><span className="fact-icon water">≈</span><div><small>{t.water}</small><strong>{selectedAnalysis.distances.waterKm !== null ? `${selectedAnalysis.distances.waterKm} км` : locale === "ru" ? "Нет данных" : "Дерек жоқ"}</strong><em>{locale === "ru" ? "до нанесённой реки/канала; расход и право не подтверждены" : "картадағы өзенге/каналға дейін; шығын мен құқық расталмаған"}</em></div></div>
                 <div className="fact-row"><span className="fact-icon rail">═</span><div><small>{t.rail}</small><strong>{selectedAnalysis.distances.railKm !== null ? `${selectedAnalysis.distances.railKm} км` : locale === "ru" ? "Нет данных" : "Дерек жоқ"}</strong><em>{locale === "ru" ? "до нанесённой железнодорожной линии" : "картадағы теміржол желісіне дейін"}</em></div></div>
               </section>
 
               <section className="ecosystem-section">
                 <div className="ecosystem-heading">
-                  <div><span className="eyebrow">in-map · {locale === "ru" ? "деловая экосистема" : "іскерлік экожүйе"}</span><h3>{locale === "ru" ? "Партнёры, проекты и активы рядом" : "Жақын серіктестер, жобалар және активтер"}</h3></div>
+                  <div><span className="eyebrow">{locale === "ru" ? "Реестр деловой среды" : "Іскерлік орта тізілімі"}</span><h3>{locale === "ru" ? "Партнёры, проекты и активы рядом" : "Жақын серіктестер, жобалар және активтер"}</h3></div>
                   <strong>+{selectedEcosystem.bonus}</strong>
                 </div>
                 <div className="ecosystem-summary">
@@ -1194,7 +1195,7 @@ export default function Home() {
 
               <details className="technical-details"><summary>{t.indicators}</summary><div className="technical-grid"><div><span>NDVI · {t.vegetation}</span><strong>{selectedCell.ndvi.toFixed(3)}</strong></div><div><span>NDWI · {t.moisture}</span><strong>{selectedCell.ndwi.toFixed(3)}</strong></div><div><span>NDBI · {t.builtDry}</span><strong>{selectedCell.ndbi.toFixed(3)}</strong></div><div><span>{t.dataQuality}</span><strong>{selectedCell.confidence}%</strong></div></div></details>
               <p className="screening-note">{t.dataNote}</p>
-            </> : <div className="no-zone"><span>↖</span><strong>{t.wizardTitle}</strong><p>{t.wizardLead}</p></div>}
+            </> : <div className="no-zone"><span>01</span><strong>{t.wizardTitle}</strong><p>{t.wizardLead}</p></div>}
           </div>
           {selectedCell && aiAdvice && <button type="button" className="download-brief" onClick={downloadBrief}>{t.download} ↓</button>}
         </aside>
