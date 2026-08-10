@@ -15,10 +15,9 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Head, Link, router, usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
-    ChevronLeft,
     ChevronRight,
     ExternalLink,
     Globe,
@@ -39,7 +38,6 @@ import {
 import React, { useState } from 'react';
 import DetailSectionNav from '@/components/detail-section-nav';
 import Map from '@/components/map';
-import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -58,8 +56,6 @@ import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import { index as issuesIndex } from '@/routes/issues';
-import { show as regionShow } from '@/routes/regions';
-import type { PaginatedData } from '@/types';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -160,24 +156,9 @@ interface Stats {
     subsoilIssuesCount: number;
 }
 
-interface ProjectFilters {
-    tab: 'all' | 'sez' | 'iz' | 'prom' | 'subsoil';
-    entity_type: 'sez' | 'iz' | 'prom' | 'subsoil' | null;
-    entity_id: number | null;
-}
-
-interface ProjectStats {
-    count: number;
-    totalInvestment: number;
-}
-
 interface Props {
     region: Region;
-    projects: PaginatedData<InvestmentProject>;
-    projectMapItems: InvestmentProject[];
-    projectIds: number[];
-    projectFilters: ProjectFilters;
-    projectStats: ProjectStats;
+    projects: InvestmentProject[];
     sezs: Sez[];
     industrialZones: IndustrialZone[];
     promZones: PromZone[];
@@ -247,10 +228,6 @@ function SortableProjectRow({
 export default function Show({
     region,
     projects,
-    projectMapItems,
-    projectIds,
-    projectFilters,
-    projectStats,
     sezs,
     industrialZones,
     promZones,
@@ -265,7 +242,7 @@ export default function Show({
         (auth as { user: { role_model?: { name?: string | null } | null } })
             .user?.role_model?.name === 'invest';
 
-    const [activeTab, setActiveTab] = useState(projectFilters.tab);
+    const [activeTab, setActiveTab] = useState('all');
     const [selectedEntityId, setSelectedEntityId] = useState<number | null>(
         null,
     );
@@ -274,25 +251,17 @@ export default function Show({
     >(null);
     const [mapSelectedEntityId, setMapSelectedEntityId] = useState<
         number | null
-    >(projectFilters.entity_id);
+    >(null);
     const [mapSelectedEntityType, setMapSelectedEntityType] = useState<
         'sez' | 'iz' | 'prom' | 'subsoil' | null
-    >(projectFilters.entity_type);
+    >(null);
 
     // Selected entity IDs per tab for filtering projects
-    const [selectedSezId, setSelectedSezId] = useState<number | null>(
-        projectFilters.entity_type === 'sez' ? projectFilters.entity_id : null,
-    );
-    const [selectedIzId, setSelectedIzId] = useState<number | null>(
-        projectFilters.entity_type === 'iz' ? projectFilters.entity_id : null,
-    );
-    const [selectedPromId, setSelectedPromId] = useState<number | null>(
-        projectFilters.entity_type === 'prom' ? projectFilters.entity_id : null,
-    );
+    const [selectedSezId, setSelectedSezId] = useState<number | null>(null);
+    const [selectedIzId, setSelectedIzId] = useState<number | null>(null);
+    const [selectedPromId, setSelectedPromId] = useState<number | null>(null);
     const [selectedSubsoilId, setSelectedSubsoilId] = useState<number | null>(
-        projectFilters.entity_type === 'subsoil'
-            ? projectFilters.entity_id
-            : null,
+        null,
     );
     const [selectedSubsoilStatus, setSelectedSubsoilStatus] = useState<
         string | null
@@ -301,55 +270,21 @@ export default function Show({
         null,
     );
 
-    // Subsoil entities are still paginated locally; projects use the server paginator.
-    const ITEMS_PER_PAGE = 10;
-    const [subsoilPage, setSubsoilPage] = useState(1);
-
-    // Local ordered copy of the current server page for drag-and-drop reordering.
-    const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(
-        projects.data,
-    );
+    // Local ordered copy of projects for drag-and-drop reordering.
+    const [orderedProjects, setOrderedProjects] =
+        useState<InvestmentProject[]>(projects);
     const [isSavingOrder, setIsSavingOrder] = useState(false);
 
-    React.useEffect(() => {
-        setOrderedProjects(projects.data);
-    }, [projects.data]);
-
-    const navigateProjectView = (
-        tab: ProjectFilters['tab'],
-        entityType: ProjectFilters['entity_type'] = null,
-        entityId: number | null = null,
-    ) => {
-        const query: Record<string, string | number> = {};
-
-        if (tab !== 'all') {
-            query.tab = tab;
-        }
-        if (entityType && entityId) {
-            query.entity_type = entityType;
-            query.entity_id = entityId;
-        }
-
-        router.get(regionShow(region.id).url, query, {
-            preserveScroll: true,
-            preserveState: false,
-            replace: true,
-        });
-    };
-
     const handleTabChange = (tab: string) => {
-        const nextTab = tab as ProjectFilters['tab'];
-        setActiveTab(nextTab);
+        setActiveTab(tab);
         setSelectedSezId(null);
         setSelectedIzId(null);
         setSelectedPromId(null);
         setSelectedSubsoilId(null);
         setSelectedSubsoilStatus(null);
         setSelectedProjectId(null);
-        setSubsoilPage(1);
         setMapSelectedEntityId(null);
         setMapSelectedEntityType(null);
-        navigateProjectView(nextTab);
     };
 
     const handleSelectEntity = (
@@ -358,10 +293,9 @@ export default function Show({
     ) => {
         setSelectedEntityId(id);
         setSelectedEntityType(type);
-        navigateProjectView(type, type, id);
     };
 
-    const clearEntityFilter = (tab: ProjectFilters['tab'] = activeTab) => {
+    const clearEntityFilter = () => {
         setSelectedSezId(null);
         setSelectedIzId(null);
         setSelectedPromId(null);
@@ -370,7 +304,6 @@ export default function Show({
         setSelectedEntityType(null);
         setMapSelectedEntityId(null);
         setMapSelectedEntityType(null);
-        navigateProjectView(tab);
     };
 
     const handleMapEntitySelect = (
@@ -413,12 +346,6 @@ export default function Show({
             setSelectedEntityId(id);
             setSelectedEntityType('subsoil');
         }
-
-        if (id && type) {
-            navigateProjectView(type, type, id);
-        } else {
-            clearEntityFilter(activeTab);
-        }
     };
 
     const handleProjectSelect = (projectId: number | null) => {
@@ -426,6 +353,10 @@ export default function Show({
             setSelectedProjectId(null);
         } else {
             setSelectedProjectId(projectId);
+            setSelectedEntityId(null);
+            setSelectedEntityType(null);
+            setMapSelectedEntityId(null);
+            setMapSelectedEntityType(null);
         }
     };
 
@@ -461,6 +392,17 @@ export default function Show({
         );
     }, [orderedProjects, selectedPromId]);
 
+    const subsoilProjects = React.useMemo(() => {
+        if (selectedSubsoilId) {
+            return orderedProjects.filter((p) =>
+                p.subsoil_users?.some((s) => s.id === selectedSubsoilId),
+            );
+        }
+        return orderedProjects.filter(
+            (p) => p.subsoil_users && p.subsoil_users.length > 0,
+        );
+    }, [orderedProjects, selectedSubsoilId]);
+
     // Filtered subsoil users by status
     const filteredSubsoilUsers = React.useMemo(() => {
         if (selectedSubsoilStatus) {
@@ -470,11 +412,6 @@ export default function Show({
         }
         return subsoilUsers;
     }, [subsoilUsers, selectedSubsoilStatus]);
-
-    // Reset the local subsoil entity pagination when its filter changes.
-    React.useEffect(() => {
-        setSubsoilPage(1);
-    }, [selectedSubsoilStatus]);
 
     // Subsoil status counts
     const subsoilStatusCounts = React.useMemo(() => {
@@ -510,101 +447,6 @@ export default function Show({
         return new Intl.NumberFormat('kk-KZ', {
             maximumFractionDigits: 2,
         }).format(area);
-    };
-
-    const renderPagination = (
-        totalItems: number,
-        currentPage: number,
-        setPage: (page: number) => void,
-    ) => {
-        const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE);
-        if (totalPages <= 1) return null;
-
-        const maxVisible = 5;
-        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-        const endPage = Math.min(totalPages, startPage + maxVisible - 1);
-        if (endPage - startPage + 1 < maxVisible) {
-            startPage = Math.max(1, endPage - maxVisible + 1);
-        }
-        const pages = Array.from(
-            { length: endPage - startPage + 1 },
-            (_, i) => startPage + i,
-        );
-
-        return (
-            <div className="flex items-center justify-between border-t border-gray-100 px-4 py-3">
-                <span className="text-xs text-gray-500">
-                    {(currentPage - 1) * ITEMS_PER_PAGE + 1}–
-                    {Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} /{' '}
-                    {totalItems}
-                </span>
-                <div className="flex items-center gap-1">
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={currentPage === 1}
-                        onClick={() => setPage(currentPage - 1)}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    {startPage > 1 && (
-                        <>
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-xs"
-                                onClick={() => setPage(1)}
-                            >
-                                1
-                            </Button>
-                            {startPage > 2 && (
-                                <span className="px-1 text-xs text-gray-400">
-                                    …
-                                </span>
-                            )}
-                        </>
-                    )}
-                    {pages.map((p) => (
-                        <Button
-                            key={p}
-                            variant={p === currentPage ? 'default' : 'ghost'}
-                            size="sm"
-                            className={`h-8 w-8 p-0 text-xs ${p === currentPage ? 'bg-[#0f1b3d] text-white hover:bg-[#0f1b3d]/90' : ''}`}
-                            onClick={() => setPage(p)}
-                        >
-                            {p}
-                        </Button>
-                    ))}
-                    {endPage < totalPages && (
-                        <>
-                            {endPage < totalPages - 1 && (
-                                <span className="px-1 text-xs text-gray-400">
-                                    …
-                                </span>
-                            )}
-                            <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0 text-xs"
-                                onClick={() => setPage(totalPages)}
-                            >
-                                {totalPages}
-                            </Button>
-                        </>
-                    )}
-                    <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0"
-                        disabled={currentPage === totalPages}
-                        onClick={() => setPage(currentPage + 1)}
-                    >
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
-                </div>
-            </div>
-        );
     };
 
     const getSectorDisplay = (project: InvestmentProject) => {
@@ -864,11 +706,21 @@ export default function Show({
         }
     }
 
-    const mapProjects = projectMapItems;
-    const canReorderProjects =
-        (isSuperAdmin || isInvest) &&
-        activeTab === 'all' &&
-        projectFilters.entity_id === null;
+    const mapProjects = React.useMemo(() => {
+        if (activeTab === 'sez') return sezProjects;
+        if (activeTab === 'iz') return izProjects;
+        if (activeTab === 'prom') return promProjects;
+        if (activeTab === 'subsoil') return subsoilProjects;
+        return orderedProjects;
+    }, [
+        activeTab,
+        orderedProjects,
+        sezProjects,
+        izProjects,
+        promProjects,
+        subsoilProjects,
+    ]);
+    const canReorderProjects = isSuperAdmin || isInvest;
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
@@ -892,11 +744,7 @@ export default function Show({
         try {
             await persistOrder(
                 `/regions/${region.id}/projects/reorder`,
-                {
-                    project_ids: newOrder.map((p) => p.id),
-                    page: projects.current_page,
-                    per_page: projects.per_page,
-                },
+                { project_ids: newOrder.map((p) => p.id) },
                 csrfToken,
             );
         } catch {
@@ -923,7 +771,11 @@ export default function Show({
     const [downloadingPresentations, setDownloadingPresentations] =
         useState(false);
 
-    const handleBulkPresentationDownload = (allIds: number[]) => {
+    const handleBulkPresentationDownload = (
+        projectList: InvestmentProject[],
+    ) => {
+        const allIds = projectList.map((project) => project.id);
+
         if (allIds.length === 0) return;
 
         setDownloadingPresentations(true);
@@ -1408,9 +1260,7 @@ export default function Show({
                                                 <Button
                                                     variant="ghost"
                                                     className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                    onClick={() =>
-                                                        clearEntityFilter('all')
-                                                    }
+                                                    onClick={clearEntityFilter}
                                                 >
                                                     Сүзгіні қалпына келтіру
                                                 </Button>
@@ -1476,7 +1326,7 @@ export default function Show({
                                                                     )
                                                                   : orderedProjects;
                                                     handleBulkPresentationDownload(
-                                                        projectIds,
+                                                        filteredProjects,
                                                     );
                                                 }}
                                             >
@@ -1537,7 +1387,7 @@ export default function Show({
                                                                     ),
                                                             )
                                                           : orderedProjects;
-                                            const paginatedAll =
+                                            const displayedProjects =
                                                 filteredProjects;
                                             return (
                                                 <>
@@ -1573,10 +1423,10 @@ export default function Show({
                                                                 </TableRow>
                                                             </TableHeader>
                                                             <TableBody>
-                                                                {paginatedAll.length >
+                                                                {displayedProjects.length >
                                                                 0 ? (
                                                                     <SortableContext
-                                                                        items={paginatedAll.map(
+                                                                        items={displayedProjects.map(
                                                                             (
                                                                                 p,
                                                                             ) =>
@@ -1586,7 +1436,7 @@ export default function Show({
                                                                             verticalListSortingStrategy
                                                                         }
                                                                     >
-                                                                        {paginatedAll.map(
+                                                                        {displayedProjects.map(
                                                                             (
                                                                                 project,
                                                                             ) => (
@@ -1676,10 +1526,6 @@ export default function Show({
                                                             </TableBody>
                                                         </Table>
                                                     </DndContext>
-                                                    <Pagination
-                                                        paginator={projects}
-                                                        preserveScroll
-                                                    />
                                                 </>
                                             );
                                         })()}
@@ -1700,9 +1546,7 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() =>
-                                                    clearEntityFilter('sez')
-                                                }
+                                                onClick={clearEntityFilter}
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -1717,7 +1561,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    projectIds,
+                                                    sezProjects,
                                                 )
                                             }
                                         >
@@ -1845,10 +1689,6 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        <Pagination
-                                            paginator={projects}
-                                            preserveScroll
-                                        />
                                     </div>
                                 </TabsContent>
 
@@ -1866,9 +1706,7 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() =>
-                                                    clearEntityFilter('iz')
-                                                }
+                                                onClick={clearEntityFilter}
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -1883,7 +1721,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    projectIds,
+                                                    izProjects,
                                                 )
                                             }
                                         >
@@ -2011,10 +1849,6 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        <Pagination
-                                            paginator={projects}
-                                            preserveScroll
-                                        />
                                     </div>
                                 </TabsContent>
 
@@ -2032,9 +1866,7 @@ export default function Show({
                                             <Button
                                                 variant="ghost"
                                                 className="h-auto px-2 py-1 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                                                onClick={() =>
-                                                    clearEntityFilter('prom')
-                                                }
+                                                onClick={clearEntityFilter}
                                             >
                                                 Сүзгіні қалпына келтіру
                                             </Button>
@@ -2049,7 +1881,7 @@ export default function Show({
                                             }
                                             onClick={() =>
                                                 handleBulkPresentationDownload(
-                                                    projectIds,
+                                                    promProjects,
                                                 )
                                             }
                                         >
@@ -2177,10 +2009,6 @@ export default function Show({
                                                 </TableBody>
                                             </Table>
                                         </DndContext>
-                                        <Pagination
-                                            paginator={projects}
-                                            preserveScroll
-                                        />
                                     </div>
                                 </TabsContent>
 
@@ -2227,14 +2055,8 @@ export default function Show({
                                             <TableBody>
                                                 {filteredSubsoilUsers.length >
                                                 0 ? (
-                                                    filteredSubsoilUsers
-                                                        .slice(
-                                                            (subsoilPage - 1) *
-                                                                ITEMS_PER_PAGE,
-                                                            subsoilPage *
-                                                                ITEMS_PER_PAGE,
-                                                        )
-                                                        .map((su) => (
+                                                    filteredSubsoilUsers.map(
+                                                        (su) => (
                                                             <TableRow
                                                                 key={su.id}
                                                                 className={`cursor-pointer transition-colors ${selectedSubsoilId === su.id ? 'border-l-2 border-l-gray-500 bg-gray-100' : 'hover:bg-gray-50'}`}
@@ -2253,9 +2075,7 @@ export default function Show({
                                                                             'subsoil',
                                                                         );
                                                                     } else {
-                                                                        clearEntityFilter(
-                                                                            'subsoil',
-                                                                        );
+                                                                        clearEntityFilter();
                                                                     }
                                                                 }}
                                                             >
@@ -2305,7 +2125,8 @@ export default function Show({
                                                                         : '—'}
                                                                 </TableCell>
                                                             </TableRow>
-                                                        ))
+                                                        ),
+                                                    )
                                                 ) : (
                                                     <TableRow>
                                                         <TableCell
@@ -2319,11 +2140,6 @@ export default function Show({
                                                 )}
                                             </TableBody>
                                         </Table>
-                                        {renderPagination(
-                                            filteredSubsoilUsers.length,
-                                            subsoilPage,
-                                            setSubsoilPage,
-                                        )}
                                     </div>
                                 </TabsContent>
                             </div>
@@ -2499,7 +2315,15 @@ export default function Show({
                                                 ? Number(selectedSez.total_area)
                                                 : totalSezArea;
                                             const displayInvestment =
-                                                projectStats.totalInvestment;
+                                                sezProjects.reduce(
+                                                    (total, project) =>
+                                                        total +
+                                                        Number(
+                                                            project.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
                                             const displayIssues = selectedSez
                                                 ? (selectedSez.issues_count ??
                                                   0)
@@ -2508,7 +2332,7 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {projectStats.count}
+                                                            {sezProjects.length}
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -2569,9 +2393,7 @@ export default function Show({
                                                             ? 'border-l-2 border-l-violet-500 bg-violet-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() =>
-                                                        clearEntityFilter('sez')
-                                                    }
+                                                    onClick={clearEntityFilter}
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Building2 className="h-4 w-4 shrink-0 text-violet-500" />
@@ -2678,7 +2500,15 @@ export default function Show({
                                                 ? Number(selectedIz.total_area)
                                                 : totalIzArea;
                                             const displayInvestment =
-                                                projectStats.totalInvestment;
+                                                izProjects.reduce(
+                                                    (total, project) =>
+                                                        total +
+                                                        Number(
+                                                            project.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
                                             const displayIssues = selectedIz
                                                 ? (selectedIz.issues_count ?? 0)
                                                 : stats.izIssuesCount;
@@ -2686,7 +2516,7 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {projectStats.count}
+                                                            {izProjects.length}
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -2747,9 +2577,7 @@ export default function Show({
                                                             ? 'border-l-2 border-l-amber-500 bg-amber-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() =>
-                                                        clearEntityFilter('iz')
-                                                    }
+                                                    onClick={clearEntityFilter}
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Factory className="h-4 w-4 shrink-0 text-amber-500" />
@@ -2863,7 +2691,15 @@ export default function Show({
                                                   )
                                                 : totalPromArea;
                                             const displayInvestment =
-                                                projectStats.totalInvestment;
+                                                promProjects.reduce(
+                                                    (total, project) =>
+                                                        total +
+                                                        Number(
+                                                            project.total_investment ||
+                                                                0,
+                                                        ),
+                                                    0,
+                                                );
                                             const displayIssues = selectedProm
                                                 ? (selectedProm.issues_count ??
                                                   0)
@@ -2872,7 +2708,9 @@ export default function Show({
                                                 <div className="grid grid-cols-2 gap-x-4 gap-y-8">
                                                     <div>
                                                         <div className="mb-1 text-2xl font-semibold tracking-tight text-[#0f1b3d]">
-                                                            {projectStats.count}
+                                                            {
+                                                                promProjects.length
+                                                            }
                                                         </div>
                                                         <div className="text-xs font-medium text-gray-500">
                                                             Жобалар саны
@@ -2933,11 +2771,7 @@ export default function Show({
                                                             ? 'border-l-2 border-l-emerald-500 bg-emerald-50'
                                                             : 'hover:bg-gray-50'
                                                     }`}
-                                                    onClick={() =>
-                                                        clearEntityFilter(
-                                                            'prom',
-                                                        )
-                                                    }
+                                                    onClick={clearEntityFilter}
                                                 >
                                                     <div className="flex min-w-0 items-center gap-2">
                                                         <Factory className="h-4 w-4 shrink-0 text-emerald-500" />
