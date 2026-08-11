@@ -5,7 +5,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Group } from 'three'
 import { MathUtils, Path, Shape, Vector3 } from 'three'
 import { index as issuesIndex } from '@/routes/issues'
-import districtsRaw from './data/turkistan-districts.geojson?raw'
 import elevationRaw from './data/turkistan-elevation.json?raw'
 import boundaryRaw from './data/turkistan-region.geojson?raw'
 import './inmap.css'
@@ -27,14 +26,17 @@ interface ElevationData {
 }
 
 interface DistrictData {
+  type: 'FeatureCollection'
   features: Array<{
+    id: string
     properties: {
-      osmId: string
       name: string
+      name_kk: string
+      kind: 'district' | 'city'
     }
     geometry: {
-      type: 'MultiLineString'
-      coordinates: GeoCoordinate[][]
+      type: 'MultiPolygon'
+      coordinates: GeoCoordinate[][][]
     }
   }>
 }
@@ -104,7 +106,6 @@ interface DistrictMapModel {
 
 const boundaryData = JSON.parse(boundaryRaw) as BoundaryData
 const elevationData = JSON.parse(elevationRaw) as ElevationData
-const districtData = JSON.parse(districtsRaw) as DistrictData
 const regionRings = boundaryData.features[0].geometry.coordinates
 const [minLongitude, minLatitude, maxLongitude, maxLatitude] =
   elevationData.bbox
@@ -261,51 +262,196 @@ function createRegionShape() {
   return shape
 }
 
-function getDistrictDisplayName(name: string) {
-  const displayNames: Record<string, string> = {
-    'Арысь городская администрация': 'Арыс қаласы',
-    'городская администрация Кентау': 'Кентау қаласы',
-    'район Байдибека': 'Бәйдібек ауданы',
-    'Туркестан Г.А.': 'Түркістан қаласы',
+const districtRegionNames: Record<string, string> = {
+  'kz.61.10': 'Түркістан қаласы',
+  'kz.61.16': 'Арыс қаласы',
+  'kz.61.20': 'Кентау қаласы',
+  'kz.61.36': 'Бәйдібек ауданы',
+  'kz.61.38': 'Жетісай ауданы',
+  'kz.61.39': 'Келес ауданы',
+  'kz.61.40': 'Қазығұрт ауданы',
+  'kz.61.44': 'Мақтаарал ауданы',
+  'kz.61.46': 'Ордабасы ауданы',
+  'kz.61.48': 'Отырар ауданы',
+  'kz.61.52': 'Сайрам ауданы',
+  'kz.61.54': 'Сарыағаш ауданы',
+  'kz.61.55': 'Сауран ауданы',
+  'kz.61.56': 'Созақ ауданы',
+  'kz.61.58': 'Төлеби ауданы',
+  'kz.61.60': 'Түлкібас ауданы',
+  'kz.61.64': 'Шардара ауданы',
+}
+
+const TURKISTAN_CITY_ID = 'kz.61.10'
+const SAURAN_DISTRICT_ID = 'kz.61.55'
+
+function coordinateKey(coordinate: GeoCoordinate) {
+  return `${coordinate[0]},${coordinate[1]}`
+}
+
+function openDistrictRing(coordinates: GeoCoordinate[]) {
+  const first = coordinates[0]
+  const last = coordinates[coordinates.length - 1]
+
+  return coordinateKey(first) === coordinateKey(last)
+    ? coordinates.slice(0, -1)
+    : [...coordinates]
+}
+
+function mergeTouchingDistrictRings(
+  baseRing: GeoCoordinate[],
+  attachedRing: GeoCoordinate[],
+) {
+  type Edge = { from: GeoCoordinate; to: GeoCoordinate }
+
+  const remainingEdges = new Map<string, Edge>()
+  const rings = [openDistrictRing(baseRing), openDistrictRing(attachedRing)]
+  let sourceEdgeCount = 0
+
+  rings.forEach((ring) => {
+    ring.forEach((from, index) => {
+      const to = ring[(index + 1) % ring.length]
+      const edgeKey = `${coordinateKey(from)}>${coordinateKey(to)}`
+      const reverseEdgeKey = `${coordinateKey(to)}>${coordinateKey(from)}`
+
+      sourceEdgeCount += 1
+      if (remainingEdges.has(reverseEdgeKey)) {
+        remainingEdges.delete(reverseEdgeKey)
+      } else {
+        remainingEdges.set(edgeKey, { from, to })
+      }
+    })
+  })
+
+  if (remainingEdges.size === sourceEdgeCount) return null
+
+  const edgesByStart = new Map<string, Edge>()
+  for (const edge of remainingEdges.values()) {
+    const startKey = coordinateKey(edge.from)
+    if (edgesByStart.has(startKey)) return null
+    edgesByStart.set(startKey, edge)
   }
 
-  return displayNames[name] ?? name
+  const firstEdge = remainingEdges.values().next().value as Edge | undefined
+  if (!firstEdge) return null
+
+  const mergedRing: GeoCoordinate[] = [firstEdge.from]
+  const visitedEdges = new Set<string>()
+  let currentEdge: Edge | undefined = firstEdge
+
+  while (currentEdge) {
+    const edgeKey = `${coordinateKey(currentEdge.from)}>${coordinateKey(currentEdge.to)}`
+    if (visitedEdges.has(edgeKey)) return null
+
+    visitedEdges.add(edgeKey)
+    mergedRing.push(currentEdge.to)
+
+    if (coordinateKey(currentEdge.to) === coordinateKey(firstEdge.from)) {
+      break
+    }
+
+    currentEdge = edgesByStart.get(coordinateKey(currentEdge.to))
+  }
+
+  return visitedEdges.size === remainingEdges.size ? mergedRing : null
 }
 
-const districtRegionNames: Record<string, string> = {
-  'Арысь городская администрация': 'Арыс қаласы',
-  'городская администрация Кентау': 'Кентау қаласы',
-  'Жетисайский район': 'Жетісай ауданы',
-  'Казыгуртский район': 'Қазығұрт ауданы',
-  'Келесский район': 'Келес ауданы',
-  'Мактааральский район': 'Мақтаарал ауданы',
-  'Ордабасынский район': 'Ордабасы ауданы',
-  'Отрарский район': 'Отырар ауданы',
-  'район Байдибека': 'Бәйдібек ауданы',
-  'Сайрамский район': 'Сайрам ауданы',
-  'Сарыагашский район': 'Сарыағаш ауданы',
-  'Сауранский район': 'Сауран ауданы',
-  'Сузакский район': 'Созақ ауданы',
-  'Толебийский район': 'Төлеби ауданы',
-  'Туркестан Г.А.': 'Түркістан қаласы',
-  'Тюлькубасский район': 'Түлкібас ауданы',
-  'Шардаринский район': 'Шардара ауданы',
+function districtPolygonArea(polygon: GeoCoordinate[][]) {
+  const ring = polygon[0]
+  let area = 0
+
+  for (let index = 0; index < ring.length; index += 1) {
+    const current = ring[index]
+    const next = ring[(index + 1) % ring.length]
+    area += current[0] * next[1] - next[0] * current[1]
+  }
+
+  return Math.abs(area / 2)
 }
 
-function simplifyDistrictRing(coordinates: GeoCoordinate[]) {
-  const maximumPoints = 240
-  const step = Math.max(1, Math.ceil(coordinates.length / maximumPoints))
-  const simplified = coordinates.filter(
-    (_, index) => index % step === 0 || index === coordinates.length - 1,
+function moveDetachedTurkistanZoneToSauran(data: DistrictData): DistrictData {
+  const turkistan = data.features.find(
+    (feature) => feature.id === TURKISTAN_CITY_ID,
   )
-  const first = simplified[0]
-  const last = simplified[simplified.length - 1]
+  const sauran = data.features.find(
+    (feature) => feature.id === SAURAN_DISTRICT_ID,
+  )
+
+  if (!turkistan || !sauran || turkistan.geometry.coordinates.length < 2) {
+    return data
+  }
+
+  const mainPolygon = turkistan.geometry.coordinates.reduce(
+    (largest, polygon) =>
+      districtPolygonArea(polygon) > districtPolygonArea(largest)
+        ? polygon
+        : largest,
+  )
+  const sauranPolygons = sauran.geometry.coordinates.map((polygon) =>
+    polygon.map((ring) => [...ring]),
+  )
+  const retainedTurkistanPolygons = [mainPolygon]
+
+  for (const polygon of turkistan.geometry.coordinates) {
+    if (polygon === mainPolygon) continue
+
+    let wasMoved = false
+    for (let index = 0; index < sauranPolygons.length; index += 1) {
+      const mergedOuterRing = mergeTouchingDistrictRings(
+        sauranPolygons[index][0],
+        polygon[0],
+      )
+      if (!mergedOuterRing) continue
+
+      sauranPolygons[index] = [
+        mergedOuterRing,
+        ...sauranPolygons[index].slice(1),
+      ]
+      wasMoved = true
+      break
+    }
+
+    if (!wasMoved) retainedTurkistanPolygons.push(polygon)
+  }
+
+  return {
+    ...data,
+    features: data.features.map((feature) => {
+      if (feature.id === TURKISTAN_CITY_ID) {
+        return {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: retainedTurkistanPolygons,
+          },
+        }
+      }
+
+      if (feature.id === SAURAN_DISTRICT_ID) {
+        return {
+          ...feature,
+          geometry: {
+            ...feature.geometry,
+            coordinates: sauranPolygons,
+          },
+        }
+      }
+
+      return feature
+    }),
+  }
+}
+
+function closeDistrictRing(coordinates: GeoCoordinate[]) {
+  const ring = [...coordinates]
+  const first = ring[0]
+  const last = ring[ring.length - 1]
 
   if (first[0] !== last[0] || first[1] !== last[1]) {
-    simplified.push(first)
+    ring.push(first)
   }
 
-  return simplified
+  return ring
 }
 
 function addDistrictRingToPath(
@@ -363,13 +509,16 @@ function createDistrictShapes(rings: GeoCoordinate[][]) {
   })
 }
 
-function buildDistrictMapModels(regions: DashboardRegion[]): {
+function buildDistrictMapModels(
+  regions: DashboardRegion[],
+  districtData: DistrictData,
+): {
   models: DistrictMapModel[]
 } {
   const regionsByName = new Map(regions.map((region) => [region.name, region]))
 
   const models = districtData.features.map((district) => {
-    const rings = district.geometry.coordinates.map(simplifyDistrictRing)
+    const rings = district.geometry.coordinates.flat().map(closeDistrictRing)
     const projectedPoints = rings.flatMap((ring) =>
       ring.map((coordinate) => projectCoordinate(coordinate)),
     )
@@ -377,14 +526,16 @@ function buildDistrictMapModels(regions: DashboardRegion[]): {
     const maximumX = Math.max(...projectedPoints.map((point) => point.x))
     const minimumZ = Math.min(...projectedPoints.map((point) => point.z))
     const maximumZ = Math.max(...projectedPoints.map((point) => point.z))
-    const region = regionsByName.get(
-      districtRegionNames[district.properties.name],
-    )
+    const region = regionsByName.get(districtRegionNames[district.id])
 
     const model: DistrictMapModel = {
-      id: district.properties.osmId,
+      id: district.id,
       regionId: region?.id ?? null,
-      name: region?.name ?? getDistrictDisplayName(district.properties.name),
+      name:
+        region?.name ??
+        districtRegionNames[district.id] ??
+        district.properties.name_kk ??
+        district.properties.name,
       center: {
         x: (minimumX + maximumX) / 2,
         z: (minimumZ + maximumZ) / 2,
@@ -738,10 +889,39 @@ function DistrictExplorer({
   const [activeIndicatorKey, setActiveIndicatorKey] =
     useState<IndicatorKey>('investment')
   const [mapMenuOpen, setMapMenuOpen] = useState(false)
+  const [districtData, setDistrictData] = useState<DistrictData | null>(null)
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    fetch('/data/turkestan-districts.json', { signal: controller.signal })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`District map request failed: ${response.status}`)
+        }
+
+        return response.json() as Promise<DistrictData>
+      })
+      .then((data) =>
+        setDistrictData(moveDetachedTurkistanZoneToSauran(data)),
+      )
+      .catch((error: unknown) => {
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          return
+        }
+
+        setDistrictData(null)
+      })
+
+    return () => controller.abort()
+  }, [])
 
   const { models: districtMapModels } = useMemo(
-    () => buildDistrictMapModels(regions),
-    [regions],
+    () =>
+      districtData
+        ? buildDistrictMapModels(regions, districtData)
+        : { models: [] },
+    [districtData, regions],
   )
 
   const selectedDistrict =

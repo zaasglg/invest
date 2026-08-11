@@ -2,26 +2,27 @@ import { Html, Line, Scroll, ScrollControls, useScroll } from '@react-three/drei
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MutableRefObject } from 'react'
+import type {
+  GridHelper,
+  Group,
+  InstancedMesh,
+  Mesh,
+  MeshBasicMaterial,
+  MeshStandardMaterial,
+  PointLight} from 'three';
 import {
   BufferGeometry,
   Color,
   Float32BufferAttribute,
-  GridHelper,
-  Group,
-  InstancedMesh,
   MathUtils,
-  Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
   Object3D,
   Path,
   PerspectiveCamera,
-  PointLight,
   Shape,
   Vector3,
 } from 'three'
-import elevationRaw from './data/turkistan-elevation.json?raw'
 import districtsRaw from './data/turkistan-districts.geojson?raw'
+import elevationRaw from './data/turkistan-elevation.json?raw'
 import boundaryRaw from './data/turkistan-region.geojson?raw'
 import './inmap.css'
 
