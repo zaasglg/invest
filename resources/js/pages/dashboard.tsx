@@ -9,7 +9,7 @@ interface Region {
     name: string;
     color?: string | null;
     icon?: string | null;
-    subtype?: string | null;
+    subtype?: 'district' | 'city' | null;
     geometry:
         | { lat: number; lng: number }[]
         | { lat: number; lng: number }[][]

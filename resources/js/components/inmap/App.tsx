@@ -50,6 +50,7 @@ interface DashboardRegion {
   id: number
   name: string
   color?: string | null
+  subtype?: 'district' | 'city' | null
   geometry?: LatLngPoint[] | LatLngPoint[][] | null
 }
 
@@ -98,6 +99,7 @@ interface DistrictMapModel {
   id: string
   regionId: number | null
   name: string
+  subtype: 'district' | 'city' | null
   center: { x: number; z: number }
   extent: number
   shapes: Shape[]
@@ -536,6 +538,7 @@ function buildDistrictMapModels(
         districtRegionNames[district.id] ??
         district.properties.name_kk ??
         district.properties.name,
+      subtype: region?.subtype ?? null,
       center: {
         x: (minimumX + maximumX) / 2,
         z: (minimumZ + maximumZ) / 2,
@@ -1251,7 +1254,9 @@ function DistrictExplorer({
               href={`/regions/${selectedDistrict.regionId}`}
               className="district-analytics__open"
               >
-                Аудан бетін ашу
+                {selectedDistrict.subtype === 'city'
+                  ? 'Қала бетіне өту'
+                  : 'Аудан бетіне өту'}
                 <span aria-hidden="true">→</span>
               </Link>
             )}
