@@ -51,6 +51,7 @@ interface DashboardRegion {
   name: string
   color?: string | null
   subtype?: 'district' | 'city' | null
+  sort_order?: number | null
   geometry?: LatLngPoint[] | LatLngPoint[][] | null
 }
 
@@ -100,6 +101,7 @@ interface DistrictMapModel {
   regionId: number | null
   name: string
   subtype: 'district' | 'city' | null
+  sortOrder: number | null
   center: { x: number; z: number }
   extent: number
   shapes: Shape[]
@@ -539,6 +541,7 @@ function buildDistrictMapModels(
         district.properties.name_kk ??
         district.properties.name,
       subtype: region?.subtype ?? null,
+      sortOrder: region?.sort_order ?? null,
       center: {
         x: (minimumX + maximumX) / 2,
         z: (minimumZ + maximumZ) / 2,
@@ -1067,8 +1070,11 @@ function DistrictExplorer({
                   </button>
                   {districtMapModels
                     .slice()
-                    .sort((first, second) =>
-                      first.name.localeCompare(second.name, 'kk'),
+                    .sort(
+                      (first, second) =>
+                        (first.sortOrder ?? Number.MAX_SAFE_INTEGER) -
+                          (second.sortOrder ?? Number.MAX_SAFE_INTEGER) ||
+                        first.name.localeCompare(second.name, 'kk'),
                     )
                     .map((district) => (
                       <button
@@ -1206,7 +1212,7 @@ function DistrictExplorer({
                   <span>
                     {activeIndicatorKey === 'problems'
                       ? 'Секторлар бойынша'
-                      : `${yearRangeLabel} аралығындағы өзгеріс`}
+                      : `${yearRangeLabel} аралығында басталған жобалар`}
                   </span>
                   <h3>{activeIndicator.label}</h3>
                 </div>
