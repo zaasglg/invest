@@ -130,7 +130,7 @@ const indicatorDefinitions: IndicatorDefinition[] = [
     key: 'investment',
     label: 'Жобаларға салынған инвестициялар',
     shortLabel: 'Инвестициялар',
-    unit: 'млн ₸',
+    unit: '₸',
     decimals: 1,
     color: '#22d3ee',
   },
@@ -606,26 +606,46 @@ function getYearlySeries(
   )
 }
 
-function toDisplayValue(key: IndicatorKey, value: number) {
-  if (key === 'investment') {
-    return value / 1_000_000
+function getAnalyticsDisplay(
+  value: number,
+  indicator: IndicatorDefinition,
+): { value: string; unit: string } {
+  let divisor = 1
+  let unit = indicator.unit
+
+  if (indicator.key === 'investment') {
+    const absoluteValue = Math.abs(value)
+
+    if (absoluteValue >= 1_000_000_000) {
+      divisor = 1_000_000_000
+      unit = 'млрд ₸'
+    } else if (absoluteValue >= 1_000_000) {
+      divisor = 1_000_000
+      unit = 'млн ₸'
+    } else if (absoluteValue >= 1_000) {
+      divisor = 1_000
+      unit = 'мың ₸'
+    }
   }
 
-  return value
-}
-
-function formatAnalyticsValue(value: number, indicator: IndicatorDefinition) {
-  return new Intl.NumberFormat('kk-KZ', {
-    minimumFractionDigits: indicator.decimals,
-    maximumFractionDigits: indicator.decimals,
-  }).format(value)
+  return {
+    value: new Intl.NumberFormat('kk-KZ', {
+      minimumFractionDigits:
+        indicator.key === 'investment' ? 0 : indicator.decimals,
+      maximumFractionDigits: indicator.decimals,
+    }).format(value / divisor),
+    unit,
+  }
 }
 
 function growthPercent(values: number[]) {
-  const first = values.find((value) => value > 0) ?? 0
-  const last = values[values.length - 1] ?? 0
+  const firstIndex = values.findIndex((value) => value > 0)
+  const lastIndex = values.length - 1
 
-  if (first <= 0) return null
+  if (firstIndex < 0 || firstIndex === lastIndex) return null
+
+  const first = values[firstIndex]
+  const last = values[values.length - 1] ?? 0
 
   return ((last - first) / first) * 100
 }
@@ -852,26 +872,36 @@ function AnalyticsBarChart({
 
   return (
     <div className="analytics-chart" aria-label={indicator.label}>
-      {values.map((value, index) => (
-        <div
-          className="analytics-chart__column"
-          key={`${labels[index]}-${index}`}
-        >
-          <span className="analytics-chart__value">
-            {formatAnalyticsValue(value, indicator)}
-          </span>
-          <div className="analytics-chart__track">
-            <div
-              className="analytics-chart__bar"
-              style={{
-                height: `${Math.max(10, (value / maximum) * 100)}%`,
-                backgroundColor: indicator.color,
-              }}
-            />
+      {values.map((value, index) => {
+        const displayValue = getAnalyticsDisplay(value, indicator)
+
+        return (
+          <div
+            className="analytics-chart__column"
+            key={`${labels[index]}-${index}`}
+          >
+            <span className="analytics-chart__value">
+              {displayValue.value}
+              {indicator.key === 'investment' && value !== 0 && (
+                <small> {displayValue.unit.replace(' ₸', '')}</small>
+              )}
+            </span>
+            <div className="analytics-chart__track">
+              <div
+                className="analytics-chart__bar"
+                style={{
+                  height:
+                    value > 0
+                      ? `${Math.max(10, (value / maximum) * 100)}%`
+                      : '0%',
+                  backgroundColor: indicator.color,
+                }}
+              />
+            </div>
+            <strong>{labels[index]}</strong>
           </div>
-          <strong>{labels[index]}</strong>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -959,7 +989,7 @@ function DistrictExplorer({
     ) ?? indicatorDefinitions[0]
 
   const kpiValues: Record<IndicatorKey, number> = {
-    investment: toDisplayValue('investment', sectorRow.investment),
+    investment: sectorRow.investment,
     projects: sectorRow.projectCount ?? 0,
     jobs: sectorRow.jobCount ?? 0,
     problems: totalProblemCount,
@@ -967,15 +997,10 @@ function DistrictExplorer({
 
   const chartValues =
     activeIndicatorKey === 'problems'
-      ? problemSectorLabels.map((sector) =>
-          toDisplayValue(
-            'problems',
-            sectorData[sector.key]?.problemCount ?? 0,
-          ),
+      ? problemSectorLabels.map(
+          (sector) => sectorData[sector.key]?.problemCount ?? 0,
         )
-      : yearly[activeIndicatorKey].map((value) =>
-          toDisplayValue(activeIndicatorKey, value),
-        )
+      : yearly[activeIndicatorKey]
 
   const chartLabels =
     activeIndicatorKey === 'problems'
@@ -1135,26 +1160,25 @@ function DistrictExplorer({
                 const seriesGrowth =
                   indicator.key === 'problems'
                     ? null
-                    : growthPercent(
-                        yearly[indicator.key].map((item) =>
-                          toDisplayValue(indicator.key, item),
-                        ),
-                      )
+                    : growthPercent(yearly[indicator.key])
+                const displayValue = getAnalyticsDisplay(value, indicator)
 
                 const content = (
                   <>
                     <span>{indicator.shortLabel}</span>
                     <strong>
-                      {formatAnalyticsValue(value, indicator)}
-                      <small>{indicator.unit}</small>
+                      {displayValue.value}
+                      <small>{displayValue.unit}</small>
                     </strong>
-                    {seriesGrowth !== null ? (
+                    {indicator.key === 'problems' ? (
+                      <p>Жоба + 4 сектор →</p>
+                    ) : seriesGrowth !== null ? (
                       <p>
                         {seriesGrowth >= 0 ? '+' : ''}
                         {seriesGrowth.toFixed(1)}% кезең ішінде
                       </p>
                     ) : (
-                      <p>Жоба + 4 сектор →</p>
+                      <p>Салыстыруға дерек жоқ</p>
                     )}
                   </>
                 )
