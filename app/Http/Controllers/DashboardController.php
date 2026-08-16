@@ -186,7 +186,7 @@ class DashboardController extends Controller
         $regionYearly = $hasScopedProjects
             ? $this->buildRegionYearlyStats($investSubRole, $investorId)
             : Cache::remember(
-                'dashboard.region_yearly',
+                'dashboard.region_yearly.start_date',
                 300,
                 fn () => $this->buildRegionYearlyStats(null)
             );
@@ -366,7 +366,7 @@ class DashboardController extends Controller
     }
 
     /**
-     * Yearly investment / project / jobs series for the last 5 years.
+     * Investment / project / jobs series grouped by project start year.
      *
      * @return array{
      *     years: list<int>,
@@ -381,15 +381,16 @@ class DashboardController extends Controller
         $currentYear = (int) now()->year;
         $years = range($currentYear - 4, $currentYear);
         $yearExpr = match (DB::getDriverName()) {
-            'pgsql' => 'EXTRACT(YEAR FROM investment_projects.created_at)::int',
-            'sqlite' => "CAST(strftime('%Y', investment_projects.created_at) AS INTEGER)",
-            default => 'YEAR(investment_projects.created_at)',
+            'pgsql' => 'EXTRACT(YEAR FROM investment_projects.start_date)::int',
+            'sqlite' => "CAST(strftime('%Y', investment_projects.start_date) AS INTEGER)",
+            default => 'YEAR(investment_projects.start_date)',
         };
 
         $rows = $this->projects($subRole, $investorId)
             ->whereNotNull('region_id')
+            ->whereNotNull('investment_projects.start_date')
             ->where(
-                'investment_projects.created_at',
+                'investment_projects.start_date',
                 '>=',
                 now()->subYears(4)->startOfYear()
             )

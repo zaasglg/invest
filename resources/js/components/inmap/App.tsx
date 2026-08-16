@@ -1206,7 +1206,7 @@ function DistrictExplorer({
                   <span>
                     {activeIndicatorKey === 'problems'
                       ? 'Секторлар бойынша'
-                      : `${yearRangeLabel} аралығындағы өзгеріс`}
+                      : `${yearRangeLabel} аралығында басталған жобалар`}
                   </span>
                   <h3>{activeIndicator.label}</h3>
                 </div>

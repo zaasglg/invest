@@ -20,6 +20,7 @@ class DashboardCache
             'dashboard.regions.v2',
             'dashboard.region_stats',
             'dashboard.region_yearly',
+            'dashboard.region_yearly.start_date',
             'dashboard.sector_summary',
         ];
 
