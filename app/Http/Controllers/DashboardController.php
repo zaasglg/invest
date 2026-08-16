@@ -155,12 +155,12 @@ class DashboardController extends Controller
 
         // $regions = Cache::remember('dashboard.regions.v2', 3600, function () {
         //     return Region::where('type', 'district')
-        //         ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
+        //         ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry', 'sort_order')
         //         ->orderBy('sort_order','asc')
         //         ->get();
         // });
         $regions = Region::where('type', 'district')
-            ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry')
+            ->select('id', 'name', 'color', 'icon', 'subtype', 'geometry', 'sort_order')
             ->when(
                 $this->hasRegionScope(),
                 fn ($query) => $query->whereIn(
