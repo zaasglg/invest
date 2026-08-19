@@ -1,7 +1,7 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Support\Facades\Notification;
 
 test('reset password link screen can be rendered', function () {
@@ -17,7 +17,7 @@ test('reset password link can be requested', function () {
 
     $this->post(route('password.email'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    Notification::assertSentTo($user, ResetPasswordNotification::class);
 });
 
 test('reset password screen can be rendered', function () {
@@ -27,7 +27,7 @@ test('reset password screen can be rendered', function () {
 
     $this->post(route('password.email'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
+    Notification::assertSentTo($user, ResetPasswordNotification::class, function ($notification) {
         $response = $this->get(route('password.reset', $notification->token));
 
         $response->assertOk();
@@ -43,7 +43,7 @@ test('password can be reset with valid token', function () {
 
     $this->post(route('password.email'), ['email' => $user->email]);
 
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
+    Notification::assertSentTo($user, ResetPasswordNotification::class, function ($notification) use ($user) {
         $response = $this->post(route('password.update'), [
             'token' => $notification->token,
             'email' => $user->email,
@@ -70,4 +70,36 @@ test('password cannot be reset with invalid token', function () {
     ]);
 
     $response->assertSessionHasErrors('email');
+});
+
+test('password reset email uses the localized branded template', function () {
+    Notification::fake();
+
+    $user = User::factory()->create([
+        'full_name' => 'Тест Пайдаланушы',
+    ]);
+
+    $this->post(route('password.email'), ['email' => $user->email]);
+
+    Notification::assertSentTo(
+        $user,
+        ResetPasswordNotification::class,
+        function (ResetPasswordNotification $notification) use ($user) {
+            $message = $notification->toMail($user);
+
+            expect($message->subject)
+                ->toBe('IN-MAP · Құпиясөзді қалпына келтіру')
+                ->and($message->view)
+                ->toBe([
+                    'html' => 'emails.auth.reset-password',
+                    'text' => 'emails.auth.reset-password-text',
+                ])
+                ->and($message->viewData['url'])
+                ->toContain('/reset-password/')
+                ->and($message->viewData['user']->is($user))
+                ->toBeTrue();
+
+            return true;
+        }
+    );
 });

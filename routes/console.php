@@ -22,3 +22,8 @@ Schedule::command('photos:check-weekly')
     ->weeklyOn(1, '09:00')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
+
+Schedule::command('applications:expire-reservations')
+    ->hourly()
+    ->timezone(config('app.timezone'))
+    ->withoutOverlapping();

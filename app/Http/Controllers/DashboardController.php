@@ -34,6 +34,10 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $roleName = $user?->load(['roleModel', 'region'])->roleModel?->name;
+
+        if ($roleName === 'applicant') {
+            return redirect()->route('applicant.portal');
+        }
         $investSubRole = ($roleName === 'invest'
             && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
             ? $user->invest_sub_role

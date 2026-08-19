@@ -19,6 +19,7 @@ interface ProjectTypeMultiSelectProps {
     value: string[];
     onChange: (value: string[]) => void;
     hasError?: boolean;
+    placeholder?: string;
 }
 
 export default function ProjectTypeMultiSelect({
@@ -27,6 +28,7 @@ export default function ProjectTypeMultiSelect({
     value,
     onChange,
     hasError = false,
+    placeholder = 'Жоба түрлерін таңдаңыз',
 }: ProjectTypeMultiSelectProps) {
     const selectedTypes = options.filter((option) =>
         value.includes(option.id.toString()),
@@ -63,7 +65,7 @@ export default function ProjectTypeMultiSelect({
                                 )}
                             >
                                 {selectedTypes.length === 0
-                                    ? 'Жоба түрлерін таңдаңыз'
+                                    ? placeholder
                                     : `${selectedTypes.length} түр таңдалды`}
                             </span>
                         </span>

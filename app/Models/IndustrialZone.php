@@ -50,6 +50,11 @@ class IndustrialZone extends Model
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_industrial_zone');
     }
 
+    public function investmentApplications()
+    {
+        return $this->morphMany(InvestmentApplication::class, 'zoneable');
+    }
+
     public function photos()
     {
         return $this->hasMany(IndustrialZonePhoto::class);

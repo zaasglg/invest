@@ -124,6 +124,10 @@ class CheckRoleAccess
 
         $routeName = $request->route()?->getName();
 
+        if ($roleName === 'applicant') {
+            abort(403, 'Өтінім берушіге бұл ішкі бөлім қолжетімсіз.');
+        }
+
         if ($roleName === 'investor') {
             if (! $routeName
                 || ! in_array($routeName, $this->investorProjectRoutes, true)) {

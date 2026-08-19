@@ -72,6 +72,12 @@ class RoleAndUserSeeder extends Seeder
                     'role' => 'invest',
                 ],
             ],
+            [
+                'name' => 'applicant',
+                'display_name' => 'Өтінім беруші',
+                'description' => 'Өзін-өзі тіркейтін әлеуетті инвестор',
+                'user' => null,
+            ],
         ];
 
         foreach ($roles as $roleData) {
@@ -82,6 +88,10 @@ class RoleAndUserSeeder extends Seeder
                     'description' => $roleData['description'],
                 ]
             );
+
+            if (! $roleData['user']) {
+                continue;
+            }
 
             User::firstOrCreate(
                 ['email' => $roleData['user']['email']],

@@ -2,6 +2,9 @@
 
 use App\Http\Middleware\AuthenticateApiClient;
 use App\Http\Middleware\CheckRoleAccess;
+use App\Http\Middleware\EnsureApplicantRole;
+use App\Http\Middleware\EnsureApplicationReviewer;
+use App\Http\Middleware\EnsureNotApplicant;
 use App\Http\Middleware\EnsureSupportedRole;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
@@ -30,6 +33,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'api.client' => AuthenticateApiClient::class,
             'role.access' => CheckRoleAccess::class,
             'role.valid' => EnsureSupportedRole::class,
+            'role.applicant' => EnsureApplicantRole::class,
+            'role.application-reviewer' => EnsureApplicationReviewer::class,
+            'role.not-applicant' => EnsureNotApplicant::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

@@ -98,7 +98,7 @@ export default function ProjectGallerySlider({
                 <div className="relative aspect-video">
                     <img
                         src={`/storage/${currentPhoto.file_path}`}
-                        alt={currentPhoto.description || 'Жоба фотосы'}
+                        alt={currentPhoto.description || 'Нысан фотосы'}
                         className="h-full w-full object-cover transition-opacity duration-300"
                     />
 
@@ -359,7 +359,7 @@ function PhotoLightbox({
             >
                 <img
                     src={`/storage/${currentPhoto.file_path}`}
-                    alt={currentPhoto.description || 'Жоба фотосы'}
+                    alt={currentPhoto.description || 'Нысан фотосы'}
                     className="max-h-full max-w-full object-contain"
                     style={{
                         transform: `scale(${zoom}) translate(${position.x / zoom}px, ${position.y / zoom}px)`,

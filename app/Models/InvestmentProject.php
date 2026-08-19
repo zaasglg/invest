@@ -172,6 +172,11 @@ class InvestmentProject extends Model
         return $this->belongsTo(Company::class);
     }
 
+    public function sourceApplication()
+    {
+        return $this->hasOne(InvestmentApplication::class);
+    }
+
     public function sezs()
     {
         return $this->belongsToMany(Sez::class, 'investment_project_sez');

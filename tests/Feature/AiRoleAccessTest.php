@@ -67,10 +67,10 @@ function createAiRoleAccessProject(
     ]);
 }
 
-test('AI assistant is available to every supported account role', function () {
+test('AI assistant is available to supported internal account roles', function () {
     config(['services.gemini.api_key' => '']);
 
-    foreach (User::SUPPORTED_ROLES as $roleName) {
+    foreach (array_diff(User::SUPPORTED_ROLES, ['applicant']) as $roleName) {
         $user = createAiRoleAccessUser($roleName);
 
         $this->actingAs($user)
@@ -80,6 +80,16 @@ test('AI assistant is available to every supported account role', function () {
             ->assertOk()
             ->assertJsonStructure(['message']);
     }
+});
+
+test('applicant cannot use the internal AI assistant', function () {
+    $applicant = createAiRoleAccessUser('applicant');
+
+    $this->actingAs($applicant)
+        ->postJson(route('chat.send'), [
+            'message' => 'Ішкі жобаларды көрсет',
+        ])
+        ->assertForbidden();
 });
 
 test('moderator AI only returns active Turkistan Invest projects', function () {
