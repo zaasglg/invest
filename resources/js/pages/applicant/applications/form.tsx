@@ -1,18 +1,24 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
+    AlertCircle,
     ArrowLeft,
+    BadgeCheck,
     BriefcaseBusiness,
     Building2,
     Download,
     FilePenLine,
     FileText,
     Files,
+    FolderKanban,
+    Loader2,
     Network,
     Save,
+    Search,
     Send,
     Trash2,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
+import { useState } from 'react';
 
 import {
     ApplicantHero,
@@ -50,11 +56,49 @@ type Props = {
     regions: { id: number; name: string }[];
     legalForms: Record<string, string>;
     projectTypes: ProjectTypeOption[];
+    applicationKinds: Record<string, string>;
+    accountRole: 'applicant' | 'investor';
+    company: CompanyFormData | null;
+    existingProjects: ExistingProject[];
     applicantDefaults: {
         full_name: string;
         email: string;
         phone?: string | null;
     };
+};
+
+type CompanyFormData = {
+    id: number;
+    legal_form: string;
+    name: string;
+    bin: string;
+    registration_date?: string | null;
+    region_id?: number | null;
+    region?: { id: number; name: string } | null;
+    director_full_name?: string | null;
+    contact_person?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    legal_address?: string | null;
+};
+
+type ExistingProject = {
+    id: number;
+    name: string;
+    description?: string | null;
+    project_type_id?: number | null;
+    project_types?: ProjectTypeOption[];
+    jobs_count: number;
+    total_investment: string | number;
+    infrastructure?: Record<string, unknown> | null;
+};
+
+type CompanyLookupResult = {
+    found: boolean;
+    can_attach?: boolean;
+    has_investor?: boolean;
+    company?: CompanyFormData;
+    message?: string;
 };
 
 const infrastructureFields = [
@@ -72,10 +116,19 @@ export default function ApplicationForm({
     regions,
     legalForms,
     projectTypes,
+    applicationKinds,
+    accountRole,
+    company,
+    existingProjects,
     applicantDefaults,
 }: Props) {
+    const isInvestor = accountRole === 'investor';
     const form = useForm({
         intent: 'draft',
+        application_kind: application?.application_kind ?? 'new_project',
+        source_investment_project_id: String(
+            application?.source_investment_project_id ?? '',
+        ),
         project_name: application?.project_name ?? '',
         project_description: application?.project_description ?? '',
         project_type_ids:
@@ -89,21 +142,154 @@ export default function ApplicationForm({
                 String(application?.infrastructure_requirements?.[key] ?? ''),
             ]),
         ) as Record<string, string>,
-        company_legal_form: application?.company_legal_form ?? '',
-        company_name: application?.company_name ?? '',
-        company_bin: application?.company_bin ?? '',
+        company_legal_form:
+            application?.company_legal_form ?? company?.legal_form ?? '',
+        company_name: application?.company_name ?? company?.name ?? '',
+        company_bin: application?.company_bin ?? company?.bin ?? '',
         company_registration_date:
-            application?.company_registration_date?.slice(0, 10) ?? '',
-        company_region_id: String(application?.company_region_id ?? ''),
-        director_full_name: application?.director_full_name ?? '',
+            application?.company_registration_date?.slice(0, 10) ??
+            company?.registration_date?.slice(0, 10) ??
+            '',
+        company_region_id: String(
+            application?.company_region_id ?? company?.region_id ?? '',
+        ),
+        director_full_name:
+            application?.director_full_name ??
+            company?.director_full_name ??
+            '',
         contact_person:
-            application?.contact_person ?? applicantDefaults.full_name,
+            application?.contact_person ??
+            company?.contact_person ??
+            applicantDefaults.full_name,
         contact_phone:
-            application?.contact_phone ?? applicantDefaults.phone ?? '',
-        contact_email: application?.contact_email ?? applicantDefaults.email,
-        legal_address: application?.legal_address ?? '',
+            application?.contact_phone ??
+            company?.phone ??
+            applicantDefaults.phone ??
+            '',
+        contact_email:
+            application?.contact_email ??
+            company?.email ??
+            applicantDefaults.email,
+        legal_address:
+            application?.legal_address ?? company?.legal_address ?? '',
         documents: [] as File[],
     });
+    const [companyLocked, setCompanyLocked] = useState(isInvestor);
+    const [lookupState, setLookupState] = useState<{
+        loading: boolean;
+        tone: 'success' | 'warning' | 'neutral';
+        message: string;
+    }>({ loading: false, tone: 'neutral', message: '' });
+    const isExpansion = form.data.application_kind === 'expansion';
+    const selectedSource = existingProjects.find(
+        (project) =>
+            project.id.toString() === form.data.source_investment_project_id,
+    );
+
+    const selectApplicationKind = (
+        kind: InvestmentApplication['application_kind'],
+    ) => {
+        form.setData('application_kind', kind);
+
+        if (kind === 'new_project') {
+            form.setData('source_investment_project_id', '');
+        }
+    };
+
+    const selectSourceProject = (projectId: string) => {
+        form.setData('source_investment_project_id', projectId);
+        const project = existingProjects.find(
+            (item) => item.id.toString() === projectId,
+        );
+
+        if (!project) return;
+
+        form.setData('project_name', project.name);
+        form.setData(
+            'project_type_ids',
+            project.project_types?.length
+                ? project.project_types.map(({ id }) => id.toString())
+                : project.project_type_id
+                  ? [project.project_type_id.toString()]
+                  : [],
+        );
+    };
+
+    const lookupCompany = async () => {
+        if (form.data.company_bin.length !== 12) {
+            setLookupState({
+                loading: false,
+                tone: 'warning',
+                message: 'БСН дәл 12 саннан тұруы керек.',
+            });
+            return;
+        }
+
+        setLookupState({ loading: true, tone: 'neutral', message: '' });
+
+        try {
+            const response = await fetch(
+                applicant.companyLookup.url({
+                    query: { bin: form.data.company_bin },
+                }),
+                { headers: { Accept: 'application/json' } },
+            );
+            const result = (await response.json()) as CompanyLookupResult;
+
+            if (!response.ok)
+                throw new Error('Компанияны тексеру мүмкін болмады.');
+
+            if (!result.found) {
+                setCompanyLocked(false);
+                setLookupState({
+                    loading: false,
+                    tone: 'neutral',
+                    message:
+                        'Компания базадан табылмады. Жаңа компания деректерін толтырыңыз.',
+                });
+                return;
+            }
+
+            if (!result.can_attach || !result.company) {
+                setCompanyLocked(true);
+                setLookupState({
+                    loading: false,
+                    tone: 'warning',
+                    message:
+                        result.message ??
+                        'Бұл компанияға Investor аккаунты тіркелген.',
+                });
+                return;
+            }
+
+            const found = result.company;
+            form.setData('company_legal_form', found.legal_form);
+            form.setData('company_name', found.name);
+            form.setData('company_bin', found.bin);
+            form.setData(
+                'company_registration_date',
+                found.registration_date?.slice(0, 10) ?? '',
+            );
+            form.setData('company_region_id', String(found.region_id ?? ''));
+            form.setData('director_full_name', found.director_full_name ?? '');
+            form.setData('legal_address', found.legal_address ?? '');
+            setCompanyLocked(true);
+            setLookupState({
+                loading: false,
+                tone: 'success',
+                message: result.message ?? 'Компания CRM базасынан табылды.',
+            });
+        } catch (error) {
+            setLookupState({
+                loading: false,
+                tone: 'warning',
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : 'Компанияны тексеру мүмкін болмады.',
+            });
+        }
+    };
 
     const submit = (event: FormEvent, intent: 'draft' | 'submit') => {
         event.preventDefault();
@@ -132,7 +318,7 @@ export default function ApplicationForm({
             ]}
         >
             <Head title={application ? 'Өтінімді өңдеу' : 'Жаңа өтінім'} />
-            <PageContainer width="form">
+            <PageContainer width="wide">
                 <ApplicantHero
                     eyebrow={`${zone.type_label} · ${zone.name}`}
                     title={
@@ -163,10 +349,161 @@ export default function ApplicationForm({
                 <form className="space-y-5">
                     <ApplicantSectionCard
                         title="Жоба туралы"
-                        description="Жобаның мақсаты мен негізгі көрсеткіштері"
+                        description={
+                            isExpansion
+                                ? 'Бар жобаға қосылатын инвестиция, жұмыс орны және жер көлемі'
+                                : 'Жобаның мақсаты мен негізгі көрсеткіштері'
+                        }
                         icon={BriefcaseBusiness}
                         tone="navy"
                     >
+                        {isInvestor && (
+                            <div className="mb-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                                <div>
+                                    <Label>Өтінім түрі</Label>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        Жаңа жоба ашыңыз немесе осы аймақтағы
+                                        жобаңызды кеңейтіңіз.
+                                    </p>
+                                </div>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {Object.entries(applicationKinds).map(
+                                        ([value, label]) => (
+                                            <button
+                                                key={value}
+                                                type="button"
+                                                onClick={() =>
+                                                    selectApplicationKind(
+                                                        value as InvestmentApplication['application_kind'],
+                                                    )
+                                                }
+                                                className={`rounded-xl border p-4 text-left transition ${
+                                                    form.data
+                                                        .application_kind ===
+                                                    value
+                                                        ? 'border-gold bg-white shadow-sm ring-2 ring-gold/15'
+                                                        : 'border-slate-200 bg-white/70 hover:border-slate-300'
+                                                }`}
+                                            >
+                                                <span className="flex items-center gap-3">
+                                                    {value === 'expansion' ? (
+                                                        <FolderKanban className="size-5 text-sky-700" />
+                                                    ) : (
+                                                        <BriefcaseBusiness className="size-5 text-gold-dark" />
+                                                    )}
+                                                    <span className="font-bold text-navy">
+                                                        {label}
+                                                    </span>
+                                                </span>
+                                                <span className="mt-2 block text-xs leading-5 text-slate-500">
+                                                    {value === 'expansion'
+                                                        ? 'Бар жобаның қуатын, жерін және көрсеткіштерін ұлғайту'
+                                                        : 'CRM жүйесінде бөлек инвестициялық жоба ашу'}
+                                                </span>
+                                            </button>
+                                        ),
+                                    )}
+                                </div>
+                                <InputError
+                                    message={form.errors.application_kind}
+                                />
+
+                                {isExpansion && (
+                                    <Field
+                                        label="Кеңейтілетін жоба"
+                                        error={
+                                            form.errors
+                                                .source_investment_project_id
+                                        }
+                                    >
+                                        {existingProjects.length ? (
+                                            <Select
+                                                value={
+                                                    form.data
+                                                        .source_investment_project_id
+                                                }
+                                                onValueChange={
+                                                    selectSourceProject
+                                                }
+                                            >
+                                                <SelectTrigger className="bg-white">
+                                                    <SelectValue placeholder="Жобаны таңдаңыз" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {existingProjects.map(
+                                                        (project) => (
+                                                            <SelectItem
+                                                                key={project.id}
+                                                                value={String(
+                                                                    project.id,
+                                                                )}
+                                                            >
+                                                                {project.name}
+                                                            </SelectItem>
+                                                        ),
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        ) : (
+                                            <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                                                <AlertCircle className="mt-0.5 size-4 shrink-0" />
+                                                Бұл аймақта компанияңызға
+                                                тиесілі жоба жоқ. «Жаңа жоба»
+                                                түрін таңдаңыз.
+                                            </div>
+                                        )}
+                                    </Field>
+                                )}
+
+                                {selectedSource && isExpansion && (
+                                    <div className="grid gap-3 rounded-xl border border-sky-100 bg-sky-50/70 p-4 text-sm sm:grid-cols-3">
+                                        <div>
+                                            <p className="text-xs text-slate-500">
+                                                Қазіргі инвестиция
+                                            </p>
+                                            <p className="font-bold text-navy">
+                                                {new Intl.NumberFormat(
+                                                    'kk-KZ',
+                                                ).format(
+                                                    Number(
+                                                        selectedSource.total_investment,
+                                                    ),
+                                                )}{' '}
+                                                ₸
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">
+                                                Қазіргі жұмыс орны
+                                            </p>
+                                            <p className="font-bold text-navy">
+                                                {selectedSource.jobs_count}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-slate-500">
+                                                Қазіргі жер
+                                            </p>
+                                            <p className="font-bold text-navy">
+                                                {String(
+                                                    (
+                                                        selectedSource.infrastructure as Record<
+                                                            string,
+                                                            Record<
+                                                                string,
+                                                                unknown
+                                                            >
+                                                        > | null
+                                                    )?.land?.used_capacity ?? 0,
+                                                )}{' '}
+                                                га
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
                                 label="Жоба атауы"
@@ -180,6 +517,7 @@ export default function ApplicationForm({
                                             e.target.value,
                                         )
                                     }
+                                    disabled={isExpansion}
                                     required
                                 />
                             </Field>
@@ -198,10 +536,15 @@ export default function ApplicationForm({
                                     hasError={Boolean(
                                         form.errors.project_type_ids,
                                     )}
+                                    disabled={isExpansion}
                                 />
                             </Field>
                             <Field
-                                label="Қажетті аумақ (га)"
+                                label={
+                                    isExpansion
+                                        ? 'Қосымша қажетті аумақ (га)'
+                                        : 'Қажетті аумақ (га)'
+                                }
                                 error={form.errors.requested_area}
                             >
                                 <Input
@@ -220,7 +563,11 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
-                                label="Инвестиция көлемі (₸)"
+                                label={
+                                    isExpansion
+                                        ? 'Қосымша инвестиция (₸)'
+                                        : 'Инвестиция көлемі (₸)'
+                                }
                                 error={form.errors.investment_amount}
                             >
                                 <Input
@@ -238,7 +585,11 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
-                                label="Жұмыс орындары"
+                                label={
+                                    isExpansion
+                                        ? 'Қосымша жұмыс орындары'
+                                        : 'Жұмыс орындары'
+                                }
                                 error={form.errors.jobs_count}
                             >
                                 <Input
@@ -257,7 +608,11 @@ export default function ApplicationForm({
                             </Field>
                             <div className="sm:col-span-2">
                                 <Field
-                                    label="Жоба сипаттамасы"
+                                    label={
+                                        isExpansion
+                                            ? 'Кеңейту сипаттамасы'
+                                            : 'Жоба сипаттамасы'
+                                    }
                                     error={form.errors.project_description}
                                 >
                                     <Textarea
@@ -278,10 +633,29 @@ export default function ApplicationForm({
 
                     <ApplicantSectionCard
                         title="Компания реквизиттері"
-                        description="Заңды тұлға мен байланыс деректері"
+                        description={
+                            isInvestor
+                                ? 'CRM жүйесінде аккаунтыңызға байланыстырылған компания'
+                                : 'БСН бойынша компанияны тексеріп, заңды тұлға деректерін толтырыңыз'
+                        }
                         icon={Building2}
                         tone="sky"
                     >
+                        {isInvestor && company && (
+                            <div className="mb-5 flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                                <BadgeCheck className="mt-0.5 size-5 shrink-0 text-emerald-600" />
+                                <div>
+                                    <p className="font-bold">
+                                        {company.name} · БСН {company.bin}
+                                    </p>
+                                    <p className="mt-1 text-emerald-800/80">
+                                        Өтінім осы компания атынан беріледі.
+                                        Ресми реквизиттерді бұл бетте өзгертуге
+                                        болмайды.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
                                 label="Заңды нысаны"
@@ -289,6 +663,7 @@ export default function ApplicationForm({
                             >
                                 <Select
                                     value={form.data.company_legal_form}
+                                    disabled={companyLocked}
                                     onValueChange={(value) =>
                                         form.setData(
                                             'company_legal_form',
@@ -319,6 +694,7 @@ export default function ApplicationForm({
                             >
                                 <Input
                                     value={form.data.company_name}
+                                    disabled={companyLocked}
                                     onChange={(e) =>
                                         form.setData(
                                             'company_name',
@@ -332,18 +708,96 @@ export default function ApplicationForm({
                                 label="БСН (12 сан)"
                                 error={form.errors.company_bin}
                             >
-                                <Input
-                                    inputMode="numeric"
-                                    maxLength={12}
-                                    value={form.data.company_bin}
-                                    onChange={(e) =>
-                                        form.setData(
-                                            'company_bin',
-                                            e.target.value.replace(/\D/g, ''),
-                                        )
-                                    }
-                                    required
-                                />
+                                <div className="flex gap-2">
+                                    <Input
+                                        inputMode="numeric"
+                                        maxLength={12}
+                                        disabled={isInvestor}
+                                        value={form.data.company_bin}
+                                        onChange={(e) => {
+                                            const nextBin =
+                                                e.target.value.replace(
+                                                    /\D/g,
+                                                    '',
+                                                );
+                                            if (
+                                                companyLocked &&
+                                                nextBin !==
+                                                    form.data.company_bin
+                                            ) {
+                                                form.setData(
+                                                    'company_legal_form',
+                                                    '',
+                                                );
+                                                form.setData(
+                                                    'company_name',
+                                                    '',
+                                                );
+                                                form.setData(
+                                                    'company_registration_date',
+                                                    '',
+                                                );
+                                                form.setData(
+                                                    'company_region_id',
+                                                    '',
+                                                );
+                                                form.setData(
+                                                    'director_full_name',
+                                                    '',
+                                                );
+                                                form.setData(
+                                                    'legal_address',
+                                                    '',
+                                                );
+                                            }
+                                            form.setData(
+                                                'company_bin',
+                                                nextBin,
+                                            );
+                                            setCompanyLocked(false);
+                                            setLookupState({
+                                                loading: false,
+                                                tone: 'neutral',
+                                                message: '',
+                                            });
+                                        }}
+                                        required
+                                    />
+                                    {!isInvestor && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            className="shrink-0"
+                                            disabled={lookupState.loading}
+                                            onClick={lookupCompany}
+                                        >
+                                            {lookupState.loading ? (
+                                                <Loader2 className="animate-spin" />
+                                            ) : (
+                                                <Search />
+                                            )}
+                                            Тексеру
+                                        </Button>
+                                    )}
+                                </div>
+                                {lookupState.message && (
+                                    <p
+                                        className={`mt-2 flex gap-2 rounded-lg px-3 py-2 text-xs ${
+                                            lookupState.tone === 'success'
+                                                ? 'bg-emerald-50 text-emerald-800'
+                                                : lookupState.tone === 'warning'
+                                                  ? 'bg-amber-50 text-amber-900'
+                                                  : 'bg-slate-50 text-slate-600'
+                                        }`}
+                                    >
+                                        {lookupState.tone === 'success' ? (
+                                            <BadgeCheck className="size-4 shrink-0" />
+                                        ) : lookupState.tone === 'warning' ? (
+                                            <AlertCircle className="size-4 shrink-0" />
+                                        ) : null}
+                                        {lookupState.message}
+                                    </p>
+                                )}
                             </Field>
                             <Field
                                 label="Тіркелген күні"
@@ -351,6 +805,7 @@ export default function ApplicationForm({
                             >
                                 <Input
                                     type="date"
+                                    disabled={companyLocked}
                                     value={form.data.company_registration_date}
                                     onChange={(e) =>
                                         form.setData(
@@ -367,6 +822,7 @@ export default function ApplicationForm({
                             >
                                 <Select
                                     value={form.data.company_region_id}
+                                    disabled={companyLocked}
                                     onValueChange={(value) =>
                                         form.setData('company_region_id', value)
                                     }
@@ -392,6 +848,7 @@ export default function ApplicationForm({
                             >
                                 <Input
                                     value={form.data.director_full_name}
+                                    disabled={companyLocked}
                                     onChange={(e) =>
                                         form.setData(
                                             'director_full_name',
@@ -407,6 +864,7 @@ export default function ApplicationForm({
                             >
                                 <Input
                                     value={form.data.contact_person}
+                                    disabled={isInvestor}
                                     onChange={(e) =>
                                         form.setData(
                                             'contact_person',
@@ -422,6 +880,7 @@ export default function ApplicationForm({
                                 <Input
                                     type="tel"
                                     value={form.data.contact_phone}
+                                    disabled={isInvestor}
                                     onChange={(e) =>
                                         form.setData(
                                             'contact_phone',
@@ -438,6 +897,7 @@ export default function ApplicationForm({
                                 <Input
                                     type="email"
                                     value={form.data.contact_email}
+                                    disabled={isInvestor}
                                     onChange={(e) =>
                                         form.setData(
                                             'contact_email',
@@ -453,6 +913,7 @@ export default function ApplicationForm({
                             >
                                 <Input
                                     value={form.data.legal_address}
+                                    disabled={companyLocked}
                                     onChange={(e) =>
                                         form.setData(
                                             'legal_address',

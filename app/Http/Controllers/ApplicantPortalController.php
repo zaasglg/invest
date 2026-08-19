@@ -82,6 +82,9 @@ class ApplicantPortalController extends Controller
             ->where('user_id', $request->user()->id);
 
         return Inertia::render('applicant/portal', [
+            'accountRole' => $request->user()
+                ->loadMissing('roleModel')
+                ->roleModel?->name,
             'zones' => $paginator,
             'filters' => [
                 'search' => $search,
@@ -111,11 +114,14 @@ class ApplicantPortalController extends Controller
         ]);
     }
 
-    public function show(string $zoneType, int $zone)
+    public function show(Request $request, string $zoneType, int $zone)
     {
         $zoneModel = $this->capacity->resolve($zoneType, $zone);
 
         return Inertia::render('applicant/zones/show', [
+            'accountRole' => $request->user()
+                ->loadMissing('roleModel')
+                ->roleModel?->name,
             'zone' => $this->capacity->present($zoneModel, true),
         ]);
     }

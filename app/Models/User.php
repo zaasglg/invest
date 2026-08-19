@@ -36,6 +36,7 @@ class User extends Authenticatable implements MustVerifyEmail
     protected $fillable = [
         'full_name',
         'email',
+        'requires_email_verification',
         'phone',
         'password',
         'role',
@@ -68,6 +69,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'password' => 'hashed',
+            'requires_email_verification' => 'boolean',
         ];
     }
 

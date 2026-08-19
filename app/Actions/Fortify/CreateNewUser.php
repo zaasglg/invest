@@ -40,6 +40,7 @@ class CreateNewUser implements CreatesNewUsers
             'email' => Str::lower($input['email']),
             'phone' => $input['phone'],
             'password' => $input['password'],
+            'requires_email_verification' => true,
             'role' => 'district_user',
             'role_id' => $applicantRole->id,
         ]);

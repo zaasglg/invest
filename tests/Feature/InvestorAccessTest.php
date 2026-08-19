@@ -213,6 +213,80 @@ test('investor automatically sees every active project of their company only', f
         ->assertForbidden();
 });
 
+test('investor can open any region while region projects and issues stay company scoped', function () {
+    $superadmin = createInvestorTestUser('superadmin');
+    $projectRegion = createInvestorTestRegion('Investor project region');
+    $otherRegion = createInvestorTestRegion('Investor readable region');
+    $scope = createInvestorTestCompany(
+        $superadmin,
+        $projectRegion,
+        'Region scope company'
+    );
+    $foreignScope = createInvestorTestCompany(
+        $superadmin,
+        $projectRegion,
+        'Foreign region company'
+    );
+
+    $ownProject = createInvestorTestProject(
+        $superadmin,
+        $scope['company'],
+        $projectRegion,
+        'Visible region project',
+        2500000
+    );
+    $foreignProject = createInvestorTestProject(
+        $superadmin,
+        $foreignScope['company'],
+        $projectRegion,
+        'Hidden region project',
+        8800000
+    );
+
+    ProjectIssue::create([
+        'project_id' => $ownProject->id,
+        'title' => 'Visible investor issue',
+        'description' => 'Visible investor issue',
+        'severity' => 'medium',
+        'status' => 'open',
+        'created_by' => $superadmin->id,
+    ]);
+    ProjectIssue::create([
+        'project_id' => $foreignProject->id,
+        'title' => 'Hidden foreign issue',
+        'description' => 'Hidden foreign issue',
+        'severity' => 'high',
+        'status' => 'open',
+        'created_by' => $superadmin->id,
+    ]);
+
+    $this->actingAs($scope['investor'])
+        ->get(route('regions.show', $projectRegion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('region.id', $projectRegion->id)
+            ->has('projects', 1)
+            ->where('projects.0.id', $ownProject->id)
+            ->where('stats.projectsCount', 1)
+            ->where('stats.projectIssuesCount', 1)
+            ->where('stats.sezIssuesCount', 0)
+            ->where('stats.izIssuesCount', 0)
+            ->where('stats.promIssuesCount', 0)
+            ->where('stats.subsoilIssuesCount', 0)
+            ->where(
+                'stats.totalInvestment',
+                fn ($value) => (float) $value === 2500000.0
+            ));
+
+    $this->get(route('regions.show', $otherRegion))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('region.id', $otherRegion->id)
+            ->has('projects', 0)
+            ->where('stats.projectsCount', 0)
+            ->where('stats.projectIssuesCount', 0));
+});
+
 test('investor navigation scope is enforced on the server', function () {
     $investor = createInvestorTestUser('investor');
 

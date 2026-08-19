@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Company;
 use App\Models\IndustrialZone;
 use App\Models\InvestmentApplication;
+use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectType;
 use App\Models\PromZone;
 use App\Models\Region;
@@ -67,6 +70,7 @@ function validApplicationPayload(Region $region, array $overrides = []): array
 
     return [
         'intent' => 'submit',
+        'application_kind' => 'new_project',
         'project_name' => 'Жаңа өндіріс',
         'project_description' => 'Өндірістік жоба сипаттамасы',
         'activity_sector' => 'Өңдеу өнеркәсібі',
@@ -90,6 +94,25 @@ function validApplicationPayload(Region $region, array $overrides = []): array
         'legal_address' => 'Түркістан қаласы',
         ...$overrides,
     ];
+}
+
+function applicationCompany(Region $region, array $attributes = []): Company
+{
+    return Company::create([
+        'legal_form' => 'too',
+        'name' => 'CRM компаниясы',
+        'bin' => '987654321098',
+        'registration_date' => '2024-03-15',
+        'region_id' => $region->id,
+        'activity_type' => 'Өңдеу өнеркәсібі',
+        'director_full_name' => 'CRM Басшысы',
+        'contact_person' => 'CRM Байланыс',
+        'phone' => '+7 701 111 22 33',
+        'email' => 'crm@example.com',
+        'legal_address' => 'Түркістан, CRM көшесі 1',
+        'status' => 'active',
+        ...$attributes,
+    ]);
 }
 
 test('applicant sees safe zone capacity and cannot open internal zone pages', function () {
@@ -257,6 +280,13 @@ test('approved application converts into company investor and internal project',
         'reserved_until' => now()->addDays(30),
     ]);
     $application->projectTypes()->sync($payload['project_type_ids']);
+    $application->documents()->create([
+        'name' => 'Бизнес жоспар.pdf',
+        'file_path' => 'investment-applications/test/business-plan.pdf',
+        'type' => 'pdf',
+        'size' => 1024,
+        'uploaded_by' => $applicant->id,
+    ]);
 
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
@@ -275,9 +305,270 @@ test('approved application converts into company investor and internal project',
         ->toBe($payload['project_type_ids'])
         ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
         ->toBe(30.0)
+        ->and($project->documents()
+            ->where('source', 'investment_application')
+            ->where('name', 'Бизнес жоспар.pdf')
+            ->exists())->toBeTrue()
         ->and($project->sezs()->whereKey($zone->id)->exists())->toBeTrue()
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(70.0);
+});
+
+test('existing unclaimed company is normalized and reused for applicant', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+
+    $this->actingAs($applicant)
+        ->getJson(route('applicant.company-lookup', ['bin' => $company->bin]))
+        ->assertOk()
+        ->assertJsonPath('found', true)
+        ->assertJsonPath('can_attach', true)
+        ->assertJsonPath('company.name', $company->name);
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, [
+                'company_bin' => $company->bin,
+                'company_name' => 'Қолданушы өзгерткен атау',
+                'director_full_name' => 'Қолданушы өзгерткен басшы',
+            ])
+        )
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+    expect($application->company_name)->toBe($company->name)
+        ->and($application->director_full_name)->toBe($company->director_full_name);
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.approve', $application), [
+            'approved_area' => 20,
+        ])
+        ->assertRedirect();
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.convert', $application))
+        ->assertRedirect();
+
+    expect(Company::query()->where('bin', $company->bin)->count())->toBe(1)
+        ->and($applicant->fresh()->company_id)->toBe($company->id)
+        ->and($applicant->fresh()->roleModel?->name)->toBe('investor');
+});
+
+test('applicant cannot submit for a company that already has investor account', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    applicationUser('investor', ['company_id' => $company->id]);
+    $applicant = applicationUser('applicant');
+
+    $this->actingAs($applicant)
+        ->getJson(route('applicant.company-lookup', ['bin' => $company->bin]))
+        ->assertOk()
+        ->assertJsonPath('can_attach', false)
+        ->assertJsonMissingPath('company.director_full_name');
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, ['company_bin' => $company->bin])
+        )
+        ->assertSessionHasErrors('company_bin');
+
+    expect(InvestmentApplication::query()->count())->toBe(0);
+});
+
+test('investor submits a new project application for the linked company', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    $investor = applicationUser('investor', ['company_id' => $company->id]);
+    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+
+    $this->actingAs($investor)
+        ->get(route('applicant.portal'))
+        ->assertOk();
+    $this->actingAs($investor)
+        ->getJson(route('applicant.company-lookup', ['bin' => $company->bin]))
+        ->assertForbidden();
+    $this->actingAs($investor)
+        ->get(route('applicant.applications.create', [
+            'zoneType' => 'sez',
+            'zone' => $zone,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('applicant/applications/form')
+            ->where('accountRole', 'investor')
+            ->where('company.id', $company->id));
+
+    $this->actingAs($investor)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, [
+                'company_bin' => '111111111111',
+                'company_name' => 'Жалған атау',
+            ])
+        )
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+    expect($application->company_bin)->toBe($company->bin)
+        ->and($application->company_name)->toBe($company->name);
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.approve', $application), [
+            'approved_area' => 10,
+        ])
+        ->assertRedirect();
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.convert', $application))
+        ->assertRedirect();
+
+    expect($investor->fresh()->roleModel?->name)->toBe('investor')
+        ->and($investor->fresh()->company_id)->toBe($company->id)
+        ->and($application->fresh()->investmentProject?->company_id)
+        ->toBe($company->id);
+});
+
+test('investor expansion application updates the existing project without duplication', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    $investor = applicationUser('investor', ['company_id' => $company->id]);
+    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $projectType = applicationProjectType();
+    $project = InvestmentProject::create([
+        'name' => 'Қолданыстағы зауыт',
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
+        'description' => 'Жұмыс істеп тұрған өндіріс',
+        'region_id' => $region->id,
+        'project_type_id' => $projectType->id,
+        'jobs_count' => 40,
+        'total_investment' => 100000000,
+        'status' => 'implementation',
+        'infrastructure' => [
+            'electricity' => [
+                'needed' => true,
+                'required_capacity' => 50,
+                'used_capacity' => 20,
+            ],
+            'land' => [
+                'needed' => true,
+                'required_capacity' => 10,
+                'used_capacity' => 10,
+            ],
+        ],
+        'created_by' => $reviewer->id,
+    ]);
+    $project->projectTypes()->sync([$projectType->id]);
+    $project->sezs()->sync([$zone->id]);
+    $projectCount = InvestmentProject::query()->count();
+
+    $this->actingAs($investor)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, [
+                'application_kind' => 'expansion',
+                'source_investment_project_id' => $project->id,
+                'project_name' => 'Өзгертілмеуі керек',
+                'requested_area' => 5,
+                'investment_amount' => 25000000,
+                'jobs_count' => 8,
+                'infrastructure_requirements' => [
+                    'electricity' => 15,
+                    'water' => 5,
+                ],
+            ])
+        )
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+    expect($application->project_name)->toBe($project->name)
+        ->and($application->application_kind)->toBe('expansion');
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.approve', $application), [
+            'approved_area' => 5,
+        ])
+        ->assertRedirect();
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.convert', $application))
+        ->assertRedirect();
+
+    $project->refresh();
+    $application->refresh();
+    expect(InvestmentProject::query()->count())->toBe($projectCount)
+        ->and($application->investment_project_id)->toBe($project->id)
+        ->and($application->status)->toBe('converted_to_project')
+        ->and((float) $project->total_investment)->toBe(125000000.0)
+        ->and($project->jobs_count)->toBe(48)
+        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->toBe(15.0)
+        ->and((float) data_get($project->infrastructure, 'electricity.required_capacity'))
+        ->toBe(65.0)
+        ->and((float) data_get($project->infrastructure, 'electricity.used_capacity'))
+        ->toBe(20.0)
+        ->and(KpiLog::query()
+            ->where('project_id', $project->id)
+            ->where('event', 'project.expanded_from_application')
+            ->exists())->toBeTrue();
+});
+
+test('investor cannot expand another company project', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    $otherCompany = applicationCompany($region, [
+        'name' => 'Басқа компания',
+        'bin' => '222222222222',
+    ]);
+    $investor = applicationUser('investor', ['company_id' => $company->id]);
+    $projectType = applicationProjectType();
+    $otherProject = InvestmentProject::create([
+        'name' => 'Басқа компания жобасы',
+        'company_id' => $otherCompany->id,
+        'company_name' => $otherCompany->display_name,
+        'region_id' => $region->id,
+        'project_type_id' => $projectType->id,
+        'jobs_count' => 1,
+        'total_investment' => 1000,
+        'status' => 'plan',
+        'infrastructure' => [],
+        'created_by' => $investor->id,
+    ]);
+    $otherProject->projectTypes()->sync([$projectType->id]);
+    $otherProject->sezs()->sync([$zone->id]);
+
+    $this->actingAs($investor)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, [
+                'application_kind' => 'expansion',
+                'source_investment_project_id' => $otherProject->id,
+            ])
+        )
+        ->assertSessionHasErrors('source_investment_project_id');
+
+    expect(InvestmentApplication::query()->count())->toBe(0);
 });
 
 test('applicant can select multiple project activity types', function () {

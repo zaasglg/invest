@@ -41,6 +41,7 @@ import * as zones from '@/routes/applicant/zones';
 import type { ApplicantZone, PaginatedData } from '@/types';
 
 type Props = {
+    accountRole: 'applicant' | 'investor';
     zones: PaginatedData<ApplicantZone>;
     filters: {
         search: string;
@@ -83,6 +84,7 @@ const areaFormatter = new Intl.NumberFormat('kk-KZ', {
 });
 
 export default function ApplicantPortal({
+    accountRole,
     zones: zonePage,
     filters,
     regions,
@@ -116,9 +118,13 @@ export default function ApplicantPortal({
             ]}
         >
             <Head title="Инвестициялық аймақтар" />
-            <PageContainer width="standard">
+            <PageContainer width="wide">
                 <ApplicantHero
-                    eyebrow="Өтінім беруші порталы"
+                    eyebrow={
+                        accountRole === 'investor'
+                            ? 'Investor порталы'
+                            : 'Өтінім беруші порталы'
+                    }
                     title="Инвестициялық аймақты таңдаңыз"
                     subtitle="АЭА, индустриялық және өндірістік аймақтардың бос гектары мен қолжетімді инфрақұрылымын көріңіз. Жобалар туралы мәліметтер көрсетілмейді."
                     icon={Landmark}

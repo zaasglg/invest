@@ -11,12 +11,14 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'role.valid'])
     ->name('dashboard');
 
-Route::middleware(['auth', 'verified', 'role.applicant'])
+Route::middleware(['auth', 'verified.registration', 'role.applicant'])
     ->prefix('portal')
     ->name('applicant.')
     ->group(function () {
         Route::get('/', [\App\Http\Controllers\ApplicantPortalController::class, 'index'])
             ->name('portal');
+        Route::get('company-lookup', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'companyLookup'])
+            ->name('company-lookup');
         Route::get('zones/{zoneType}/{zone}', [\App\Http\Controllers\ApplicantPortalController::class, 'show'])
             ->whereIn('zoneType', ['sez', 'industrial-zone', 'prom-zone'])
             ->whereNumber('zone')

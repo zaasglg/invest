@@ -65,6 +65,9 @@ export type InvestmentApplication = {
     user_id: number;
     status: string;
     status_label: string;
+    application_kind: 'new_project' | 'expansion';
+    application_kind_label: string;
+    source_investment_project_id?: number | null;
     zone_type: ApplicantZone['type'];
     zone_type_label: string;
     zoneable?: {
@@ -81,6 +84,7 @@ export type InvestmentApplication = {
     reviewer?: { id: number; full_name: string } | null;
     company_region?: { id: number; name: string } | null;
     investment_project?: { id: number; name: string } | null;
+    source_investment_project?: { id: number; name: string } | null;
     project_name: string;
     project_description: string;
     activity_sector: string;

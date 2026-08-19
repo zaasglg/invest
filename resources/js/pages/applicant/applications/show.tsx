@@ -58,7 +58,7 @@ export default function ApplicationShow({
             ]}
         >
             <Head title={application.application_number} />
-            <PageContainer width="standard">
+            <PageContainer width="wide">
                 <ApplicantHero
                     eyebrow={application.application_number}
                     title={application.project_name}

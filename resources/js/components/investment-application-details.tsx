@@ -141,6 +141,16 @@ export default function InvestmentApplicationDetails({
             >
                 <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <Detail
+                        label="Өтінім түрі"
+                        value={application.application_kind_label}
+                    />
+                    {application.application_kind === 'expansion' && (
+                        <Detail
+                            label="Кеңейтілетін жоба"
+                            value={application.source_investment_project?.name}
+                        />
+                    )}
+                    <Detail
                         label="Жоба атауы"
                         value={application.project_name}
                     />
@@ -155,7 +165,11 @@ export default function InvestmentApplicationDetails({
                         }
                     />
                     <Detail
-                        label="Сұралған аумақ"
+                        label={
+                            application.application_kind === 'expansion'
+                                ? 'Қосымша сұралған аумақ'
+                                : 'Сұралған аумақ'
+                        }
                         value={`${application.requested_area} га`}
                     />
                     <Detail
@@ -167,10 +181,21 @@ export default function InvestmentApplicationDetails({
                         }
                     />
                     <Detail
-                        label="Инвестиция"
+                        label={
+                            application.application_kind === 'expansion'
+                                ? 'Қосымша инвестиция'
+                                : 'Инвестиция'
+                        }
                         value={`${money(application.investment_amount)} ₸`}
                     />
-                    <Detail label="Жұмыс орны" value={application.jobs_count} />
+                    <Detail
+                        label={
+                            application.application_kind === 'expansion'
+                                ? 'Қосымша жұмыс орны'
+                                : 'Жұмыс орны'
+                        }
+                        value={application.jobs_count}
+                    />
                     <Detail
                         label="Аймақ"
                         value={`${application.zone_type_label} · ${application.zoneable?.name ?? '—'}`}

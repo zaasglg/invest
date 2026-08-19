@@ -246,9 +246,10 @@ export const filterNavItemsByRole = (
     }
 
     // Superadmin and prokuror can see the full regions section.
-    let filteredItems = items.filter(
-        (item) => !applicantHrefs.has(String(item.href)),
-    );
+    let filteredItems =
+        roleKey === 'investor'
+            ? items
+            : items.filter((item) => !applicantHrefs.has(String(item.href)));
     const isSuperadmin =
         user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
 
@@ -302,6 +303,21 @@ export const filterNavItemsByRole = (
                 (item) => !subRoleHidden.has(item.title),
             );
         }
+    }
+
+    if (roleKey === 'investor') {
+        const investorNavigationOrder = new Map([
+            [dashboard.url(), 0],
+            [investmentProjects.index.url(), 1],
+            [applicant.portal.url(), 2],
+            [applicantApplications.index.url(), 3],
+        ]);
+
+        filteredItems = [...filteredItems].sort(
+            (left, right) =>
+                (investorNavigationOrder.get(String(left.href)) ?? 99) -
+                (investorNavigationOrder.get(String(right.href)) ?? 99),
+        );
     }
 
     return filteredItems;

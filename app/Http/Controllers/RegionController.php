@@ -128,26 +128,37 @@ class RegionController extends Controller
     {
         $user = request()->user();
         $this->authorizeRegionAccess($region, $user);
+        $user?->loadMissing('roleModel');
+        $roleName = $user?->roleModel?->name;
+        $isInvestor = $roleName === 'investor';
 
         $region->load([
-            'subsoilUsers' => function ($query) {
-                $query->withCount('issues');
+            'subsoilUsers' => function ($query) use ($isInvestor) {
+                if (! $isInvestor) {
+                    $query->withCount('issues');
+                }
             },
             'parent',
         ]);
         $region->load([
-            'sezs' => function ($query) {
-                $query->withCount('issues');
+            'sezs' => function ($query) use ($isInvestor) {
+                if (! $isInvestor) {
+                    $query->withCount('issues');
+                }
             },
         ]);
         $region->load([
-            'industrialZones' => function ($query) {
-                $query->withCount('issues');
+            'industrialZones' => function ($query) use ($isInvestor) {
+                if (! $isInvestor) {
+                    $query->withCount('issues');
+                }
             },
         ]);
         $region->load([
-            'promZones' => function ($query) {
-                $query->withCount('issues');
+            'promZones' => function ($query) use ($isInvestor) {
+                if (! $isInvestor) {
+                    $query->withCount('issues');
+                }
             },
         ]);
 
@@ -180,7 +191,6 @@ class RegionController extends Controller
         )->count();
 
         // Determine which entity sections the invest sub-role can access.
-        $roleName = $user?->load('roleModel')->roleModel?->name;
         $subRole = ($roleName === 'invest') ? $user->invest_sub_role : null;
         $canSeeSez = ! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true);
         $canSeeIz = ! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true);
@@ -188,22 +198,22 @@ class RegionController extends Controller
         $canSeeSubsoil = ! $subRole || $subRole === 'turkistan_invest';
 
         // SEZ issues count
-        $sezIssuesCount = $canSeeSez
+        $sezIssuesCount = $canSeeSez && ! $isInvestor
             ? \App\Models\SezIssue::whereIn('sez_id', $region->sezs->pluck('id'))->count()
             : 0;
 
         // IZ issues count
-        $izIssuesCount = $canSeeIz
+        $izIssuesCount = $canSeeIz && ! $isInvestor
             ? \App\Models\IndustrialZoneIssue::whereIn('industrial_zone_id', $region->industrialZones->pluck('id'))->count()
             : 0;
 
         // Prom zone issues count
-        $promIssuesCount = $canSeeProm
+        $promIssuesCount = $canSeeProm && ! $isInvestor
             ? \App\Models\PromZoneIssue::whereIn('prom_zone_id', $region->promZones->pluck('id'))->count()
             : 0;
 
         // Subsoil issues count
-        $subsoilIssuesCount = $canSeeSubsoil
+        $subsoilIssuesCount = $canSeeSubsoil && ! $isInvestor
             ? \App\Models\SubsoilIssue::whereIn('subsoil_user_id', $region->subsoilUsers->pluck('id'))->count()
             : 0;
 

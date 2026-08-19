@@ -111,6 +111,7 @@ class InvestmentApplicationReviewController extends Controller
             'documents:id,investment_application_id,name,type,size,created_at',
             'statusHistories.actor:id,full_name',
             'investmentProject:id,name',
+            'sourceInvestmentProject:id,name',
         ]);
 
         return Inertia::render('investment-applications/show', [
@@ -222,7 +223,12 @@ class InvestmentApplicationReviewController extends Controller
 
         return redirect()
             ->route('investment-projects.show', $project)
-            ->with('success', 'Өтінімнен инвестициялық жоба құрылды.');
+            ->with(
+                'success',
+                $investmentApplication->application_kind === 'expansion'
+                    ? 'Бар инвестициялық жоба кеңейтілді.'
+                    : 'Өтінімнен инвестициялық жоба құрылды.'
+            );
     }
 
     private function ensureReviewable(

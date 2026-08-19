@@ -7,6 +7,8 @@ use App\Models\IndustrialZone;
 use App\Models\InvestmentApplication;
 use App\Models\InvestmentApplicationStatusHistory;
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
+use App\Models\ProjectDocument;
 use App\Models\PromZone;
 use App\Models\Role;
 use App\Models\Sez;
@@ -299,7 +301,10 @@ class InvestmentApplicationWorkflowService
                 ->unique()
                 ->values()
                 ->all();
-            $applicant = User::query()->lockForUpdate()->findOrFail($locked->user_id);
+            $account = User::query()
+                ->with('roleModel')
+                ->lockForUpdate()
+                ->findOrFail($locked->user_id);
             $company = Company::query()
                 ->where('bin', $locked->company_bin)
                 ->lockForUpdate()
@@ -324,56 +329,92 @@ class InvestmentApplicationWorkflowService
             }
 
             $existingInvestor = $company->investor()->first();
-            if ($existingInvestor && $existingInvestor->id !== $applicant->id) {
+            if ($existingInvestor && $existingInvestor->id !== $account->id) {
                 throw ValidationException::withMessages([
                     'company_bin' => 'Бұл компанияға басқа инвестор аккаунты байланыстырылған.',
                 ]);
             }
 
-            if ($applicant->company_id
-                && (int) $applicant->company_id !== (int) $company->id) {
+            if ($account->company_id
+                && (int) $account->company_id !== (int) $company->id) {
                 throw ValidationException::withMessages([
                     'company_bin' => 'Өтінім беруші басқа компанияға байланыстырылған.',
                 ]);
             }
 
-            $investorRole = Role::query()->firstOrCreate(
-                ['name' => 'investor'],
-                [
-                    'display_name' => 'Инвестор',
-                    'description' => 'Компанияның инвестициялық жобаларына қол жеткізеді',
-                ]
-            );
-            $applicant->update([
-                'role' => 'district_user',
-                'role_id' => $investorRole->id,
-                'company_id' => $company->id,
-                'phone' => $locked->contact_phone,
-            ]);
+            if ($account->roleModel?->name === 'applicant') {
+                $investorRole = Role::query()->firstOrCreate(
+                    ['name' => 'investor'],
+                    [
+                        'display_name' => 'Инвестор',
+                        'description' => 'Компанияның инвестициялық жобаларына қол жеткізеді',
+                    ]
+                );
+                $account->update([
+                    'role' => 'district_user',
+                    'role_id' => $investorRole->id,
+                    'company_id' => $company->id,
+                    'phone' => $locked->contact_phone,
+                ]);
+            } else {
+                abort_unless(
+                    $account->roleModel?->name === 'investor'
+                        && (int) $account->company_id === (int) $company->id,
+                    403,
+                    'Өтінім иесі Investor аккаунтына сәйкес келмейді.'
+                );
+            }
 
-            $project = InvestmentProject::create([
-                'name' => $locked->project_name,
-                'project_type_id' => $projectTypeIds[0] ?? null,
-                'company_id' => $company->id,
-                'company_name' => $company->display_name,
-                'description' => $locked->project_description,
-                'current_status' => 'Өтінім қабылданып, жоба құрылды.',
-                'region_id' => $zone->region_id,
-                'jobs_count' => $locked->jobs_count,
-                'production_not_applicable' => true,
-                'total_investment' => $locked->investment_amount,
-                'status' => 'plan',
-                'created_by' => $reviewer->id,
-                'infrastructure' => $this->projectInfrastructure($locked),
-            ]);
-            $project->projectTypes()->sync($projectTypeIds);
-            $project->curators()->sync([$reviewer->id]);
+            if ($locked->application_kind === 'expansion') {
+                $project = InvestmentProject::query()
+                    ->lockForUpdate()
+                    ->findOrFail($locked->source_investment_project_id);
+                abort_unless(
+                    (int) $project->company_id === (int) $company->id
+                        && $this->projectBelongsToZone($project, $zone),
+                    422,
+                    'Кеңейтілетін жоба компанияға немесе аймаққа сәйкес келмейді.'
+                );
 
-            match ($zone::class) {
-                Sez::class => $project->sezs()->sync([$zone->id]),
-                IndustrialZone::class => $project->industrialZones()->sync([$zone->id]),
-                PromZone::class => $project->promZones()->sync([$zone->id]),
-            };
+                $project->update([
+                    'jobs_count' => (int) $project->jobs_count
+                        + (int) $locked->jobs_count,
+                    'total_investment' => (float) $project->total_investment
+                        + (float) $locked->investment_amount,
+                    'infrastructure' => $this->expandedInfrastructure(
+                        $project->infrastructure,
+                        $locked
+                    ),
+                ]);
+                $project->projectTypes()->syncWithoutDetaching($projectTypeIds);
+                $project->curators()->syncWithoutDetaching([$reviewer->id]);
+            } else {
+                $project = InvestmentProject::create([
+                    'name' => $locked->project_name,
+                    'project_type_id' => $projectTypeIds[0] ?? null,
+                    'company_id' => $company->id,
+                    'company_name' => $company->display_name,
+                    'description' => $locked->project_description,
+                    'current_status' => 'Өтінім қабылданып, жоба құрылды.',
+                    'region_id' => $zone->region_id,
+                    'jobs_count' => $locked->jobs_count,
+                    'production_not_applicable' => true,
+                    'total_investment' => $locked->investment_amount,
+                    'status' => 'plan',
+                    'created_by' => $reviewer->id,
+                    'infrastructure' => $this->projectInfrastructure($locked),
+                ]);
+                $project->projectTypes()->sync($projectTypeIds);
+                $project->curators()->sync([$reviewer->id]);
+
+                match ($zone::class) {
+                    Sez::class => $project->sezs()->sync([$zone->id]),
+                    IndustrialZone::class => $project->industrialZones()->sync([$zone->id]),
+                    PromZone::class => $project->promZones()->sync([$zone->id]),
+                };
+            }
+
+            $this->copyApplicationDocuments($locked, $project);
 
             $locked->update([
                 'status' => 'converted_to_project',
@@ -386,8 +427,30 @@ class InvestmentApplicationWorkflowService
                 'approved',
                 'converted_to_project',
                 $reviewer,
-                'Өтінімнен инвестициялық жоба құрылды.',
+                $locked->application_kind === 'expansion'
+                    ? 'Өтінім бойынша бар инвестициялық жоба кеңейтілді.'
+                    : 'Өтінімнен инвестициялық жоба құрылды.',
                 ['investment_project_id' => $project->id]
+            );
+            KpiLog::activity(
+                projectId: $project->id,
+                event: $locked->application_kind === 'expansion'
+                    ? 'project.expanded_from_application'
+                    : 'project.created_from_application',
+                category: 'project',
+                action: $locked->application_kind === 'expansion'
+                    ? 'Қабылданған өтінім бойынша жоба кеңейтілді.'
+                    : 'Қабылданған өтінім бойынша жоба құрылды.',
+                subject: $locked,
+                properties: [
+                    'application_number' => $locked->application_number,
+                    'application_kind' => $locked->application_kind,
+                    'approved_area' => (float) $locked->approved_area,
+                    'investment_amount' => (float) $locked->investment_amount,
+                    'jobs_count' => (int) $locked->jobs_count,
+                    'description' => $locked->project_description,
+                ],
+                actor: $reviewer
             );
 
             return [$locked->fresh(['applicant']), $project];
@@ -396,13 +459,103 @@ class InvestmentApplicationWorkflowService
         TaskNotification::create([
             'user_id' => $application->user_id,
             'type' => 'investment_application_converted',
-            'message' => 'Өтінім инвестициялық жобаға айналдырылды. Енді жоба кабинетіне кіре аласыз.',
+            'message' => $application->application_kind === 'expansion'
+                ? 'Өтінім қабылданып, бар инвестициялық жобаңыз кеңейтілді.'
+                : 'Өтінім инвестициялық жобаға айналдырылды. Енді жоба кабинетіне кіре аласыз.',
             'action_url' => route('investment-projects.show', $project, false),
             'action_label' => 'Жобаны ашу',
             'is_read' => false,
         ]);
 
         return $project;
+    }
+
+    private function projectBelongsToZone(
+        InvestmentProject $project,
+        object $zone
+    ): bool {
+        return match ($zone::class) {
+            Sez::class => $project->sezs()->whereKey($zone->id)->exists(),
+            IndustrialZone::class => $project->industrialZones()
+                ->whereKey($zone->id)
+                ->exists(),
+            PromZone::class => $project->promZones()
+                ->whereKey($zone->id)
+                ->exists(),
+            default => false,
+        };
+    }
+
+    /** @param array<string, mixed>|null $infrastructure
+     * @return array<string, mixed>
+     */
+    private function expandedInfrastructure(
+        ?array $infrastructure,
+        InvestmentApplication $application
+    ): array {
+        $result = $infrastructure ?? [];
+        $requirements = $application->infrastructure_requirements ?? [];
+
+        foreach (['electricity', 'water', 'gas', 'roads', 'railway', 'internet'] as $key) {
+            $additional = (float) ($requirements[$key] ?? 0);
+            $currentRequired = (float) data_get(
+                $result,
+                "{$key}.required_capacity",
+                data_get($result, "{$key}.capacity", 0)
+            );
+            $currentUsed = (float) data_get(
+                $result,
+                "{$key}.used_capacity",
+                0
+            );
+            $result[$key] = [
+                ...(is_array($result[$key] ?? null) ? $result[$key] : []),
+                'needed' => (bool) data_get($result, "{$key}.needed", false)
+                    || $additional > 0,
+                'required_capacity' => $currentRequired + $additional,
+                'used_capacity' => $currentUsed,
+            ];
+        }
+
+        $additionalArea = (float) $application->approved_area;
+        $currentLandRequired = (float) data_get(
+            $result,
+            'land.required_capacity',
+            0
+        );
+        $currentLandUsed = (float) data_get($result, 'land.used_capacity', 0);
+        $result['land'] = [
+            ...(is_array($result['land'] ?? null) ? $result['land'] : []),
+            'needed' => true,
+            'required_capacity' => $currentLandRequired + $additionalArea,
+            'used_capacity' => $currentLandUsed + $additionalArea,
+        ];
+
+        return $result;
+    }
+
+    private function copyApplicationDocuments(
+        InvestmentApplication $application,
+        InvestmentProject $project
+    ): void {
+        $application->documents()->get()->each(
+            function ($document) use ($project): void {
+                ProjectDocument::query()->firstOrCreate(
+                    [
+                        'project_id' => $project->id,
+                        'file_path' => $document->file_path,
+                    ],
+                    [
+                        'name' => $document->name,
+                        'type' => $document->type,
+                        'is_completed' => false,
+                        'uploaded_by' => $document->uploaded_by,
+                        'source' => 'investment_application',
+                        'submitted_at' => now(),
+                    ]
+                );
+            }
+        );
     }
 
     private function reviewTransition(

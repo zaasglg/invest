@@ -50,7 +50,13 @@ const fullTypeLabels: Record<ApplicantZone['type'], string> = {
     'prom-zone': 'Өндірістік аймақ',
 };
 
-export default function ZoneShow({ zone }: { zone: ApplicantZone }) {
+export default function ZoneShow({
+    zone,
+    accountRole,
+}: {
+    zone: ApplicantZone;
+    accountRole: 'applicant' | 'investor';
+}) {
     const showUrl = zones.show.url({ zoneType: zone.type, zone: zone.id });
     const applicationUrl = applications.create.url({
         zoneType: zone.type,
@@ -124,7 +130,9 @@ export default function ZoneShow({ zone }: { zone: ApplicantZone }) {
                         <Link href={applicationUrl}>
                             <Button>
                                 <FilePlus2 data-icon="inline-start" />
-                                Өтінім беру
+                                {accountRole === 'investor'
+                                    ? 'Жобаға өтінім беру'
+                                    : 'Өтінім беру'}
                             </Button>
                         </Link>
                     ) : (

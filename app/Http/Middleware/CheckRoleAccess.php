@@ -83,6 +83,7 @@ class CheckRoleAccess
      * Project routes available to an investor for their company's projects.
      */
     protected array $investorProjectRoutes = [
+        'regions.show',
         'investment-projects.index',
         'investment-projects.show',
         'investment-projects.passport',

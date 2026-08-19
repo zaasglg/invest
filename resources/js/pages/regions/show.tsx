@@ -241,6 +241,9 @@ export default function Show({
     const isInvest =
         (auth as { user: { role_model?: { name?: string | null } | null } })
             .user?.role_model?.name === 'invest';
+    const isInvestor =
+        (auth as { user: { role_model?: { name?: string | null } | null } })
+            .user?.role_model?.name === 'investor';
 
     const [activeTab, setActiveTab] = useState('all');
     const [baseLayer, setBaseLayer] = useState<'standard' | 'satellite'>(
@@ -803,12 +806,13 @@ export default function Show({
         0,
     );
 
-    const totalIssuesCount =
-        stats.projectIssuesCount +
-        stats.sezIssuesCount +
-        stats.izIssuesCount +
-        stats.promIssuesCount +
-        stats.subsoilIssuesCount;
+    const totalIssuesCount = isInvestor
+        ? stats.projectIssuesCount
+        : stats.projectIssuesCount +
+          stats.sezIssuesCount +
+          stats.izIssuesCount +
+          stats.promIssuesCount +
+          stats.subsoilIssuesCount;
     const regionIssuesUrl = issuesIndex({
         query: { region_id: region.id },
     }).url;
@@ -1143,7 +1147,7 @@ export default function Show({
                             label: 'Проблемалық мәселелер',
                             value: totalIssuesCount,
                             icon: AlertTriangle,
-                            href: regionIssuesUrl,
+                            href: isInvestor ? null : regionIssuesUrl,
                         },
                     ].map((metric) => {
                         const content = (

@@ -36,12 +36,14 @@ import * as applicationsRoutes from '@/routes/applicant/applications';
 import type { InvestmentApplication, PaginatedData } from '@/types';
 
 type Props = {
+    accountRole: 'applicant' | 'investor';
     applications: PaginatedData<InvestmentApplication>;
     statuses: Record<string, string>;
     filter: string;
 };
 
 export default function ApplicationsIndex({
+    accountRole,
     applications,
     statuses,
     filter,
@@ -57,9 +59,13 @@ export default function ApplicationsIndex({
             ]}
         >
             <Head title="Менің өтінімдерім" />
-            <PageContainer width="standard">
+            <PageContainer width="wide">
                 <ApplicantHero
-                    eyebrow="Өтінім беруші порталы"
+                    eyebrow={
+                        accountRole === 'investor'
+                            ? 'Investor порталы'
+                            : 'Өтінім беруші порталы'
+                    }
                     title="Менің өтінімдерім"
                     subtitle="Өтінімдердің қаралу күйін, ескертулерді және резерв мерзімін бақылаңыз."
                     icon={FolderKanban}
@@ -173,6 +179,11 @@ export default function ApplicationsIndex({
                                                                         'kk-KZ',
                                                                     )}
                                                                 </p>
+                                                                <p className="mt-1 text-[11px] font-semibold text-sky-700">
+                                                                    {
+                                                                        application.application_kind_label
+                                                                    }
+                                                                </p>
                                                             </div>
                                                         </div>
                                                     </TableCell>
@@ -246,6 +257,9 @@ export default function ApplicationsIndex({
                                         <h2 className="mt-4 text-lg font-extrabold text-navy">
                                             {application.project_name}
                                         </h2>
+                                        <p className="mt-1 text-xs font-semibold text-sky-700">
+                                            {application.application_kind_label}
+                                        </p>
                                         <div className="mt-3 grid gap-2 text-sm text-slate-500">
                                             <p className="flex items-center gap-2">
                                                 <MapPin className="size-4 text-gold-dark" />

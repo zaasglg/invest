@@ -11,9 +11,13 @@ class EnsureApplicantRole
     public function handle(Request $request, Closure $next): Response
     {
         abort_unless(
-            $request->user()?->loadMissing('roleModel')->roleModel?->name === 'applicant',
+            in_array(
+                $request->user()?->loadMissing('roleModel')->roleModel?->name,
+                ['applicant', 'investor'],
+                true
+            ),
             403,
-            'Бұл бөлім тек өтінім берушілерге арналған.'
+            'Бұл бөлім тек өтінім беруші мен Investor аккаунтына арналған.'
         );
 
         return $next($request);

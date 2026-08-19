@@ -6,11 +6,13 @@ use App\Http\Requests\InvestmentApplicationRequest;
 use App\Models\Company;
 use App\Models\InvestmentApplication;
 use App\Models\InvestmentApplicationDocument;
+use App\Models\InvestmentProject;
 use App\Models\ProjectType;
 use App\Models\Region;
 use App\Services\InvestmentApplicationDocumentService;
 use App\Services\InvestmentApplicationWorkflowService;
 use App\Services\ZoneCapacityService;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -34,7 +36,11 @@ class ApplicantInvestmentApplicationController extends Controller
 
         $applications = InvestmentApplication::query()
             ->where('user_id', $request->user()->id)
-            ->with(['zoneable:id,name,region_id', 'zoneable.region:id,name'])
+            ->with([
+                'zoneable:id,name,region_id',
+                'zoneable.region:id,name',
+                'sourceInvestmentProject:id,name',
+            ])
             ->when(
                 $validated['status'] ?? null,
                 fn ($query, $status) => $query->where('status', $status)
@@ -44,6 +50,9 @@ class ApplicantInvestmentApplicationController extends Controller
             ->withQueryString();
 
         return Inertia::render('applicant/applications/index', [
+            'accountRole' => $request->user()
+                ->loadMissing('roleModel')
+                ->roleModel?->name,
             'applications' => $applications,
             'statuses' => InvestmentApplication::STATUSES,
             'filter' => $validated['status'] ?? '',
@@ -57,7 +66,46 @@ class ApplicantInvestmentApplicationController extends Controller
         return Inertia::render('applicant/applications/form', [
             'application' => null,
             'zone' => $this->capacity->present($zoneModel),
-            ...$this->formOptions($request),
+            ...$this->formOptions($request, $zoneModel),
+        ]);
+    }
+
+    public function companyLookup(Request $request)
+    {
+        abort_unless(
+            $request->user()
+                ->loadMissing('roleModel')
+                ->roleModel?->name === 'applicant',
+            403
+        );
+        $validated = $request->validate([
+            'bin' => 'required|digits:12',
+        ]);
+        $company = Company::query()
+            ->where('bin', $validated['bin'])
+            ->with(['region:id,name', 'investor:id,company_id'])
+            ->first();
+
+        if (! $company) {
+            return response()->json(['found' => false]);
+        }
+
+        if ($company->investor) {
+            return response()->json([
+                'found' => true,
+                'can_attach' => false,
+                'has_investor' => true,
+                'company' => $company->only(['id', 'name', 'bin']),
+                'message' => 'Бұл компанияға Investor аккаунты тіркелген. Өтінімді сол аккаунтпен беріңіз.',
+            ]);
+        }
+
+        return response()->json([
+            'found' => true,
+            'can_attach' => true,
+            'has_investor' => false,
+            'company' => $this->companyFormData($company),
+            'message' => 'Компания CRM базасынан табылды. Ресми деректер автоматты толтырылды.',
         ]);
     }
 
@@ -70,7 +118,10 @@ class ApplicantInvestmentApplicationController extends Controller
         $validated = $request->validated();
         $intent = $validated['intent'];
         $documents = $request->file('documents', []);
-        $projectTypeIds = $this->projectTypeIds($validated);
+        [$validated, $projectTypeIds] = $this->normalizeApplicationData(
+            $validated,
+            $request
+        );
         $validated['activity_sector'] = $this->activitySector($projectTypeIds);
         unset(
             $validated['intent'],
@@ -124,6 +175,7 @@ class ApplicantInvestmentApplicationController extends Controller
                 'documents:id,investment_application_id,name,type,size,created_at',
                 'statusHistories.actor:id,full_name',
                 'investmentProject:id,name',
+                'sourceInvestmentProject:id,name',
             ]),
         ]);
     }
@@ -139,11 +191,15 @@ class ApplicantInvestmentApplicationController extends Controller
             'application' => $investmentApplication->load([
                 'projectTypes:id,name',
                 'documents:id,investment_application_id,name,type,size,created_at',
+                'sourceInvestmentProject:id,name',
             ]),
             'zone' => $this->capacity->present(
                 $investmentApplication->zoneable()->firstOrFail()
             ),
-            ...$this->formOptions($request),
+            ...$this->formOptions(
+                $request,
+                $investmentApplication->zoneable()->firstOrFail()
+            ),
         ]);
     }
 
@@ -155,7 +211,10 @@ class ApplicantInvestmentApplicationController extends Controller
         $validated = $request->validated();
         $intent = $validated['intent'];
         $documents = $request->file('documents', []);
-        $projectTypeIds = $this->projectTypeIds($validated);
+        [$validated, $projectTypeIds] = $this->normalizeApplicationData(
+            $validated,
+            $request
+        );
         $validated['activity_sector'] = $this->activitySector($projectTypeIds);
         unset(
             $validated['intent'],
@@ -220,8 +279,11 @@ class ApplicantInvestmentApplicationController extends Controller
     }
 
     /** @return array<string, mixed> */
-    private function formOptions(Request $request): array
+    private function formOptions(Request $request, Model $zone): array
     {
+        $user = $request->user()->loadMissing(['roleModel', 'company']);
+        $role = $user->roleModel?->name;
+
         return [
             'regions' => Region::query()
                 ->where('type', 'district')
@@ -231,11 +293,98 @@ class ApplicantInvestmentApplicationController extends Controller
             'projectTypes' => ProjectType::query()
                 ->orderBy('name')
                 ->get(['id', 'name']),
+            'applicationKinds' => InvestmentApplication::APPLICATION_KINDS,
+            'accountRole' => $role,
+            'company' => $user->company
+                ? $this->companyFormData($user->company)
+                : null,
+            'existingProjects' => $role === 'investor' && $user->company_id
+                ? $this->existingProjects($user->company_id, $zone)
+                : [],
             'applicantDefaults' => [
                 'full_name' => $request->user()->full_name,
                 'email' => $request->user()->email,
                 'phone' => $request->user()->phone,
             ],
+        ];
+    }
+
+    /** @return array{0: array<string, mixed>, 1: array<int, int>} */
+    private function normalizeApplicationData(
+        array $validated,
+        Request $request
+    ): array {
+        $kind = $validated['application_kind'];
+        $projectTypeIds = $this->projectTypeIds($validated);
+
+        if ($kind === 'expansion') {
+            $source = InvestmentProject::query()
+                ->whereKey($validated['source_investment_project_id'])
+                ->where('company_id', $request->user()->company_id)
+                ->with('projectTypes:id,name')
+                ->firstOrFail();
+            $projectTypeIds = $source->projectTypes
+                ->pluck('id')
+                ->whenEmpty(fn ($ids) => collect([$source->project_type_id]))
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            $validated['project_name'] = $source->name;
+        } else {
+            $validated['source_investment_project_id'] = null;
+        }
+
+        return [$validated, $projectTypeIds];
+    }
+
+    private function existingProjects(int $companyId, Model $zone)
+    {
+        $relation = match ($this->capacity->type($zone)) {
+            'sez' => 'sezs',
+            'industrial-zone' => 'industrialZones',
+            'prom-zone' => 'promZones',
+        };
+
+        return InvestmentProject::query()
+            ->active()
+            ->where('company_id', $companyId)
+            ->whereHas(
+                $relation,
+                fn ($query) => $query->whereKey($zone->getKey())
+            )
+            ->with('projectTypes:id,name')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'description',
+                'project_type_id',
+                'jobs_count',
+                'total_investment',
+                'infrastructure',
+            ]);
+    }
+
+    /** @return array<string, mixed> */
+    private function companyFormData(Company $company): array
+    {
+        $company->loadMissing('region:id,name');
+
+        return [
+            'id' => $company->id,
+            'legal_form' => $company->legal_form,
+            'name' => $company->name,
+            'bin' => $company->bin,
+            'registration_date' => $company->registration_date?->format('Y-m-d'),
+            'region_id' => $company->region_id,
+            'region' => $company->region?->only(['id', 'name']),
+            'director_full_name' => $company->director_full_name,
+            'contact_person' => $company->contact_person,
+            'phone' => $company->phone,
+            'email' => $company->email,
+            'legal_address' => $company->legal_address,
         ];
     }
 

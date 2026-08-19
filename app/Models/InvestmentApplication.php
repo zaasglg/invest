@@ -7,6 +7,11 @@ use Illuminate\Database\Eloquent\Model;
 
 class InvestmentApplication extends Model
 {
+    public const APPLICATION_KINDS = [
+        'new_project' => 'Жаңа жоба',
+        'expansion' => 'Бар жобаны кеңейту',
+    ];
+
     public const STATUSES = [
         'draft' => 'Жоба нұсқасы',
         'submitted' => 'Жіберілді',
@@ -34,6 +39,8 @@ class InvestmentApplication extends Model
         'zoneable_type',
         'zoneable_id',
         'status',
+        'application_kind',
+        'source_investment_project_id',
         'project_name',
         'project_description',
         'activity_sector',
@@ -63,6 +70,7 @@ class InvestmentApplication extends Model
 
     protected $appends = [
         'status_label',
+        'application_kind_label',
         'zone_type',
         'zone_type_label',
         'is_editable',
@@ -110,6 +118,14 @@ class InvestmentApplication extends Model
         return $this->belongsTo(InvestmentProject::class);
     }
 
+    public function sourceInvestmentProject()
+    {
+        return $this->belongsTo(
+            InvestmentProject::class,
+            'source_investment_project_id'
+        );
+    }
+
     public function projectTypes()
     {
         return $this->belongsToMany(
@@ -140,6 +156,12 @@ class InvestmentApplication extends Model
     public function getStatusLabelAttribute(): string
     {
         return self::STATUSES[$this->status] ?? $this->status;
+    }
+
+    public function getApplicationKindLabelAttribute(): string
+    {
+        return self::APPLICATION_KINDS[$this->application_kind]
+            ?? $this->application_kind;
     }
 
     public function getZoneTypeAttribute(): string
