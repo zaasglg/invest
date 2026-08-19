@@ -1,20 +1,29 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
+    BriefcaseBusiness,
+    Building2,
     Download,
+    FilePenLine,
     FileText,
+    Files,
+    Network,
     Save,
     Send,
     Trash2,
 } from 'lucide-react';
 import type { FormEvent } from 'react';
 
+import {
+    ApplicantHero,
+    ApplicantSectionCard,
+} from '@/components/applicant/applicant-ui';
 import InputError from '@/components/input-error';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { FormCard, PageContainer, PageHeader } from '@/components/ui/page';
+import { PageContainer } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -124,12 +133,13 @@ export default function ApplicationForm({
         >
             <Head title={application ? 'Өтінімді өңдеу' : 'Жаңа өтінім'} />
             <PageContainer width="form">
-                <PageHeader
+                <ApplicantHero
                     eyebrow={`${zone.type_label} · ${zone.name}`}
                     title={
                         application ? 'Өтінімді өңдеу' : 'Жер аумағына өтінім'
                     }
                     subtitle="Деректерді толық толтырыңыз. Өтінім қабылданғаннан кейін жер уақытша резервке қойылады."
+                    icon={FilePenLine}
                     action={
                         <Link
                             href={
@@ -138,7 +148,10 @@ export default function ApplicationForm({
                                     : `/portal/zones/${zone.type}/${zone.id}`
                             }
                         >
-                            <Button variant="outline">
+                            <Button
+                                variant="outline"
+                                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                            >
                                 <ArrowLeft /> Артқа
                             </Button>
                         </Link>
@@ -148,9 +161,11 @@ export default function ApplicationForm({
                 <ZoneAreaSummary area={zone.area} />
 
                 <form className="space-y-5">
-                    <FormCard
+                    <ApplicantSectionCard
                         title="Жоба туралы"
                         description="Жобаның мақсаты мен негізгі көрсеткіштері"
+                        icon={BriefcaseBusiness}
+                        tone="navy"
                     >
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
@@ -259,9 +274,14 @@ export default function ApplicationForm({
                                 </Field>
                             </div>
                         </div>
-                    </FormCard>
+                    </ApplicantSectionCard>
 
-                    <FormCard title="Компания реквизиттері">
+                    <ApplicantSectionCard
+                        title="Компания реквизиттері"
+                        description="Заңды тұлға мен байланыс деректері"
+                        icon={Building2}
+                        tone="sky"
+                    >
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
                                 label="Заңды нысаны"
@@ -443,11 +463,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                         </div>
-                    </FormCard>
+                    </ApplicantSectionCard>
 
-                    <FormCard
+                    <ApplicantSectionCard
                         title="Қажетті инфрақұрылым"
                         description="Тек қажет ресурстардың шамасын көрсетіңіз"
+                        icon={Network}
+                        tone="emerald"
                     >
                         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {infrastructureFields.map((field) => (
@@ -484,11 +506,13 @@ export default function ApplicationForm({
                                 </Field>
                             ))}
                         </div>
-                    </FormCard>
+                    </ApplicantSectionCard>
 
-                    <FormCard
+                    <ApplicantSectionCard
                         title="Құжаттар"
                         description="PDF, Word, Excel немесе сурет; әр файл 10 МБ-тан аспайды"
+                        icon={Files}
+                        tone="violet"
                     >
                         <Input
                             type="file"
@@ -566,9 +590,9 @@ export default function ApplicationForm({
                                 ))}
                             </div>
                         ) : null}
-                    </FormCard>
+                    </ApplicantSectionCard>
 
-                    <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+                    <div className="sticky bottom-4 z-20 flex flex-col-reverse gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-[0_24px_65px_-32px_rgba(15,27,61,0.45)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-end">
                         <Button
                             type="button"
                             variant="outline"
@@ -579,6 +603,7 @@ export default function ApplicationForm({
                         </Button>
                         <Button
                             type="button"
+                            className="bg-gold text-white shadow-[0_12px_28px_-14px_rgba(200,164,78,0.8)] hover:bg-gold-dark"
                             disabled={form.processing}
                             onClick={(event) => submit(event, 'submit')}
                         >

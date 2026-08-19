@@ -25,8 +25,13 @@ export default function ApplicationStatusBadge({
     return (
         <Badge
             variant="outline"
-            className={cn(styles[status] ?? styles.draft, className)}
+            className={cn(
+                'gap-1.5 px-2.5 py-1 font-semibold shadow-none',
+                styles[status] ?? styles.draft,
+                className,
+            )}
         >
+            <span className="size-1.5 rounded-full bg-current opacity-70" />
             {label}
         </Badge>
     );

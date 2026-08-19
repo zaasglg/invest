@@ -1,5 +1,17 @@
-import { Download, FileText } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
+import {
+    BriefcaseBusiness,
+    Building2,
+    Download,
+    FileText,
+    Files,
+    History,
+    MessageSquareText,
+    Network,
+    UserRound,
+} from 'lucide-react';
 
+import { ApplicantSectionCard } from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import { Button } from '@/components/ui/button';
 import { FormCard } from '@/components/ui/page';
@@ -56,12 +68,38 @@ function Detail({ label, value }: { label: string; value?: React.ReactNode }) {
     );
 }
 
+function ApplicationSection({
+    applicantStyle,
+    title,
+    icon,
+    tone,
+    children,
+}: {
+    applicantStyle: boolean;
+    title: string;
+    icon: LucideIcon;
+    tone: 'navy' | 'sky' | 'amber' | 'emerald' | 'violet';
+    children: React.ReactNode;
+}) {
+    if (applicantStyle) {
+        return (
+            <ApplicantSectionCard title={title} icon={icon} tone={tone}>
+                {children}
+            </ApplicantSectionCard>
+        );
+    }
+
+    return <FormCard title={title}>{children}</FormCard>;
+}
+
 export default function InvestmentApplicationDetails({
     application,
     showApplicant = false,
+    applicantStyle = false,
 }: {
     application: InvestmentApplication;
     showApplicant?: boolean;
+    applicantStyle?: boolean;
 }) {
     const requirements = Object.entries(
         application.infrastructure_requirements ?? {},
@@ -72,7 +110,12 @@ export default function InvestmentApplicationDetails({
     return (
         <div className="space-y-5">
             {showApplicant && (
-                <FormCard title="Өтінім беруші">
+                <ApplicationSection
+                    applicantStyle={applicantStyle}
+                    title="Өтінім беруші"
+                    icon={UserRound}
+                    tone="sky"
+                >
                     <dl className="grid gap-5 sm:grid-cols-3">
                         <Detail
                             label="Аты-жөні"
@@ -87,10 +130,15 @@ export default function InvestmentApplicationDetails({
                             value={application.applicant?.phone}
                         />
                     </dl>
-                </FormCard>
+                </ApplicationSection>
             )}
 
-            <FormCard title="Жоба және сұралған жер">
+            <ApplicationSection
+                applicantStyle={applicantStyle}
+                title="Жоба және сұралған жер"
+                icon={BriefcaseBusiness}
+                tone="navy"
+            >
                 <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <Detail
                         label="Жоба атауы"
@@ -138,9 +186,14 @@ export default function InvestmentApplicationDetails({
                         value={application.project_description}
                     />
                 </div>
-            </FormCard>
+            </ApplicationSection>
 
-            <FormCard title="Компания мәліметтері">
+            <ApplicationSection
+                applicantStyle={applicantStyle}
+                title="Компания мәліметтері"
+                icon={Building2}
+                tone="sky"
+            >
                 <dl className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
                     <Detail
                         label="Заңды нысаны"
@@ -180,9 +233,14 @@ export default function InvestmentApplicationDetails({
                         value={application.legal_address}
                     />
                 </dl>
-            </FormCard>
+            </ApplicationSection>
 
-            <FormCard title="Қажетті инфрақұрылым">
+            <ApplicationSection
+                applicantStyle={applicantStyle}
+                title="Қажетті инфрақұрылым"
+                icon={Network}
+                tone="emerald"
+            >
                 {requirements.length === 0 ? (
                     <p className="text-sm text-slate-500">
                         Қажетті қуат көрсетілмеген.
@@ -198,9 +256,14 @@ export default function InvestmentApplicationDetails({
                         ))}
                     </dl>
                 )}
-            </FormCard>
+            </ApplicationSection>
 
-            <FormCard title="Құжаттар">
+            <ApplicationSection
+                applicantStyle={applicantStyle}
+                title="Құжаттар"
+                icon={Files}
+                tone="violet"
+            >
                 {application.documents?.length ? (
                     <div className="divide-y divide-slate-100">
                         {application.documents.map((document) => (
@@ -232,17 +295,27 @@ export default function InvestmentApplicationDetails({
                         Құжаттар тіркелмеген.
                     </p>
                 )}
-            </FormCard>
+            </ApplicationSection>
 
             {application.reviewer_comment && (
-                <FormCard title="Соңғы сарапшы пікірі">
+                <ApplicationSection
+                    applicantStyle={applicantStyle}
+                    title="Соңғы сарапшы пікірі"
+                    icon={MessageSquareText}
+                    tone="amber"
+                >
                     <p className="text-sm leading-6 whitespace-pre-line text-slate-700">
                         {application.reviewer_comment}
                     </p>
-                </FormCard>
+                </ApplicationSection>
             )}
 
-            <FormCard title="Өтінім тарихы">
+            <ApplicationSection
+                applicantStyle={applicantStyle}
+                title="Өтінім тарихы"
+                icon={History}
+                tone="navy"
+            >
                 <ol className="space-y-4">
                     {application.status_histories?.map((history) => (
                         <li key={history.id} className="flex gap-3">
@@ -272,7 +345,7 @@ export default function InvestmentApplicationDetails({
                         </li>
                     ))}
                 </ol>
-            </FormCard>
+            </ApplicationSection>
         </div>
     );
 }
