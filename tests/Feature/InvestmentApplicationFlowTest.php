@@ -150,15 +150,18 @@ test('applicant sees safe zone capacity and cannot open internal zone pages', fu
         ]))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->component('applicant/zones/show')
-            ->where('zone.name', $zone->name)
-            ->has('zone.location', 3)
-            ->where('zone.main_gallery.0.file_path', 'sezs/test-zone.jpg')
-            ->where('zone.area.available', 100)
-            ->missing('zone.investment_projects')
-            ->missing('zone.projects')
-            ->missing('zone.geometry')
-            ->missing('zone.infrastructure.electricity.consumers'));
+            ->component('sezs/show')
+            ->where('sez.name', $zone->name)
+            ->has('sez.location', 3)
+            ->where('mainGallery.0.file_path', 'sezs/test-zone.jpg')
+            ->where('areaUsage.available', 100)
+            ->where('portalContext.accountRole', 'applicant')
+            ->where('portalContext.zoneType', 'sez')
+            ->has('investmentProjects.data', 0)
+            ->has('mapProjects', 0)
+            ->missing('sez.issues')
+            ->missing('sez.investment_projects')
+            ->missing('infrastructureUsage.electricity.consumers'));
 
     $this->actingAs($applicant)
         ->get(route('sezs.show', $zone))
@@ -210,16 +213,72 @@ test('applicant sees public map and gallery for every supported zone type', func
             ]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->component('applicant/zones/show')
-                ->where('zone.type', $type)
-                ->has('zone.location', 3)
+                ->component('sezs/show')
+                ->where('portalContext.zoneType', $type)
+                ->has('sez.location', 3)
                 ->where(
-                    'zone.main_gallery.0.file_path',
+                    'mainGallery.0.file_path',
                     "zones/{$type}.jpg"
                 )
-                ->missing('zone.investment_projects')
-                ->missing('zone.projects'));
+                ->has('investmentProjects.data', 0)
+                ->has('mapProjects', 0)
+                ->missing('sez.investment_projects')
+                ->missing('sez.issues'));
     }
+});
+
+test('investor zone detail only shows their company projects in that zone', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $company = applicationCompany($region);
+    $otherCompany = applicationCompany($region, [
+        'name' => 'Other zone company',
+        'bin' => '444444444444',
+    ]);
+    $investor = applicationUser('investor', ['company_id' => $company->id]);
+    $creator = applicationUser('superadmin', ['region_id' => $region->id]);
+
+    $ownProject = InvestmentProject::create([
+        'name' => 'Investor visible zone project',
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
+        'region_id' => $region->id,
+        'total_investment' => 25000000,
+        'status' => 'implementation',
+        'infrastructure' => [],
+        'created_by' => $creator->id,
+    ]);
+    $foreignProject = InvestmentProject::create([
+        'name' => 'Foreign hidden zone project',
+        'company_id' => $otherCompany->id,
+        'company_name' => $otherCompany->display_name,
+        'region_id' => $region->id,
+        'total_investment' => 90000000,
+        'status' => 'launched',
+        'infrastructure' => [],
+        'created_by' => $creator->id,
+    ]);
+    $ownProject->sezs()->attach($zone);
+    $foreignProject->sezs()->attach($zone);
+
+    $this->actingAs($investor)
+        ->get(route('applicant.zones.show', [
+            'zoneType' => 'sez',
+            'zone' => $zone,
+        ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('sezs/show')
+            ->where('portalContext.accountRole', 'investor')
+            ->has('investmentProjects.data', 1)
+            ->where('investmentProjects.data.0.id', $ownProject->id)
+            ->where('investmentProjects.data.0.name', $ownProject->name)
+            ->where(
+                'investmentProjects.data.0.company_name',
+                $company->display_name
+            )
+            ->missing('investmentProjects.data.0.issues')
+            ->missing('sez.issues'));
 });
 
 test('submitted applications do not reserve land and approval reserves it', function () {

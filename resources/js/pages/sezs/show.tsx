@@ -3,12 +3,15 @@ import {
     ArrowLeft,
     Building2,
     Eye,
+    FilePlus2,
     ImageIcon,
+    Info,
     MapPin,
     Activity,
     Layers,
     AlertTriangle,
     ScrollText,
+    Sprout,
 } from 'lucide-react';
 import React from 'react';
 import AreaOccupancyCard from '@/components/area-occupancy-card';
@@ -33,6 +36,10 @@ import ZoneTerritoryMapCard from '@/components/zone-territory-map-card';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { cn, formatMoneyCompact } from '@/lib/utils';
+import * as applicant from '@/routes/applicant';
+import * as applications from '@/routes/applicant/applications';
+import * as applicantZones from '@/routes/applicant/zones';
+import * as investmentProjectRoutes from '@/routes/investment-projects';
 import { logs as activityLogs } from '@/routes/sezs';
 import type { PaginatedData, SharedData } from '@/types';
 
@@ -95,7 +102,7 @@ interface Sez {
     issues?: Issue[];
     investment_projects?: InvestmentProject[];
     photos_count?: number;
-    created_at: string;
+    created_at?: string | null;
     is_deleted?: boolean;
     deleted_at?: string | null;
     deleter?: { id: number; full_name: string } | null;
@@ -109,6 +116,13 @@ interface Photo {
     created_at?: string | null;
 }
 
+interface PortalContext {
+    accountRole: 'applicant' | 'investor';
+    zoneType: 'sez' | 'industrial-zone' | 'prom-zone';
+    typeLabel: string;
+    availableArea: number;
+}
+
 interface Props {
     sez: Sez;
     areaUsage: AreaUsage;
@@ -120,6 +134,7 @@ interface Props {
     mapProjects?: InvestmentProject[];
     mainGallery?: Photo[];
     renderPhotos?: Photo[];
+    portalContext?: PortalContext;
 }
 
 export default function Show({
@@ -130,6 +145,7 @@ export default function Show({
     mapProjects = [],
     mainGallery = [],
     renderPhotos = [],
+    portalContext,
 }: Props) {
     const {
         url,
@@ -137,6 +153,8 @@ export default function Show({
     } = usePage<SharedData>();
     const canModify = useCanModify();
     const isSuperadmin = auth.user?.role_model?.name === 'superadmin';
+    const isPortalView = portalContext !== undefined;
+    const isInvestorView = portalContext?.accountRole === 'investor';
 
     const statusMap: Record<string, { label: string; color: string }> = {
         active: {
@@ -198,35 +216,69 @@ export default function Show({
     const issues = sez.issues ?? [];
     const photosCount =
         typeof sez.photos_count === 'number' ? sez.photos_count : 0;
+    const portalShowUrl = portalContext
+        ? applicantZones.show.url({
+              zoneType: portalContext.zoneType,
+              zone: sez.id,
+          })
+        : '';
+    const applicationUrl = portalContext
+        ? applications.create.url({
+              zoneType: portalContext.zoneType,
+              zone: sez.id,
+          })
+        : '';
+    const mapEntityType =
+        portalContext?.zoneType === 'industrial-zone'
+            ? 'iz'
+            : portalContext?.zoneType === 'prom-zone'
+              ? 'prom'
+              : 'sez';
+    const showPortalProjects = isInvestorView && investmentProjects.total > 0;
+    const canApply = (portalContext?.availableArea ?? 0) > 0;
+
     return (
         <AppLayout
-            breadcrumbs={[
-                {
-                    title: sez.region?.name || 'Аудан',
-                    href: `/regions/${sez.region_id}`,
-                },
-                { title: sez.name, href: '' },
-            ]}
+            breadcrumbs={
+                isPortalView
+                    ? [
+                          {
+                              title: 'Аймақтар',
+                              href: applicant.portal.url(),
+                          },
+                          { title: sez.name, href: portalShowUrl },
+                      ]
+                    : [
+                          {
+                              title: sez.region?.name || 'Аудан',
+                              href: `/regions/${sez.region_id}`,
+                          },
+                          { title: sez.name, href: '' },
+                      ]
+            }
         >
             <Head title={sez.name} />
 
             <div className="page-surface flex h-full flex-1 flex-col gap-5 sm:gap-6">
                 {/* Back link */}
                 <Link
-                    href={`/sezs`}
+                    href={isPortalView ? applicant.portal.url() : '/sezs'}
                     className="inline-flex w-fit items-center gap-1.5 text-sm font-semibold text-slate-500 transition-colors hover:text-navy"
                 >
-                    <ArrowLeft className="size-4" /> Тізімге қайту
+                    <ArrowLeft className="size-4" />{' '}
+                    {isPortalView ? 'Аймақтар тізіміне қайту' : 'Тізімге қайту'}
                 </Link>
 
-                <DeletedEntityNotice
-                    isDeleted={sez.is_deleted}
-                    deletedAt={sez.deleted_at}
-                    deleter={sez.deleter}
-                />
+                {!isPortalView && (
+                    <DeletedEntityNotice
+                        isDeleted={sez.is_deleted}
+                        deletedAt={sez.deleted_at}
+                        deleter={sez.deleter}
+                    />
+                )}
 
                 <DetailSectionNav
-                    ariaLabel="АЭА бөлімдері"
+                    ariaLabel={`${sez.name} бөлімдері`}
                     items={[
                         {
                             label: 'Шолу',
@@ -238,18 +290,37 @@ export default function Show({
                             href: '#zone-map',
                             icon: MapPin,
                         },
-                        {
-                            label: 'Жобалар',
-                            href: '#zone-projects',
-                            icon: Building2,
-                            count: investmentProjects.total,
-                        },
-                        {
-                            label: 'Мәселелер',
-                            href: '#zone-issues',
-                            icon: AlertTriangle,
-                            count: issues.length,
-                        },
+                        ...(!isPortalView || showPortalProjects
+                            ? [
+                                  {
+                                      label: isPortalView
+                                          ? 'Менің жобаларым'
+                                          : 'Жобалар',
+                                      href: '#zone-projects',
+                                      icon: Building2,
+                                      count: investmentProjects.total,
+                                  },
+                              ]
+                            : []),
+                        ...(!isPortalView
+                            ? [
+                                  {
+                                      label: 'Мәселелер',
+                                      href: '#zone-issues',
+                                      icon: AlertTriangle,
+                                      count: issues.length,
+                                  },
+                              ]
+                            : []),
+                        ...(isPortalView
+                            ? [
+                                  {
+                                      label: 'Өтінім',
+                                      href: '#zone-application',
+                                      icon: FilePlus2,
+                                  },
+                              ]
+                            : []),
                     ]}
                 />
 
@@ -271,7 +342,8 @@ export default function Show({
                                         </span>
                                         <div className="min-w-0">
                                             <p className="mb-1 text-[10px] font-bold tracking-[0.14em] text-gold uppercase">
-                                                Арнайы экономикалық аймақ
+                                                {portalContext?.typeLabel ??
+                                                    'Арнайы экономикалық аймақ'}
                                             </p>
                                             <h1 className="text-xl font-extrabold text-balance text-white sm:text-2xl">
                                                 {sez.name}
@@ -320,14 +392,19 @@ export default function Show({
                                                 icon: MapPin,
                                             },
                                             {
-                                                label: 'Инвестиция көлемі',
-                                                value:
-                                                    totalInvestment > 0
-                                                        ? formatCurrency(
-                                                              totalInvestment,
-                                                          )
-                                                        : 'Көрсетілмеген',
-                                                icon: Building2,
+                                                label: isPortalView
+                                                    ? 'Бос аумақ'
+                                                    : 'Инвестиция көлемі',
+                                                value: isPortalView
+                                                    ? `${portalContext.availableArea} га`
+                                                    : totalInvestment > 0
+                                                      ? formatCurrency(
+                                                            totalInvestment,
+                                                        )
+                                                      : 'Көрсетілмеген',
+                                                icon: isPortalView
+                                                    ? Sprout
+                                                    : Building2,
                                             },
                                         ].map((metric, index) => (
                                             <div
@@ -358,11 +435,13 @@ export default function Show({
 
                                 {/* Infrastructure */}
                                 {sez.infrastructure && (
-                                    <InfrastructureList
-                                        className="mt-6"
-                                        infrastructure={sez.infrastructure}
-                                        usage={infrastructureUsage}
-                                    />
+                                    <div id="zone-infrastructure">
+                                        <InfrastructureList
+                                            className="mt-6 scroll-mt-24"
+                                            infrastructure={sez.infrastructure}
+                                            usage={infrastructureUsage}
+                                        />
+                                    </div>
                                 )}
                             </CardContent>
 
@@ -381,100 +460,156 @@ export default function Show({
                         <section id="zone-map" className="scroll-mt-24">
                             <ZoneTerritoryMapCard
                                 entity={sez}
-                                entityType="sez"
+                                entityType={mapEntityType}
                                 projects={mapProjects}
                             />
                         </section>
 
                         {/* Investment Projects */}
-                        <Card
-                            id="zone-projects"
-                            className="scroll-mt-24 shadow-none"
-                        >
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Building2 className="h-5 w-5 text-gray-500" />
-                                    Инвестициялық жобалар
-                                    {investmentProjects.total > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-2"
-                                        >
-                                            {investmentProjects.total}
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {projects.length > 0 ? (
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>Атауы</TableHead>
-                                                <TableHead>Компания</TableHead>
-                                                <TableHead>
-                                                    Инвестициялар
-                                                </TableHead>
-                                                <TableHead>Күйі</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {projects.map((project) => (
-                                                <TableRow
-                                                    key={project.id}
-                                                    className="cursor-pointer hover:bg-violet-50"
-                                                    onClick={() =>
-                                                        (window.location.href = `/investment-projects/${project.id}`)
-                                                    }
-                                                >
-                                                    <TableCell className="font-medium text-[#0f1b3d]">
-                                                        {project.name}
-                                                    </TableCell>
-                                                    <TableCell className="text-gray-600">
-                                                        {project.company_name ||
-                                                            '—'}
-                                                    </TableCell>
-                                                    <TableCell className="text-gray-600">
-                                                        {project.total_investment
-                                                            ? formatCurrency(
-                                                                  Number(
-                                                                      project.total_investment,
-                                                                  ),
-                                                              )
-                                                            : '—'}
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <Badge
-                                                            className={`${projectStatusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} border-0`}
-                                                        >
-                                                            {projectStatusMap[
-                                                                project.status
-                                                            ]?.label ||
-                                                                project.status}
-                                                        </Badge>
-                                                    </TableCell>
+                        {(!isPortalView || showPortalProjects) && (
+                            <Card
+                                id="zone-projects"
+                                className="scroll-mt-24 shadow-none"
+                            >
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <Building2 className="h-5 w-5 text-gray-500" />
+                                        {isPortalView
+                                            ? 'Менің инвестициялық жобаларым'
+                                            : 'Инвестициялық жобалар'}
+                                        {investmentProjects.total > 0 && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="ml-2"
+                                            >
+                                                {investmentProjects.total}
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {projects.length > 0 ? (
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Атауы</TableHead>
+                                                    <TableHead>
+                                                        Компания
+                                                    </TableHead>
+                                                    <TableHead>
+                                                        Инвестициялар
+                                                    </TableHead>
+                                                    <TableHead>Күйі</TableHead>
                                                 </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                ) : (
-                                    <p className="py-4 text-center text-sm text-gray-500">
-                                        Байланыстырылған жобалар жоқ
-                                    </p>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {projects.map((project) => (
+                                                    <TableRow
+                                                        key={project.id}
+                                                        className="cursor-pointer hover:bg-violet-50"
+                                                        onClick={() =>
+                                                            (window.location.href =
+                                                                investmentProjectRoutes.show.url(
+                                                                    project.id,
+                                                                ))
+                                                        }
+                                                    >
+                                                        <TableCell className="font-medium text-[#0f1b3d]">
+                                                            {project.name}
+                                                        </TableCell>
+                                                        <TableCell className="text-gray-600">
+                                                            {project.company_name ||
+                                                                '—'}
+                                                        </TableCell>
+                                                        <TableCell className="text-gray-600">
+                                                            {project.total_investment
+                                                                ? formatCurrency(
+                                                                      Number(
+                                                                          project.total_investment,
+                                                                      ),
+                                                                  )
+                                                                : '—'}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge
+                                                                className={`${projectStatusMap[project.status]?.color || 'bg-gray-100 text-gray-800'} border-0`}
+                                                            >
+                                                                {projectStatusMap[
+                                                                    project
+                                                                        .status
+                                                                ]?.label ||
+                                                                    project.status}
+                                                            </Badge>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    ) : (
+                                        <p className="py-4 text-center text-sm text-gray-500">
+                                            Байланыстырылған жобалар жоқ
+                                        </p>
+                                    )}
+                                </CardContent>
+                                {projects.length > 0 && (
+                                    <div className="border-t">
+                                        <Pagination
+                                            paginator={investmentProjects}
+                                        />
+                                    </div>
                                 )}
-                            </CardContent>
-                            {projects.length > 0 && (
-                                <div className="border-t">
-                                    <Pagination
-                                        paginator={investmentProjects}
-                                    />
-                                </div>
-                            )}
-                        </Card>
+                            </Card>
+                        )}
                     </div>
 
                     {/* Sidebar */}
                     <aside className="flex flex-col gap-5 lg:sticky lg:top-20 lg:self-start">
+                        {isPortalView && (
+                            <Card
+                                id="zone-application"
+                                className="scroll-mt-24 overflow-hidden border-navy/10 py-0 shadow-none"
+                            >
+                                <div className="bg-navy px-5 py-5 text-white">
+                                    <p className="text-[10px] font-bold tracking-[0.14em] text-gold uppercase">
+                                        Инвестициялық мүмкіндік
+                                    </p>
+                                    <p className="mt-2 text-3xl font-extrabold tracking-tight text-white tabular-nums">
+                                        {portalContext.availableArea} га
+                                    </p>
+                                    <p className="mt-1 text-xs text-white/60">
+                                        Қазір қолжетімді бос аумақ
+                                    </p>
+                                </div>
+                                <CardContent className="space-y-4 p-5">
+                                    {canApply ? (
+                                        <>
+                                            <p className="text-sm leading-6 text-slate-600">
+                                                Қажетті гектар мен жобаңыз
+                                                туралы мәліметті көрсетіп,
+                                                электрондық өтінім беріңіз.
+                                            </p>
+                                            <Link
+                                                href={applicationUrl}
+                                                className="block"
+                                            >
+                                                <Button className="w-full">
+                                                    <FilePlus2 data-icon="inline-start" />
+                                                    Өтінім толтыру
+                                                </Button>
+                                            </Link>
+                                        </>
+                                    ) : (
+                                        <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm leading-5 text-amber-900">
+                                            <Info className="mt-0.5 size-4 shrink-0" />
+                                            Бұл аймақта қазір бос жер жоқ. Бос
+                                            аумақ пайда болғанда көрсеткіш
+                                            автоматты жаңарады.
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
+
                         {renderPhotos.length > 0 && (
                             <Card className="overflow-hidden shadow-none">
                                 <CardHeader>
@@ -492,166 +627,174 @@ export default function Show({
                         )}
 
                         {/* Actions */}
-                        <Card className="shadow-none">
-                            <CardContent className="flex flex-col gap-3 p-4">
-                                {canModify && (
+                        {!isPortalView && (
+                            <Card className="shadow-none">
+                                <CardContent className="flex flex-col gap-3 p-4">
+                                    {canModify && (
+                                        <Link
+                                            href={`/sezs/${sez.id}/edit?return_to=${encodeURIComponent(url)}`}
+                                            className="w-full"
+                                        >
+                                            <Button
+                                                variant="outline"
+                                                className="w-full justify-start"
+                                            >
+                                                <Activity className="mr-2 h-4 w-4" />{' '}
+                                                Өңдеу
+                                            </Button>
+                                        </Link>
+                                    )}
                                     <Link
-                                        href={`/sezs/${sez.id}/edit?return_to=${encodeURIComponent(url)}`}
+                                        href={`/sezs/${sez.id}/gallery`}
                                         className="w-full"
                                     >
                                         <Button
                                             variant="outline"
                                             className="w-full justify-start"
                                         >
-                                            <Activity className="mr-2 h-4 w-4" />{' '}
-                                            Өңдеу
+                                            <ImageIcon className="mr-2 h-4 w-4" />
+                                            Галерея
+                                            {photosCount > 0 && (
+                                                <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                    {photosCount}
+                                                </span>
+                                            )}
                                         </Button>
                                     </Link>
-                                )}
-                                <Link
-                                    href={`/sezs/${sez.id}/gallery`}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                    >
-                                        <ImageIcon className="mr-2 h-4 w-4" />
-                                        Галерея
-                                        {photosCount > 0 && (
-                                            <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                                                {photosCount}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
-                                <Link
-                                    href={`/regions/${sez.region_id}`}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                    >
-                                        <Layers className="mr-2 h-4 w-4" />{' '}
-                                        Ауданға өту
-                                    </Button>
-                                </Link>
-                                <Link
-                                    href={`/sezs/${sez.id}/issues`}
-                                    className="w-full"
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start"
-                                    >
-                                        <AlertTriangle className="mr-2 h-4 w-4" />{' '}
-                                        Мәселелерді басқару
-                                        {issues.length > 0 && (
-                                            <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
-                                                {issues.length}
-                                            </span>
-                                        )}
-                                    </Button>
-                                </Link>
-                                {isSuperadmin && (
                                     <Link
-                                        href={activityLogs.url(sez)}
+                                        href={`/regions/${sez.region_id}`}
                                         className="w-full"
                                     >
                                         <Button
                                             variant="outline"
                                             className="w-full justify-start"
                                         >
-                                            <ScrollText className="mr-2 h-4 w-4" />
-                                            Әрекеттер тарихы
+                                            <Layers className="mr-2 h-4 w-4" />{' '}
+                                            Ауданға өту
                                         </Button>
                                     </Link>
-                                )}
-                            </CardContent>
-                        </Card>
+                                    <Link
+                                        href={`/sezs/${sez.id}/issues`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <AlertTriangle className="mr-2 h-4 w-4" />{' '}
+                                            Мәселелерді басқару
+                                            {issues.length > 0 && (
+                                                <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
+                                                    {issues.length}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </Link>
+                                    {isSuperadmin && (
+                                        <Link
+                                            href={activityLogs.url(sez)}
+                                            className="w-full"
+                                        >
+                                            <Button
+                                                variant="outline"
+                                                className="w-full justify-start"
+                                            >
+                                                <ScrollText className="mr-2 h-4 w-4" />
+                                                Әрекеттер тарихы
+                                            </Button>
+                                        </Link>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
 
-                        <AreaOccupancyCard usage={areaUsage} />
+                        <AreaOccupancyCard
+                            usage={areaUsage}
+                            showConsumers={!isPortalView}
+                        />
 
                         {/* Issues */}
-                        <Card
-                            id="zone-issues"
-                            className="scroll-mt-24 shadow-none"
-                        >
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <AlertTriangle className="h-5 w-5 text-gray-500" />
-                                    Проблемалық мәселелер
-                                    {issues.length > 0 && (
-                                        <Badge
-                                            variant="secondary"
-                                            className="ml-2"
-                                        >
-                                            {issues.length}
-                                        </Badge>
-                                    )}
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent>
-                                {issues.length > 0 ? (
-                                    <div className="space-y-3">
-                                        {issues.map((issue) => (
-                                            <div
-                                                key={issue.id}
-                                                className="rounded-lg border p-3"
+                        {!isPortalView && (
+                            <Card
+                                id="zone-issues"
+                                className="scroll-mt-24 shadow-none"
+                            >
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2 text-lg">
+                                        <AlertTriangle className="h-5 w-5 text-gray-500" />
+                                        Проблемалық мәселелер
+                                        {issues.length > 0 && (
+                                            <Badge
+                                                variant="secondary"
+                                                className="ml-2"
                                             >
-                                                <div className="mb-1 flex items-center justify-between">
-                                                    <p className="text-sm font-semibold text-[#0f1b3d]">
-                                                        {issue.title}
-                                                    </p>
-                                                    <div className="flex gap-1">
-                                                        {issue.severity && (
-                                                            <Badge
-                                                                className={`${severityMap[issue.severity]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
-                                                            >
-                                                                {severityMap[
-                                                                    issue
-                                                                        .severity
-                                                                ]?.label ||
-                                                                    issue.severity}
-                                                            </Badge>
-                                                        )}
-                                                        {issue.status && (
-                                                            <Badge
-                                                                className={`${issueStatusMap[issue.status]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
-                                                            >
-                                                                {issueStatusMap[
-                                                                    issue.status
-                                                                ]?.label ||
-                                                                    issue.status}
-                                                            </Badge>
-                                                        )}
+                                                {issues.length}
+                                            </Badge>
+                                        )}
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {issues.length > 0 ? (
+                                        <div className="space-y-3">
+                                            {issues.map((issue) => (
+                                                <div
+                                                    key={issue.id}
+                                                    className="rounded-lg border p-3"
+                                                >
+                                                    <div className="mb-1 flex items-center justify-between">
+                                                        <p className="text-sm font-semibold text-[#0f1b3d]">
+                                                            {issue.title}
+                                                        </p>
+                                                        <div className="flex gap-1">
+                                                            {issue.severity && (
+                                                                <Badge
+                                                                    className={`${severityMap[issue.severity]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
+                                                                >
+                                                                    {severityMap[
+                                                                        issue
+                                                                            .severity
+                                                                    ]?.label ||
+                                                                        issue.severity}
+                                                                </Badge>
+                                                            )}
+                                                            {issue.status && (
+                                                                <Badge
+                                                                    className={`${issueStatusMap[issue.status]?.color || 'bg-gray-100 text-gray-800'} border-0 text-[10px]`}
+                                                                >
+                                                                    {issueStatusMap[
+                                                                        issue
+                                                                            .status
+                                                                    ]?.label ||
+                                                                        issue.status}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
                                                     </div>
+                                                    {issue.description && (
+                                                        <p className="text-xs text-gray-500">
+                                                            {issue.description}
+                                                        </p>
+                                                    )}
+                                                    {issue.creator && (
+                                                        <p className="mt-1 text-[11px] text-gray-400">
+                                                            Қосқан:{' '}
+                                                            {
+                                                                issue.creator
+                                                                    .full_name
+                                                            }
+                                                        </p>
+                                                    )}
                                                 </div>
-                                                {issue.description && (
-                                                    <p className="text-xs text-gray-500">
-                                                        {issue.description}
-                                                    </p>
-                                                )}
-                                                {issue.creator && (
-                                                    <p className="mt-1 text-[11px] text-gray-400">
-                                                        Қосқан:{' '}
-                                                        {
-                                                            issue.creator
-                                                                .full_name
-                                                        }
-                                                    </p>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <p className="py-2 text-center text-sm text-gray-500">
-                                        Проблемалық мәселелер жоқ
-                                    </p>
-                                )}
-                            </CardContent>
-                        </Card>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="py-2 text-center text-sm text-gray-500">
+                                            Проблемалық мәселелер жоқ
+                                        </p>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        )}
                     </aside>
                 </div>
             </div>

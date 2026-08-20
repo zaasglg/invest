@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentApplication;
+use App\Models\InvestmentProject;
+use App\Services\InvestmentProjectAccessService;
 use App\Services\ZoneCapacityService;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -11,7 +13,8 @@ use Inertia\Inertia;
 class ApplicantPortalController extends Controller
 {
     public function __construct(
-        private readonly ZoneCapacityService $capacity
+        private readonly ZoneCapacityService $capacity,
+        private readonly InvestmentProjectAccessService $projectAccess
     ) {}
 
     public function index(Request $request)
@@ -117,12 +120,119 @@ class ApplicantPortalController extends Controller
     public function show(Request $request, string $zoneType, int $zone)
     {
         $zoneModel = $this->capacity->resolve($zoneType, $zone);
+        $user = $request->user()->loadMissing('roleModel');
+        $roleName = $user->roleModel?->name;
+        $presentedZone = $this->capacity->present($zoneModel, true);
+        $projectPage = max(1, $request->integer('projects_page', 1));
+        $investmentProjects = new LengthAwarePaginator(
+            [],
+            0,
+            10,
+            $projectPage,
+            [
+                'path' => $request->url(),
+                'pageName' => 'projects_page',
+                'query' => $request->query(),
+            ]
+        );
+        $mapProjects = collect();
 
-        return Inertia::render('applicant/zones/show', [
-            'accountRole' => $request->user()
-                ->loadMissing('roleModel')
-                ->roleModel?->name,
-            'zone' => $this->capacity->present($zoneModel, true),
+        if ($roleName === 'investor') {
+            $zoneRelation = match ($zoneType) {
+                'sez' => 'sezs',
+                'industrial-zone' => 'industrialZones',
+                'prom-zone' => 'promZones',
+            };
+            $projectsQuery = InvestmentProject::query()
+                ->where('is_archived', false)
+                ->whereHas(
+                    $zoneRelation,
+                    fn ($query) => $query->whereKey($zoneModel->getKey())
+                )
+                ->with('region:id,name');
+            $this->projectAccess->scopeVisible($projectsQuery, $user);
+
+            $presentProject = static fn (InvestmentProject $project): array => [
+                'id' => (int) $project->id,
+                'name' => $project->name,
+                'company_name' => (string) ($project->company_name ?? ''),
+                'total_investment' => $project->total_investment,
+                'status' => $project->status,
+                'geometry' => $project->geometry,
+                'region' => $project->region?->only(['id', 'name']),
+            ];
+
+            $mapProjects = (clone $projectsQuery)
+                ->whereNotNull('geometry')
+                ->get()
+                ->map($presentProject)
+                ->values();
+            $investmentProjects = (clone $projectsQuery)
+                ->latest()
+                ->paginate(10, ['*'], 'projects_page')
+                ->withQueryString()
+                ->through($presentProject);
+        }
+
+        $area = $presentedZone['area'];
+
+        return Inertia::render('sezs/show', [
+            'sez' => [
+                'id' => (int) $zoneModel->getKey(),
+                'name' => $zoneModel->name,
+                'region_id' => (int) $zoneModel->region_id,
+                'region' => $presentedZone['region'],
+                'total_area' => (float) $area['total'],
+                'location' => $presentedZone['location'],
+                'status' => $zoneModel->status,
+                'infrastructure' => collect($zoneModel->infrastructure)
+                    ->map(fn (mixed $resource): array => [
+                        'available' => is_array($resource)
+                            ? (bool) ($resource['available'] ?? false)
+                            : (bool) $resource,
+                        'capacity' => is_array($resource)
+                            && isset($resource['capacity'])
+                            ? (string) $resource['capacity']
+                            : null,
+                        'distance' => is_array($resource)
+                            && isset($resource['distance'])
+                            ? (string) $resource['distance']
+                            : null,
+                        'type' => is_array($resource)
+                            && isset($resource['type'])
+                            ? (string) $resource['type']
+                            : null,
+                    ])->all(),
+                'description' => $presentedZone['description'],
+                'created_at' => $zoneModel->created_at?->toISOString(),
+            ],
+            'portalContext' => [
+                'accountRole' => $roleName,
+                'zoneType' => $zoneType,
+                'typeLabel' => $presentedZone['type_label'],
+                'availableArea' => (float) $area['available'],
+            ],
+            'areaUsage' => [
+                'total' => (float) $area['total'],
+                'occupied' => max(
+                    0,
+                    (float) $area['total'] - (float) $area['available']
+                ),
+                'available' => (float) $area['available'],
+                'overused' => 0,
+                'consumers' => [],
+            ],
+            'infrastructureUsage' => collect(
+                $presentedZone['infrastructure']
+            )->map(fn (array $resource): array => [
+                'total' => (float) $resource['total'],
+                'used' => (float) $resource['used'],
+                'remaining' => (float) $resource['remaining'],
+            ])->all(),
+            'investmentProjects' => $investmentProjects,
+            'mapProjects' => $mapProjects,
+            'mainGallery' => $presentedZone['main_gallery'],
+            'renderPhotos' => $presentedZone['render_photos'],
         ]);
     }
 }
