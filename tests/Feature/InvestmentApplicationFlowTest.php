@@ -74,6 +74,7 @@ function validApplicationPayload(Region $region, array $overrides = []): array
         'project_name' => 'Жаңа өндіріс',
         'project_description' => 'Өндірістік жоба сипаттамасы',
         'activity_sector' => 'Өңдеу өнеркәсібі',
+        'company_activity_type' => 'Жеңіл өнеркәсіп өнімдерін өндіру',
         'project_type_ids' => [$projectType->id],
         'requested_area' => 30,
         'investment_amount' => 150000000,
@@ -354,6 +355,7 @@ test('approved application converts into company investor and internal project',
     $application->refresh();
     $applicant->refresh();
     $project = $application->investmentProject()->firstOrFail();
+    $company = Company::query()->findOrFail($applicant->company_id);
 
     expect($application->status)->toBe('converted_to_project')
         ->and($applicant->roleModel?->name)->toBe('investor')
@@ -362,6 +364,8 @@ test('approved application converts into company investor and internal project',
         ->and($project->project_type_id)->toBe($payload['project_type_ids'][0])
         ->and($project->projectTypes()->pluck('project_types.id')->all())
         ->toBe($payload['project_type_ids'])
+        ->and($company->activity_type)
+        ->toBe($payload['company_activity_type'])
         ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
         ->toBe(30.0)
         ->and($project->documents()
@@ -385,7 +389,8 @@ test('existing unclaimed company is normalized and reused for applicant', functi
         ->assertOk()
         ->assertJsonPath('found', true)
         ->assertJsonPath('can_attach', true)
-        ->assertJsonPath('company.name', $company->name);
+        ->assertJsonPath('company.name', $company->name)
+        ->assertJsonPath('company.activity_type', $company->activity_type);
 
     $this->actingAs($applicant)
         ->post(
@@ -396,6 +401,7 @@ test('existing unclaimed company is normalized and reused for applicant', functi
             validApplicationPayload($region, [
                 'company_bin' => $company->bin,
                 'company_name' => 'Қолданушы өзгерткен атау',
+                'company_activity_type' => 'Қолданушы өзгерткен қызмет саласы',
                 'director_full_name' => 'Қолданушы өзгерткен басшы',
             ])
         )
@@ -403,6 +409,7 @@ test('existing unclaimed company is normalized and reused for applicant', functi
 
     $application = InvestmentApplication::query()->firstOrFail();
     expect($application->company_name)->toBe($company->name)
+        ->and($application->company_activity_type)->toBe($company->activity_type)
         ->and($application->director_full_name)->toBe($company->director_full_name);
 
     $this->actingAs($reviewer)
@@ -478,13 +485,15 @@ test('investor submits a new project application for the linked company', functi
             validApplicationPayload($region, [
                 'company_bin' => '111111111111',
                 'company_name' => 'Жалған атау',
+                'company_activity_type' => 'Жалған қызмет саласы',
             ])
         )
         ->assertRedirect();
 
     $application = InvestmentApplication::query()->firstOrFail();
     expect($application->company_bin)->toBe($company->bin)
-        ->and($application->company_name)->toBe($company->name);
+        ->and($application->company_name)->toBe($company->name)
+        ->and($application->company_activity_type)->toBe($company->activity_type);
 
     $this->actingAs($reviewer)
         ->post(route('investment-applications.approve', $application), [
@@ -630,7 +639,7 @@ test('investor cannot expand another company project', function () {
     expect(InvestmentApplication::query()->count())->toBe(0);
 });
 
-test('applicant can select multiple project activity types', function () {
+test('applicant can select multiple project types independently from company activity', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
@@ -665,6 +674,8 @@ test('applicant can select multiple project activity types', function () {
 
     expect($application->activity_sector)
         ->toBe('Өңдеу өнеркәсібі, Тамақ өнеркәсібі')
+        ->and($application->company_activity_type)
+        ->toBe('Жеңіл өнеркәсіп өнімдерін өндіру')
         ->and($application->projectTypes()->pluck('project_types.id')->all())
         ->toBe([$firstType->id, $secondType->id]);
 
@@ -683,7 +694,7 @@ test('applicant can select multiple project activity types', function () {
             ->has('application.project_types', 2));
 });
 
-test('applicant must select at least one project activity type', function () {
+test('applicant must select at least one project type', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
@@ -697,6 +708,26 @@ test('applicant must select at least one project activity type', function () {
             validApplicationPayload($region, ['project_type_ids' => []])
         )
         ->assertSessionHasErrors('project_type_ids');
+
+    expect(InvestmentApplication::query()->count())->toBe(0);
+});
+
+test('company main activity type is required', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $payload = validApplicationPayload($region);
+    unset($payload['company_activity_type']);
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            $payload
+        )
+        ->assertSessionHasErrors('company_activity_type');
 
     expect(InvestmentApplication::query()->count())->toBe(0);
 });

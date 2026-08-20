@@ -88,6 +88,7 @@ export type InvestmentApplication = {
     project_name: string;
     project_description: string;
     activity_sector: string;
+    company_activity_type: string;
     project_types?: ProjectTypeOption[];
     requested_area: string | number;
     approved_area?: string | number | null;

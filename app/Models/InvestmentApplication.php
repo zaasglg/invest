@@ -44,6 +44,7 @@ class InvestmentApplication extends Model
         'project_name',
         'project_description',
         'activity_sector',
+        'company_activity_type',
         'requested_area',
         'approved_area',
         'investment_amount',

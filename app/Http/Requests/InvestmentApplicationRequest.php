@@ -34,6 +34,7 @@ class InvestmentApplicationRequest extends FormRequest
         $strings = [
             'project_name',
             'project_description',
+            'company_activity_type',
             'company_name',
             'director_full_name',
             'contact_person',
@@ -121,6 +122,11 @@ class InvestmentApplicationRequest extends FormRequest
                     'company_region_id' => $company->region_id,
                     'director_full_name' => $company->director_full_name,
                     'legal_address' => $company->legal_address,
+                    ...(
+                        filled($company->activity_type)
+                            ? ['company_activity_type' => $company->activity_type]
+                            : []
+                    ),
                 ]);
             }
         }
@@ -145,6 +151,7 @@ class InvestmentApplicationRequest extends FormRequest
             'project_description' => 'required|string|max:10000',
             'project_type_ids' => 'required|array|min:1',
             'project_type_ids.*' => 'required|integer|distinct|exists:project_types,id',
+            'company_activity_type' => 'required|string|max:255',
             'requested_area' => 'required|numeric|gt:0|max:2000000000',
             'investment_amount' => 'required|numeric|min:0|max:2000000000',
             'jobs_count' => 'required|integer|min:0|max:2000000000',
@@ -266,10 +273,11 @@ class InvestmentApplicationRequest extends FormRequest
             'source_investment_project_id.exists' => 'Таңдалған жоба табылмады.',
             'project_name.required' => 'Жобаның атауын енгізіңіз.',
             'project_description.required' => 'Жобаның сипаттамасын енгізіңіз.',
-            'project_type_ids.required' => 'Кемінде бір қызмет түрін таңдаңыз.',
-            'project_type_ids.array' => 'Қызмет түрлерін тізімнен таңдаңыз.',
-            'project_type_ids.min' => 'Кемінде бір қызмет түрін таңдаңыз.',
-            'project_type_ids.*.exists' => 'Таңдалған қызмет түрі табылмады.',
+            'project_type_ids.required' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.array' => 'Жоба түрлерін тізімнен таңдаңыз.',
+            'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
+            'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
+            'company_activity_type.required' => 'Компанияның негізгі қызмет саласын енгізіңіз.',
             'requested_area.required' => 'Қажетті гектарды енгізіңіз.',
             'requested_area.gt' => 'Қажетті гектар 0-ден үлкен болуы керек.',
             'company_bin.digits' => 'БСН дәл 12 саннан тұруы керек.',
@@ -295,6 +303,11 @@ class InvestmentApplicationRequest extends FormRequest
                 ->registration_date?->format('Y-m-d'),
             'company_region_id' => $company->region_id,
             'director_full_name' => $company->director_full_name,
+            ...(
+                filled($company->activity_type)
+                    ? ['company_activity_type' => $company->activity_type]
+                    : []
+            ),
             'contact_person' => $company->contact_person ?: $userName,
             'contact_phone' => $company->phone ?: $userPhone,
             'contact_email' => $company->email ?: $userEmail,

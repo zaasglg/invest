@@ -75,6 +75,7 @@ type CompanyFormData = {
     registration_date?: string | null;
     region_id?: number | null;
     region?: { id: number; name: string } | null;
+    activity_type?: string | null;
     director_full_name?: string | null;
     contact_person?: string | null;
     phone?: string | null;
@@ -146,6 +147,8 @@ export default function ApplicationForm({
             application?.company_legal_form ?? company?.legal_form ?? '',
         company_name: application?.company_name ?? company?.name ?? '',
         company_bin: application?.company_bin ?? company?.bin ?? '',
+        company_activity_type:
+            application?.company_activity_type ?? company?.activity_type ?? '',
         company_registration_date:
             application?.company_registration_date?.slice(0, 10) ??
             company?.registration_date?.slice(0, 10) ??
@@ -175,6 +178,9 @@ export default function ApplicationForm({
         documents: [] as File[],
     });
     const [companyLocked, setCompanyLocked] = useState(isInvestor);
+    const [companyActivityLocked, setCompanyActivityLocked] = useState(
+        Boolean(company?.activity_type),
+    );
     const [lookupState, setLookupState] = useState<{
         loading: boolean;
         tone: 'success' | 'warning' | 'neutral';
@@ -241,6 +247,7 @@ export default function ApplicationForm({
 
             if (!result.found) {
                 setCompanyLocked(false);
+                setCompanyActivityLocked(false);
                 setLookupState({
                     loading: false,
                     tone: 'neutral',
@@ -252,6 +259,7 @@ export default function ApplicationForm({
 
             if (!result.can_attach || !result.company) {
                 setCompanyLocked(true);
+                setCompanyActivityLocked(true);
                 setLookupState({
                     loading: false,
                     tone: 'warning',
@@ -266,6 +274,7 @@ export default function ApplicationForm({
             form.setData('company_legal_form', found.legal_form);
             form.setData('company_name', found.name);
             form.setData('company_bin', found.bin);
+            form.setData('company_activity_type', found.activity_type ?? '');
             form.setData(
                 'company_registration_date',
                 found.registration_date?.slice(0, 10) ?? '',
@@ -274,6 +283,7 @@ export default function ApplicationForm({
             form.setData('director_full_name', found.director_full_name ?? '');
             form.setData('legal_address', found.legal_address ?? '');
             setCompanyLocked(true);
+            setCompanyActivityLocked(Boolean(found.activity_type));
             setLookupState({
                 loading: false,
                 tone: 'success',
@@ -522,14 +532,14 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
-                                label="Қызмет түрлері"
+                                label="Жоба түрлері"
                                 error={form.errors.project_type_ids}
                             >
                                 <ProjectTypeMultiSelect
                                     id="project_type_ids"
                                     options={projectTypes}
                                     value={form.data.project_type_ids}
-                                    placeholder="Қызмет түрлерін таңдаңыз"
+                                    placeholder="Жоба түрлерін таңдаңыз"
                                     onChange={(value) =>
                                         form.setData('project_type_ids', value)
                                     }
@@ -734,6 +744,10 @@ export default function ApplicationForm({
                                                     '',
                                                 );
                                                 form.setData(
+                                                    'company_activity_type',
+                                                    '',
+                                                );
+                                                form.setData(
                                                     'company_registration_date',
                                                     '',
                                                 );
@@ -755,6 +769,7 @@ export default function ApplicationForm({
                                                 nextBin,
                                             );
                                             setCompanyLocked(false);
+                                            setCompanyActivityLocked(false);
                                             setLookupState({
                                                 loading: false,
                                                 tone: 'neutral',
@@ -798,6 +813,24 @@ export default function ApplicationForm({
                                         {lookupState.message}
                                     </p>
                                 )}
+                            </Field>
+                            <Field
+                                label="Компанияның негізгі қызмет саласы"
+                                error={form.errors.company_activity_type}
+                            >
+                                <Input
+                                    value={form.data.company_activity_type}
+                                    disabled={companyActivityLocked}
+                                    maxLength={255}
+                                    placeholder="Мысалы, тамақ өнімдерін өндіру"
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'company_activity_type',
+                                            e.target.value,
+                                        )
+                                    }
+                                    required
+                                />
                             </Field>
                             <Field
                                 label="Тіркелген күні"

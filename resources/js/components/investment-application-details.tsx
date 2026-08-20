@@ -155,7 +155,7 @@ export default function InvestmentApplicationDetails({
                         value={application.project_name}
                     />
                     <Detail
-                        label="Қызмет түрлері"
+                        label="Жоба түрлері"
                         value={
                             application.project_types?.length
                                 ? application.project_types
@@ -230,6 +230,10 @@ export default function InvestmentApplicationDetails({
                     <Detail
                         label="Компания атауы"
                         value={application.company_name}
+                    />
+                    <Detail
+                        label="Негізгі қызмет саласы"
+                        value={application.company_activity_type}
                     />
                     <Detail label="БСН" value={application.company_bin} />
                     <Detail

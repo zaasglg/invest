@@ -222,6 +222,7 @@ return [
         'sort_order' => 'Сорттау тәртібі',
         'is_active' => 'Активті',
         'company_name' => 'Компания атауы',
+        'company_activity_type' => 'компанияның негізгі қызмет саласы',
         'end_date' => 'Аяқталу күні',
         'start_date' => 'Басталу күні',
         'corporate_email' => 'Корпоративті электрондық пошта',

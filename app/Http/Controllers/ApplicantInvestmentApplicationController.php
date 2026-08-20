@@ -380,6 +380,7 @@ class ApplicantInvestmentApplicationController extends Controller
             'registration_date' => $company->registration_date?->format('Y-m-d'),
             'region_id' => $company->region_id,
             'region' => $company->region?->only(['id', 'name']),
+            'activity_type' => $company->activity_type,
             'director_full_name' => $company->director_full_name,
             'contact_person' => $company->contact_person,
             'phone' => $company->phone,

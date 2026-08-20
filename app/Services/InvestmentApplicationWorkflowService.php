@@ -317,7 +317,7 @@ class InvestmentApplicationWorkflowService
                     'bin' => $locked->company_bin,
                     'registration_date' => $locked->company_registration_date,
                     'region_id' => $locked->company_region_id,
-                    'activity_type' => $locked->activity_sector,
+                    'activity_type' => $locked->company_activity_type,
                     'director_full_name' => $locked->director_full_name,
                     'contact_person' => $locked->contact_person,
                     'phone' => $locked->contact_phone,
@@ -339,6 +339,12 @@ class InvestmentApplicationWorkflowService
                 && (int) $account->company_id !== (int) $company->id) {
                 throw ValidationException::withMessages([
                     'company_bin' => 'Өтінім беруші басқа компанияға байланыстырылған.',
+                ]);
+            }
+
+            if ($company->activity_type !== $locked->company_activity_type) {
+                $company->update([
+                    'activity_type' => $locked->company_activity_type,
                 ]);
             }
 
