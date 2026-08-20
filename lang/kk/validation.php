@@ -241,6 +241,7 @@ return [
         'bank_city' => 'Банк қаласы',
         'bank_country' => 'Банк елі',
         'bank_postal_code' => 'Банк пошта индексі',
+        'comment' => 'Пікір',
     ],
 
 ];
