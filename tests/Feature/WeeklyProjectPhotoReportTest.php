@@ -78,6 +78,12 @@ test('district executor is automatically attached to projects in the same distri
     $districtExecutor = createWeeklyPhotoUser('ispolnitel', $district, [
         'baskarma_type' => 'district',
     ]);
+    $managementExecutor = createWeeklyPhotoUser('ispolnitel', $district, [
+        'baskarma_type' => 'oblast',
+    ]);
+    $departmentExecutor = createWeeklyPhotoUser('ispolnitel', $district, [
+        'baskarma_type' => 'additional',
+    ]);
 
     $districtProject = createWeeklyPhotoProject($curator, $district);
     $cityProject = createWeeklyPhotoProject(
@@ -97,6 +103,16 @@ test('district executor is automatically attached to projects in the same distri
         )->toBeTrue()
         ->and(
             $districtProject->executors()->whereKey($cityExecutor->id)->exists()
+        )->toBeFalse()
+        ->and(
+            $districtProject->executors()
+                ->whereKey($managementExecutor->id)
+                ->exists()
+        )->toBeFalse()
+        ->and(
+            $districtProject->executors()
+                ->whereKey($departmentExecutor->id)
+                ->exists()
         )->toBeFalse();
 });
 
@@ -130,7 +146,7 @@ test('project gallery records the user who uploaded each photo', function () {
     ]);
 });
 
-test('weekly check notifies curators when only another user uploaded a photo', function () {
+test('weekly check notifies district executors but not other executor types or curators', function () {
     configureWeeklyPhotoTelegram();
 
     $region = createWeeklyPhotoRegion();
@@ -139,6 +155,15 @@ test('weekly check notifies curators when only another user uploaded a photo', f
     ]);
     $executor = createWeeklyPhotoUser('ispolnitel', $region, [
         'baskarma_type' => 'district',
+        'telegram_chat_id' => 'district-executor-chat',
+    ]);
+    createWeeklyPhotoUser('ispolnitel', $region, [
+        'baskarma_type' => 'oblast',
+        'telegram_chat_id' => 'management-executor-chat',
+    ]);
+    createWeeklyPhotoUser('ispolnitel', $region, [
+        'baskarma_type' => 'additional',
+        'telegram_chat_id' => 'department-executor-chat',
     ]);
     $project = createWeeklyPhotoProject($curator, $region);
 
@@ -152,11 +177,20 @@ test('weekly check notifies curators when only another user uploaded a photo', f
 
     expect(Artisan::call('photos:check-weekly'))->toBe(0);
 
-    Http::assertSent(fn (Request $request) => $request['chat_id'] === 'curator-chat'
+    Http::assertSent(fn (Request $request) => $request['chat_id'] === 'district-executor-chat'
         && str_contains($request['text'], $project->name)
         && str_contains($request['text'], $executor->full_name)
         && str_contains(mb_strtolower($request['text']), 'соңғы 7 күнде')
     );
+    Http::assertNotSent(fn (Request $request) => in_array(
+        $request['chat_id'],
+        [
+            'curator-chat',
+            'management-executor-chat',
+            'department-executor-chat',
+        ],
+        true
+    ));
     Http::assertSentCount(1);
 });
 
@@ -169,6 +203,7 @@ test('weekly check does not notify when the same district executor uploaded a re
     ]);
     $executor = createWeeklyPhotoUser('ispolnitel', $region, [
         'baskarma_type' => 'district',
+        'telegram_chat_id' => 'district-executor-chat',
     ]);
     $project = createWeeklyPhotoProject($curator, $region);
 
