@@ -52,6 +52,7 @@ type Props = {
 };
 
 const COMPACT_HEADER_NAV_TITLES = new Set([
+    'Жер қойнауын пайдалану',
     'Аймақтар',
     'Компаниялар',
     'Жоба түрлері',
@@ -288,7 +289,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     {/* Right side: notifications + avatar */}
-                    <div className="ml-auto flex items-center gap-1">
+                    <div className="ml-auto flex shrink-0 items-center gap-1">
                         {compactHeaderNavItems.map((item) => (
                             <TooltipProvider key={item.title} delayDuration={0}>
                                 <Tooltip>
@@ -297,7 +298,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             href={item.href}
                                             aria-label={item.title}
                                             className={cn(
-                                                'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
                                                 isCurrentUrl(item.href) &&
                                                     'bg-white/10 text-white',
                                             )}
