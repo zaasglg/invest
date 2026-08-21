@@ -54,11 +54,12 @@ class InvestmentApplicationRequest extends FormRequest
         }
 
         if ($this->exists('company_bin')) {
-            $normalized['company_bin'] = preg_replace(
+            $bin = preg_replace(
                 '/\D+/',
                 '',
                 (string) $this->input('company_bin')
             );
+            $normalized['company_bin'] = $bin !== '' ? $bin : null;
         }
 
         $this->merge($normalized);
@@ -135,6 +136,9 @@ class InvestmentApplicationRequest extends FormRequest
     /** @return array<string, mixed> */
     public function rules(): array
     {
+        $isSubmit = $this->input('intent') === 'submit';
+        $required = $isSubmit ? 'required' : 'nullable';
+
         $rules = [
             'intent' => ['required', Rule::in(['draft', 'submit'])],
             'application_kind' => [
@@ -143,35 +147,40 @@ class InvestmentApplicationRequest extends FormRequest
             ],
             'source_investment_project_id' => [
                 'nullable',
-                'required_if:application_kind,expansion',
+                Rule::requiredIf(
+                    $isSubmit
+                    && $this->input('application_kind') === 'expansion'
+                ),
                 'integer',
                 'exists:investment_projects,id',
             ],
-            'project_name' => 'required|string|max:255',
-            'project_description' => 'required|string|max:10000',
-            'project_type_ids' => 'required|array|min:1',
+            'project_name' => [$required, 'string', 'max:255'],
+            'project_description' => [$required, 'string', 'max:10000'],
+            'project_type_ids' => $isSubmit
+                ? ['required', 'array', 'min:1']
+                : ['nullable', 'array'],
             'project_type_ids.*' => 'required|integer|distinct|exists:project_types,id',
-            'company_activity_type' => 'required|string|max:255',
-            'requested_area' => 'required|numeric|gt:0|max:2000000000',
-            'investment_amount' => 'required|numeric|min:0|max:2000000000',
-            'jobs_count' => 'required|integer|min:0|max:2000000000',
+            'company_activity_type' => [$required, 'string', 'max:255'],
+            'requested_area' => [$required, 'numeric', 'gt:0', 'max:2000000000'],
+            'investment_amount' => [$required, 'numeric', 'min:0', 'max:2000000000'],
+            'jobs_count' => [$required, 'integer', 'min:0', 'max:2000000000'],
             'company_legal_form' => [
-                'required',
+                $required,
                 Rule::in(array_keys(Company::LEGAL_FORMS)),
             ],
-            'company_name' => 'required|string|max:255',
-            'company_bin' => 'required|digits:12',
-            'company_registration_date' => 'required|date|before_or_equal:today',
+            'company_name' => [$required, 'string', 'max:255'],
+            'company_bin' => [$required, 'digits:12'],
+            'company_registration_date' => [$required, 'date', 'before_or_equal:today'],
             'company_region_id' => [
-                'required',
+                $required,
                 'integer',
                 Rule::exists('regions', 'id')->where('type', 'district'),
             ],
-            'director_full_name' => 'required|string|max:255',
+            'director_full_name' => [$required, 'string', 'max:255'],
             'contact_person' => 'nullable|string|max:255',
-            'contact_phone' => 'required|string|max:30',
-            'contact_email' => 'required|email:rfc|max:255',
-            'legal_address' => 'required|string|max:1000',
+            'contact_phone' => [$required, 'string', 'max:30'],
+            'contact_email' => [$required, 'email:rfc', 'max:255'],
+            'legal_address' => [$required, 'string', 'max:1000'],
             'infrastructure_requirements' => 'nullable|array:electricity,water,gas,roads,railway,internet',
             'documents' => 'nullable|array|max:10',
             'documents.*' => [

@@ -132,14 +132,14 @@ class RegionController extends Controller
         $roleName = $user?->roleModel?->name;
         $isInvestor = $roleName === 'investor';
 
-        $region->load([
-            'subsoilUsers' => function ($query) use ($isInvestor) {
-                if (! $isInvestor) {
-                    $query->withCount('issues');
-                }
-            },
-            'parent',
-        ]);
+        $region->load('parent');
+        if ($isInvestor) {
+            $region->setRelation('subsoilUsers', collect());
+        } else {
+            $region->load([
+                'subsoilUsers' => fn ($query) => $query->withCount('issues'),
+            ]);
+        }
         $region->load([
             'sezs' => function ($query) use ($isInvestor) {
                 if (! $isInvestor) {
@@ -162,16 +162,20 @@ class RegionController extends Controller
             },
         ]);
 
+        $projectRelations = [
+            'sezs',
+            'industrialZones',
+            'promZones',
+            'projectType',
+            'projectTypes',
+            'executors',
+        ];
+        if (! $isInvestor) {
+            $projectRelations[] = 'subsoilUsers';
+        }
+
         $projectsQuery = InvestmentProject::active()
-            ->with([
-                'sezs',
-                'industrialZones',
-                'promZones',
-                'subsoilUsers',
-                'projectType',
-                'projectTypes',
-                'executors',
-            ])
+            ->with($projectRelations)
             ->where('region_id', $region->id)
             ->orderBy('sort_order');
 

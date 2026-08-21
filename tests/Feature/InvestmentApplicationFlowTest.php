@@ -116,6 +116,40 @@ function applicationCompany(Region $region, array $attributes = []): Company
     ]);
 }
 
+test('applicant can save an incomplete draft but cannot submit it', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+
+    $this->actingAs($applicant)
+        ->post(route('applicant.applications.store', [
+            'zoneType' => 'sez',
+            'zone' => $zone,
+        ]), [
+            'intent' => 'draft',
+            'application_kind' => 'new_project',
+        ])
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+
+    expect($application->status)->toBe('draft')
+        ->and($application->project_name)->toBeNull()
+        ->and($application->projectTypes()->count())->toBe(0);
+
+    $this->actingAs($applicant)
+        ->post(route('applicant.applications.submit', $application))
+        ->assertSessionHasErrors([
+            'project_name',
+            'project_description',
+            'project_type_ids',
+            'requested_area',
+            'company_bin',
+        ]);
+
+    expect($application->fresh()->status)->toBe('draft');
+});
+
 test('applicant sees safe zone capacity and cannot open internal zone pages', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
@@ -375,6 +409,21 @@ test('approved application converts into company investor and internal project',
         ->and($project->sezs()->whereKey($zone->id)->exists())->toBeTrue()
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(70.0);
+
+    $this->actingAs($applicant)
+        ->get(route('applicant.applications.show', $application))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('applicant/applications/show')
+            ->where('application.status', 'converted_to_project')
+            ->where('application.is_withdrawable', false)
+            ->where('application.investment_project.id', $project->id));
+
+    $this->actingAs($applicant)
+        ->post(route('applicant.applications.withdraw', $application))
+        ->assertForbidden();
+
+    expect($application->fresh()->status)->toBe('converted_to_project');
 });
 
 test('existing unclaimed company is normalized and reused for applicant', function () {

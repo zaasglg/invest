@@ -1,8 +1,8 @@
-import { Head } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import InMapApp from '@/components/inmap/App';
 import AppLayout from '@/layouts/app-layout';
 import { dashboard } from '@/routes';
-import type { BreadcrumbItem } from '@/types';
+import type { BreadcrumbItem, SharedData } from '@/types';
 
 interface Region {
     id: number;
@@ -68,6 +68,9 @@ export default function Dashboard({
     sectorSummary,
     regionYearly,
 }: Props) {
+    const { auth } = usePage<SharedData>().props;
+    const isInvestor = auth.user.role_model?.name === 'investor';
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Басқару тақтасы" />
@@ -76,6 +79,8 @@ export default function Dashboard({
                     regions={regions}
                     sectorSummary={sectorSummary}
                     regionYearly={regionYearly}
+                    canOpenIssues
+                    showSubsoil={!isInvestor}
                 />
             </div>
         </AppLayout>

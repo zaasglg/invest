@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\InvestmentApplicationRequest;
+use App\Http\Requests\SubmitInvestmentApplicationRequest;
 use App\Models\Company;
 use App\Models\InvestmentApplication;
 use App\Models\InvestmentApplicationDocument;
@@ -14,6 +15,7 @@ use App\Services\InvestmentApplicationWorkflowService;
 use App\Services\ZoneCapacityService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 
@@ -129,26 +131,38 @@ class ApplicantInvestmentApplicationController extends Controller
             $validated['project_type_ids']
         );
 
-        $application = InvestmentApplication::create([
-            ...$validated,
-            'application_number' => $this->newApplicationNumber(),
-            'user_id' => $request->user()->id,
-            'zoneable_type' => $zoneModel::class,
-            'zoneable_id' => $zoneModel->id,
-            'status' => 'draft',
-            'infrastructure_requirements' => $validated['infrastructure_requirements'] ?? [],
-        ]);
-        $application->projectTypes()->sync($projectTypeIds);
-        $this->workflow->recordCreated($application, $request->user());
-        $this->documents->storeMany(
-            $application,
-            is_array($documents) ? $documents : [],
-            $request->user()
-        );
+        $application = DB::transaction(function () use (
+            $documents,
+            $intent,
+            $projectTypeIds,
+            $request,
+            $validated,
+            $zoneModel
+        ) {
+            $application = InvestmentApplication::create([
+                ...$validated,
+                'application_number' => $this->newApplicationNumber(),
+                'user_id' => $request->user()->id,
+                'zoneable_type' => $zoneModel::class,
+                'zoneable_id' => $zoneModel->id,
+                'status' => 'draft',
+                'infrastructure_requirements' => $validated['infrastructure_requirements'] ?? [],
+            ]);
+            $application->projectTypes()->sync($projectTypeIds);
+            $this->workflow->recordCreated($application, $request->user());
 
-        if ($intent === 'submit') {
-            $this->workflow->submit($application, $request->user());
-        }
+            if ($intent === 'submit') {
+                $this->workflow->submit($application, $request->user());
+            }
+
+            $this->documents->storeMany(
+                $application,
+                is_array($documents) ? $documents : [],
+                $request->user()
+            );
+
+            return $application;
+        });
 
         return redirect()
             ->route('applicant.applications.show', $application)
@@ -222,20 +236,33 @@ class ApplicantInvestmentApplicationController extends Controller
             $validated['project_type_ids']
         );
 
-        $investmentApplication->update([
-            ...$validated,
-            'infrastructure_requirements' => $validated['infrastructure_requirements'] ?? [],
-        ]);
-        $investmentApplication->projectTypes()->sync($projectTypeIds);
-        $this->documents->storeMany(
+        DB::transaction(function () use (
+            $documents,
+            $intent,
             $investmentApplication,
-            is_array($documents) ? $documents : [],
-            $request->user()
-        );
+            $projectTypeIds,
+            $request,
+            $validated
+        ): void {
+            $investmentApplication->update([
+                ...$validated,
+                'infrastructure_requirements' => $validated['infrastructure_requirements'] ?? [],
+            ]);
+            $investmentApplication->projectTypes()->sync($projectTypeIds);
 
-        if ($intent === 'submit') {
-            $this->workflow->submit($investmentApplication, $request->user());
-        }
+            if ($intent === 'submit') {
+                $this->workflow->submit(
+                    $investmentApplication,
+                    $request->user()
+                );
+            }
+
+            $this->documents->storeMany(
+                $investmentApplication,
+                is_array($documents) ? $documents : [],
+                $request->user()
+            );
+        });
 
         return redirect()
             ->route('applicant.applications.show', $investmentApplication)
@@ -243,7 +270,7 @@ class ApplicantInvestmentApplicationController extends Controller
     }
 
     public function submit(
-        Request $request,
+        SubmitInvestmentApplicationRequest $request,
         InvestmentApplication $investmentApplication
     ) {
         $this->ensureOwner($request, $investmentApplication);
@@ -317,7 +344,8 @@ class ApplicantInvestmentApplicationController extends Controller
         $kind = $validated['application_kind'];
         $projectTypeIds = $this->projectTypeIds($validated);
 
-        if ($kind === 'expansion') {
+        if ($kind === 'expansion'
+            && filled($validated['source_investment_project_id'] ?? null)) {
             $source = InvestmentProject::query()
                 ->whereKey($validated['source_investment_project_id'])
                 ->where('company_id', $request->user()->company_id)
@@ -394,7 +422,7 @@ class ApplicantInvestmentApplicationController extends Controller
      */
     private function projectTypeIds(array $validated): array
     {
-        return collect($validated['project_type_ids'])
+        return collect($validated['project_type_ids'] ?? [])
             ->map(fn ($id) => (int) $id)
             ->unique()
             ->values()

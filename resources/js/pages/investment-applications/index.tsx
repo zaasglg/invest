@@ -294,14 +294,12 @@ export default function ReviewIndex({
                                                             </span>
                                                             <div className="min-w-0">
                                                                 <p className="max-w-72 truncate font-bold text-navy">
-                                                                    {
-                                                                        application.project_name
-                                                                    }
+                                                                    {application.project_name ||
+                                                                        'Атауы енгізілмеген жоба'}
                                                                 </p>
                                                                 <p className="max-w-72 truncate text-xs text-slate-500">
-                                                                    {
-                                                                        application.company_name
-                                                                    }
+                                                                    {application.company_name ||
+                                                                        'Компания көрсетілмеген'}
                                                                 </p>
                                                                 <p className="mt-1 text-[11px] font-semibold text-sky-700">
                                                                     {
@@ -342,10 +340,10 @@ export default function ReviewIndex({
                                                         </p>
                                                     </TableCell>
                                                     <TableCell className="font-bold text-navy tabular-nums">
-                                                        {
-                                                            application.requested_area
-                                                        }{' '}
-                                                        га
+                                                        {application.requested_area !==
+                                                        null
+                                                            ? `${application.requested_area} га`
+                                                            : '—'}
                                                     </TableCell>
                                                     <TableCell>
                                                         <ApplicationStatusBadge
@@ -393,10 +391,12 @@ export default function ReviewIndex({
                                                     }
                                                 </span>
                                                 <h3 className="mt-3 font-bold text-navy">
-                                                    {application.project_name}
+                                                    {application.project_name ||
+                                                        'Атауы енгізілмеген жоба'}
                                                 </h3>
                                                 <p className="text-xs text-slate-500">
-                                                    {application.company_name}
+                                                    {application.company_name ||
+                                                        'Компания көрсетілмеген'}
                                                 </p>
                                             </div>
                                             <ApplicationStatusBadge
@@ -423,8 +423,10 @@ export default function ReviewIndex({
                                                     Сұралған жер
                                                 </dt>
                                                 <dd className="mt-1 font-bold text-navy">
-                                                    {application.requested_area}{' '}
-                                                    га
+                                                    {application.requested_area !==
+                                                    null
+                                                        ? `${application.requested_area} га`
+                                                        : '—'}
                                                 </dd>
                                             </div>
                                         </dl>

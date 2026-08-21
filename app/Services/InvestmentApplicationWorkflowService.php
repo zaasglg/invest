@@ -35,7 +35,7 @@ class InvestmentApplicationWorkflowService
         InvestmentApplication $application,
         User $actor
     ): InvestmentApplication {
-        $application = DB::transaction(function () use ($application, $actor) {
+        return DB::transaction(function () use ($application, $actor) {
             $locked = InvestmentApplication::query()
                 ->lockForUpdate()
                 ->findOrFail($application->id);
@@ -69,12 +69,11 @@ class InvestmentApplicationWorkflowService
             ]);
             $this->history($locked, $from, 'submitted', $actor);
 
-            return $locked->fresh(['zoneable.region', 'applicant']);
+            $submitted = $locked->fresh(['zoneable.region', 'applicant']);
+            $this->notifyReviewers($submitted);
+
+            return $submitted;
         });
-
-        $this->notifyReviewers($application);
-
-        return $application;
     }
 
     public function beginReview(
@@ -127,7 +126,7 @@ class InvestmentApplicationWorkflowService
         float $approvedArea,
         ?string $comment
     ): InvestmentApplication {
-        $application = DB::transaction(function () use (
+        return DB::transaction(function () use (
             $application,
             $reviewer,
             $approvedArea,
@@ -184,16 +183,15 @@ class InvestmentApplicationWorkflowService
                 ]
             );
 
-            return $locked->fresh(['zoneable.region', 'applicant']);
+            $approved = $locked->fresh(['zoneable.region', 'applicant']);
+            $this->notifyApplicant(
+                $approved,
+                'investment_application_approved',
+                "Өтінім қабылданды. {$approved->approved_area} га аумақ {$approved->reserved_until?->format('d.m.Y')} дейін резервке қойылды."
+            );
+
+            return $approved;
         });
-
-        $this->notifyApplicant(
-            $application,
-            'investment_application_approved',
-            "Өтінім қабылданды. {$application->approved_area} га аумақ {$application->reserved_until?->format('d.m.Y')} дейін резервке қойылды."
-        );
-
-        return $application;
     }
 
     public function withdraw(
@@ -228,7 +226,7 @@ class InvestmentApplicationWorkflowService
 
     public function expire(InvestmentApplication $application): bool
     {
-        $expired = DB::transaction(function () use ($application) {
+        return (bool) DB::transaction(function () use ($application) {
             $locked = InvestmentApplication::query()
                 ->lockForUpdate()
                 ->find($application->id);
@@ -249,27 +247,22 @@ class InvestmentApplicationWorkflowService
                 'Жер резервінің мерзімі аяқталды.'
             );
 
-            return $locked->fresh(['applicant']);
+            $expired = $locked->fresh(['applicant']);
+            $this->notifyApplicant(
+                $expired,
+                'investment_application_expired',
+                'Өтінім бойынша жер резервінің мерзімі аяқталды.'
+            );
+
+            return $expired;
         });
-
-        if (! $expired) {
-            return false;
-        }
-
-        $this->notifyApplicant(
-            $expired,
-            'investment_application_expired',
-            'Өтінім бойынша жер резервінің мерзімі аяқталды.'
-        );
-
-        return true;
     }
 
     public function convertToProject(
         InvestmentApplication $application,
         User $reviewer
     ): InvestmentProject {
-        [$application, $project] = DB::transaction(function () use (
+        [, $project] = DB::transaction(function () use (
             $application,
             $reviewer
         ) {
@@ -459,19 +452,24 @@ class InvestmentApplicationWorkflowService
                 actor: $reviewer
             );
 
-            return [$locked->fresh(['applicant']), $project];
-        });
+            $converted = $locked->fresh(['applicant']);
+            TaskNotification::create([
+                'user_id' => $converted->user_id,
+                'type' => 'investment_application_converted',
+                'message' => $converted->application_kind === 'expansion'
+                    ? 'Өтінім қабылданып, бар инвестициялық жобаңыз кеңейтілді.'
+                    : 'Өтінім инвестициялық жобаға айналдырылды. Енді жоба кабинетіне кіре аласыз.',
+                'action_url' => route(
+                    'investment-projects.show',
+                    $project,
+                    false
+                ),
+                'action_label' => 'Жобаны ашу',
+                'is_read' => false,
+            ]);
 
-        TaskNotification::create([
-            'user_id' => $application->user_id,
-            'type' => 'investment_application_converted',
-            'message' => $application->application_kind === 'expansion'
-                ? 'Өтінім қабылданып, бар инвестициялық жобаңыз кеңейтілді.'
-                : 'Өтінім инвестициялық жобаға айналдырылды. Енді жоба кабинетіне кіре аласыз.',
-            'action_url' => route('investment-projects.show', $project, false),
-            'action_label' => 'Жобаны ашу',
-            'is_read' => false,
-        ]);
+            return [$converted, $project];
+        });
 
         return $project;
     }
@@ -572,12 +570,13 @@ class InvestmentApplicationWorkflowService
         ?string $comment,
         string $notificationMessage
     ): InvestmentApplication {
-        $application = DB::transaction(function () use (
+        return DB::transaction(function () use (
             $application,
             $reviewer,
             $fromStatuses,
             $toStatus,
-            $comment
+            $comment,
+            $notificationMessage
         ) {
             $locked = InvestmentApplication::query()
                 ->lockForUpdate()
@@ -598,16 +597,18 @@ class InvestmentApplicationWorkflowService
             ]);
             $this->history($locked, $from, $toStatus, $reviewer, $comment);
 
-            return $locked->fresh(['zoneable.region', 'applicant']);
+            $transitioned = $locked->fresh([
+                'zoneable.region',
+                'applicant',
+            ]);
+            $this->notifyApplicant(
+                $transitioned,
+                'investment_application_'.$toStatus,
+                $notificationMessage
+            );
+
+            return $transitioned;
         });
-
-        $this->notifyApplicant(
-            $application,
-            'investment_application_'.$toStatus,
-            $notificationMessage
-        );
-
-        return $application;
     }
 
     private function notifyReviewers(InvestmentApplication $application): void

@@ -191,6 +191,11 @@ export default function ApplicationForm({
         (project) =>
             project.id.toString() === form.data.source_investment_project_id,
     );
+    const documentError =
+        form.errors.documents ??
+        Object.entries(form.errors as Record<string, string | undefined>).find(
+            ([key]) => key.startsWith('documents.'),
+        )?.[1];
 
     const selectApplicationKind = (
         kind: InvestmentApplication['application_kind'],
@@ -370,13 +375,19 @@ export default function ApplicationForm({
                         {isInvestor && (
                             <div className="mb-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
                                 <div>
-                                    <Label>Өтінім түрі</Label>
+                                    <Label id="application-kind-label">
+                                        Өтінім түрі
+                                    </Label>
                                     <p className="mt-1 text-xs text-slate-500">
                                         Жаңа жоба ашыңыз немесе осы аймақтағы
                                         жобаңызды кеңейтіңіз.
                                     </p>
                                 </div>
-                                <div className="grid gap-3 sm:grid-cols-2">
+                                <div
+                                    className="grid gap-3 sm:grid-cols-2"
+                                    role="group"
+                                    aria-labelledby="application-kind-label"
+                                >
                                     {Object.entries(applicationKinds).map(
                                         ([value, label]) => (
                                             <button
@@ -420,6 +431,7 @@ export default function ApplicationForm({
 
                                 {isExpansion && (
                                     <Field
+                                        htmlFor="source_investment_project_id"
                                         label="Кеңейтілетін жоба"
                                         error={
                                             form.errors
@@ -436,7 +448,10 @@ export default function ApplicationForm({
                                                     selectSourceProject
                                                 }
                                             >
-                                                <SelectTrigger className="bg-white">
+                                                <SelectTrigger
+                                                    id="source_investment_project_id"
+                                                    className="bg-white"
+                                                >
                                                     <SelectValue placeholder="Жобаны таңдаңыз" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -516,10 +531,13 @@ export default function ApplicationForm({
 
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
+                                htmlFor="project_name"
                                 label="Жоба атауы"
                                 error={form.errors.project_name}
                             >
                                 <Input
+                                    id="project_name"
+                                    name="project_name"
                                     value={form.data.project_name}
                                     onChange={(e) =>
                                         form.setData(
@@ -532,6 +550,7 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="project_type_ids"
                                 label="Жоба түрлері"
                                 error={form.errors.project_type_ids}
                             >
@@ -550,6 +569,7 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="requested_area"
                                 label={
                                     isExpansion
                                         ? 'Қосымша қажетті аумақ (га)'
@@ -558,6 +578,8 @@ export default function ApplicationForm({
                                 error={form.errors.requested_area}
                             >
                                 <Input
+                                    id="requested_area"
+                                    name="requested_area"
                                     type="number"
                                     min="0.01"
                                     step="0.01"
@@ -573,6 +595,7 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="investment_amount"
                                 label={
                                     isExpansion
                                         ? 'Қосымша инвестиция (₸)'
@@ -581,6 +604,8 @@ export default function ApplicationForm({
                                 error={form.errors.investment_amount}
                             >
                                 <Input
+                                    id="investment_amount"
+                                    name="investment_amount"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -595,6 +620,7 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="jobs_count"
                                 label={
                                     isExpansion
                                         ? 'Қосымша жұмыс орындары'
@@ -603,6 +629,8 @@ export default function ApplicationForm({
                                 error={form.errors.jobs_count}
                             >
                                 <Input
+                                    id="jobs_count"
+                                    name="jobs_count"
                                     type="number"
                                     min="0"
                                     step="1"
@@ -618,6 +646,7 @@ export default function ApplicationForm({
                             </Field>
                             <div className="sm:col-span-2">
                                 <Field
+                                    htmlFor="project_description"
                                     label={
                                         isExpansion
                                             ? 'Кеңейту сипаттамасы'
@@ -626,6 +655,8 @@ export default function ApplicationForm({
                                     error={form.errors.project_description}
                                 >
                                     <Textarea
+                                        id="project_description"
+                                        name="project_description"
                                         rows={6}
                                         value={form.data.project_description}
                                         onChange={(e) =>
@@ -668,6 +699,7 @@ export default function ApplicationForm({
                         )}
                         <div className="grid gap-5 sm:grid-cols-2">
                             <Field
+                                htmlFor="company_legal_form"
                                 label="Заңды нысаны"
                                 error={form.errors.company_legal_form}
                             >
@@ -681,7 +713,7 @@ export default function ApplicationForm({
                                         )
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="company_legal_form">
                                         <SelectValue placeholder="Таңдаңыз" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -699,10 +731,13 @@ export default function ApplicationForm({
                                 </Select>
                             </Field>
                             <Field
+                                htmlFor="company_name"
                                 label="Компания атауы"
                                 error={form.errors.company_name}
                             >
                                 <Input
+                                    id="company_name"
+                                    name="company_name"
                                     value={form.data.company_name}
                                     disabled={companyLocked}
                                     onChange={(e) =>
@@ -715,11 +750,14 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="company_bin"
                                 label="БСН (12 сан)"
                                 error={form.errors.company_bin}
                             >
                                 <div className="flex gap-2">
                                     <Input
+                                        id="company_bin"
+                                        name="company_bin"
                                         inputMode="numeric"
                                         maxLength={12}
                                         disabled={isInvestor}
@@ -815,10 +853,13 @@ export default function ApplicationForm({
                                 )}
                             </Field>
                             <Field
+                                htmlFor="company_activity_type"
                                 label="Компанияның негізгі қызмет саласы"
                                 error={form.errors.company_activity_type}
                             >
                                 <Input
+                                    id="company_activity_type"
+                                    name="company_activity_type"
                                     value={form.data.company_activity_type}
                                     disabled={companyActivityLocked}
                                     maxLength={255}
@@ -833,10 +874,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="company_registration_date"
                                 label="Тіркелген күні"
                                 error={form.errors.company_registration_date}
                             >
                                 <Input
+                                    id="company_registration_date"
+                                    name="company_registration_date"
                                     type="date"
                                     disabled={companyLocked}
                                     value={form.data.company_registration_date}
@@ -850,6 +894,7 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="company_region_id"
                                 label="Тіркелген аудан"
                                 error={form.errors.company_region_id}
                             >
@@ -860,7 +905,7 @@ export default function ApplicationForm({
                                         form.setData('company_region_id', value)
                                     }
                                 >
-                                    <SelectTrigger>
+                                    <SelectTrigger id="company_region_id">
                                         <SelectValue placeholder="Таңдаңыз" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -876,10 +921,13 @@ export default function ApplicationForm({
                                 </Select>
                             </Field>
                             <Field
+                                htmlFor="director_full_name"
                                 label="Басшының аты-жөні"
                                 error={form.errors.director_full_name}
                             >
                                 <Input
+                                    id="director_full_name"
+                                    name="director_full_name"
                                     value={form.data.director_full_name}
                                     disabled={companyLocked}
                                     onChange={(e) =>
@@ -892,10 +940,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="contact_person"
                                 label="Байланыс тұлғасы"
                                 error={form.errors.contact_person}
                             >
                                 <Input
+                                    id="contact_person"
+                                    name="contact_person"
                                     value={form.data.contact_person}
                                     disabled={isInvestor}
                                     onChange={(e) =>
@@ -907,10 +958,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="contact_phone"
                                 label="Телефон"
                                 error={form.errors.contact_phone}
                             >
                                 <Input
+                                    id="contact_phone"
+                                    name="contact_phone"
                                     type="tel"
                                     value={form.data.contact_phone}
                                     disabled={isInvestor}
@@ -924,10 +978,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="contact_email"
                                 label="Email"
                                 error={form.errors.contact_email}
                             >
                                 <Input
+                                    id="contact_email"
+                                    name="contact_email"
                                     type="email"
                                     value={form.data.contact_email}
                                     disabled={isInvestor}
@@ -941,10 +998,13 @@ export default function ApplicationForm({
                                 />
                             </Field>
                             <Field
+                                htmlFor="legal_address"
                                 label="Заңды мекенжай"
                                 error={form.errors.legal_address}
                             >
                                 <Input
+                                    id="legal_address"
+                                    name="legal_address"
                                     value={form.data.legal_address}
                                     disabled={companyLocked}
                                     onChange={(e) =>
@@ -969,6 +1029,7 @@ export default function ApplicationForm({
                             {infrastructureFields.map((field) => (
                                 <Field
                                     key={field.key}
+                                    htmlFor={`infrastructure_requirements_${field.key}`}
                                     label={`${field.label} (${field.unit})`}
                                     error={
                                         form.errors[
@@ -977,6 +1038,8 @@ export default function ApplicationForm({
                                     }
                                 >
                                     <Input
+                                        id={`infrastructure_requirements_${field.key}`}
+                                        name={`infrastructure_requirements[${field.key}]`}
                                         type="number"
                                         min="0"
                                         step="0.01"
@@ -1008,8 +1071,12 @@ export default function ApplicationForm({
                         icon={Files}
                         tone="violet"
                     >
+                        <Label htmlFor="documents">Құжаттарды таңдаңыз</Label>
                         <Input
+                            id="documents"
+                            name="documents[]"
                             type="file"
+                            accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar,.jpg,.jpeg,.png,.gif"
                             multiple
                             onChange={(event) =>
                                 form.setData(
@@ -1018,10 +1085,7 @@ export default function ApplicationForm({
                                 )
                             }
                         />
-                        <InputError
-                            message={form.errors.documents}
-                            className="mt-2"
-                        />
+                        <InputError message={documentError} className="mt-2" />
                         {application?.documents?.length ? (
                             <div className="mt-4 divide-y divide-slate-100">
                                 {application.documents.map((document) => (
@@ -1111,17 +1175,19 @@ export default function ApplicationForm({
 }
 
 function Field({
+    htmlFor,
     label,
     error,
     children,
 }: {
+    htmlFor: string;
     label: string;
     error?: string;
     children: React.ReactNode;
 }) {
     return (
         <div className="space-y-1.5">
-            <Label>{label}</Label>
+            <Label htmlFor={htmlFor}>{label}</Label>
             {children}
             <InputError message={error} />
         </div>

@@ -52,6 +52,8 @@ class InvestmentProjectController extends Controller
 
     public function index(Request $request)
     {
+        $user = $request->user()->loadMissing('roleModel');
+        $isInvestor = $user->roleModel?->name === 'investor';
         $filters = $request->only([
             'search',
             'region_id',
@@ -68,7 +70,11 @@ class InvestmentProjectController extends Controller
             'end_date_to',
         ]);
 
-        $projectsQuery = InvestmentProject::active()->with([
+        if ($isInvestor && ($filters['sector_type'] ?? null) === 'subsoil') {
+            unset($filters['sector_type'], $filters['sector_id']);
+        }
+
+        $projectRelations = [
             'company',
             'region',
             'projectType',
@@ -80,10 +86,12 @@ class InvestmentProjectController extends Controller
             'sezs',
             'industrialZones',
             'promZones',
-            'subsoilUsers',
-        ]);
+        ];
+        if (! $isInvestor) {
+            $projectRelations[] = 'subsoilUsers';
+        }
 
-        $user = $request->user();
+        $projectsQuery = InvestmentProject::active()->with($projectRelations);
         $this->projectAccess->scopeVisible($projectsQuery, $user);
 
         if (! empty($filters['search'])) {
@@ -225,7 +233,11 @@ class InvestmentProjectController extends Controller
             'sezs' => Sez::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'industrialZones' => IndustrialZone::select('id', 'name', 'region_id')->orderBy('name')->get(),
             'promZones' => PromZone::select('id', 'name', 'region_id')->orderBy('name')->get(),
-            'subsoilUsers' => SubsoilUser::select('id', 'name', 'region_id')->orderBy('name')->get(),
+            'subsoilUsers' => $isInvestor
+                ? []
+                : SubsoilUser::select('id', 'name', 'region_id')
+                    ->orderBy('name')
+                    ->get(),
             'filters' => $filters,
         ]);
     }
@@ -823,6 +835,9 @@ class InvestmentProjectController extends Controller
             ['ispolnitel', 'investor'],
             true
         ) || $isInvolved;
+        if ($roleName === 'investor' && is_object($project)) {
+            $project->setRelation('subsoilUsers', collect());
+        }
         $passportSummary = is_object($project)
             ? $this->passportSummary->build(
                 $project,
@@ -1592,6 +1607,9 @@ class InvestmentProjectController extends Controller
             'promZones',
             'subsoilUsers',
         ]);
+        if ($user?->roleModel?->name === 'investor') {
+            $investmentProject->setRelation('subsoilUsers', collect());
+        }
 
         $zip = new ZipArchive;
         $zipFileName = 'passport_'.$investmentProject->id.'_'.time().'.zip';
@@ -1690,6 +1708,9 @@ class InvestmentProjectController extends Controller
             'tasks.assignee.roleModel', 'sezs', 'industrialZones', 'subsoilUsers',
             'productionPlans',
         ]);
+        if ($user?->roleModel?->name === 'investor') {
+            $investmentProject->setRelation('subsoilUsers', collect());
+        }
 
         $pptx = new PhpPresentation;
         $pptx->getDocumentProperties()

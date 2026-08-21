@@ -8,6 +8,7 @@ use App\Models\PromZoneIssue;
 use App\Models\Region;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
+use App\Services\InvestmentProjectAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -15,6 +16,10 @@ use Inertia\Inertia;
 
 class IssuesController extends Controller
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess
+    ) {}
+
     public function index(Request $request)
     {
         $user = $request->user();
@@ -24,15 +29,24 @@ class IssuesController extends Controller
             ? $user->invest_sub_role
             : null;
         $isModerator = $roleName === 'moderator';
+        $isInvestor = $roleName === 'investor';
 
         // Determine which sections are accessible for this user.
-        $canSeeSez = ! $investSubRole || in_array($investSubRole, ['aea', 'turkistan_invest'], true);
-        $canSeeIz = ! $investSubRole || in_array($investSubRole, ['ia', 'turkistan_invest'], true);
-        $canSeeProm = ! $investSubRole || in_array($investSubRole, ['prom_zone', 'turkistan_invest'], true);
-        $canSeeSubsoil = ! $investSubRole || $investSubRole === 'turkistan_invest';
+        $canSeeSez = ! $isInvestor
+            && (! $investSubRole || in_array($investSubRole, ['aea', 'turkistan_invest'], true));
+        $canSeeIz = ! $isInvestor
+            && (! $investSubRole || in_array($investSubRole, ['ia', 'turkistan_invest'], true));
+        $canSeeProm = ! $isInvestor
+            && (! $investSubRole || in_array($investSubRole, ['prom_zone', 'turkistan_invest'], true));
+        $canSeeSubsoil = ! $isInvestor
+            && (! $investSubRole || $investSubRole === 'turkistan_invest');
 
         $sector = $request->get('sector');
         $regionId = $request->get('region_id');
+
+        if ($isInvestor && $sector === 'invest') {
+            $sector = 'all_projects';
+        }
 
         // Respect section access — if the requested sector is blocked, reset to null.
         if ($sector === 'sez' && ! $canSeeSez) {
@@ -62,6 +76,13 @@ class IssuesController extends Controller
         // Get issues based on sector filter
         if ($sector === 'all_projects' || $sector === 'invest' || ! $sector) {
             $query = ProjectIssue::with(['project.region', 'creator:id,full_name']);
+            if ($isInvestor) {
+                $query->whereHas(
+                    'project',
+                    fn (Builder $project) => $this->projectAccess
+                        ->scopeVisible($project, $user)
+                );
+            }
             if ($isModerator) {
                 $query->whereHas(
                     'project',
@@ -278,8 +299,10 @@ class IssuesController extends Controller
         // Get sector labels — only for accessible sections.
         $sectorLabels = [
             'all_projects' => 'Барлық жобалар',
-            'invest' => 'Turkistan Invest',
         ];
+        if (! $isInvestor) {
+            $sectorLabels['invest'] = 'Turkistan Invest';
+        }
         if ($canSeeSez) {
             $sectorLabels['sez'] = 'АЭА';
         }

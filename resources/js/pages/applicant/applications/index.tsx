@@ -167,9 +167,8 @@ export default function ApplicationsIndex({
                                                             </span>
                                                             <div>
                                                                 <p className="font-bold text-navy">
-                                                                    {
-                                                                        application.project_name
-                                                                    }
+                                                                    {application.project_name ||
+                                                                        'Атауы енгізілмеген жоба'}
                                                                 </p>
                                                                 <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-400">
                                                                     <CalendarDays className="size-3" />
@@ -202,10 +201,10 @@ export default function ApplicationsIndex({
                                                         </p>
                                                     </TableCell>
                                                     <TableCell className="font-bold text-navy tabular-nums">
-                                                        {
-                                                            application.requested_area
-                                                        }{' '}
-                                                        га
+                                                        {application.requested_area !==
+                                                        null
+                                                            ? `${application.requested_area} га`
+                                                            : '—'}
                                                     </TableCell>
                                                     <TableCell>
                                                         <ApplicationStatusBadge
@@ -255,7 +254,8 @@ export default function ApplicationsIndex({
                                             />
                                         </div>
                                         <h2 className="mt-4 text-lg font-extrabold text-navy">
-                                            {application.project_name}
+                                            {application.project_name ||
+                                                'Атауы енгізілмеген жоба'}
                                         </h2>
                                         <p className="mt-1 text-xs font-semibold text-sky-700">
                                             {application.application_kind_label}
@@ -268,7 +268,10 @@ export default function ApplicationsIndex({
                                             </p>
                                             <p className="flex items-center gap-2">
                                                 <LandPlot className="size-4 text-emerald-600" />
-                                                {application.requested_area} га
+                                                {application.requested_area !==
+                                                null
+                                                    ? `${application.requested_area} га`
+                                                    : '—'}
                                             </p>
                                         </div>
                                         <Link

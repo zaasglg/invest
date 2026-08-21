@@ -170,7 +170,11 @@ export default function InvestmentApplicationDetails({
                                 ? 'Қосымша сұралған аумақ'
                                 : 'Сұралған аумақ'
                         }
-                        value={`${application.requested_area} га`}
+                        value={
+                            application.requested_area !== null
+                                ? `${application.requested_area} га`
+                                : '—'
+                        }
                     />
                     <Detail
                         label="Қабылданған аумақ"
@@ -186,7 +190,11 @@ export default function InvestmentApplicationDetails({
                                 ? 'Қосымша инвестиция'
                                 : 'Инвестиция'
                         }
-                        value={`${money(application.investment_amount)} ₸`}
+                        value={
+                            application.investment_amount !== null
+                                ? `${money(application.investment_amount)} ₸`
+                                : '—'
+                        }
                     />
                     <Detail
                         label={
@@ -223,8 +231,11 @@ export default function InvestmentApplicationDetails({
                     <Detail
                         label="Заңды нысаны"
                         value={
-                            legalFormLabels[application.company_legal_form] ??
                             application.company_legal_form
+                                ? (legalFormLabels[
+                                      application.company_legal_form
+                                  ] ?? application.company_legal_form)
+                                : '—'
                         }
                     />
                     <Detail

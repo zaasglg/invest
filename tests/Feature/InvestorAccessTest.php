@@ -7,8 +7,12 @@ use App\Models\ProjectDocument;
 use App\Models\ProjectIssue;
 use App\Models\ProjectPhoto;
 use App\Models\ProjectTask;
+use App\Models\PromZone;
 use App\Models\Region;
 use App\Models\Role;
+use App\Models\Sez;
+use App\Models\SubsoilIssue;
+use App\Models\SubsoilUser;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Schema;
@@ -242,6 +246,42 @@ test('investor can open any region while region projects and issues stay company
         'Hidden region project',
         8800000
     );
+    $sez = Sez::create([
+        'name' => 'Investor portal SEZ',
+        'region_id' => $projectRegion->id,
+        'total_area' => 100,
+        'status' => 'active',
+    ]);
+    $industrialZone = IndustrialZone::create([
+        'name' => 'Investor portal IZ',
+        'region_id' => $projectRegion->id,
+        'total_area' => 80,
+        'status' => 'active',
+    ]);
+    $promZone = PromZone::create([
+        'name' => 'Investor portal prom zone',
+        'region_id' => $projectRegion->id,
+        'total_area' => 60,
+        'status' => 'active',
+    ]);
+    $subsoilUser = SubsoilUser::create([
+        'name' => 'Hidden investor subsoil user',
+        'bin' => '123456789012',
+        'region_id' => $projectRegion->id,
+        'mineral_type' => 'Limestone',
+        'license_status' => 'active',
+    ]);
+    $ownProject->sezs()->attach($sez);
+    $ownProject->industrialZones()->attach($industrialZone);
+    $ownProject->promZones()->attach($promZone);
+    $ownProject->subsoilUsers()->attach($subsoilUser);
+    SubsoilIssue::create([
+        'subsoil_user_id' => $subsoilUser->id,
+        'description' => 'Hidden investor subsoil issue',
+        'severity' => 'high',
+        'status' => 'open',
+        'created_by' => $superadmin->id,
+    ]);
 
     ProjectIssue::create([
         'project_id' => $ownProject->id,
@@ -267,6 +307,11 @@ test('investor can open any region while region projects and issues stay company
             ->where('region.id', $projectRegion->id)
             ->has('projects', 1)
             ->where('projects.0.id', $ownProject->id)
+            ->missing('projects.0.subsoil_users')
+            ->has('sezs', 1)
+            ->has('industrialZones', 1)
+            ->has('promZones', 1)
+            ->has('subsoilUsers', 0)
             ->where('stats.projectsCount', 1)
             ->where('stats.projectIssuesCount', 1)
             ->where('stats.sezIssuesCount', 0)
@@ -277,6 +322,67 @@ test('investor can open any region while region projects and issues stay company
                 'stats.totalInvestment',
                 fn ($value) => (float) $value === 2500000.0
             ));
+
+    $this->get(route('issues.index', ['region_id' => $projectRegion->id]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('issues/index')
+            ->has('issues.data', 1)
+            ->where('issues.data.0.entity_id', $ownProject->id)
+            ->where('issues.data.0.title', 'Visible investor issue')
+            ->where('issueStats.total', 1)
+            ->has('sectorLabels', 1)
+            ->where('sectorLabels.all_projects', 'Барлық жобалар'));
+
+    $this->get(route('issues.index', [
+        'region_id' => $projectRegion->id,
+        'sector' => 'nedro',
+    ]))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('issues.data', 1)
+            ->where('issues.data.0.entity_id', $ownProject->id)
+            ->where('filters.sector', null)
+            ->missing('sectorLabels.nedro'));
+
+    foreach ([
+        ['type' => 'sez', 'zone' => $sez],
+        ['type' => 'industrial-zone', 'zone' => $industrialZone],
+        ['type' => 'prom-zone', 'zone' => $promZone],
+    ] as $zone) {
+        $this->get(route('applicant.zones.show', [
+            'zoneType' => $zone['type'],
+            'zone' => $zone['zone'],
+        ]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('sezs/show')
+                ->where('portalContext.accountRole', 'investor')
+                ->where('portalContext.zoneType', $zone['type'])
+                ->has('investmentProjects.data', 1)
+                ->where('investmentProjects.data.0.id', $ownProject->id));
+    }
+
+    $this->get(route('investment-projects.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('projects.data', 1)
+            ->missing('projects.data.0.subsoil_users')
+            ->has('subsoilUsers', 0));
+
+    $this->get(route('investment-projects.show', $ownProject))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('project.subsoil_users', 0));
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('sectorSummary.total.nedro.investment', 0)
+            ->where('sectorSummary.total.nedro.projectCount', 0)
+            ->where('sectorSummary.total.nedro.problemCount', 0)
+            ->where('sectorSummary.total.nedro.jobCount', 0)
+            ->has('regionStats.subsoilUsers', 0));
 
     $this->get(route('regions.show', $otherRegion))
         ->assertOk()
@@ -292,7 +398,7 @@ test('investor navigation scope is enforced on the server', function () {
 
     $this->actingAs($investor)->get('/notifications')->assertOk();
     $this->get('/sezs')->assertForbidden();
-    $this->get('/issues')->assertForbidden();
+    $this->get('/issues')->assertOk();
     $this->get('/baskarma-rating')->assertForbidden();
     $this->get('/users')->assertForbidden();
     $this->get('/investment-projects/create')->assertForbidden();

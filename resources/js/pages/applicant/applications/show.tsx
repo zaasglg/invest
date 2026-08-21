@@ -6,6 +6,7 @@ import {
     Clock3,
     Edit3,
     FileCheck2,
+    FolderKanban,
     LandPlot,
     MapPin,
     Send,
@@ -23,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
 import * as applicationRoutes from '@/routes/applicant/applications';
+import * as investmentProjectRoutes from '@/routes/investment-projects';
 import type { InvestmentApplication } from '@/types';
 
 export default function ApplicationShow({
@@ -61,7 +63,9 @@ export default function ApplicationShow({
             <PageContainer width="wide">
                 <ApplicantHero
                     eyebrow={application.application_number}
-                    title={application.project_name}
+                    title={
+                        application.project_name || 'Атауы енгізілмеген жоба'
+                    }
                     icon={FileCheck2}
                     badge={
                         <ApplicationStatusBadge
@@ -81,6 +85,18 @@ export default function ApplicationShow({
                                     <ArrowLeft /> Тізімге
                                 </Button>
                             </Link>
+                            {application.status === 'converted_to_project' &&
+                                application.investment_project && (
+                                    <Link
+                                        href={investmentProjectRoutes.show.url(
+                                            application.investment_project.id,
+                                        )}
+                                    >
+                                        <Button className="bg-gold text-white hover:bg-gold-dark">
+                                            <FolderKanban /> Жобаға өту
+                                        </Button>
+                                    </Link>
+                                )}
                             {application.is_editable && (
                                 <Link
                                     href={applicationRoutes.edit.url(
@@ -96,18 +112,15 @@ export default function ApplicationShow({
                                 </Link>
                             )}
                             {application.status === 'draft' && (
-                                <Button
-                                    className="bg-gold text-white hover:bg-gold-dark"
-                                    onClick={() =>
-                                        router.post(
-                                            applicationRoutes.submit.url(
-                                                application.id,
-                                            ),
-                                        )
-                                    }
+                                <Link
+                                    href={applicationRoutes.edit.url(
+                                        application.id,
+                                    )}
                                 >
-                                    <Send /> Жіберу
-                                </Button>
+                                    <Button className="bg-gold text-white hover:bg-gold-dark">
+                                        <Send /> Толтырып жіберу
+                                    </Button>
+                                </Link>
                             )}
                             {application.is_withdrawable && (
                                 <Button
@@ -125,7 +138,11 @@ export default function ApplicationShow({
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                     <ApplicantMetricCard
                         label="Сұралған аумақ"
-                        value={`${application.requested_area} га`}
+                        value={
+                            application.requested_area !== null
+                                ? `${application.requested_area} га`
+                                : '—'
+                        }
                         description="Инвестициялық аймақтан"
                         icon={LandPlot}
                         tone="emerald"
@@ -139,7 +156,7 @@ export default function ApplicationShow({
                     />
                     <ApplicantMetricCard
                         label="Жұмыс орны"
-                        value={application.jobs_count}
+                        value={application.jobs_count ?? '—'}
                         description="Жоспарланған жаңа орын"
                         icon={UsersRound}
                         tone="sky"

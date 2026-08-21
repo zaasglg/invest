@@ -84,6 +84,7 @@ class CheckRoleAccess
      */
     protected array $investorProjectRoutes = [
         'regions.show',
+        'issues.index',
         'investment-projects.index',
         'investment-projects.show',
         'investment-projects.passport',

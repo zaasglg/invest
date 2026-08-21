@@ -85,7 +85,9 @@ export default function ReviewShow({
             <PageContainer width="wide">
                 <ApplicantHero
                     eyebrow={application.application_number}
-                    title={application.project_name}
+                    title={
+                        application.project_name || 'Атауы енгізілмеген жоба'
+                    }
                     subtitle={`${application.zone_type_label} · ${application.zoneable?.name ?? 'Аймақ'} · ${application.application_kind_label}`}
                     icon={ShieldCheck}
                     badge={
