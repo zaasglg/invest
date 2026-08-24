@@ -48,7 +48,7 @@ class ApplicantInvestmentApplicationController extends Controller
                 fn ($query, $status) => $query->where('status', $status)
             )
             ->latest()
-            ->paginate(12)
+            ->paginate(10)
             ->withQueryString();
 
         return Inertia::render('applicant/applications/index', [
