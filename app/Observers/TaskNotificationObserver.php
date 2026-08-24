@@ -11,10 +11,19 @@ class TaskNotificationObserver implements ShouldHandleEventsAfterCommit
 {
     /**
      * Handle the TaskNotification "created" event.
-     * Sends the notification to the user via Telegram if they have a chat_id.
+     * Sends ordinary task notifications to Telegram when the user has a
+     * chat ID. Assistant notifications remain inside the action helper.
      */
     public function created(TaskNotification $notification): void
     {
+        if (in_array(
+            $notification->type,
+            TaskNotification::ASSISTANT_TYPES,
+            true
+        )) {
+            return;
+        }
+
         $user = User::find($notification->user_id);
 
         if (! $user || empty($user->telegram_chat_id)) {
