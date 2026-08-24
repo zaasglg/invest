@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 
 test('login screen can be rendered', function () {
@@ -19,6 +20,28 @@ test('users can authenticate using the login screen', function () {
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
+});
+
+test('remembered logins last for 30 days', function () {
+    $user = User::factory()->create();
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+        'remember' => true,
+    ]);
+
+    $rememberCookie = collect($response->headers->getCookies())
+        ->first(
+            fn ($cookie) => $cookie->getName() === Auth::guard()->getRecallerName()
+        );
+
+    expect($rememberCookie)->not->toBeNull()
+        ->and($rememberCookie->getExpiresTime())
+        ->toBeBetween(
+            now()->addDays(30)->subSeconds(5)->timestamp,
+            now()->addDays(30)->addSeconds(5)->timestamp
+        );
 });
 
 test('users can not authenticate with invalid password', function () {
