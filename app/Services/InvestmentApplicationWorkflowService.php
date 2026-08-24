@@ -125,12 +125,16 @@ class InvestmentApplicationWorkflowService
         InvestmentApplication $application,
         User $reviewer,
         float $approvedArea,
+        int $plannedStartYear,
+        int $plannedEndYear,
         ?string $comment
     ): InvestmentApplication {
         return DB::transaction(function () use (
             $application,
             $reviewer,
             $approvedArea,
+            $plannedStartYear,
+            $plannedEndYear,
             $comment
         ) {
             $locked = InvestmentApplication::query()
@@ -150,6 +154,37 @@ class InvestmentApplicationWorkflowService
                 ]);
             }
 
+            $minimumStartYear = min(
+                now()->year,
+                $locked->planned_start_year ?? now()->year
+            );
+
+            if ($plannedStartYear < $minimumStartYear
+                || $plannedStartYear > 2100
+                || $plannedEndYear < $plannedStartYear
+                || $plannedEndYear > 2100) {
+                throw ValidationException::withMessages([
+                    'planned_end_year' => 'Жобаның жоспарлы басталу және аяқталу жылдарын тексеріңіз.',
+                ]);
+            }
+
+            if ($locked->application_kind === 'expansion') {
+                $sourceProject = InvestmentProject::query()
+                    ->lockForUpdate()
+                    ->findOrFail($locked->source_investment_project_id);
+
+                if ($sourceProject->start_date) {
+                    $plannedStartYear = $sourceProject->start_date->year;
+                }
+
+                if ($sourceProject->end_date
+                    && $plannedEndYear < $sourceProject->end_date->year) {
+                    throw ValidationException::withMessages([
+                        'planned_end_year' => "Кеңейту жобаның қазіргі {$sourceProject->end_date->year} аяқталу жылын қысқартпауы керек.",
+                    ]);
+                }
+            }
+
             $zone = $locked->zoneable()->lockForUpdate()->firstOrFail();
             $available = $this->capacity->summarize($zone)['available'];
 
@@ -160,6 +195,8 @@ class InvestmentApplicationWorkflowService
             }
 
             $from = $locked->status;
+            $submittedStartYear = $locked->planned_start_year;
+            $submittedEndYear = $locked->planned_end_year;
             $reservationDays = max(
                 1,
                 (int) config('investment_applications.reservation_days', 30)
@@ -167,6 +204,8 @@ class InvestmentApplicationWorkflowService
             $locked->update([
                 'status' => 'approved',
                 'approved_area' => $approvedArea,
+                'planned_start_year' => $plannedStartYear,
+                'planned_end_year' => $plannedEndYear,
                 'reviewed_by' => $reviewer->id,
                 'reviewer_comment' => $comment,
                 'reviewed_at' => now(),
@@ -180,6 +219,10 @@ class InvestmentApplicationWorkflowService
                 $comment,
                 [
                     'approved_area' => $approvedArea,
+                    'submitted_start_year' => $submittedStartYear,
+                    'submitted_end_year' => $submittedEndYear,
+                    'approved_start_year' => $plannedStartYear,
+                    'approved_end_year' => $plannedEndYear,
                     'reserved_until' => $locked->reserved_until?->toIso8601String(),
                 ]
             );
@@ -220,6 +263,88 @@ class InvestmentApplicationWorkflowService
                 'reserved_until' => null,
             ]);
             $this->history($locked, $from, 'withdrawn', $actor);
+
+            return $locked->fresh();
+        });
+    }
+
+    public function setApprovedSchedule(
+        InvestmentApplication $application,
+        User $reviewer,
+        int $plannedStartYear,
+        int $plannedEndYear,
+        string $comment
+    ): InvestmentApplication {
+        return DB::transaction(function () use (
+            $application,
+            $reviewer,
+            $plannedStartYear,
+            $plannedEndYear,
+            $comment
+        ) {
+            $locked = InvestmentApplication::query()
+                ->lockForUpdate()
+                ->findOrFail($application->id);
+
+            abort_unless(
+                $locked->status === 'approved'
+                    && ($locked->planned_start_year === null
+                        || $locked->planned_end_year === null),
+                422,
+                'Бұл өтінімнің жоспарлы мерзімі бұрын бекітілген.'
+            );
+
+            if (! $locked->reserved_until || $locked->reserved_until->isPast()) {
+                throw ValidationException::withMessages([
+                    'application' => 'Резерв мерзімі аяқталған. Өтінімді қайта қарау қажет.',
+                ]);
+            }
+
+            $minimumStartYear = now()->year;
+
+            if ($locked->application_kind === 'expansion') {
+                $sourceProject = InvestmentProject::query()
+                    ->lockForUpdate()
+                    ->findOrFail($locked->source_investment_project_id);
+
+                if ($sourceProject->start_date) {
+                    $plannedStartYear = $sourceProject->start_date->year;
+                    $minimumStartYear = $plannedStartYear;
+                }
+
+                if ($sourceProject->end_date
+                    && $plannedEndYear < $sourceProject->end_date->year) {
+                    throw ValidationException::withMessages([
+                        'planned_end_year' => "Кеңейту жобаның қазіргі {$sourceProject->end_date->year} аяқталу жылын қысқартпауы керек.",
+                    ]);
+                }
+            }
+
+            if ($plannedStartYear < $minimumStartYear
+                || $plannedStartYear > 2100
+                || $plannedEndYear < max(now()->year, $plannedStartYear)
+                || $plannedEndYear > 2100) {
+                throw ValidationException::withMessages([
+                    'planned_end_year' => 'Жобаның жоспарлы басталу және аяқталу жылдарын тексеріңіз.',
+                ]);
+            }
+
+            $locked->update([
+                'planned_start_year' => $plannedStartYear,
+                'planned_end_year' => $plannedEndYear,
+            ]);
+            $this->history(
+                $locked,
+                'approved',
+                'approved',
+                $reviewer,
+                $comment,
+                [
+                    'approved_start_year' => $plannedStartYear,
+                    'approved_end_year' => $plannedEndYear,
+                    'schedule_completed' => true,
+                ]
+            );
 
             return $locked->fresh();
         });
@@ -280,6 +405,12 @@ class InvestmentApplicationWorkflowService
             if (! $locked->reserved_until || $locked->reserved_until->isPast()) {
                 throw ValidationException::withMessages([
                     'application' => 'Резерв мерзімі аяқталған. Өтінімді қайта қарау қажет.',
+                ]);
+            }
+
+            if (! $locked->planned_start_year || ! $locked->planned_end_year) {
+                throw ValidationException::withMessages([
+                    'application' => 'Жобаға айналдыру үшін жоспарлы басталу және аяқталу жылдары бекітілуі керек.',
                 ]);
             }
 
@@ -381,6 +512,14 @@ class InvestmentApplicationWorkflowService
                         + (int) $locked->jobs_count,
                     'total_investment' => (float) $project->total_investment
                         + (float) $locked->investment_amount,
+                    ...(! $project->start_date
+                        ? ['start_date' => "{$locked->planned_start_year}-01-01"]
+                        : []),
+                    ...($locked->planned_end_year
+                        && (! $project->end_date
+                            || $locked->planned_end_year > $project->end_date->year)
+                        ? ['end_date' => "{$locked->planned_end_year}-12-31"]
+                        : []),
                     'infrastructure' => $this->expandedInfrastructure(
                         $project->infrastructure,
                         $locked
@@ -406,6 +545,8 @@ class InvestmentApplicationWorkflowService
                     'current_status' => 'Өтінім қабылданып, жоба құрылды.',
                     'region_id' => $zone->region_id,
                     'jobs_count' => $locked->jobs_count,
+                    'start_date' => "{$locked->planned_start_year}-01-01",
+                    'end_date' => "{$locked->planned_end_year}-12-31",
                     'production_not_applicable' => (bool) $locked
                         ->production_not_applicable,
                     'total_investment' => $locked->investment_amount,

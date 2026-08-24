@@ -391,6 +391,8 @@ class ApplicantInvestmentApplicationController extends Controller
                 'project_type_id',
                 'jobs_count',
                 'total_investment',
+                'start_date',
+                'end_date',
                 'infrastructure',
             ]);
     }

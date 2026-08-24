@@ -61,6 +61,8 @@ Route::middleware(['auth', 'role.application-reviewer'])
             ->name('request-clarification');
         Route::post('{investmentApplication}/approve', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'approve'])
             ->name('approve');
+        Route::post('{investmentApplication}/set-schedule', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'setSchedule'])
+            ->name('set-schedule');
         Route::post('{investmentApplication}/reject', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'reject'])
             ->name('reject');
         Route::post('{investmentApplication}/convert', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'convert'])

@@ -26,6 +26,8 @@ class SubmitInvestmentApplicationRequest extends InvestmentApplicationRequest
             'requested_area' => $application->requested_area,
             'investment_amount' => $application->investment_amount,
             'jobs_count' => $application->jobs_count,
+            'planned_start_year' => $application->planned_start_year,
+            'planned_end_year' => $application->planned_end_year,
             'company_legal_form' => $application->company_legal_form,
             'company_name' => $application->company_name,
             'company_bin' => $application->company_bin,

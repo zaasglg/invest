@@ -111,7 +111,7 @@ class InvestmentApplicationReviewController extends Controller
             'documents:id,investment_application_id,name,type,size,created_at',
             'statusHistories.actor:id,full_name',
             'investmentProject:id,name',
-            'sourceInvestmentProject:id,name',
+            'sourceInvestmentProject:id,name,start_date,end_date',
         ]);
 
         return Inertia::render('investment-applications/show', [
@@ -136,8 +136,14 @@ class InvestmentApplicationReviewController extends Controller
                     ['submitted', 'under_review'],
                     true
                 ),
+                'can_set_schedule' => $investmentApplication->status === 'approved'
+                    && $investmentApplication->reserved_until?->isFuture()
+                    && ($investmentApplication->planned_start_year === null
+                        || $investmentApplication->planned_end_year === null),
                 'can_convert' => $investmentApplication->status === 'approved'
-                    && $investmentApplication->reserved_until?->isFuture(),
+                    && $investmentApplication->reserved_until?->isFuture()
+                    && $investmentApplication->planned_start_year !== null
+                    && $investmentApplication->planned_end_year !== null,
             ],
         ]);
     }
@@ -174,6 +180,19 @@ class InvestmentApplicationReviewController extends Controller
         InvestmentApplication $investmentApplication
     ) {
         $this->ensureReviewable($request, $investmentApplication);
+        $minimumStartYear = min(
+            now()->year,
+            $investmentApplication->planned_start_year ?? now()->year
+        );
+        $yearsChanged = (
+            $investmentApplication->planned_start_year !== null
+            && $request->integer('planned_start_year')
+                !== $investmentApplication->planned_start_year
+        ) || (
+            $investmentApplication->planned_end_year !== null
+            && $request->integer('planned_end_year')
+                !== $investmentApplication->planned_end_year
+        );
         $validated = $request->validate([
             'approved_area' => [
                 'required',
@@ -182,16 +201,80 @@ class InvestmentApplicationReviewController extends Controller
                 'max:2000000000',
                 'lte:'.$investmentApplication->requested_area,
             ],
-            'comment' => 'nullable|string|max:5000',
+            'planned_start_year' => [
+                'required',
+                'integer',
+                'min:'.$minimumStartYear,
+                'max:2100',
+            ],
+            'planned_end_year' => [
+                'required',
+                'integer',
+                'min:'.now()->year,
+                'max:2100',
+                'gte:planned_start_year',
+            ],
+            'comment' => [
+                Rule::requiredIf($yearsChanged),
+                'nullable',
+                'string',
+                'max:5000',
+            ],
+        ], [
+            'planned_start_year.required' => 'Жобаның басталу жылын енгізіңіз.',
+            'planned_end_year.required' => 'Жобаның аяқталу жылын енгізіңіз.',
+            'planned_end_year.gte' => 'Аяқталу жылы басталу жылынан ерте болмауы керек.',
+            'comment.required' => 'Өтінім беруші көрсеткен мерзімді өзгерту себебін жазыңыз.',
         ]);
         $this->workflow->approve(
             $investmentApplication,
             $request->user(),
             (float) $validated['approved_area'],
+            (int) $validated['planned_start_year'],
+            (int) $validated['planned_end_year'],
             $validated['comment'] ?? null
         );
 
         return redirect()->back()->with('success', 'Өтінім қабылданып, жер резервке қойылды.');
+    }
+
+    public function setSchedule(
+        Request $request,
+        InvestmentApplication $investmentApplication
+    ) {
+        $this->ensureReviewable($request, $investmentApplication);
+        $minimumStartYear = $investmentApplication->sourceInvestmentProject
+            ?->start_date?->year ?? now()->year;
+        $validated = $request->validate([
+            'planned_start_year' => [
+                'required',
+                'integer',
+                'min:'.min(now()->year, $minimumStartYear),
+                'max:2100',
+            ],
+            'planned_end_year' => [
+                'required',
+                'integer',
+                'min:'.now()->year,
+                'max:2100',
+                'gte:planned_start_year',
+            ],
+            'comment' => ['required', 'string', 'max:5000'],
+        ], [
+            'planned_start_year.required' => 'Жобаның басталу жылын енгізіңіз.',
+            'planned_end_year.required' => 'Жобаның аяқталу жылын енгізіңіз.',
+            'planned_end_year.gte' => 'Аяқталу жылы басталу жылынан ерте болмауы керек.',
+            'comment.required' => 'Мерзімді бекіту туралы түсініктеме жазыңыз.',
+        ]);
+        $this->workflow->setApprovedSchedule(
+            $investmentApplication,
+            $request->user(),
+            (int) $validated['planned_start_year'],
+            (int) $validated['planned_end_year'],
+            $validated['comment']
+        );
+
+        return redirect()->back()->with('success', 'Жобаның жоспарлы мерзімі бекітілді.');
     }
 
     public function reject(

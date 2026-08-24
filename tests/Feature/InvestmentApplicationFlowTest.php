@@ -79,6 +79,8 @@ function validApplicationPayload(Region $region, array $overrides = []): array
         'requested_area' => 30,
         'investment_amount' => 150000000,
         'jobs_count' => 50,
+        'planned_start_year' => now()->year,
+        'planned_end_year' => now()->year + 2,
         'infrastructure_requirements' => [
             'electricity' => 100,
             'water' => 20,
@@ -103,6 +105,20 @@ function validApplicationPayload(Region $region, array $overrides = []): array
         'contact_phone' => '+7 700 000 00 00',
         'contact_email' => 'investor@example.com',
         'legal_address' => 'Түркістан қаласы',
+        ...$overrides,
+    ];
+}
+
+/** @return array<string, mixed> */
+function validApprovalPayload(
+    InvestmentApplication $application,
+    float $approvedArea,
+    array $overrides = []
+): array {
+    return [
+        'approved_area' => $approvedArea,
+        'planned_start_year' => $application->planned_start_year,
+        'planned_end_year' => $application->planned_end_year,
         ...$overrides,
     ];
 }
@@ -161,11 +177,34 @@ test('applicant can save an incomplete draft but cannot submit it', function () 
             'project_type_ids',
             'requested_area',
             'company_bin',
+            'planned_start_year',
+            'planned_end_year',
             'planned_production.0.unit',
             'planned_production.0.period',
         ]);
 
     expect($application->fresh()->status)->toBe('draft');
+});
+
+test('applicant cannot submit an invalid planned project period', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region, [
+                'planned_start_year' => now()->year + 2,
+                'planned_end_year' => now()->year + 1,
+            ])
+        )
+        ->assertSessionHasErrors('planned_end_year');
+
+    expect(InvestmentApplication::query()->count())->toBe(0);
 });
 
 test('applicant sees safe zone capacity and cannot open internal zone pages', function () {
@@ -358,18 +397,102 @@ test('submitted applications do not reserve land and approval reserves it', func
         ->toBe(100.0);
 
     $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), [
-            'approved_area' => 25,
+        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 25, [
+            'planned_end_year' => now()->year + 3,
+        ]))
+        ->assertSessionHasErrors('comment');
+
+    expect($application->fresh()->status)->toBe('submitted')
+        ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
+        ->toBe(100.0);
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 25, [
+            'planned_end_year' => now()->year + 3,
             'comment' => 'Құжаттар талапқа сай.',
-        ])
+        ]))
         ->assertRedirect();
 
     $application->refresh();
     expect($application->status)->toBe('approved')
         ->and((float) $application->approved_area)->toBe(25.0)
+        ->and($application->planned_start_year)->toBe(now()->year)
+        ->and($application->planned_end_year)->toBe(now()->year + 3)
         ->and($application->reserved_until)->not->toBeNull()
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(75.0);
+});
+
+test('invest reviewer can set schedule for a legacy approved application', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region)
+        )
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+    $this->actingAs($reviewer)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 25)
+        )
+        ->assertRedirect();
+
+    $application->refresh();
+    $reservedUntil = $application->reserved_until?->toDateTimeString();
+    $application->update([
+        'planned_start_year' => null,
+        'planned_end_year' => null,
+    ]);
+
+    $this->actingAs($reviewer)
+        ->get(route('investment-applications.show', $application))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('actions.can_set_schedule', true)
+            ->where('actions.can_convert', false));
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.set-schedule', $application), [
+            'planned_start_year' => now()->year,
+            'planned_end_year' => now()->year + 4,
+        ])
+        ->assertSessionHasErrors('comment');
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.set-schedule', $application), [
+            'planned_start_year' => now()->year,
+            'planned_end_year' => now()->year + 4,
+            'comment' => 'Ескі өтінімнің жоспарлы мерзімі бекітілді.',
+        ])
+        ->assertRedirect();
+
+    $application->refresh();
+    expect($application->status)->toBe('approved')
+        ->and($application->planned_start_year)->toBe(now()->year)
+        ->and($application->planned_end_year)->toBe(now()->year + 4)
+        ->and($application->reserved_until?->toDateTimeString())
+        ->toBe($reservedUntil)
+        ->and((float) $application->approved_area)->toBe(25.0);
+
+    $this->actingAs($reviewer)
+        ->get(route('investment-applications.show', $application))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('actions.can_set_schedule', false)
+            ->where('actions.can_convert', true));
 });
 
 test('invest reviewer rejects an application with a required reason', function () {
@@ -461,6 +584,10 @@ test('approved application converts into company investor and internal project',
         ->toBe($payload['project_type_ids'])
         ->and($company->activity_type)
         ->toBe($payload['company_activity_type'])
+        ->and($project->start_date?->format('Y-m-d'))
+        ->toBe(now()->year.'-01-01')
+        ->and($project->end_date?->format('Y-m-d'))
+        ->toBe((now()->year + 2).'-12-31')
         ->and($project->production_not_applicable)->toBeFalse()
         ->and($project->productionPlans()->count())->toBe(1)
         ->and($project->productionPlans()->first()->product_name)
@@ -613,9 +740,10 @@ test('existing unclaimed company is normalized and reused for applicant', functi
         ->and($application->director_full_name)->toBe($company->director_full_name);
 
     $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), [
-            'approved_area' => 20,
-        ])
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 20)
+        )
         ->assertRedirect();
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
@@ -696,9 +824,10 @@ test('investor submits a new project application for the linked company', functi
         ->and($application->company_activity_type)->toBe($company->activity_type);
 
     $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), [
-            'approved_area' => 10,
-        ])
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 10)
+        )
         ->assertRedirect();
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
@@ -727,6 +856,8 @@ test('investor expansion application updates the existing project without duplic
         'jobs_count' => 40,
         'total_investment' => 100000000,
         'status' => 'implementation',
+        'start_date' => now()->year.'-01-01',
+        'end_date' => (now()->year + 1).'-12-31',
         'infrastructure' => [
             'electricity' => [
                 'needed' => true,
@@ -768,12 +899,24 @@ test('investor expansion application updates the existing project without duplic
 
     $application = InvestmentApplication::query()->firstOrFail();
     expect($application->project_name)->toBe($project->name)
-        ->and($application->application_kind)->toBe('expansion');
+        ->and($application->application_kind)->toBe('expansion')
+        ->and($application->planned_start_year)->toBe(now()->year)
+        ->and($application->planned_end_year)->toBe(now()->year + 2);
 
     $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), [
-            'approved_area' => 3,
-        ])
+        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 3, [
+            'planned_end_year' => now()->year,
+            'comment' => 'Мерзімді қысқарту әрекеті.',
+        ]))
+        ->assertSessionHasErrors('planned_end_year');
+
+    expect($application->fresh()->status)->toBe('submitted');
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 3, [
+            'planned_end_year' => now()->year + 3,
+            'comment' => 'Кеңейту мерзімі келісілді.',
+        ]))
         ->assertRedirect();
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
@@ -784,6 +927,10 @@ test('investor expansion application updates the existing project without duplic
     expect(InvestmentProject::query()->count())->toBe($projectCount)
         ->and($application->investment_project_id)->toBe($project->id)
         ->and($application->status)->toBe('converted_to_project')
+        ->and($project->start_date?->format('Y-m-d'))
+        ->toBe(now()->year.'-01-01')
+        ->and($project->end_date?->format('Y-m-d'))
+        ->toBe((now()->year + 3).'-12-31')
         ->and((float) $project->total_investment)->toBe(125000000.0)
         ->and($project->jobs_count)->toBe(48)
         ->and((float) data_get($project->infrastructure, 'land.required_capacity'))

@@ -36,6 +36,7 @@ type Props = {
         can_request_clarification: boolean;
         can_approve: boolean;
         can_reject: boolean;
+        can_set_schedule: boolean;
         can_convert: boolean;
     };
 };
@@ -45,25 +46,64 @@ export default function ReviewShow({
     zoneCapacity,
     actions,
 }: Props) {
+    const currentYear = new Date().getFullYear();
+    const sourceStartYear = Number(
+        application.source_investment_project?.start_date?.slice(0, 4) || 0,
+    );
+    const sourceEndYear = Number(
+        application.source_investment_project?.end_date?.slice(0, 4) || 0,
+    );
     const decision = useForm({
         approved_area: String(
             application.approved_area ?? application.requested_area,
+        ),
+        planned_start_year: String(
+            application.planned_start_year || sourceStartYear || currentYear,
+        ),
+        planned_end_year: String(
+            application.planned_end_year ||
+                Math.max(sourceEndYear, currentYear + 1),
         ),
         comment: '',
     });
 
     const postDecision = (
         event: FormEvent,
-        action: 'approve' | 'request-clarification' | 'reject',
+        action: 'approve' | 'set-schedule' | 'request-clarification' | 'reject',
     ) => {
         event.preventDefault();
+        const yearsChanged =
+            (application.planned_start_year !== null &&
+                application.planned_start_year !== undefined &&
+                Number(decision.data.planned_start_year) !==
+                    application.planned_start_year) ||
+            (application.planned_end_year !== null &&
+                application.planned_end_year !== undefined &&
+                Number(decision.data.planned_end_year) !==
+                    application.planned_end_year);
 
         if (action !== 'approve' && decision.data.comment.trim().length === 0) {
             decision.setError(
                 'comment',
                 action === 'reject'
                     ? 'Өтінімді қабылдамау себебін жазыңыз.'
-                    : 'Қандай мәліметті толықтыру керегін жазыңыз.',
+                    : action === 'set-schedule'
+                      ? 'Мерзімді бекіту туралы түсініктеме жазыңыз.'
+                      : 'Қандай мәліметті толықтыру керегін жазыңыз.',
+            );
+            document.getElementById('decision-comment')?.focus();
+
+            return;
+        }
+
+        if (
+            action === 'approve' &&
+            yearsChanged &&
+            decision.data.comment.trim().length === 0
+        ) {
+            decision.setError(
+                'comment',
+                'Өтінім беруші көрсеткен мерзімді өзгерту себебін жазыңыз.',
             );
             document.getElementById('decision-comment')?.focus();
 
@@ -74,9 +114,11 @@ export default function ReviewShow({
         const url =
             action === 'approve'
                 ? routes.approve.url(application.id)
-                : action === 'reject'
-                  ? routes.reject.url(application.id)
-                  : routes.requestClarification.url(application.id);
+                : action === 'set-schedule'
+                  ? routes.setSchedule.url(application.id)
+                  : action === 'reject'
+                    ? routes.reject.url(application.id)
+                    : routes.requestClarification.url(application.id);
 
         decision.post(url, { preserveScroll: true });
     };
@@ -186,16 +228,22 @@ export default function ReviewShow({
                     )}
 
                 {(actions.can_approve ||
+                    actions.can_set_schedule ||
                     actions.can_request_clarification ||
                     actions.can_reject) && (
                     <ApplicantSectionCard
                         title="Сарапшы шешімі"
-                        description="Мақұлданған гектар резервке қойылады. Толықтыру немесе бас тарту кезінде түсініктеме міндетті."
+                        description={
+                            actions.can_set_schedule
+                                ? 'Бұрын қабылданған өтінімнің мерзімін бекіткеннен кейін оны жобаға айналдыруға болады.'
+                                : 'Мақұлданған гектар резервке қойылады. Толықтыру немесе бас тарту кезінде түсініктеме міндетті.'
+                        }
                         icon={ClipboardCheck}
                         tone="amber"
                     >
                         <form className="grid gap-5 lg:grid-cols-3">
-                            {actions.can_approve && (
+                            {(actions.can_approve ||
+                                actions.can_set_schedule) && (
                                 <div className="space-y-4 rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4 lg:row-span-2">
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-9 items-center justify-center rounded-xl bg-amber-500 text-white">
@@ -203,84 +251,186 @@ export default function ReviewShow({
                                         </span>
                                         <div>
                                             <p className="text-sm font-bold text-navy">
-                                                Бекітілетін жер
+                                                {actions.can_set_schedule
+                                                    ? 'Жобаның мерзімі'
+                                                    : 'Бекітілетін жер'}
                                             </p>
                                             <p className="text-xs text-slate-500">
-                                                Сұралған көлемнен аспауы керек
+                                                {actions.can_set_schedule
+                                                    ? 'Бұрын қабылданған өтінім үшін мерзімді бекітіңіз'
+                                                    : 'Сұралған көлемнен аспауы керек'}
                                             </p>
                                         </div>
                                     </div>
 
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor="approved-area">
-                                            Қабылданатын аумақ (га)
-                                        </Label>
-                                        <Input
-                                            id="approved-area"
-                                            className="h-11 bg-white"
-                                            type="number"
-                                            min="0.01"
-                                            step="0.01"
-                                            max={Math.min(
-                                                Number(
-                                                    application.requested_area,
-                                                ),
-                                                zoneCapacity.available,
+                                    {actions.can_approve && (
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="approved-area">
+                                                Қабылданатын аумақ (га)
+                                            </Label>
+                                            <Input
+                                                id="approved-area"
+                                                className="h-11 bg-white"
+                                                type="number"
+                                                min="0.01"
+                                                step="0.01"
+                                                max={Math.min(
+                                                    Number(
+                                                        application.requested_area,
+                                                    ),
+                                                    zoneCapacity.available,
+                                                )}
+                                                value={
+                                                    decision.data.approved_area
+                                                }
+                                                onChange={(event) =>
+                                                    decision.setData(
+                                                        'approved_area',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            {decision.errors.approved_area && (
+                                                <p className="text-sm text-rose-600">
+                                                    {
+                                                        decision.errors
+                                                            .approved_area
+                                                    }
+                                                </p>
                                             )}
-                                            value={decision.data.approved_area}
-                                            onChange={(event) =>
-                                                decision.setData(
-                                                    'approved_area',
-                                                    event.target.value,
-                                                )
-                                            }
-                                        />
-                                        {decision.errors.approved_area && (
-                                            <p className="text-sm text-rose-600">
-                                                {decision.errors.approved_area}
+                                        </div>
+                                    )}
+
+                                    <div className="grid grid-cols-2 gap-3">
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="planned-start-year">
+                                                Басталу жылы
+                                            </Label>
+                                            <Input
+                                                id="planned-start-year"
+                                                className="h-11 bg-white"
+                                                type="number"
+                                                min={Math.min(
+                                                    currentYear,
+                                                    application.planned_start_year ??
+                                                        currentYear,
+                                                )}
+                                                max="2100"
+                                                disabled={
+                                                    application.application_kind ===
+                                                        'expansion' &&
+                                                    Boolean(
+                                                        application
+                                                            .source_investment_project
+                                                            ?.start_date,
+                                                    )
+                                                }
+                                                value={
+                                                    decision.data
+                                                        .planned_start_year
+                                                }
+                                                onChange={(event) =>
+                                                    decision.setData(
+                                                        'planned_start_year',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            {decision.errors
+                                                .planned_start_year && (
+                                                <p className="text-sm text-rose-600">
+                                                    {
+                                                        decision.errors
+                                                            .planned_start_year
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <Label htmlFor="planned-end-year">
+                                                Аяқталу жылы
+                                            </Label>
+                                            <Input
+                                                id="planned-end-year"
+                                                className="h-11 bg-white"
+                                                type="number"
+                                                min={Math.max(
+                                                    currentYear,
+                                                    Number(
+                                                        decision.data
+                                                            .planned_start_year ||
+                                                            0,
+                                                    ),
+                                                )}
+                                                max="2100"
+                                                value={
+                                                    decision.data
+                                                        .planned_end_year
+                                                }
+                                                onChange={(event) =>
+                                                    decision.setData(
+                                                        'planned_end_year',
+                                                        event.target.value,
+                                                    )
+                                                }
+                                            />
+                                            {decision.errors
+                                                .planned_end_year && (
+                                                <p className="text-sm text-rose-600">
+                                                    {
+                                                        decision.errors
+                                                            .planned_end_year
+                                                    }
+                                                </p>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {actions.can_approve && (
+                                        <div className="grid grid-cols-2 gap-3 text-xs">
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-amber-200/70">
+                                                <p className="text-slate-400">
+                                                    Қазір бос
+                                                </p>
+                                                <p className="mt-1 font-extrabold text-emerald-700">
+                                                    {zoneCapacity.available} га
+                                                </p>
+                                            </div>
+                                            <div className="rounded-xl bg-white p-3 ring-1 ring-amber-200/70">
+                                                <p className="text-slate-400">
+                                                    Сұралғаны
+                                                </p>
+                                                <p className="mt-1 font-extrabold text-navy">
+                                                    {application.requested_area}{' '}
+                                                    га
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {actions.can_approve &&
+                                        zoneCapacity.available <= 0 && (
+                                            <p className="rounded-xl border border-amber-200 bg-white p-3 text-sm leading-5 text-amber-900">
+                                                Аймақта бос жер қалмаған. Бұл
+                                                өтінімді қазір резервтеу мүмкін
+                                                емес.
                                             </p>
                                         )}
-                                    </div>
-
-                                    <div className="grid grid-cols-2 gap-3 text-xs">
-                                        <div className="rounded-xl bg-white p-3 ring-1 ring-amber-200/70">
-                                            <p className="text-slate-400">
-                                                Қазір бос
-                                            </p>
-                                            <p className="mt-1 font-extrabold text-emerald-700">
-                                                {zoneCapacity.available} га
-                                            </p>
-                                        </div>
-                                        <div className="rounded-xl bg-white p-3 ring-1 ring-amber-200/70">
-                                            <p className="text-slate-400">
-                                                Сұралғаны
-                                            </p>
-                                            <p className="mt-1 font-extrabold text-navy">
-                                                {application.requested_area} га
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    {zoneCapacity.available <= 0 && (
-                                        <p className="rounded-xl border border-amber-200 bg-white p-3 text-sm leading-5 text-amber-900">
-                                            Аймақта бос жер қалмаған. Бұл
-                                            өтінімді қазір резервтеу мүмкін
-                                            емес.
-                                        </p>
-                                    )}
                                 </div>
                             )}
 
                             <div
                                 className={
-                                    actions.can_approve
+                                    actions.can_approve ||
+                                    actions.can_set_schedule
                                         ? 'space-y-1.5 lg:col-span-2'
                                         : 'space-y-1.5 lg:col-span-3'
                                 }
                             >
                                 <Label htmlFor="decision-comment">
                                     Түсініктеме
-                                    {(actions.can_reject ||
+                                    {(actions.can_set_schedule ||
+                                        actions.can_reject ||
                                         actions.can_request_clarification) && (
                                         <span className="text-rose-600">
                                             {' '}
@@ -310,7 +460,8 @@ export default function ReviewShow({
 
                             <div
                                 className={
-                                    actions.can_approve
+                                    actions.can_approve ||
+                                    actions.can_set_schedule
                                         ? 'flex flex-wrap gap-2 lg:col-span-2'
                                         : 'flex flex-wrap gap-2 lg:col-span-3'
                                 }
@@ -328,6 +479,19 @@ export default function ReviewShow({
                                         }
                                     >
                                         <CheckCircle2 /> Қабылдау және резервтеу
+                                    </Button>
+                                )}
+
+                                {actions.can_set_schedule && (
+                                    <Button
+                                        type="button"
+                                        disabled={decision.processing}
+                                        className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                        onClick={(event) =>
+                                            postDecision(event, 'set-schedule')
+                                        }
+                                    >
+                                        <CheckCircle2 /> Мерзімді бекіту
                                     </Button>
                                 )}
 
