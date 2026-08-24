@@ -16,11 +16,13 @@ Schedule::command('tasks:notify-overdue')
 Schedule::command('assistant:notify')
     ->hourly()
     ->timezone(config('app.timezone'))
+    ->appendOutputTo(storage_path('logs/assistant-scheduler.log'))
     ->withoutOverlapping();
 
 Schedule::command('photos:check-weekly')
     ->weeklyOn(1, '09:00')
     ->timezone(config('app.timezone'))
+    ->appendOutputTo(storage_path('logs/weekly-photo-scheduler.log'))
     ->withoutOverlapping();
 
 Schedule::command('applications:expire-reservations')
