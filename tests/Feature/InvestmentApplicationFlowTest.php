@@ -83,6 +83,16 @@ function validApplicationPayload(Region $region, array $overrides = []): array
             'electricity' => 100,
             'water' => 20,
         ],
+        'production_not_applicable' => false,
+        'planned_production' => [[
+            'client_key' => 'application-plan-1',
+            'product_name' => 'Керамикалық кірпіш',
+            'planned_quantity' => 500000,
+            'unit' => 'piece',
+            'custom_unit' => '',
+            'planned_amount' => 75000000,
+            'period' => 'year',
+        ]],
         'company_legal_form' => 'too',
         'company_name' => 'Тест Инвест',
         'company_bin' => '123456789012',
@@ -128,6 +138,10 @@ test('applicant can save an incomplete draft but cannot submit it', function () 
         ]), [
             'intent' => 'draft',
             'application_kind' => 'new_project',
+            'production_not_applicable' => false,
+            'planned_production' => [[
+                'product_name' => 'Толық емес өндіріс жоспары',
+            ]],
         ])
         ->assertRedirect();
 
@@ -135,6 +149,8 @@ test('applicant can save an incomplete draft but cannot submit it', function () 
 
     expect($application->status)->toBe('draft')
         ->and($application->project_name)->toBeNull()
+        ->and($application->planned_production[0]['product_name'])
+        ->toBe('Толық емес өндіріс жоспары')
         ->and($application->projectTypes()->count())->toBe(0);
 
     $this->actingAs($applicant)
@@ -145,6 +161,8 @@ test('applicant can save an incomplete draft but cannot submit it', function () 
             'project_type_ids',
             'requested_area',
             'company_bin',
+            'planned_production.0.unit',
+            'planned_production.0.period',
         ]);
 
     expect($application->fresh()->status)->toBe('draft');
@@ -354,6 +372,49 @@ test('submitted applications do not reserve land and approval reserves it', func
         ->toBe(75.0);
 });
 
+test('invest reviewer rejects an application with a required reason', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region)
+        )
+        ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.reject', $application))
+        ->assertSessionHasErrors('comment');
+
+    expect($application->fresh()->status)->toBe('submitted');
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.reject', $application), [
+            'comment' => 'Жоба талаптарға сәйкес келмейді.',
+        ])
+        ->assertRedirect();
+
+    $application->refresh();
+    expect($application->status)->toBe('rejected')
+        ->and($application->reviewed_by)->toBe($reviewer->id)
+        ->and($application->reviewer_comment)
+        ->toBe('Жоба талаптарға сәйкес келмейді.')
+        ->and($application->statusHistories()
+            ->where('to_status', 'rejected')
+            ->exists())->toBeTrue();
+});
+
 test('approved application converts into company investor and internal project', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
@@ -367,7 +428,7 @@ test('approved application converts into company investor and internal project',
         'zoneable_type' => Sez::class,
         'zoneable_id' => $zone->id,
         'status' => 'approved',
-        'approved_area' => 30,
+        'approved_area' => 25,
         'reviewed_by' => $reviewer->id,
         'submitted_at' => now(),
         'reviewed_at' => now(),
@@ -400,15 +461,23 @@ test('approved application converts into company investor and internal project',
         ->toBe($payload['project_type_ids'])
         ->and($company->activity_type)
         ->toBe($payload['company_activity_type'])
-        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->and($project->production_not_applicable)->toBeFalse()
+        ->and($project->productionPlans()->count())->toBe(1)
+        ->and($project->productionPlans()->first()->product_name)
+        ->toBe('Керамикалық кірпіш')
+        ->and((float) $project->productionPlans()->first()->planned_quantity)
+        ->toBe(500000.0)
+        ->and((float) data_get($project->infrastructure, 'land.required_capacity'))
         ->toBe(30.0)
+        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->toBe(25.0)
         ->and($project->documents()
             ->where('source', 'investment_application')
             ->where('name', 'Бизнес жоспар.pdf')
             ->exists())->toBeTrue()
         ->and($project->sezs()->whereKey($zone->id)->exists())->toBeTrue()
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
-        ->toBe(70.0);
+        ->toBe(75.0);
 
     $this->actingAs($applicant)
         ->get(route('applicant.applications.show', $application))
@@ -424,6 +493,88 @@ test('approved application converts into company investor and internal project',
         ->assertForbidden();
 
     expect($application->fresh()->status)->toBe('converted_to_project');
+});
+
+test('application without planned production creates a project without plans', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $payload = validApplicationPayload($region, [
+        'production_not_applicable' => true,
+        'planned_production' => [],
+    ]);
+    $application = InvestmentApplication::create([
+        ...$payload,
+        'application_number' => 'INV-2026-NOPRODUCTION',
+        'user_id' => $applicant->id,
+        'zoneable_type' => Sez::class,
+        'zoneable_id' => $zone->id,
+        'status' => 'approved',
+        'approved_area' => 25,
+        'reviewed_by' => $reviewer->id,
+        'submitted_at' => now(),
+        'reviewed_at' => now(),
+        'reserved_until' => now()->addDays(30),
+    ]);
+    $application->projectTypes()->sync($payload['project_type_ids']);
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.convert', $application))
+        ->assertRedirect();
+
+    $project = $application->fresh()->investmentProject()->firstOrFail();
+    expect($project->production_not_applicable)->toBeTrue()
+        ->and($project->productionPlans()->count())->toBe(0);
+});
+
+test('existing converted projects restore requested and approved land areas', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $payload = validApplicationPayload($region, ['requested_area' => 200]);
+    $project = InvestmentProject::create([
+        'name' => $payload['project_name'],
+        'region_id' => $region->id,
+        'total_investment' => $payload['investment_amount'],
+        'status' => 'plan',
+        'created_by' => $reviewer->id,
+        'infrastructure' => [
+            'land' => [
+                'needed' => true,
+                'required_capacity' => 180,
+                'used_capacity' => 180,
+            ],
+        ],
+    ]);
+    $project->sezs()->sync([$zone->id]);
+
+    InvestmentApplication::create([
+        ...$payload,
+        'application_number' => 'INV-2026-BACKFILL1',
+        'user_id' => $applicant->id,
+        'zoneable_type' => Sez::class,
+        'zoneable_id' => $zone->id,
+        'status' => 'converted_to_project',
+        'approved_area' => 180,
+        'reviewed_by' => $reviewer->id,
+        'investment_project_id' => $project->id,
+        'submitted_at' => now(),
+        'reviewed_at' => now(),
+        'converted_at' => now(),
+    ]);
+
+    $migration = require database_path(
+        'migrations/2026_08_24_000000_correct_converted_application_land_capacity.php'
+    );
+    $migration->up();
+
+    $project->refresh();
+    expect((float) data_get($project->infrastructure, 'land.required_capacity'))
+        ->toBe(200.0)
+        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->toBe(180.0);
 });
 
 test('existing unclaimed company is normalized and reused for applicant', function () {
@@ -621,7 +772,7 @@ test('investor expansion application updates the existing project without duplic
 
     $this->actingAs($reviewer)
         ->post(route('investment-applications.approve', $application), [
-            'approved_area' => 5,
+            'approved_area' => 3,
         ])
         ->assertRedirect();
     $this->actingAs($reviewer)
@@ -635,12 +786,17 @@ test('investor expansion application updates the existing project without duplic
         ->and($application->status)->toBe('converted_to_project')
         ->and((float) $project->total_investment)->toBe(125000000.0)
         ->and($project->jobs_count)->toBe(48)
-        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->and((float) data_get($project->infrastructure, 'land.required_capacity'))
         ->toBe(15.0)
+        ->and((float) data_get($project->infrastructure, 'land.used_capacity'))
+        ->toBe(13.0)
         ->and((float) data_get($project->infrastructure, 'electricity.required_capacity'))
         ->toBe(65.0)
         ->and((float) data_get($project->infrastructure, 'electricity.used_capacity'))
         ->toBe(20.0)
+        ->and($project->productionPlans()->count())->toBe(1)
+        ->and($project->productionPlans()->first()->product_name)
+        ->toBe('Керамикалық кірпіш')
         ->and(KpiLog::query()
             ->where('project_id', $project->id)
             ->where('event', 'project.expanded_from_application')

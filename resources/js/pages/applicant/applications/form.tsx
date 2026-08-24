@@ -25,6 +25,7 @@ import {
     ApplicantSectionCard,
 } from '@/components/applicant/applicant-ui';
 import InputError from '@/components/input-error';
+import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,8 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import ZoneAreaSummary from '@/components/zone-area-summary';
 import AppLayout from '@/layouts/app-layout';
+import { normalizeProductionPlans } from '@/lib/production';
+import type { ProductionPlanInput } from '@/lib/production';
 import * as applicant from '@/routes/applicant';
 import * as applicationRoutes from '@/routes/applicant/applications';
 import * as applicationDocumentRoutes from '@/routes/applicant/applications/documents';
@@ -143,6 +146,11 @@ export default function ApplicationForm({
                 String(application?.infrastructure_requirements?.[key] ?? ''),
             ]),
         ) as Record<string, string>,
+        production_not_applicable:
+            application?.production_not_applicable ?? false,
+        planned_production: normalizeProductionPlans(
+            application?.planned_production,
+        ) as ProductionPlanInput[],
         company_legal_form:
             application?.company_legal_form ?? company?.legal_form ?? '',
         company_name: application?.company_name ?? company?.name ?? '',
@@ -1064,6 +1072,20 @@ export default function ApplicationForm({
                             ))}
                         </div>
                     </ApplicantSectionCard>
+
+                    <div data-form-field="planned_production">
+                        <PlannedProductionForm
+                            errors={form.errors}
+                            notApplicable={form.data.production_not_applicable}
+                            onChange={(plans) =>
+                                form.setData('planned_production', plans)
+                            }
+                            onNotApplicableChange={(value) =>
+                                form.setData('production_not_applicable', value)
+                            }
+                            value={form.data.planned_production}
+                        />
+                    </div>
 
                     <ApplicantSectionCard
                         title="Құжаттар"

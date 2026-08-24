@@ -9,8 +9,11 @@ use App\Models\InvestmentProject;
 use App\Models\PromZone;
 use App\Models\Sez;
 use App\Services\PrivateFileService;
+use App\Services\ProjectProductionService;
+use App\Support\ProductionPlanValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Illuminate\Validation\Validator;
 
 class InvestmentApplicationRequest extends FormRequest
@@ -182,6 +185,7 @@ class InvestmentApplicationRequest extends FormRequest
             'contact_email' => [$required, 'email:rfc', 'max:255'],
             'legal_address' => [$required, 'string', 'max:1000'],
             'infrastructure_requirements' => 'nullable|array:electricity,water,gas,roads,railway,internet',
+            ...ProductionPlanValidationRules::rules(! $isSubmit),
             'documents' => 'nullable|array|max:10',
             'documents.*' => [
                 'required',
@@ -267,6 +271,32 @@ class InvestmentApplicationRequest extends FormRequest
                         'source_investment_project_id',
                         'Кеңейтілетін жоба осы инвестициялық аймаққа байланыстырылмаған.'
                     );
+                }
+            },
+            function (Validator $validator): void {
+                if ($validator->errors()->isNotEmpty()) {
+                    return;
+                }
+
+                $rows = $this->input('planned_production', []);
+                $rows = is_array($rows) ? $rows : [];
+                $production = app(ProjectProductionService::class);
+
+                try {
+                    $production->assertApplicability(
+                        $this->boolean('production_not_applicable'),
+                        $rows
+                    );
+
+                    if ($this->input('intent') === 'submit') {
+                        $production->assertNewPlansAreComplete($rows);
+                    }
+                } catch (ValidationException $exception) {
+                    foreach ($exception->errors() as $field => $messages) {
+                        foreach ($messages as $message) {
+                            $validator->errors()->add($field, $message);
+                        }
+                    }
                 }
             },
         ];

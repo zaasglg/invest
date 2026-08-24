@@ -57,6 +57,20 @@ export default function ReviewShow({
         action: 'approve' | 'request-clarification' | 'reject',
     ) => {
         event.preventDefault();
+
+        if (action !== 'approve' && decision.data.comment.trim().length === 0) {
+            decision.setError(
+                'comment',
+                action === 'reject'
+                    ? 'Өтінімді қабылдамау себебін жазыңыз.'
+                    : 'Қандай мәліметті толықтыру керегін жазыңыз.',
+            );
+            document.getElementById('decision-comment')?.focus();
+
+            return;
+        }
+
+        decision.clearErrors();
         const url =
             action === 'approve'
                 ? routes.approve.url(application.id)
@@ -266,6 +280,13 @@ export default function ReviewShow({
                             >
                                 <Label htmlFor="decision-comment">
                                     Түсініктеме
+                                    {(actions.can_reject ||
+                                        actions.can_request_clarification) && (
+                                        <span className="text-rose-600">
+                                            {' '}
+                                            *
+                                        </span>
+                                    )}
                                 </Label>
                                 <Textarea
                                     id="decision-comment"

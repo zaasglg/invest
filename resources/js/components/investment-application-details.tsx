@@ -3,6 +3,7 @@ import {
     BriefcaseBusiness,
     Building2,
     Download,
+    Factory,
     FileText,
     Files,
     History,
@@ -15,6 +16,7 @@ import { ApplicantSectionCard } from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import { Button } from '@/components/ui/button';
 import { FormCard } from '@/components/ui/page';
+import { productionPeriodLabel, productionUnitLabel } from '@/lib/production';
 import * as documentRoutes from '@/routes/investment-applications/documents';
 import type { InvestmentApplication } from '@/types';
 
@@ -105,6 +107,11 @@ export default function InvestmentApplicationDetails({
         application.infrastructure_requirements ?? {},
     ).filter(
         ([, value]) => value !== null && value !== '' && Number(value) > 0,
+    );
+    const statusHistories = [...(application.status_histories ?? [])].sort(
+        (first, second) =>
+            new Date(first.created_at).getTime() -
+                new Date(second.created_at).getTime() || first.id - second.id,
     );
 
     return (
@@ -300,6 +307,58 @@ export default function InvestmentApplicationDetails({
 
             <ApplicationSection
                 applicantStyle={applicantStyle}
+                title="Жоспарлы өндіріс"
+                icon={Factory}
+                tone="amber"
+            >
+                {application.production_not_applicable ? (
+                    <p className="text-sm text-slate-500">
+                        Бұл жобаға жоспарлы өндіріс қолданылмайды.
+                    </p>
+                ) : application.planned_production?.length ? (
+                    <div className="divide-y divide-slate-100">
+                        {application.planned_production.map((plan, index) => (
+                            <div
+                                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-4"
+                                key={plan.client_key ?? index}
+                            >
+                                <Detail
+                                    label="Өнім немесе нәтиже"
+                                    value={plan.product_name}
+                                />
+                                <Detail
+                                    label="Жоспарлы көлем"
+                                    value={
+                                        plan.planned_quantity
+                                            ? `${plan.planned_quantity} ${productionUnitLabel(plan)}`
+                                            : '—'
+                                    }
+                                />
+                                <Detail
+                                    label="Жоспарлы сома"
+                                    value={
+                                        plan.planned_amount !== '' &&
+                                        plan.planned_amount != null
+                                            ? `${money(plan.planned_amount)} ₸`
+                                            : '—'
+                                    }
+                                />
+                                <Detail
+                                    label="Есептеу кезеңі"
+                                    value={productionPeriodLabel(plan.period)}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-sm text-slate-500">
+                        Жоспарлы өндіріс көрсетілмеген.
+                    </p>
+                )}
+            </ApplicationSection>
+
+            <ApplicationSection
+                applicantStyle={applicantStyle}
                 title="Құжаттар"
                 icon={Files}
                 tone="violet"
@@ -357,7 +416,7 @@ export default function InvestmentApplicationDetails({
                 tone="navy"
             >
                 <ol className="space-y-4">
-                    {application.status_histories?.map((history) => (
+                    {statusHistories.map((history) => (
                         <li key={history.id} className="flex gap-3">
                             <span className="mt-1.5 size-2 shrink-0 rounded-full bg-gold" />
                             <div>

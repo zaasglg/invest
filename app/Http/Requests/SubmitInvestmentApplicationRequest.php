@@ -39,6 +39,9 @@ class SubmitInvestmentApplicationRequest extends InvestmentApplicationRequest
             'legal_address' => $application->legal_address,
             'infrastructure_requirements' => $application
                 ->infrastructure_requirements ?? [],
+            'production_not_applicable' => $application
+                ->production_not_applicable,
+            'planned_production' => $application->planned_production ?? [],
         ]);
     }
 }

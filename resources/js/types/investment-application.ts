@@ -1,3 +1,5 @@
+import type { ProductionPlanInput } from '@/lib/production';
+
 export type ZoneArea = {
     total: number;
     occupied: number;
@@ -95,6 +97,8 @@ export type InvestmentApplication = {
     investment_amount: string | number | null;
     jobs_count: number | null;
     infrastructure_requirements?: Record<string, string | number | null>;
+    production_not_applicable?: boolean;
+    planned_production?: ProductionPlanInput[];
     company_legal_form: string | null;
     company_name: string | null;
     company_bin: string | null;

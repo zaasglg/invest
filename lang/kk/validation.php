@@ -243,6 +243,9 @@ return [
         'bank_country' => 'Банк елі',
         'bank_postal_code' => 'Банк пошта индексі',
         'comment' => 'Пікір',
+        'investment_amount' => 'Инвестиция мөлшері',
+        'jobs_count' => 'Жұмыс орындарының саны',
+        'investment_type' => 'Инвестиция түрі',
     ],
 
 ];

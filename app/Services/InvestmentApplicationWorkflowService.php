@@ -21,7 +21,8 @@ use Illuminate\Validation\ValidationException;
 class InvestmentApplicationWorkflowService
 {
     public function __construct(
-        private readonly ZoneCapacityService $capacity
+        private readonly ZoneCapacityService $capacity,
+        private readonly ProjectProductionService $production
     ) {}
 
     public function recordCreated(
@@ -387,6 +388,14 @@ class InvestmentApplicationWorkflowService
                 ]);
                 $project->projectTypes()->syncWithoutDetaching($projectTypeIds);
                 $project->curators()->syncWithoutDetaching([$reviewer->id]);
+
+                if (($locked->planned_production ?? []) !== []) {
+                    $project->update(['production_not_applicable' => false]);
+                    $this->production->appendPlans(
+                        $project,
+                        $locked->planned_production
+                    );
+                }
             } else {
                 $project = InvestmentProject::create([
                     'name' => $locked->project_name,
@@ -397,7 +406,8 @@ class InvestmentApplicationWorkflowService
                     'current_status' => 'Өтінім қабылданып, жоба құрылды.',
                     'region_id' => $zone->region_id,
                     'jobs_count' => $locked->jobs_count,
-                    'production_not_applicable' => true,
+                    'production_not_applicable' => (bool) $locked
+                        ->production_not_applicable,
                     'total_investment' => $locked->investment_amount,
                     'status' => 'plan',
                     'created_by' => $reviewer->id,
@@ -405,6 +415,10 @@ class InvestmentApplicationWorkflowService
                 ]);
                 $project->projectTypes()->sync($projectTypeIds);
                 $project->curators()->sync([$reviewer->id]);
+                $this->production->syncPlans(
+                    $project,
+                    $locked->planned_production ?? []
+                );
 
                 match ($zone::class) {
                     Sez::class => $project->sezs()->sync([$zone->id]),
@@ -521,7 +535,8 @@ class InvestmentApplicationWorkflowService
             ];
         }
 
-        $additionalArea = (float) $application->approved_area;
+        $additionalRequiredArea = (float) $application->requested_area;
+        $additionalUsedArea = (float) $application->approved_area;
         $currentLandRequired = (float) data_get(
             $result,
             'land.required_capacity',
@@ -531,8 +546,8 @@ class InvestmentApplicationWorkflowService
         $result['land'] = [
             ...(is_array($result['land'] ?? null) ? $result['land'] : []),
             'needed' => true,
-            'required_capacity' => $currentLandRequired + $additionalArea,
-            'used_capacity' => $currentLandUsed + $additionalArea,
+            'required_capacity' => $currentLandRequired + $additionalRequiredArea,
+            'used_capacity' => $currentLandUsed + $additionalUsedArea,
         ];
 
         return $result;
@@ -695,11 +710,10 @@ class InvestmentApplicationWorkflowService
             ];
         }
 
-        $area = (float) $application->approved_area;
         $result['land'] = [
             'needed' => true,
-            'required_capacity' => $area,
-            'used_capacity' => $area,
+            'required_capacity' => (float) $application->requested_area,
+            'used_capacity' => (float) $application->approved_area,
         ];
 
         return $result;

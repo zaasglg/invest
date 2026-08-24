@@ -97,20 +97,21 @@ export default function ApplicationShow({
                                         </Button>
                                     </Link>
                                 )}
-                            {application.is_editable && (
-                                <Link
-                                    href={applicationRoutes.edit.url(
-                                        application.id,
-                                    )}
-                                >
-                                    <Button
-                                        variant="outline"
-                                        className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                            {application.is_editable &&
+                                application.status !== 'draft' && (
+                                    <Link
+                                        href={applicationRoutes.edit.url(
+                                            application.id,
+                                        )}
                                     >
-                                        <Edit3 /> Өңдеу
-                                    </Button>
-                                </Link>
-                            )}
+                                        <Button
+                                            variant="outline"
+                                            className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
+                                        >
+                                            <Edit3 /> Өңдеу
+                                        </Button>
+                                    </Link>
+                                )}
                             {application.status === 'draft' && (
                                 <Link
                                     href={applicationRoutes.edit.url(
