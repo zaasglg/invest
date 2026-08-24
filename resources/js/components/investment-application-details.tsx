@@ -212,6 +212,14 @@ export default function InvestmentApplicationDetails({
                         value={application.jobs_count}
                     />
                     <Detail
+                        label="Жоспарлы басталу жылы"
+                        value={application.planned_start_year}
+                    />
+                    <Detail
+                        label="Жоспарлы аяқталу жылы"
+                        value={application.planned_end_year}
+                    />
+                    <Detail
                         label="Аймақ"
                         value={`${application.zone_type_label} · ${application.zoneable?.name ?? '—'}`}
                     />

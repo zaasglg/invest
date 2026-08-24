@@ -95,6 +95,9 @@ class InvestmentApplicationRequest extends FormRequest
                         ->filter()
                         ->values()
                         ->all(),
+                    ...($sourceProject->start_date
+                        ? ['planned_start_year' => $sourceProject->start_date->year]
+                        : []),
                 ]);
             }
         }
@@ -141,6 +144,10 @@ class InvestmentApplicationRequest extends FormRequest
     {
         $isSubmit = $this->input('intent') === 'submit';
         $required = $isSubmit ? 'required' : 'nullable';
+        $currentYear = now()->year;
+        $minimumStartYear = $this->input('application_kind') === 'expansion'
+            ? 1990
+            : $currentYear;
 
         $rules = [
             'intent' => ['required', Rule::in(['draft', 'submit'])],
@@ -167,6 +174,19 @@ class InvestmentApplicationRequest extends FormRequest
             'requested_area' => [$required, 'numeric', 'gt:0', 'max:2000000000'],
             'investment_amount' => [$required, 'numeric', 'min:0', 'max:2000000000'],
             'jobs_count' => [$required, 'integer', 'min:0', 'max:2000000000'],
+            'planned_start_year' => [
+                $required,
+                'integer',
+                "min:{$minimumStartYear}",
+                'max:2100',
+            ],
+            'planned_end_year' => [
+                $required,
+                'integer',
+                "min:{$currentYear}",
+                'max:2100',
+                'gte:planned_start_year',
+            ],
             'company_legal_form' => [
                 $required,
                 Rule::in(array_keys(Company::LEGAL_FORMS)),
@@ -272,6 +292,15 @@ class InvestmentApplicationRequest extends FormRequest
                         'Кеңейтілетін жоба осы инвестициялық аймаққа байланыстырылмаған.'
                     );
                 }
+
+                if ($project->end_date
+                    && $this->filled('planned_end_year')
+                    && $this->integer('planned_end_year') < $project->end_date->year) {
+                    $validator->errors()->add(
+                        'planned_end_year',
+                        "Кеңейту жобаның қазіргі {$project->end_date->year} аяқталу жылын қысқартпауы керек."
+                    );
+                }
             },
             function (Validator $validator): void {
                 if ($validator->errors()->isNotEmpty()) {
@@ -319,6 +348,10 @@ class InvestmentApplicationRequest extends FormRequest
             'company_activity_type.required' => 'Компанияның негізгі қызмет саласын енгізіңіз.',
             'requested_area.required' => 'Қажетті гектарды енгізіңіз.',
             'requested_area.gt' => 'Қажетті гектар 0-ден үлкен болуы керек.',
+            'planned_start_year.required' => 'Жобаның басталу жылын енгізіңіз.',
+            'planned_start_year.min' => 'Басталу жылы ағымдағы жылдан ерте болмауы керек.',
+            'planned_end_year.required' => 'Жобаның аяқталу жылын енгізіңіз.',
+            'planned_end_year.gte' => 'Аяқталу жылы басталу жылынан ерте болмауы керек.',
             'company_bin.digits' => 'БСН дәл 12 саннан тұруы керек.',
             'company_region_id.required' => 'Компания тіркелген ауданды таңдаңыз.',
             'documents.max' => 'Бір ретте 10 файлдан артық жүктеуге болмайды.',

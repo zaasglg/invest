@@ -246,6 +246,8 @@ return [
         'investment_amount' => 'Инвестиция мөлшері',
         'jobs_count' => 'Жұмыс орындарының саны',
         'investment_type' => 'Инвестиция түрі',
+        'planned_end_year' => 'Жоспарланған аяқталу жылы',
+        'planned_start_year' => 'Жоспарланған басталу жылы',
     ],
 
 ];

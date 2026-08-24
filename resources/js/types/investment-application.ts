@@ -86,7 +86,12 @@ export type InvestmentApplication = {
     reviewer?: { id: number; full_name: string } | null;
     company_region?: { id: number; name: string } | null;
     investment_project?: { id: number; name: string } | null;
-    source_investment_project?: { id: number; name: string } | null;
+    source_investment_project?: {
+        id: number;
+        name: string;
+        start_date?: string | null;
+        end_date?: string | null;
+    } | null;
     project_name: string | null;
     project_description: string | null;
     activity_sector: string | null;
@@ -96,6 +101,8 @@ export type InvestmentApplication = {
     approved_area?: string | number | null;
     investment_amount: string | number | null;
     jobs_count: number | null;
+    planned_start_year?: number | null;
+    planned_end_year?: number | null;
     infrastructure_requirements?: Record<string, string | number | null>;
     production_not_applicable?: boolean;
     planned_production?: ProductionPlanInput[];

@@ -94,6 +94,8 @@ type ExistingProject = {
     project_types?: ProjectTypeOption[];
     jobs_count: number;
     total_investment: string | number;
+    start_date?: string | null;
+    end_date?: string | null;
     infrastructure?: Record<string, unknown> | null;
 };
 
@@ -127,6 +129,7 @@ export default function ApplicationForm({
     applicantDefaults,
 }: Props) {
     const isInvestor = accountRole === 'investor';
+    const currentYear = new Date().getFullYear();
     const form = useForm({
         intent: 'draft',
         application_kind: application?.application_kind ?? 'new_project',
@@ -140,6 +143,8 @@ export default function ApplicationForm({
         requested_area: String(application?.requested_area ?? ''),
         investment_amount: String(application?.investment_amount ?? ''),
         jobs_count: String(application?.jobs_count ?? ''),
+        planned_start_year: String(application?.planned_start_year ?? ''),
+        planned_end_year: String(application?.planned_end_year ?? ''),
         infrastructure_requirements: Object.fromEntries(
             infrastructureFields.map(({ key }) => [
                 key,
@@ -212,6 +217,13 @@ export default function ApplicationForm({
 
         if (kind === 'new_project') {
             form.setData('source_investment_project_id', '');
+
+            if (
+                Number(form.data.planned_start_year) > 0 &&
+                Number(form.data.planned_start_year) < currentYear
+            ) {
+                form.setData('planned_start_year', String(currentYear));
+            }
         }
     };
 
@@ -224,6 +236,11 @@ export default function ApplicationForm({
         if (!project) return;
 
         form.setData('project_name', project.name);
+        form.setData(
+            'planned_start_year',
+            project.start_date?.slice(0, 4) ?? '',
+        );
+        form.setData('planned_end_year', project.end_date?.slice(0, 4) ?? '');
         form.setData(
             'project_type_ids',
             project.project_types?.length
@@ -553,7 +570,10 @@ export default function ApplicationForm({
                                             e.target.value,
                                         )
                                     }
-                                    disabled={isExpansion}
+                                    disabled={
+                                        isExpansion &&
+                                        Boolean(selectedSource?.start_date)
+                                    }
                                     required
                                 />
                             </Field>
@@ -649,6 +669,68 @@ export default function ApplicationForm({
                                             e.target.value,
                                         )
                                     }
+                                    required
+                                />
+                            </Field>
+                            <Field
+                                htmlFor="planned_start_year"
+                                label="Жоспарлы басталу жылы"
+                                error={form.errors.planned_start_year}
+                            >
+                                <Input
+                                    id="planned_start_year"
+                                    name="planned_start_year"
+                                    type="number"
+                                    min={isExpansion ? 1990 : currentYear}
+                                    max="2100"
+                                    value={form.data.planned_start_year}
+                                    disabled={isExpansion}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'planned_start_year',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder={String(currentYear)}
+                                    required
+                                />
+                                {isExpansion && selectedSource?.start_date && (
+                                    <p className="text-xs text-slate-500">
+                                        Кеңейту кезінде жобаның басталу жылы
+                                        өзгермейді.
+                                    </p>
+                                )}
+                            </Field>
+                            <Field
+                                htmlFor="planned_end_year"
+                                label="Жоспарлы аяқталу жылы"
+                                error={form.errors.planned_end_year}
+                            >
+                                <Input
+                                    id="planned_end_year"
+                                    name="planned_end_year"
+                                    type="number"
+                                    min={Math.max(
+                                        currentYear,
+                                        Number(
+                                            form.data.planned_start_year || 0,
+                                        ),
+                                        Number(
+                                            selectedSource?.end_date?.slice(
+                                                0,
+                                                4,
+                                            ) ?? 0,
+                                        ),
+                                    )}
+                                    max="2100"
+                                    value={form.data.planned_end_year}
+                                    onChange={(e) =>
+                                        form.setData(
+                                            'planned_end_year',
+                                            e.target.value,
+                                        )
+                                    }
+                                    placeholder={String(currentYear + 1)}
                                     required
                                 />
                             </Field>
