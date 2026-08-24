@@ -70,7 +70,7 @@ class InvestmentApplicationReviewController extends Controller
                 'zoneable.region:id,name',
             ])
             ->latest()
-            ->paginate(15)
+            ->paginate(10)
             ->withQueryString();
 
         $baseStats = $this->access->scopeReviewable(

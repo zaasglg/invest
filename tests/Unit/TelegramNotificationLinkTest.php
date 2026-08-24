@@ -28,7 +28,6 @@ test('all project telegram notification types link to the exact project', functi
 
     $types = [
         'task_assigned',
-        'task_overdue',
         'task_pending_approval',
         'task_approved',
         'task_rejected',

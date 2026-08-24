@@ -10,7 +10,7 @@ class NotifyOverdueTasks extends Command
 {
     protected $signature = 'tasks:notify-overdue';
 
-    protected $description = 'Мерзімі өткен тапсырмаларға тағайындалған пайдаланушыларға хабарлама жіберу (сайт + Telegram)';
+    protected $description = 'Мерзімі өткен тапсырмаларды іс-қимыл көмекшісінде көрсету';
 
     public function handle(): int
     {
@@ -54,8 +54,7 @@ class NotifyOverdueTasks extends Command
                 ."Мерзім: {$dueDate}\n"
                 ."Кешігу: {$daysOverdue} күн";
 
-            // Creating the notification triggers the TaskNotificationObserver
-            // which also sends a Telegram message automatically
+            // Overdue reminders are displayed only in the action helper.
             TaskNotification::create([
                 'user_id' => $task->assigned_to,
                 'task_id' => $task->id,
