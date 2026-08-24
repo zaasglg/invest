@@ -34,6 +34,10 @@ class DashboardController extends Controller
     {
         $user = $request->user();
         $roleName = $user?->load(['roleModel', 'region'])->roleModel?->name;
+
+        if ($roleName === 'applicant') {
+            return redirect()->route('applicant.portal');
+        }
         $investSubRole = ($roleName === 'invest'
             && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
             ? $user->invest_sub_role
@@ -76,12 +80,14 @@ class DashboardController extends Controller
                 $data[] = ['name' => 'ИА', 'value' => (float) $izProjectsInvestment];
             }
 
-            // Projects linked to Subsoil Users
-            $subsoilProjectsInvestment = $this->projects($investSubRole, $investorId)->whereHas('subsoilUsers')
-                ->where('total_investment', '>', 0)
-                ->sum('total_investment');
-            if ($subsoilProjectsInvestment > 0) {
-                $data[] = ['name' => 'Жер қойнауын пайдалану', 'value' => (float) $subsoilProjectsInvestment];
+            if (! $investorId) {
+                // Projects linked to Subsoil Users
+                $subsoilProjectsInvestment = $this->projects($investSubRole)->whereHas('subsoilUsers')
+                    ->where('total_investment', '>', 0)
+                    ->sum('total_investment');
+                if ($subsoilProjectsInvestment > 0) {
+                    $data[] = ['name' => 'Жер қойнауын пайдалану', 'value' => (float) $subsoilProjectsInvestment];
+                }
             }
 
             // Other projects (not linked to any entity)
@@ -327,26 +333,20 @@ class DashboardController extends Controller
             ->pluck('cnt', 'region_id')
             ->toArray();
 
-        $subsoilUsers = SubsoilUser::query()
-            ->when(
-                $this->hasRegionScope(),
-                fn ($query) => $query->whereIn(
-                    'region_id',
-                    $this->regionScopeIds
+        $subsoilUsers = $investorId
+            ? []
+            : SubsoilUser::query()
+                ->when(
+                    $this->hasRegionScope(),
+                    fn ($query) => $query->whereIn(
+                        'region_id',
+                        $this->regionScopeIds
+                    )
                 )
-            )
-            ->when(
-                $investorId,
-                fn ($query) => $query->whereHas(
-                    'investmentProjects.investors',
-                    fn ($investorQuery) => $investorQuery
-                        ->where('users.id', $investorId)
-                )
-            )
-            ->selectRaw('region_id, COUNT(*) as cnt')
-            ->groupBy('region_id')
-            ->pluck('cnt', 'region_id')
-            ->toArray();
+                ->selectRaw('region_id, COUNT(*) as cnt')
+                ->groupBy('region_id')
+                ->pluck('cnt', 'region_id')
+                ->toArray();
 
         $promProjects = $this->projects($subRole, $investorId)
             ->join('investment_project_prom_zone as ippz', 'investment_projects.id', '=', 'ippz.investment_project_id')
@@ -510,10 +510,14 @@ class DashboardController extends Controller
 
         // Entity issue counts — only for sections the sub-role can access.
         // aea → SEZ only | ia → IZ only | prom_zone → prom only | turkistan_invest/null → all.
-        $canSeeSez = ! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true);
-        $canSeeIz = ! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true);
-        $canSeeProm = ! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true);
-        $canSeeSubsoil = ! $subRole || $subRole === 'turkistan_invest';
+        $canSeeSez = ! $investorId
+            && (! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true));
+        $canSeeIz = ! $investorId
+            && (! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true));
+        $canSeeProm = ! $investorId
+            && (! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true));
+        $canSeeSubsoil = ! $investorId
+            && (! $subRole || $subRole === 'turkistan_invest');
 
         $sezIds = ($investorId || $this->hasRegionScope())
             ? Sez::query()
@@ -642,10 +646,10 @@ class DashboardController extends Controller
                 'jobCount' => $promJobCount,
             ],
             'nedro' => [
-                'investment' => $nedroInvestment,
-                'projectCount' => $subsoilProjectCount,
-                'problemCount' => $subsoilIssues ?: 0,
-                'jobCount' => $subsoilJobCount,
+                'investment' => $investorId ? 0 : $nedroInvestment,
+                'projectCount' => $investorId ? 0 : $subsoilProjectCount,
+                'problemCount' => $investorId ? 0 : ($subsoilIssues ?: 0),
+                'jobCount' => $investorId ? 0 : $subsoilJobCount,
             ],
             'invest' => [
                 'investment' => $investInvestment,
@@ -803,10 +807,18 @@ class DashboardController extends Controller
                     'jobCount' => (int) ($promProj?->jobs ?? 0),
                 ],
                 'nedro' => [
-                    'investment' => (float) ($nedroProj?->investment ?? 0),
-                    'projectCount' => (int) ($nedroProj?->cnt ?? 0),
-                    'problemCount' => (int) ($subsoilIssuesByRegion[$rid] ?? 0),
-                    'jobCount' => (int) ($nedroProj?->jobs ?? 0),
+                    'investment' => $investorId
+                        ? 0
+                        : (float) ($nedroProj?->investment ?? 0),
+                    'projectCount' => $investorId
+                        ? 0
+                        : (int) ($nedroProj?->cnt ?? 0),
+                    'problemCount' => $investorId
+                        ? 0
+                        : (int) ($subsoilIssuesByRegion[$rid] ?? 0),
+                    'jobCount' => $investorId
+                        ? 0
+                        : (int) ($nedroProj?->jobs ?? 0),
                 ],
                 'invest' => [
                     'investment' => (float) ($investProj?->investment ?? 0),

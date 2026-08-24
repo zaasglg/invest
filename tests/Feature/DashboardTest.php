@@ -20,7 +20,7 @@ test('authenticated users can visit the dashboard', function () {
     $response->assertOk();
 });
 
-test('email verification is not required to visit the dashboard', function () {
+test('legacy account is not redirected to email verification', function () {
     $role = Role::create([
         'name' => 'superadmin',
         'display_name' => 'Superadmin',
@@ -28,11 +28,10 @@ test('email verification is not required to visit the dashboard', function () {
     $user = User::factory()->create([
         'role_id' => $role->id,
         'email_verified_at' => null,
+        'requires_email_verification' => false,
     ]);
 
     $this->actingAs($user)
         ->get(route('dashboard'))
         ->assertOk();
-
-    $this->get('/email/verify')->assertNotFound();
 });

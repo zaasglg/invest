@@ -83,9 +83,11 @@ export function emptyProductionPlan(): ProductionPlanInput {
 export function normalizeProductionPlans(
     plans?: ProductionPlanInput[] | null,
 ): ProductionPlanInput[] {
-    return (plans ?? []).map((plan) => ({
+    return (plans ?? []).map((plan, index) => ({
         id: plan.id,
-        client_key: `plan-${plan.id}`,
+        client_key:
+            plan.client_key ??
+            (plan.id ? `plan-${plan.id}` : `plan-draft-${index}`),
         product_name: plan.product_name ?? '',
         planned_quantity: plan.planned_quantity ?? '',
         unit: plan.unit ?? 'piece',

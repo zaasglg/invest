@@ -92,6 +92,8 @@ export interface InMapAppProps {
   regions: DashboardRegion[]
   sectorSummary: SectorSummary
   regionYearly: RegionYearly
+  canOpenIssues?: boolean
+  showSubsoil?: boolean
   /** Landing hero: full-bleed map without analytics chrome. */
   variant?: 'dashboard' | 'landing'
 }
@@ -788,9 +790,7 @@ function DistrictSurface({
             ]}
           />
           <meshStandardMaterial
-            color={
-              isSelected ? DISTRICT_FILL_SELECTED : DISTRICT_FILL_DEFAULT
-            }
+            color={isSelected ? DISTRICT_FILL_SELECTED : DISTRICT_FILL_DEFAULT}
             emissive={isSelected ? '#0891b2' : '#071827'}
             emissiveIntensity={isSelected ? 1.25 : 0.18}
             metalness={0.2}
@@ -916,6 +916,8 @@ function DistrictExplorer({
   regions,
   sectorSummary,
   regionYearly,
+  canOpenIssues = true,
+  showSubsoil = true,
   variant = 'dashboard',
 }: InMapAppProps) {
   const isLanding = variant === 'landing'
@@ -938,9 +940,7 @@ function DistrictExplorer({
 
         return response.json() as Promise<DistrictData>
       })
-      .then((data) =>
-        setDistrictData(moveDetachedTurkistanZoneToSauran(data)),
-      )
+      .then((data) => setDistrictData(moveDetachedTurkistanZoneToSauran(data)))
       .catch((error: unknown) => {
         if (error instanceof DOMException && error.name === 'AbortError') {
           return
@@ -980,7 +980,10 @@ function DistrictExplorer({
     sectorData.sez.problemCount +
     sectorData.iz.problemCount +
     sectorData.prom.problemCount +
-    sectorData.nedro.problemCount
+    (showSubsoil ? sectorData.nedro.problemCount : 0)
+  const visibleProblemSectorLabels = showSubsoil
+    ? problemSectorLabels
+    : problemSectorLabels.filter((sector) => sector.key !== 'nedro')
   const yearly = hasSelectedRegion
     ? getYearlySeries(regionYearly, regionId)
     : {
@@ -1003,14 +1006,14 @@ function DistrictExplorer({
 
   const chartValues =
     activeIndicatorKey === 'problems'
-      ? problemSectorLabels.map(
+      ? visibleProblemSectorLabels.map(
           (sector) => sectorData[sector.key]?.problemCount ?? 0,
         )
       : yearly[activeIndicatorKey]
 
   const chartLabels =
     activeIndicatorKey === 'problems'
-      ? problemSectorLabels.map((sector) => sector.label)
+      ? visibleProblemSectorLabels.map((sector) => sector.label)
       : regionYearly.years
 
   const growth =
@@ -1037,9 +1040,7 @@ function DistrictExplorer({
                 className="district-map-menu__toggle"
                 aria-expanded={mapMenuOpen}
                 aria-controls="district-map-menu-panel"
-                aria-label={
-                  mapMenuOpen ? 'Карта мәзірін жабу' : 'Карта мәзірі'
-                }
+                aria-label={mapMenuOpen ? 'Карта мәзірін жабу' : 'Карта мәзірі'}
                 onClick={() => setMapMenuOpen((open) => !open)}
               >
                 <span />
@@ -1143,9 +1144,7 @@ function DistrictExplorer({
             <div className="district-analytics__heading">
               <div>
                 <p>
-                  {selectedDistrict
-                    ? 'Аумақ профилі'
-                    : 'Аймақ бойынша жиынтық'}
+                  {selectedDistrict ? 'Аумақ профилі' : 'Аймақ бойынша жиынтық'}
                 </p>
                 <h2>
                   {selectedDistrict
@@ -1180,7 +1179,11 @@ function DistrictExplorer({
                       <small>{displayValue.unit}</small>
                     </strong>
                     {indicator.key === 'problems' ? (
-                      <p>Жоба + 4 сектор →</p>
+                      <p>
+                        {showSubsoil
+                          ? 'Жоба + 4 сектор →'
+                          : 'Жоба мәселелері →'}
+                      </p>
                     ) : seriesGrowth !== null ? (
                       <p>
                         {seriesGrowth >= 0 ? '+' : ''}
@@ -1192,7 +1195,7 @@ function DistrictExplorer({
                   </>
                 )
 
-                return indicator.key === 'problems' ? (
+                return indicator.key === 'problems' && canOpenIssues ? (
                   <Link
                     key={indicator.key}
                     href={regionIssuesUrl}
@@ -1224,12 +1227,9 @@ function DistrictExplorer({
                 )}
               </div>
 
-              <div
-                className="indicator-tabs"
-                aria-label="Көрсеткішті таңдау"
-              >
+              <div className="indicator-tabs" aria-label="Көрсеткішті таңдау">
                 {indicatorDefinitions.map((indicator) =>
-                  indicator.key === 'problems' ? (
+                  indicator.key === 'problems' && canOpenIssues ? (
                     <Link key={indicator.key} href={regionIssuesUrl}>
                       {indicator.shortLabel}
                     </Link>
@@ -1255,10 +1255,10 @@ function DistrictExplorer({
               />
             </div>
 
-          {selectedDistrict && selectedDistrict.regionId !== null && (
-            <Link
-              href={`/regions/${selectedDistrict.regionId}`}
-              className="district-analytics__open"
+            {selectedDistrict && selectedDistrict.regionId !== null && (
+              <Link
+                href={`/regions/${selectedDistrict.regionId}`}
+                className="district-analytics__open"
               >
                 {selectedDistrict.subtype === 'city'
                   ? 'Қала бетіне өту'
@@ -1277,6 +1277,8 @@ function App({
   regions,
   sectorSummary,
   regionYearly,
+  canOpenIssues = true,
+  showSubsoil = true,
   variant = 'dashboard',
 }: InMapAppProps) {
   const isLanding = variant === 'landing'
@@ -1291,6 +1293,8 @@ function App({
         regions={regions}
         sectorSummary={sectorSummary}
         regionYearly={regionYearly}
+        canOpenIssues={canOpenIssues}
+        showSubsoil={showSubsoil}
         variant={variant}
       />
     </div>

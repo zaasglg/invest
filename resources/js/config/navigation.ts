@@ -8,13 +8,17 @@ import {
     LayoutDashboard,
     Layers,
     Map as MapIcon,
+    ClipboardList,
     Shield,
     Tags,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
 import * as akim from '@/routes/akim';
+import * as applicant from '@/routes/applicant';
+import * as applicantApplications from '@/routes/applicant/applications';
 import * as industrialZones from '@/routes/industrial-zones';
+import * as investmentApplications from '@/routes/investment-applications';
 import * as investmentProjects from '@/routes/investment-projects';
 import * as projectTypes from '@/routes/project-types';
 import * as promZones from '@/routes/prom-zones';
@@ -103,11 +107,26 @@ export const adminNavItems: NavItem[] = [
 ];
 
 export const headerNavItems: NavItem[] = [
+    {
+        title: 'Аймақтарды таңдау',
+        href: applicant.portal.url(),
+        icon: MapIcon,
+    },
+    {
+        title: 'Менің өтінімдерім',
+        href: applicantApplications.index.url(),
+        icon: ClipboardList,
+    },
     ...mainNavItems,
     {
         title: 'Инвестициялық жобалар',
         href: investmentProjects.index.url(),
         icon: Briefcase,
+    },
+    {
+        title: 'Инвестор өтінімдері',
+        href: investmentApplications.index.url(),
+        icon: ClipboardList,
     },
     ...zoneNavItems,
     ...projectNavItems.filter((item) => item.title !== 'Инвестициялық жобалар'),
@@ -189,6 +208,10 @@ export const getRoleKey = (user: User | null | undefined): string | null => {
         return 'investor';
     }
 
+    if (normalizedCandidates.some((value) => value === 'applicant')) {
+        return 'applicant';
+    }
+
     if (normalizedCandidates.some((value) => value === 'invest')) {
         return 'invest';
     }
@@ -212,10 +235,29 @@ export const filterNavItemsByRole = (
     items: NavItem[],
     user: User | null | undefined,
 ) => {
+    const roleKey = getRoleKey(user);
+    const applicantHrefs = new Set([
+        applicant.portal.url(),
+        applicantApplications.index.url(),
+    ]);
+
+    if (roleKey === 'applicant') {
+        return items.filter((item) => applicantHrefs.has(String(item.href)));
+    }
+
     // Superadmin and prokuror can see the full regions section.
-    let filteredItems = items;
+    let filteredItems =
+        roleKey === 'investor'
+            ? items
+            : items.filter((item) => !applicantHrefs.has(String(item.href)));
     const isSuperadmin =
         user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
+
+    if (!isSuperadmin && roleKey !== 'invest') {
+        filteredItems = filteredItems.filter(
+            (item) => item.href !== investmentApplications.index.url(),
+        );
+    }
 
     if (!isSuperadmin) {
         filteredItems = filteredItems.filter(
@@ -232,8 +274,6 @@ export const filterNavItemsByRole = (
             (item) => item.title !== 'Аймақтар',
         );
     }
-
-    const roleKey = getRoleKey(user);
 
     filteredItems = filteredItems.filter(
         (item) =>
@@ -263,6 +303,21 @@ export const filterNavItemsByRole = (
                 (item) => !subRoleHidden.has(item.title),
             );
         }
+    }
+
+    if (roleKey === 'investor') {
+        const investorNavigationOrder = new Map([
+            [dashboard.url(), 0],
+            [investmentProjects.index.url(), 1],
+            [applicant.portal.url(), 2],
+            [applicantApplications.index.url(), 3],
+        ]);
+
+        filteredItems = [...filteredItems].sort(
+            (left, right) =>
+                (investorNavigationOrder.get(String(left.href)) ?? 99) -
+                (investorNavigationOrder.get(String(right.href)) ?? 99),
+        );
     }
 
     return filteredItems;

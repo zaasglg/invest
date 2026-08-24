@@ -178,7 +178,11 @@ export default function ZoneTerritoryMapCard({
                 {hasBoundary ? (
                     <Map
                         {...entityLayer}
-                        aria-label={`${entity.name} аумағы мен инвестициялық жобаларының картасы`}
+                        aria-label={
+                            normalizedProjects.length > 0
+                                ? `${entity.name} аумағы мен инвестициялық жобаларының картасы`
+                                : `${entity.name} аумағының картасы`
+                        }
                         activeTab={entityType}
                         baseLayer={baseLayer}
                         center={center}

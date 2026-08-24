@@ -11,6 +11,66 @@ Route::get('dashboard', \App\Http\Controllers\DashboardController::class)
     ->middleware(['auth', 'role.valid'])
     ->name('dashboard');
 
+Route::middleware(['auth', 'verified.registration', 'role.applicant'])
+    ->prefix('portal')
+    ->name('applicant.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\ApplicantPortalController::class, 'index'])
+            ->name('portal');
+        Route::get('company-lookup', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'companyLookup'])
+            ->name('company-lookup');
+        Route::get('zones/{zoneType}/{zone}', [\App\Http\Controllers\ApplicantPortalController::class, 'show'])
+            ->whereIn('zoneType', ['sez', 'industrial-zone', 'prom-zone'])
+            ->whereNumber('zone')
+            ->name('zones.show');
+        Route::get('zones/{zoneType}/{zone}/applications/create', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'create'])
+            ->whereIn('zoneType', ['sez', 'industrial-zone', 'prom-zone'])
+            ->whereNumber('zone')
+            ->name('applications.create');
+        Route::post('zones/{zoneType}/{zone}/applications', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'store'])
+            ->whereIn('zoneType', ['sez', 'industrial-zone', 'prom-zone'])
+            ->whereNumber('zone')
+            ->name('applications.store');
+        Route::get('applications', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'index'])
+            ->name('applications.index');
+        Route::get('applications/{investmentApplication}', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'show'])
+            ->name('applications.show');
+        Route::get('applications/{investmentApplication}/edit', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'edit'])
+            ->name('applications.edit');
+        Route::post('applications/{investmentApplication}', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'update'])
+            ->name('applications.update');
+        Route::post('applications/{investmentApplication}/submit', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'submit'])
+            ->name('applications.submit');
+        Route::post('applications/{investmentApplication}/withdraw', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'withdraw'])
+            ->name('applications.withdraw');
+        Route::delete('applications/{investmentApplication}/documents/{document}', [\App\Http\Controllers\ApplicantInvestmentApplicationController::class, 'destroyDocument'])
+            ->name('applications.documents.destroy');
+    });
+
+Route::middleware(['auth', 'role.application-reviewer'])
+    ->prefix('investment-applications')
+    ->name('investment-applications.')
+    ->group(function () {
+        Route::get('/', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'index'])
+            ->name('index');
+        Route::get('{investmentApplication}', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'show'])
+            ->name('show');
+        Route::post('{investmentApplication}/start-review', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'startReview'])
+            ->name('start-review');
+        Route::post('{investmentApplication}/request-clarification', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'requestClarification'])
+            ->name('request-clarification');
+        Route::post('{investmentApplication}/approve', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'approve'])
+            ->name('approve');
+        Route::post('{investmentApplication}/reject', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'reject'])
+            ->name('reject');
+        Route::post('{investmentApplication}/convert', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'convert'])
+            ->name('convert');
+    });
+
+Route::get('investment-applications/{investmentApplication}/documents/{document}/download', [\App\Http\Controllers\InvestmentApplicationDocumentController::class, 'download'])
+    ->middleware(['auth', 'role.valid'])
+    ->name('investment-applications.documents.download');
+
 Route::get('akim-analytics', \App\Http\Controllers\OblastAkimAnalyticsController::class)
     ->middleware(['auth', 'role.access'])
     ->name('akim.analytics');
@@ -265,11 +325,13 @@ Route::middleware(['auth', 'role.valid'])->group(function () {
     Route::get('assistant/notifications', [\App\Http\Controllers\ProactiveAssistantController::class, 'index'])->name('assistant.notifications.index');
     Route::post('assistant/notifications/read-all', [\App\Http\Controllers\ProactiveAssistantController::class, 'markAllAsRead'])->name('assistant.notifications.read-all');
 
-    Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
-    Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');
-    Route::get('chats/attachments/{attachment}', [\App\Http\Controllers\ProjectChatController::class, 'downloadAttachment'])->name('chats.attachments.download');
-    Route::post('chats/{investmentProject}/messages', [\App\Http\Controllers\ProjectChatController::class, 'store'])->name('chats.messages.store');
-    Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
+    Route::middleware('role.not-applicant')->group(function () {
+        Route::get('chats/unread-count', [\App\Http\Controllers\ProjectChatController::class, 'unreadCount'])->name('chats.unread-count');
+        Route::get('chats/attachments/{attachment}/preview', [\App\Http\Controllers\ProjectChatController::class, 'previewAttachment'])->name('chats.attachments.preview');
+        Route::get('chats/attachments/{attachment}', [\App\Http\Controllers\ProjectChatController::class, 'downloadAttachment'])->name('chats.attachments.download');
+        Route::post('chats/{investmentProject}/messages', [\App\Http\Controllers\ProjectChatController::class, 'store'])->name('chats.messages.store');
+        Route::get('chats/{investmentProject?}', [\App\Http\Controllers\ProjectChatController::class, 'index'])->name('chats.index');
+    });
 });
 
 Route::middleware(['auth', 'role.access'])->prefix('chat')->name('chat.')->group(function () {

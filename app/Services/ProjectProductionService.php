@@ -144,6 +144,35 @@ class ProjectProductionService
             ->delete();
     }
 
+    /** @param array<int, array<string, mixed>> $rows */
+    public function appendPlans(
+        InvestmentProject $project,
+        array $rows
+    ): void {
+        $currentMaxSortOrder = $project->productionPlans()->max('sort_order');
+        $nextSortOrder = $currentMaxSortOrder === null
+            ? 0
+            : (int) $currentMaxSortOrder + 1;
+
+        foreach (array_values($rows) as $index => $row) {
+            $attributes = Arr::only($row, [
+                'product_name',
+                'planned_quantity',
+                'unit',
+                'custom_unit',
+                'planned_amount',
+                'period',
+            ]);
+            $attributes['custom_unit'] = $attributes['unit'] === 'other'
+                ? trim((string) ($attributes['custom_unit'] ?? ''))
+                : null;
+            $attributes['legacy_value'] = null;
+            $attributes['sort_order'] = $nextSortOrder + $index;
+
+            $project->productionPlans()->create($attributes);
+        }
+    }
+
     public function canReport(User $user, InvestmentProject $project): bool
     {
         $role = $user->loadMissing('roleModel')->roleModel?->name;

@@ -7,8 +7,10 @@ use Illuminate\Validation\Rule;
 final class ProductionPlanValidationRules
 {
     /** @return array<string, array<int, mixed>> */
-    public static function rules(): array
+    public static function rules(bool $allowIncomplete = false): array
     {
+        $rowRequirement = $allowIncomplete ? 'nullable' : 'required';
+
         return [
             'production_not_applicable' => ['sometimes', 'boolean'],
             'planned_production' => ['nullable', 'array', 'max:50'],
@@ -19,7 +21,7 @@ final class ProductionPlanValidationRules
                 'max:64',
             ],
             'planned_production.*.product_name' => [
-                'required',
+                $rowRequirement,
                 'string',
                 'max:255',
             ],
@@ -30,7 +32,7 @@ final class ProductionPlanValidationRules
                 'max:2000000000',
             ],
             'planned_production.*.unit' => [
-                'required',
+                $rowRequirement,
                 'string',
                 Rule::in(array_keys(ProductionOptions::UNITS)),
             ],
@@ -46,7 +48,7 @@ final class ProductionPlanValidationRules
                 'max:2000000000',
             ],
             'planned_production.*.period' => [
-                'required',
+                $rowRequirement,
                 'string',
                 Rule::in(array_keys(ProductionOptions::PERIODS)),
             ],

@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -22,6 +25,7 @@ class User extends Authenticatable
         'moderator',
         'prokuror',
         'investor',
+        'applicant',
     ];
 
     /**
@@ -32,6 +36,7 @@ class User extends Authenticatable
     protected $fillable = [
         'full_name',
         'email',
+        'requires_email_verification',
         'phone',
         'password',
         'role',
@@ -64,7 +69,24 @@ class User extends Authenticatable
     {
         return [
             'password' => 'hashed',
+            'requires_email_verification' => 'boolean',
         ];
+    }
+
+    /**
+     * Send the localized email verification notification.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $this->notify(new VerifyEmailNotification);
+    }
+
+    /**
+     * Send the localized password reset notification.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     public function region()
@@ -120,6 +142,11 @@ class User extends Authenticatable
             'company_id',
             'company_id'
         );
+    }
+
+    public function investmentApplications()
+    {
+        return $this->hasMany(InvestmentApplication::class);
     }
 
     /**

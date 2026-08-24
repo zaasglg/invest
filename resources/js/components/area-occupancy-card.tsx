@@ -24,9 +24,11 @@ function formatArea(value: number) {
 export default function AreaOccupancyCard({
     usage,
     className,
+    showConsumers = true,
 }: {
     usage: AreaUsage;
     className?: string;
+    showConsumers?: boolean;
 }) {
     const percentage =
         usage.total > 0
@@ -174,92 +176,98 @@ export default function AreaOccupancyCard({
                     </div>
                 </div>
 
-                <div className="mt-6 border-t border-slate-100 pt-4">
-                    {(usage.overused ?? 0) > 0 && (
-                        <div className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
-                            Артық пайдаланылған:{' '}
-                            {formatArea(usage.overused ?? 0)}
+                {showConsumers && (
+                    <div className="mt-6 border-t border-slate-100 pt-4">
+                        {(usage.overused ?? 0) > 0 && (
+                            <div className="mb-4 rounded-xl bg-red-50 px-3 py-2 text-sm font-medium text-red-700">
+                                Артық пайдаланылған:{' '}
+                                {formatArea(usage.overused ?? 0)}
+                            </div>
+                        )}
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                            <p className="text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
+                                Аумақты алып жатқан жобалар
+                            </p>
+                            <span className="text-xs font-medium text-slate-400 tabular-nums">
+                                {usage.consumers.length}
+                            </span>
                         </div>
-                    )}
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                        <p className="text-[10px] font-medium tracking-[0.12em] text-slate-400 uppercase">
-                            Аумақты алып жатқан жобалар
-                        </p>
-                        <span className="text-xs font-medium text-slate-400 tabular-nums">
-                            {usage.consumers.length}
-                        </span>
-                    </div>
 
-                    {usage.consumers.length > 0 ? (
-                        <div className="divide-y divide-slate-100">
-                            {usage.consumers.slice(0, 5).map((consumer) => {
-                                const share =
-                                    usage.total > 0
-                                        ? Math.min(
-                                              100,
-                                              Math.round(
-                                                  (consumer.area /
-                                                      usage.total) *
-                                                      100,
-                                              ),
-                                          )
-                                        : 0;
+                        {usage.consumers.length > 0 ? (
+                            <div className="divide-y divide-slate-100">
+                                {usage.consumers.slice(0, 5).map((consumer) => {
+                                    const share =
+                                        usage.total > 0
+                                            ? Math.min(
+                                                  100,
+                                                  Math.round(
+                                                      (consumer.area /
+                                                          usage.total) *
+                                                          100,
+                                                  ),
+                                              )
+                                            : 0;
 
-                                return (
-                                    <div
-                                        key={consumer.id ?? consumer.name}
-                                        className="py-3 first:pt-0 last:pb-0"
-                                    >
-                                        <div className="flex items-center justify-between gap-3">
-                                            <p className="min-w-0 truncate text-sm text-navy">
-                                                {consumer.name}
-                                            </p>
-                                            <div className="shrink-0 text-right text-xs tabular-nums">
-                                                <p className="font-medium text-slate-500">
-                                                    Пайдалануда:{' '}
-                                                    {formatArea(consumer.area)}
+                                    return (
+                                        <div
+                                            key={consumer.id ?? consumer.name}
+                                            className="py-3 first:pt-0 last:pb-0"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <p className="min-w-0 truncate text-sm text-navy">
+                                                    {consumer.name}
                                                 </p>
-                                                <p className="mt-0.5 text-slate-400">
-                                                    Қажетті:{' '}
-                                                    {consumer.required_capacity
-                                                        ? formatArea(
-                                                              Number(
-                                                                  normalizeStandardNumber(
-                                                                      consumer.required_capacity,
-                                                                      'land',
+                                                <div className="shrink-0 text-right text-xs tabular-nums">
+                                                    <p className="font-medium text-slate-500">
+                                                        Пайдалануда:{' '}
+                                                        {formatArea(
+                                                            consumer.area,
+                                                        )}
+                                                    </p>
+                                                    <p className="mt-0.5 text-slate-400">
+                                                        Қажетті:{' '}
+                                                        {consumer.required_capacity
+                                                            ? formatArea(
+                                                                  Number(
+                                                                      normalizeStandardNumber(
+                                                                          consumer.required_capacity,
+                                                                          'land',
+                                                                      ),
                                                                   ),
-                                                              ),
-                                                          )
-                                                        : '—'}
-                                                </p>
+                                                              )
+                                                            : '—'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className="mt-2 h-px overflow-hidden bg-slate-100">
+                                                <div
+                                                    className="h-full bg-gold"
+                                                    style={{
+                                                        width: `${share}%`,
+                                                    }}
+                                                />
                                             </div>
                                         </div>
-                                        <div className="mt-2 h-px overflow-hidden bg-slate-100">
-                                            <div
-                                                className="h-full bg-gold"
-                                                style={{ width: `${share}%` }}
-                                            />
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                            {usage.consumers.length > 5 && (
-                                <p className="pt-3 text-center text-xs text-slate-400">
-                                    Тағы {usage.consumers.length - 5} жоба
+                                    );
+                                })}
+                                {usage.consumers.length > 5 && (
+                                    <p className="pt-3 text-center text-xs text-slate-400">
+                                        Тағы {usage.consumers.length - 5} жоба
+                                    </p>
+                                )}
+                            </div>
+                        ) : (
+                            <div className="py-1">
+                                <p className="text-sm text-navy">
+                                    Барлық аумақ бос
                                 </p>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="py-1">
-                            <p className="text-sm text-navy">
-                                Барлық аумақ бос
-                            </p>
-                            <p className="mt-0.5 text-xs text-slate-400">
-                                Жобалар әлі орналастырылмаған
-                            </p>
-                        </div>
-                    )}
-                </div>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                    Жобалар әлі орналастырылмаған
+                                </p>
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
         </section>
     );

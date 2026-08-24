@@ -50,6 +50,11 @@ class PromZone extends Model
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_prom_zone');
     }
 
+    public function investmentApplications()
+    {
+        return $this->morphMany(InvestmentApplication::class, 'zoneable');
+    }
+
     public function photos()
     {
         return $this->hasMany(PromZonePhoto::class);

@@ -63,7 +63,10 @@ class HandleInertiaRequests extends Middleware
                     ->count()
                 : 0,
             'unreadChatMessagesCount' => fn () => $request->user()
-                ? app(ProjectChatService::class)->unreadMessageCount($request->user())
+                && $request->user()->roleModel?->name !== 'applicant'
+                ? app(ProjectChatService::class)->unreadMessageCount(
+                    $request->user()
+                )
                 : 0,
         ];
     }
@@ -89,6 +92,11 @@ class HandleInertiaRequests extends Middleware
                 || str_contains($normalized, 'investor')
                 || str_contains($normalized, 'prokuror')
                 || str_contains($normalized, 'moderator')) {
+                return true;
+            }
+
+            if ($normalized === 'applicant'
+                || $normalized === 'өтінімберуші') {
                 return true;
             }
         }

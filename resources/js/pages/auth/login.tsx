@@ -17,12 +17,14 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
 
 type Props = {
     status?: string;
     canResetPassword: boolean;
+    canRegister: boolean;
 };
 
 const inputClassName =
@@ -37,7 +39,11 @@ function CornerTick({ className }: { className: string }) {
     );
 }
 
-export default function Login({ status, canResetPassword }: Props) {
+export default function Login({
+    status,
+    canResetPassword,
+    canRegister,
+}: Props) {
     const [showPassword, setShowPassword] = useState(false);
 
     return (
@@ -230,6 +236,18 @@ export default function Login({ status, canResetPassword }: Props) {
                                 )}
                             </Form>
                         </div>
+
+                        {canRegister && (
+                            <p className="mt-5 text-center text-sm text-slate-400">
+                                Аккаунтыңыз жоқ па?{' '}
+                                <TextLink
+                                    href={register()}
+                                    className="font-semibold text-cyan-300 hover:text-cyan-200"
+                                >
+                                    Өтінім беруші ретінде тіркелу
+                                </TextLink>
+                            </p>
+                        )}
 
                         <Link
                             href="/"

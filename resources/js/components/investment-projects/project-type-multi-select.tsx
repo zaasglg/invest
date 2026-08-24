@@ -19,6 +19,8 @@ interface ProjectTypeMultiSelectProps {
     value: string[];
     onChange: (value: string[]) => void;
     hasError?: boolean;
+    placeholder?: string;
+    disabled?: boolean;
 }
 
 export default function ProjectTypeMultiSelect({
@@ -27,6 +29,8 @@ export default function ProjectTypeMultiSelect({
     value,
     onChange,
     hasError = false,
+    placeholder = 'Жоба түрлерін таңдаңыз',
+    disabled = false,
 }: ProjectTypeMultiSelectProps) {
     const selectedTypes = options.filter((option) =>
         value.includes(option.id.toString()),
@@ -48,6 +52,7 @@ export default function ProjectTypeMultiSelect({
                         id={id}
                         type="button"
                         variant="outline"
+                        disabled={disabled}
                         className={cn(
                             'h-10 w-full justify-between border-gray-200 bg-white px-3 font-normal shadow-none hover:bg-gray-50',
                             hasError && 'border-red-500',
@@ -63,7 +68,7 @@ export default function ProjectTypeMultiSelect({
                                 )}
                             >
                                 {selectedTypes.length === 0
-                                    ? 'Жоба түрлерін таңдаңыз'
+                                    ? placeholder
                                     : `${selectedTypes.length} түр таңдалды`}
                             </span>
                         </span>

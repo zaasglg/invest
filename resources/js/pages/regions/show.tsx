@@ -55,7 +55,11 @@ import AppLayout from '@/layouts/app-layout';
 import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import * as applicantZones from '@/routes/applicant/zones';
+import { show as industrialZoneShow } from '@/routes/industrial-zones';
 import { index as issuesIndex } from '@/routes/issues';
+import { show as promZoneShow } from '@/routes/prom-zones';
+import { show as sezShow } from '@/routes/sezs';
 
 interface InfrastructureDetails {
     available: boolean;
@@ -241,6 +245,24 @@ export default function Show({
     const isInvest =
         (auth as { user: { role_model?: { name?: string | null } | null } })
             .user?.role_model?.name === 'invest';
+    const isInvestor =
+        (auth as { user: { role_model?: { name?: string | null } | null } })
+            .user?.role_model?.name === 'investor';
+    const zoneDetailsUrl = (
+        zoneType: 'sez' | 'industrial-zone' | 'prom-zone',
+        zoneId: number,
+    ) => {
+        if (isInvestor) {
+            return applicantZones.show({ zoneType, zone: zoneId }).url;
+        }
+
+        if (zoneType === 'sez') return sezShow(zoneId).url;
+        if (zoneType === 'industrial-zone') {
+            return industrialZoneShow(zoneId).url;
+        }
+
+        return promZoneShow(zoneId).url;
+    };
 
     const [activeTab, setActiveTab] = useState('all');
     const [baseLayer, setBaseLayer] = useState<'standard' | 'satellite'>(
@@ -803,12 +825,13 @@ export default function Show({
         0,
     );
 
-    const totalIssuesCount =
-        stats.projectIssuesCount +
-        stats.sezIssuesCount +
-        stats.izIssuesCount +
-        stats.promIssuesCount +
-        stats.subsoilIssuesCount;
+    const totalIssuesCount = isInvestor
+        ? stats.projectIssuesCount
+        : stats.projectIssuesCount +
+          stats.sezIssuesCount +
+          stats.izIssuesCount +
+          stats.promIssuesCount +
+          stats.subsoilIssuesCount;
     const regionIssuesUrl = issuesIndex({
         query: { region_id: region.id },
     }).url;
@@ -2436,20 +2459,22 @@ export default function Show({
                                         </span>
                                     )}
                                 </TabsTrigger>
-                                <TabsTrigger
-                                    value="subsoil"
-                                    className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${subsoilStatusCounts.illegal > 0 ? 'bg-red-100 text-red-600 data-[state=active]:bg-red-200' : ''}`}
-                                >
-                                    <Pickaxe
-                                        className={`h-4 w-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`}
-                                    />
-                                    Недро
-                                    {subsoilStatusCounts.illegal > 0 && (
-                                        <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
-                                            {subsoilStatusCounts.illegal}
-                                        </span>
-                                    )}
-                                </TabsTrigger>
+                                {!isInvestor && (
+                                    <TabsTrigger
+                                        value="subsoil"
+                                        className={`flex flex-1 items-center gap-2 rounded-md py-2 text-sm data-[state=active]:bg-white data-[state=active]:shadow-sm ${subsoilStatusCounts.illegal > 0 ? 'bg-red-100 text-red-600 data-[state=active]:bg-red-200' : ''}`}
+                                    >
+                                        <Pickaxe
+                                            className={`h-4 w-4 ${subsoilStatusCounts.illegal > 0 ? 'text-red-600' : ''}`}
+                                        />
+                                        Недро
+                                        {subsoilStatusCounts.illegal > 0 && (
+                                            <span className="inline-flex items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] leading-none font-bold text-white">
+                                                {subsoilStatusCounts.illegal}
+                                            </span>
+                                        )}
+                                    </TabsTrigger>
+                                )}
                             </TabsList>
 
                             {/* Region structure for ALL */}
@@ -2477,11 +2502,15 @@ export default function Show({
                                                 count: promZones.length,
                                                 icon: Factory,
                                             },
-                                            {
-                                                label: 'Жер қойнауын пайдаланушылар',
-                                                count: subsoilUsers.length,
-                                                icon: Pickaxe,
-                                            },
+                                            ...(!isInvestor
+                                                ? [
+                                                      {
+                                                          label: 'Жер қойнауын пайдаланушылар',
+                                                          count: subsoilUsers.length,
+                                                          icon: Pickaxe,
+                                                      },
+                                                  ]
+                                                : []),
                                         ].map((item) => (
                                             <div
                                                 key={item.label}
@@ -2673,7 +2702,10 @@ export default function Show({
                                                         </div>
                                                         <div className="flex shrink-0 items-center gap-2">
                                                             <Link
-                                                                href={`/sezs/${sez.id}`}
+                                                                href={zoneDetailsUrl(
+                                                                    'sez',
+                                                                    sez.id,
+                                                                )}
                                                                 className="text-violet-500 transition-colors hover:text-violet-700"
                                                                 onClick={(e) =>
                                                                     e.stopPropagation()
@@ -2859,7 +2891,10 @@ export default function Show({
                                                         </div>
                                                         <div className="flex shrink-0 items-center gap-2">
                                                             <Link
-                                                                href={`/industrial-zones/${iz.id}`}
+                                                                href={zoneDetailsUrl(
+                                                                    'industrial-zone',
+                                                                    iz.id,
+                                                                )}
                                                                 className="text-amber-500 transition-colors hover:text-amber-700"
                                                                 onClick={(e) =>
                                                                     e.stopPropagation()
@@ -3053,7 +3088,10 @@ export default function Show({
                                                         </div>
                                                         <div className="flex shrink-0 items-center gap-2">
                                                             <Link
-                                                                href={`/prom-zones/${prom.id}`}
+                                                                href={zoneDetailsUrl(
+                                                                    'prom-zone',
+                                                                    prom.id,
+                                                                )}
                                                                 className="text-emerald-500 transition-colors hover:text-emerald-700"
                                                                 onClick={(e) =>
                                                                     e.stopPropagation()

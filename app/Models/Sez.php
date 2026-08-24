@@ -50,6 +50,11 @@ class Sez extends Model
         return $this->belongsToMany(InvestmentProject::class, 'investment_project_sez');
     }
 
+    public function investmentApplications()
+    {
+        return $this->morphMany(InvestmentApplication::class, 'zoneable');
+    }
+
     public function photos()
     {
         return $this->hasMany(SezPhoto::class);

@@ -19,7 +19,7 @@ class CheckWeeklyPhotos extends Command
         ProjectExecutorAssignmentService $assignments
     ): int {
         $projects = InvestmentProject::active()
-            ->with(['creator', 'curators', 'region'])
+            ->with('region')
             ->get();
 
         $cutoff = now()->subDays(7);
@@ -56,12 +56,12 @@ class CheckWeeklyPhotos extends Command
                 continue;
             }
 
-            $recipients = $this->telegramRecipients($project);
+            $recipients = $this->telegramRecipients($districtExecutors);
 
             if ($recipients->isEmpty()) {
                 $this->warn(
                     "Жоба #{$project->id} \"{$project->name}\" — "
-                    .'кураторлардың Telegram ID-і жоқ.'
+                    .'аудан орындаушыларының Telegram ID-і жоқ.'
                 );
 
                 continue;
@@ -69,12 +69,12 @@ class CheckWeeklyPhotos extends Command
 
             $missingPhotoProjectCount++;
 
-            foreach ($recipients as $curator) {
-                $recipientId = (string) $curator->id;
+            foreach ($recipients as $executor) {
+                $recipientId = (string) $executor->id;
 
                 if (! $notifications->has($recipientId)) {
                     $notifications->put($recipientId, [
-                        'recipient' => $curator,
+                        'recipient' => $executor,
                         'projects' => collect(),
                     ]);
                 }
@@ -89,7 +89,7 @@ class CheckWeeklyPhotos extends Command
         }
 
         foreach ($notifications as $notification) {
-            $curator = $notification['recipient'];
+            $executor = $notification['recipient'];
             $messages = $this->missingPhotoSummaryMessages(
                 $notification['projects']
             );
@@ -101,19 +101,19 @@ class CheckWeeklyPhotos extends Command
                 );
 
                 if ($telegram->sendMessage(
-                    $curator->telegram_chat_id,
+                    $executor->telegram_chat_id,
                     $formattedMessage
                 )) {
                     $notifiedCount++;
                     $this->info(
                         'Апталық фото қорытындысы жіберілді: '
-                        ."{$curator->full_name}"
+                        ."{$executor->full_name}"
                     );
                 } else {
                     $failedCount++;
                     $this->error(
                         'Апталық фото қорытындысы жіберілмеді: '
-                        ."{$curator->full_name}"
+                        ."{$executor->full_name}"
                     );
                 }
             }
@@ -129,21 +129,12 @@ class CheckWeeklyPhotos extends Command
         return $failedCount === 0 ? self::SUCCESS : self::FAILURE;
     }
 
-    private function telegramRecipients(
-        InvestmentProject $project
-    ): Collection {
-        $recipients = $project->curators
-            ->when(
-                $project->creator,
-                fn (Collection $curators) => $curators->push(
-                    $project->creator
-                )
-            )
+    private function telegramRecipients(Collection $districtExecutors): Collection
+    {
+        return $districtExecutors
             ->filter(fn ($user) => filled($user->telegram_chat_id))
             ->unique('id')
             ->values();
-
-        return $recipients;
     }
 
     /**

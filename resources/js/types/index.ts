@@ -1,5 +1,6 @@
 export type * from './auth';
 export type * from './navigation';
+export type * from './investment-application';
 export type * from './pagination';
 export type * from './ui';
 

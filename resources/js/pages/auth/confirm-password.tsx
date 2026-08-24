@@ -1,53 +1,60 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
+
+import AuthPasswordField from '@/components/auth/auth-password-field';
+import AuthPlatformShell from '@/components/auth/auth-platform-shell';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
-import AuthLayout from '@/layouts/auth-layout';
 import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
     return (
-        <AuthLayout
-            title="Құпия сөзіңізді растаңыз"
-            description="Бұл қолданбаның қорғалған аймағы. Жалғастыру үшін құпия сөзіңізді растаңыз."
-        >
-            <Head title="Құпия сөзіңізді растаңыз" />
+        <>
+            <Head title="Құпиясөзді растау" />
 
-            <Form {...store.form()} resetOnSuccess={['password']}>
-                {({ processing, errors }) => (
-                    <div className="space-y-6">
-                        <div className="grid gap-2">
-                            <Label htmlFor="password" className="text-white">
-                                Құпия сөз
-                            </Label>
-                            <Input
+            <AuthPlatformShell
+                eyebrow="Қорғалған бөлім"
+                title="Құпиясөзіңізді растаңыз"
+                description="Қауіпсіздік мақсатында осы әрекетті жалғастырмас бұрын аккаунтыңыздың құпиясөзін қайта енгізіңіз."
+            >
+                <div className="mb-5 flex items-start gap-3 border border-cyan-300/15 bg-cyan-300/[0.05] px-4 py-3 text-sm leading-6 text-slate-300">
+                    <ShieldCheck className="mt-1 size-4 shrink-0 text-cyan-300" />
+                    Бұл тек аккаунт иесі орындай алатын қорғалған әрекет.
+                </div>
+
+                <Form
+                    {...store.form()}
+                    resetOnSuccess={['password']}
+                    className="space-y-5"
+                >
+                    {({ processing, errors }) => (
+                        <>
+                            <AuthPasswordField
                                 id="password"
-                                type="password"
+                                label="Құпиясөз"
                                 name="password"
-                                placeholder="Құпия сөз"
                                 autoComplete="current-password"
-                                className="text-white"
                                 autoFocus
+                                error={errors.password}
+                                placeholder="Құпиясөзді енгізіңіз"
                             />
 
-                            <InputError message={errors.password} />
-                        </div>
-
-                        <div className="flex items-center">
                             <Button
-                                className="w-full"
+                                type="submit"
+                                className="group h-12 w-full rounded-lg bg-cyan-300 font-bold text-slate-950 transition hover:bg-cyan-200"
                                 disabled={processing}
                                 data-test="confirm-password-button"
                             >
                                 {processing && <Spinner />}
-                                Құпия сөзді растаңыз
+                                Жалғастыру
+                                {!processing && (
+                                    <ArrowRight className="ml-1 size-4 transition-transform group-hover:translate-x-1" />
+                                )}
                             </Button>
-                        </div>
-                    </div>
-                )}
-            </Form>
-        </AuthLayout>
+                        </>
+                    )}
+                </Form>
+            </AuthPlatformShell>
+        </>
     );
 }

@@ -622,6 +622,7 @@ export default function Map({
 }: Props) {
     const { auth } = usePage<SharedData>().props;
     const activeUser = auth?.user;
+    const isInvestor = activeUser?.role_model?.name === 'investor';
     const [isMounted, setIsMounted] = useState(false);
     const [hoveredRegionId, setHoveredRegionId] = useState<number | null>(null);
     const [activeRegion, setActiveRegion] = useState<Region | null>(null);
@@ -915,18 +916,21 @@ export default function Map({
                     sezIds: project.sezs?.map((s) => s.id) ?? [],
                     izIds: project.industrial_zones?.map((z) => z.id) ?? [],
                     promIds: project.prom_zones?.map((z) => z.id) ?? [],
-                    subsoilIds: project.subsoil_users?.map((s) => s.id) ?? [],
+                    subsoilIds: isInvestor
+                        ? []
+                        : (project.subsoil_users?.map((s) => s.id) ?? []),
                     sezNames: project.sezs?.map((s) => s.name) ?? [],
                     izNames: project.industrial_zones?.map((z) => z.name) ?? [],
                     promNames: project.prom_zones?.map((z) => z.name) ?? [],
-                    subsoilNames:
-                        project.subsoil_users?.map((s) => s.name) ?? [],
+                    subsoilNames: isInvestor
+                        ? []
+                        : (project.subsoil_users?.map((s) => s.name) ?? []),
                 };
             })
             .filter((plot) => plot.geometry.length > 0);
 
         setPlots(projectPlots);
-    }, [regions, activeTab, projects]);
+    }, [regions, activeTab, projects, isInvestor]);
 
     const getRegionStats = (regionId: number): RegionStats => {
         const investments = regionStats?.investments?.[regionId] ?? 0;
@@ -940,7 +944,7 @@ export default function Map({
             izProjects: Number(izProjects) || 0,
             promProjects: Number(promProjects) || 0,
             sezProjects: Number(sezProjects) || 0,
-            subsoilUsers: Number(subsoilUsers) || 0,
+            subsoilUsers: isInvestor ? 0 : Number(subsoilUsers) || 0,
         };
     };
 
@@ -1448,7 +1452,8 @@ export default function Map({
                     })}
 
                 {/* Subsoil Layer */}
-                {(activeTab === 'all' || activeTab === 'subsoil') &&
+                {!isInvestor &&
+                    (activeTab === 'all' || activeTab === 'subsoil') &&
                     subsoilUsers.map((su) => {
                         const positions = (
                             Array.isArray(su.location) ? su.location : []
@@ -1716,14 +1721,16 @@ export default function Map({
                                             {stats.promProjects}
                                         </span>
                                     </div>
-                                    <div className="flex items-center justify-between px-5 py-3.5">
-                                        <span className="text-sm text-gray-500">
-                                            Жер қойнауын пайдаланушылар
-                                        </span>
-                                        <span className="text-lg font-bold text-[#0f1b3d]">
-                                            {stats.subsoilUsers}
-                                        </span>
-                                    </div>
+                                    {!isInvestor && (
+                                        <div className="flex items-center justify-between px-5 py-3.5">
+                                            <span className="text-sm text-gray-500">
+                                                Жер қойнауын пайдаланушылар
+                                            </span>
+                                            <span className="text-lg font-bold text-[#0f1b3d]">
+                                                {stats.subsoilUsers}
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })()}
@@ -1938,17 +1945,18 @@ export default function Map({
                                                 </span>
                                             ),
                                         )}
-                                        {activePlot.subsoilNames?.map(
-                                            (name, i) => (
-                                                <span
-                                                    key={`su-${i}`}
-                                                    className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
-                                                >
-                                                    Жер қойнауын пайдалану:{' '}
-                                                    {name}
-                                                </span>
-                                            ),
-                                        )}
+                                        {!isInvestor &&
+                                            activePlot.subsoilNames?.map(
+                                                (name, i) => (
+                                                    <span
+                                                        key={`su-${i}`}
+                                                        className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-[10px] font-medium text-gray-600"
+                                                    >
+                                                        Жер қойнауын пайдалану:{' '}
+                                                        {name}
+                                                    </span>
+                                                ),
+                                            )}
                                     </div>
                                 </div>
                             )}
@@ -2019,11 +2027,15 @@ export default function Map({
                                 label: 'Пром зона',
                                 d: data.prom,
                             },
-                            {
-                                key: 'nedro',
-                                label: 'Жер қойнауын пайдалану',
-                                d: data.nedro,
-                            },
+                            ...(!isInvestor
+                                ? [
+                                      {
+                                          key: 'nedro',
+                                          label: 'Жер қойнауын пайдалану',
+                                          d: data.nedro,
+                                      },
+                                  ]
+                                : []),
                         ];
 
                     return (

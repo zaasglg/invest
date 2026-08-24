@@ -36,6 +36,7 @@ import { filterNavItemsByRole, headerNavItems } from '@/config/navigation';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn } from '@/lib/utils';
+import { portal as applicantPortal } from '@/routes/applicant';
 import {
     index as chatsIndex,
     unreadCount as chatUnreadCount,
@@ -51,6 +52,7 @@ type Props = {
 };
 
 const COMPACT_HEADER_NAV_TITLES = new Set([
+    'Жер қойнауын пайдалану',
     'Аймақтар',
     'Компаниялар',
     'Жоба түрлері',
@@ -74,6 +76,7 @@ function HeaderNavIcon({
 export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage<SharedData>();
     const { auth } = page.props;
+    const isApplicant = auth.user.role_model?.name === 'applicant';
     const getInitials = useInitials();
     const { isCurrentUrl } = useCurrentUrl();
     const [unreadChatMessagesCount, setUnreadChatMessagesCount] = useState(
@@ -133,10 +136,28 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         'X-Requested-With': 'XMLHttpRequest',
                     },
                 };
-                const [chatResponse, notificationResponse] = await Promise.all([
-                    fetch(chatUnreadCount.url(), requestOptions),
-                    fetch(notificationUnreadCount.url(), requestOptions),
-                ]);
+                const notificationResponse = await fetch(
+                    notificationUnreadCount.url(),
+                    requestOptions,
+                );
+
+                if (isApplicant) {
+                    if (notificationResponse.ok) {
+                        const notificationData =
+                            (await notificationResponse.json()) as {
+                                count: number;
+                                assistant_count: number;
+                            };
+                        setUnreadNotificationsCount(notificationData.count);
+                    }
+
+                    return;
+                }
+
+                const chatResponse = await fetch(
+                    chatUnreadCount.url(),
+                    requestOptions,
+                );
 
                 if (chatResponse.ok) {
                     const chatData = (await chatResponse.json()) as {
@@ -167,7 +188,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
         const intervalId = window.setInterval(loadUnreadCounts, 5000);
 
         return () => window.clearInterval(intervalId);
-    }, [auth.user.id]);
+    }, [auth.user.id, isApplicant]);
 
     return (
         <>
@@ -176,7 +197,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 <div className="mx-auto flex h-16 items-center px-4 md:max-w-7xl">
                     {/* Logo */}
                     <Link
-                        href="/dashboard"
+                        href={
+                            isApplicant ? applicantPortal.url() : '/dashboard'
+                        }
                         className="mr-4 flex shrink-0 items-center"
                     >
                         <InMapLogo />
@@ -266,7 +289,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     </div>
 
                     {/* Right side: notifications + avatar */}
-                    <div className="ml-auto flex items-center gap-1">
+                    <div className="ml-auto flex shrink-0 items-center gap-1">
                         {compactHeaderNavItems.map((item) => (
                             <TooltipProvider key={item.title} delayDuration={0}>
                                 <Tooltip>
@@ -275,7 +298,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             href={item.href}
                                             aria-label={item.title}
                                             className={cn(
-                                                'flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
                                                 isCurrentUrl(item.href) &&
                                                     'bg-white/10 text-white',
                                             )}
@@ -333,30 +356,35 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 </TooltipProvider>
                             </>
                         )}
-                        <TooltipProvider delayDuration={0}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <Link
-                                        href={chatsIndex.url()}
-                                        className={cn(
-                                            'relative flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
-                                            isCurrentUrl('/chats') &&
-                                                'bg-white/10 text-white',
-                                        )}
-                                    >
-                                        <MessageCircle className="h-4 w-4" />
-                                        {unreadChatMessagesCount > 0 && (
-                                            <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
-                                                {unreadChatMessagesCount > 99
-                                                    ? '99+'
-                                                    : unreadChatMessagesCount}
-                                            </span>
-                                        )}
-                                    </Link>
-                                </TooltipTrigger>
-                                <TooltipContent>Жоба чаттары</TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        {!isApplicant && (
+                            <TooltipProvider delayDuration={0}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Link
+                                            href={chatsIndex.url()}
+                                            className={cn(
+                                                'relative flex h-9 w-9 items-center justify-center rounded-lg text-white/60 transition-colors hover:bg-white/10 hover:text-white',
+                                                isCurrentUrl('/chats') &&
+                                                    'bg-white/10 text-white',
+                                            )}
+                                        >
+                                            <MessageCircle className="h-4 w-4" />
+                                            {unreadChatMessagesCount > 0 && (
+                                                <span className="absolute top-0.5 right-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white shadow-sm">
+                                                    {unreadChatMessagesCount >
+                                                    99
+                                                        ? '99+'
+                                                        : unreadChatMessagesCount}
+                                                </span>
+                                            )}
+                                        </Link>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        Жоба чаттары
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        )}
                         <TooltipProvider delayDuration={0}>
                             <Tooltip>
                                 <TooltipTrigger asChild>

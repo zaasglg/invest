@@ -22,4 +22,12 @@ class ProjectType extends Model
     {
         return $this->hasMany(InvestmentProject::class);
     }
+
+    public function applications()
+    {
+        return $this->belongsToMany(
+            InvestmentApplication::class,
+            'investment_application_project_type'
+        )->withTimestamps();
+    }
 }

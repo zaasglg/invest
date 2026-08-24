@@ -83,6 +83,8 @@ class CheckRoleAccess
      * Project routes available to an investor for their company's projects.
      */
     protected array $investorProjectRoutes = [
+        'regions.show',
+        'issues.index',
         'investment-projects.index',
         'investment-projects.show',
         'investment-projects.passport',
@@ -123,6 +125,10 @@ class CheckRoleAccess
         );
 
         $routeName = $request->route()?->getName();
+
+        if ($roleName === 'applicant') {
+            abort(403, 'Өтінім берушіге бұл ішкі бөлім қолжетімсіз.');
+        }
 
         if ($roleName === 'investor') {
             if (! $routeName
