@@ -55,11 +55,12 @@ class GeminiService
 
     protected function callApi(string $model, string $prompt): ?string
     {
-        $url = $this->baseUrl.$model.':generateContent?key='.$this->apiKey;
+        $url = $this->baseUrl.$model.':generateContent';
 
         try {
             $response = Http::timeout(12)
                 ->connectTimeout(5)
+                ->withHeaders(['x-goog-api-key' => $this->apiKey])
                 ->post($url, [
                     'contents' => [
                         [
@@ -420,6 +421,7 @@ PROMPT;
             case 'oblast_analytics':
                 $scope = $data['scope'] ?? [];
                 $summary = $data['summary'] ?? [];
+                $dataQuality = $data['data_quality'] ?? [];
                 $production = $data['production_summary'] ?? [];
                 $investment = number_format(
                     (float) ($summary['total_investment'] ?? 0),
@@ -440,6 +442,24 @@ PROMPT;
                     .($summary['active_issues'] ?? 0)
                     .' | '.($lang === 'ru' ? 'просроченных задач: ' : 'кешіккен тапсырма: ')
                     .($summary['overdue_tasks'] ?? 0);
+                $lines[] = ($lang === 'ru' ? 'Достоверность данных: ' : 'Дерек сенімділігі: ')
+                    .($dataQuality['overall_score'] ?? 0).'%'
+                    .' | '.($lang === 'ru' ? 'предупреждений: ' : 'ескерту: ')
+                    .count($dataQuality['warnings'] ?? []);
+
+                if (! empty($data['priority_projects'])) {
+                    $lines[] = $lang === 'ru'
+                        ? 'ПРИОРИТЕТНЫЕ РИСКИ И СЛЕДУЮЩИЕ ДЕЙСТВИЯ:'
+                        : 'БАСЫМ ТӘУЕКЕЛДЕР ЖӘНЕ КЕЛЕСІ ӘРЕКЕТТЕР:';
+                    foreach ($data['priority_projects'] as $item) {
+                        $lines[] = '- '.$item['name']
+                            .' | '.($item['region_name'] ?? '—')
+                            .' | '.($lang === 'ru' ? 'ответственный: ' : 'жауапты: ')
+                            .($item['responsible'] ?? '—')
+                            .' | '.($lang === 'ru' ? 'действие: ' : 'әрекет: ')
+                            .($item['recommended_action'] ?? '—');
+                    }
+                }
 
                 if (($production['projects_with_plans'] ?? 0) > 0) {
                     $lines[] = $lang === 'ru'
@@ -504,6 +524,34 @@ PROMPT;
 
                 foreach ($data['regional_potential']['insights'] ?? [] as $insight) {
                     $lines[] = '- '.$insight;
+                }
+
+                if (! empty($data['activity_trend'])) {
+                    $lines[] = $lang === 'ru'
+                        ? 'ДИНАМИКА ЗА 6 МЕСЯЦЕВ:'
+                        : '6 АЙЛЫҚ ДИНАМИКА:';
+                    foreach ($data['activity_trend'] as $item) {
+                        $lines[] = '- '.$item['period']
+                            .': '.($lang === 'ru' ? 'событий ' : 'оқиға ')
+                            .$item['activity']
+                            .', '.($lang === 'ru' ? 'выполнений ' : 'орындалу ')
+                            .$item['completions']
+                            .', '.($lang === 'ru' ? 'новых проблем ' : 'жаңа мәселе ')
+                            .$item['issues'];
+                    }
+                }
+
+                $funnel = $data['application_funnel'] ?? [];
+                if (($funnel['total'] ?? 0) > 0) {
+                    $lines[] = $lang === 'ru'
+                        ? 'ИНВЕСТИЦИОННЫЕ ЗАЯВКИ:'
+                        : 'ИНВЕСТИЦИЯЛЫҚ ӨТІНІМДЕР:';
+                    $lines[] = ($lang === 'ru' ? 'Всего: ' : 'Барлығы: ')
+                        .$funnel['total']
+                        .' | '.($lang === 'ru' ? 'инвестиции: ' : 'инвестиция: ')
+                        .number_format((float) ($funnel['investment'] ?? 0), 0, ',', ' ').' ₸'
+                        .' | '.($lang === 'ru' ? 'рабочих мест: ' : 'жұмыс орны: ')
+                        .($funnel['jobs'] ?? 0);
                 }
                 break;
 

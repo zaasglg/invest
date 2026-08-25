@@ -6,55 +6,33 @@ use App\Models\IndustrialZone;
 use App\Models\Region;
 use App\Services\InfrastructureUsageService;
 use App\Services\SectorActivityLogService;
+use App\Services\ZoneIndexAnalyticsService;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class IndustrialZoneController extends Controller
 {
-    public function index(Request $request)
-    {
-        $user = auth()->user();
-        $isModerator = $user?->loadMissing('roleModel')
+    public function index(
+        Request $request,
+        ZoneIndexAnalyticsService $analytics
+    ) {
+        $user = $request->user();
+        $isModerator = $user->loadMissing('roleModel')
             ->roleModel?->name === 'moderator';
-
-        $query = IndustrialZone::with('region')
-            ->withSum(['investmentProjects' => function ($q) use (
-                $isModerator
-            ) {
-                $q->where('is_archived', false);
-                if ($isModerator) {
-                    $q->curatedByTurkistanInvest();
-                }
-            }], 'total_investment');
-
-        if ($user && $user->isDistrictScoped()) {
-            $query->where('region_id', $user->region_id);
-        }
-
-        if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->search.'%');
-        }
-
-        if ($request->filled('region_id')) {
-            $query->where('region_id', $request->region_id);
-        }
-
-        if ($request->filled('status')) {
-            $query->where('status', $request->status);
-        }
-
-        $industrialZones = $query->latest()->paginate(15)->withQueryString();
-
-        $regionsQuery = Region::query();
-        if ($user && $user->isDistrictScoped()) {
-            $regionsQuery->where('id', $user->region_id);
-        }
+        $filters = $request->only(['search', 'region_id', 'status']);
+        $data = $analytics->build(
+            IndustrialZone::class,
+            $user,
+            $filters,
+            $isModerator
+        );
 
         return Inertia::render('industrial-zones/index', [
-            'industrialZones' => $industrialZones,
-            'regions' => $regionsQuery->orderBy('name')->get(),
-            'filters' => $request->only(['search', 'region_id', 'status']),
+            'industrialZones' => $data['zones'],
+            'summary' => $data['summary'],
+            'regions' => $data['regions'],
+            'filters' => $filters,
         ]);
     }
 
