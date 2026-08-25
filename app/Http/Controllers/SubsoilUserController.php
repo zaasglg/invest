@@ -7,6 +7,7 @@ use App\Models\SubsoilUser;
 use App\Models\User;
 use App\Services\PrivateFileService;
 use App\Services\SectorActivityLogService;
+use App\Services\SubsoilIndexAnalyticsService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
@@ -18,50 +19,24 @@ class SubsoilUserController extends Controller
         private readonly PrivateFileService $files
     ) {}
 
-    public function index(Request $request)
-    {
-        $query = SubsoilUser::with('region');
-
-        $user = auth()->user();
-        if ($user && $user->isDistrictScoped()) {
-            $query->where('region_id', $user->region_id);
-        }
-
-        if ($request->filled('search')) {
-            $search = $request->search;
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%'.$search.'%')
-                    ->orWhere('bin', 'like', '%'.$search.'%');
-            });
-        }
-
-        if ($request->filled('region_id')) {
-            $query->where('region_id', $request->region_id);
-        }
-
-        if ($request->filled('license_status')) {
-            $query->where('license_status', $request->license_status);
-        }
-
-        if ($request->filled('mineral_type')) {
-            $query->where('mineral_type', 'like', '%'.$request->mineral_type.'%');
-        }
-
-        $subsoilUsers = $query->latest()->paginate(15)->withQueryString();
-
-        $regionsQuery = Region::query();
-        if ($user && $user->isDistrictScoped()) {
-            $regionsQuery->where('id', $user->region_id);
-        }
-
-        // Get distinct mineral types for filter dropdown
-        $mineralTypes = SubsoilUser::distinct()->pluck('mineral_type')->filter()->sort()->values();
+    public function index(
+        Request $request,
+        SubsoilIndexAnalyticsService $analytics
+    ) {
+        $filters = $request->only([
+            'search',
+            'region_id',
+            'license_status',
+            'mineral_type',
+        ]);
+        $data = $analytics->build($request->user(), $filters);
 
         return Inertia::render('subsoil-users/index', [
-            'subsoilUsers' => $subsoilUsers,
-            'regions' => $regionsQuery->orderBy('name')->get(),
-            'mineralTypes' => $mineralTypes,
-            'filters' => $request->only(['search', 'region_id', 'license_status', 'mineral_type']),
+            'subsoilUsers' => $data['subsoilUsers'],
+            'summary' => $data['summary'],
+            'regions' => $data['regions'],
+            'mineralTypes' => $data['mineralTypes'],
+            'filters' => $filters,
         ]);
     }
 

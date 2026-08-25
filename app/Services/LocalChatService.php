@@ -59,6 +59,12 @@ class LocalChatService
         $lang = $this->detectLanguage($message);
         $entities = $this->analyzeQuery($message, $user);
 
+        if (array_key_exists('oblast_analytics', $contextData)
+            && $user?->isOblastScopedAkim()) {
+            $entities[] = 'oblast_analytics';
+            $entities = array_values(array_unique($entities));
+        }
+
         if (empty($entities)) {
             return $lang === 'ru'
                 ? 'Извините, я не понял вопрос. Спросите, например: «Сколько проектов в Туркестанской области?» или «Какие есть разделы?»'
@@ -746,6 +752,12 @@ class LocalChatService
 
         $scope = $data['scope'] ?? [];
         $summary = $data['summary'] ?? [];
+        $dataQuality = $data['data_quality'] ?? [];
+        $priorityProjects = array_slice(
+            $data['priority_projects'] ?? [],
+            0,
+            5
+        );
         $districts = array_slice($data['district_quality'] ?? [], 0, 3);
         $managements = array_slice(
             $data['management_quality'] ?? [],
@@ -781,6 +793,25 @@ class LocalChatService
                     .' белсенді мәселе, '.($summary['overdue_tasks'] ?? 0)
                     .' кешіктірілген тапсырма.',
             ];
+
+        $lines[] = $lang === 'ru'
+            ? 'Достоверность данных: '.($dataQuality['overall_score'] ?? 0)
+                .'%, предупреждений: '.count($dataQuality['warnings'] ?? []).'.'
+            : 'Дерек сенімділігі: '.($dataQuality['overall_score'] ?? 0)
+                .'%, ескерту: '.count($dataQuality['warnings'] ?? []).'.';
+
+        if ($priorityProjects !== []) {
+            $lines[] = '';
+            $lines[] = $lang === 'ru'
+                ? 'Приоритетные риски:'
+                : 'Басым тәуекелдер:';
+            foreach ($priorityProjects as $item) {
+                $lines[] = '- '.$item['name']
+                    .' — '.($item['recommended_action'] ?? '—')
+                    .' ('.($lang === 'ru' ? 'ответственный: ' : 'жауапты: ')
+                    .($item['responsible'] ?? '—').')';
+            }
+        }
 
         if (($production['projects_with_plans'] ?? 0) > 0) {
             $amountRate = ($production['amount_completion_rate'] ?? null)
@@ -859,6 +890,17 @@ class LocalChatService
             foreach ($potential['insights'] as $insight) {
                 $lines[] = '- '.$insight;
             }
+        }
+
+        $funnel = $data['application_funnel'] ?? [];
+        if (($funnel['total'] ?? 0) > 0) {
+            $lines[] = '';
+            $lines[] = ($lang === 'ru'
+                ? 'Инвестиционных заявок: '
+                : 'Инвестициялық өтінім: ')
+                .$funnel['total']
+                .' · '.($lang === 'ru' ? 'рабочих мест: ' : 'жұмыс орны: ')
+                .($funnel['jobs'] ?? 0).'.';
         }
 
         return implode("\n", $lines);
@@ -1041,7 +1083,7 @@ class LocalChatService
         if (preg_match('/(пром.?зона|промзона|пром аймақ)/ui', $query)) {
             $entities[] = 'prom_zones';
         }
-        if (preg_match('/(недропользовател|недро|участок|кен|қазба|жер қойнау|лицензия)/ui', $query)) {
+        if (preg_match('/(недропользовател|недро|участок|(?<!\p{L})кен(?!\p{L})|қазба|жер қойнау|лицензия)/ui', $query)) {
             $entities[] = 'subsoil_users';
         }
         if (preg_match('/(проблем|вопрос|issue|мәселе|шешілмеген)/ui', $query)) {

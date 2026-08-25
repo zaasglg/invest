@@ -190,6 +190,7 @@ function seedOblastAnalyticsScenario(): array
         'assigned_to' => $managementExecutor->id,
         'created_by' => $admin->id,
         'status' => 'done',
+        'approval_status' => 'approved',
         'due_date' => now()->subDay(),
     ]);
     ProjectTask::create([
@@ -198,6 +199,7 @@ function seedOblastAnalyticsScenario(): array
         'assigned_to' => $managementExecutor->id,
         'created_by' => $admin->id,
         'status' => 'in_progress',
+        'approval_status' => 'approved',
         'due_date' => now()->subDay(),
     ]);
     ProjectTask::create([
@@ -206,6 +208,7 @@ function seedOblastAnalyticsScenario(): array
         'assigned_to' => $managementExecutor->id,
         'created_by' => $admin->id,
         'status' => 'in_progress',
+        'approval_status' => 'approved',
         'due_date' => now()->subDay(),
     ]);
 
@@ -252,7 +255,17 @@ test('oblast akim receives scoped management and niche analytics', function () {
             ->where('analytics.summary.jobs_count', 120)
             ->where('analytics.summary.active_issues', 1)
             ->where('analytics.summary.overdue_tasks', 1)
+            ->where('analytics.summary.problem_projects', 1)
+            ->where('analytics.summary.total_tasks', 2)
+            ->has('analytics.priority_projects', 1)
+            ->where(
+                'analytics.priority_projects.0.id',
+                $data['implementationProject']->id
+            )
+            ->has('analytics.data_quality.components')
+            ->where('analytics.data_quality.components.task_project_coverage', 50)
             ->where('analytics.production_summary.projects_with_plans', 2)
+            ->where('analytics.production_summary.projects_with_any_plan', 2)
             ->where('analytics.production_summary.complete_plans', 2)
             ->where(
                 'analytics.production_summary.projects_needing_plan_completion',
@@ -284,6 +297,8 @@ test('oblast akim receives scoped management and niche analytics', function () {
             )
             ->where('analytics.management_quality.0.total_tasks', 2)
             ->has('analytics.niche_analytics', 1)
+            ->has('analytics.activity_trend', 6)
+            ->where('analytics.application_funnel.total', 0)
             ->where(
                 'analytics.niche_analytics.0.name',
                 'Агроөнеркәсіп'
@@ -350,4 +365,48 @@ test('oblast akim AI generates a scoped management report', function () {
         ->toContain('Өндіріс жоспарының орындалуы')
         ->toContain('сома бойынша: 80%')
         ->toContain('көлем бойынша: 80%');
+
+    $briefing = $this->actingAs($data['oblastAkim'])
+        ->postJson(route('chat.send'), [
+            'message' => 'Облыс бойынша 1 минуттық әкім брифингін жаса: ең үлкен тәуекел, жауапты және келесі әрекетті көрсет',
+            'context_scope' => 'oblast_analytics',
+        ])
+        ->assertOk()
+        ->assertJsonPath('provider', 'local')
+        ->json('message');
+
+    expect($briefing)
+        ->toContain('БАСҚАРУШЫЛЫҚ ЕСЕП')
+        ->toContain('Тест Түркістан облысы')
+        ->toContain('Басым тәуекелдер')
+        ->not->toContain('Облысқа көрінбейтін жоба');
+
+    expect(app(\App\Services\LocalChatService::class)->analyzeQuery(
+        'Облыс бойынша 1 минуттық әкім брифингін жаса: ең үлкен тәуекелді көрсет',
+        $data['oblastAkim']
+    ))->not->toContain('subsoil_users');
+
+    $exactProductionPrompt = $this->actingAs($data['oblastAkim'])
+        ->postJson(route('chat.send'), [
+            'message' => 'Өндіріс plan/fact аномалияларын және тексерілетін жобаларды түсіндір',
+            'context_scope' => 'oblast_analytics',
+        ])
+        ->assertOk()
+        ->json('message');
+
+    expect($exactProductionPrompt)
+        ->toContain('Өндіріс жоспарының орындалуы')
+        ->toContain('сома бойынша: 80%');
+});
+
+test('district akim cannot force oblast analytics AI context', function () {
+    config(['services.gemini.api_key' => '']);
+    $data = seedOblastAnalyticsScenario();
+
+    $this->actingAs($data['districtAkim'])
+        ->postJson(route('chat.send'), [
+            'message' => 'Облыстық есеп жаса',
+            'context_scope' => 'oblast_analytics',
+        ])
+        ->assertForbidden();
 });

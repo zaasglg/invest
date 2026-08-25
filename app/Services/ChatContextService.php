@@ -104,6 +104,14 @@ class ChatContextService
     protected function getOverviewStats(?User $user): array
     {
         $projects = $this->visibleProjects($user);
+        $sezs = Sez::query();
+        $industrialZones = IndustrialZone::query();
+        $promZones = PromZone::query();
+        $subsoilUsers = SubsoilUser::query();
+        $this->scopeRegionalResource($sezs, $user);
+        $this->scopeRegionalResource($industrialZones, $user);
+        $this->scopeRegionalResource($promZones, $user);
+        $this->scopeRegionalResource($subsoilUsers, $user);
 
         $activeIssues = ProjectIssue::query()
             ->where('status', '!=', 'resolved')
@@ -113,10 +121,10 @@ class ChatContextService
             'total_projects' => (clone $projects)->count(),
             'total_investment' => (float) (clone $projects)
                 ->sum('total_investment'),
-            'total_sezs' => Sez::count(),
-            'total_industrial_zones' => IndustrialZone::count(),
-            'total_prom_zones' => PromZone::count(),
-            'total_subsoil_users' => SubsoilUser::count(),
+            'total_sezs' => $sezs->count(),
+            'total_industrial_zones' => $industrialZones->count(),
+            'total_prom_zones' => $promZones->count(),
+            'total_subsoil_users' => $subsoilUsers->count(),
             'active_issues' => $activeIssues->count(),
         ];
     }
@@ -323,6 +331,22 @@ class ChatContextService
                     fn (Builder $sez) => $sez
                         ->where('region_id', $user->region_id)
                 );
+            } elseif ($user?->isOblastScopedAkim()) {
+                $oblastId = $user->region_id;
+                $sezIssuesQuery->whereHas(
+                    'sez',
+                    fn (Builder $sez) => $sez
+                        ->where(function (Builder $regions) use (
+                            $oblastId
+                        ): void {
+                            $regions->where('region_id', $oblastId)
+                                ->orWhereHas(
+                                    'region',
+                                    fn (Builder $region) => $region
+                                        ->where('parent_id', $oblastId)
+                                );
+                        })
+                );
             }
 
             $sezIssues = $sezIssuesQuery
@@ -509,6 +533,20 @@ class ChatContextService
     ): void {
         if ($user?->isDistrictScoped()) {
             $query->where('region_id', $user->region_id);
+
+            return;
+        }
+
+        if ($user?->isOblastScopedAkim()) {
+            $oblastId = $user->region_id;
+            $query->where(function (Builder $regions) use ($oblastId): void {
+                $regions->where('region_id', $oblastId)
+                    ->orWhereHas(
+                        'region',
+                        fn (Builder $region) => $region
+                            ->where('parent_id', $oblastId)
+                    );
+            });
         }
     }
 
