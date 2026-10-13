@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Company;
+use App\Services\CompanyAccessService;
 use App\Services\PrivateFileService;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -11,7 +12,7 @@ class CompanyRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->roleModel?->name === 'superadmin';
+        return app(CompanyAccessService::class)->canManage($this->user());
     }
 
     protected function prepareForValidation(): void
@@ -60,6 +61,14 @@ class CompanyRequest extends FormRequest
     {
         $company = $this->route('company');
         $investorId = $company?->investor()->value('users.id');
+        $requiresInvestor = $investorId !== null
+            || $this->boolean('create_investor')
+            || $this->anyFilled([
+                'investor_full_name',
+                'investor_email',
+                'investor_password',
+                'investor_password_confirmation',
+            ]);
 
         return [
             'legal_form' => [
@@ -95,15 +104,22 @@ class CompanyRequest extends FormRequest
                 Rule::in(array_keys(Company::STATUSES)),
             ],
             'notes' => 'nullable|string|max:5000',
-            'investor_full_name' => 'required|string|max:255',
+            'create_investor' => 'sometimes|boolean',
+            'investor_full_name' => [
+                Rule::requiredIf($requiresInvestor),
+                'nullable',
+                'string',
+                'max:255',
+            ],
             'investor_email' => [
-                'required',
+                Rule::requiredIf($requiresInvestor),
+                'nullable',
                 'email:rfc',
                 'max:255',
                 Rule::unique('users', 'email')->ignore($investorId),
             ],
             'investor_password' => [
-                Rule::requiredIf($investorId === null),
+                Rule::requiredIf($requiresInvestor && $investorId === null),
                 'nullable',
                 'string',
                 'min:8',

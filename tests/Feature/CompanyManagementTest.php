@@ -9,13 +9,16 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(RefreshDatabase::class);
 
-function createCompanyManagementUser(string $roleName): User
-{
+function createCompanyManagementUser(
+    string $roleName,
+    ?string $investSubRole = null
+): User {
     $role = Role::firstOrCreate(
         ['name' => $roleName],
         ['display_name' => ucfirst($roleName)]
@@ -23,6 +26,7 @@ function createCompanyManagementUser(string $roleName): User
 
     return User::factory()->create([
         'role_id' => $role->id,
+        'invest_sub_role' => $investSubRole,
         'role' => match ($roleName) {
             'superadmin' => 'admin',
             'invest' => 'invest',
@@ -37,7 +41,7 @@ function createCompanyManagementRegion(): Region
 {
     return Region::create([
         'name' => 'Company management test region',
-        'type' => 'oblast',
+        'type' => 'district',
         'color' => '#3B82F6',
         'icon' => 'factory',
     ]);
@@ -90,6 +94,23 @@ function validCompanyPayload(Region $region, array $overrides = []): array
     ], $overrides);
 }
 
+/**
+ * @return array<string, mixed>
+ */
+function companyPayloadWithoutInvestor(Region $region, array $overrides = []): array
+{
+    $payload = validCompanyPayload($region);
+
+    unset(
+        $payload['investor_full_name'],
+        $payload['investor_email'],
+        $payload['investor_password'],
+        $payload['investor_password_confirmation']
+    );
+
+    return array_merge($payload, $overrides);
+}
+
 test('superadmin can create and update a complete company card', function () {
     Storage::fake('local');
 
@@ -110,6 +131,8 @@ test('superadmin can create and update a complete company card', function () {
 
     $company = Company::query()->sole();
     $document = CompanyDocument::query()->sole();
+    $investor = $company->investor()->sole();
+    $originalPassword = $investor->password;
 
     expect($company->created_by)->toBe($user->id)
         ->and($company->display_name)->toContain('Turkistan Test Company')
@@ -207,10 +230,178 @@ test('superadmin can create and update a complete company card', function () {
     ]);
     Storage::disk('local')->assertMissing($document->file_path);
     $this->assertDatabaseHas('users', [
+        'id' => $investor->id,
         'company_id' => $company->id,
         'full_name' => 'Жаңартылған Инвестор',
         'email' => 'company-investor@example.test',
     ]);
+    expect($company->investor()->count())->toBe(1)
+        ->and($investor->fresh()->password)->toBe($originalPassword);
+});
+
+test('company creation can omit the investor account', function (array $investorFields) {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+
+    $this->actingAs($user)
+        ->post(
+            route('companies.store'),
+            companyPayloadWithoutInvestor($region, $investorFields)
+        )
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $company = Company::query()->sole();
+
+    expect($company->is_profile_complete)->toBeTrue()
+        ->and($company->investor()->exists())->toBeFalse();
+    $this->assertDatabaseCount('users', 1);
+
+    $this->get(route('companies.edit', $company))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('company.investor', null)
+        );
+})->with([
+    'fields omitted' => [[]],
+    'unchecked form with blank fields' => [[
+        'create_investor' => false,
+        'investor_full_name' => '',
+        'investor_email' => '',
+        'investor_password' => '',
+        'investor_password_confirmation' => '',
+    ]],
+]);
+
+test('a company can be edited without an investor and receive one later', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+
+    $this->actingAs($user)
+        ->put(
+            route('companies.update', $company),
+            companyPayloadWithoutInvestor($region, [
+                'name' => 'Accountless updated company',
+                'bin' => $company->bin,
+                'create_investor' => false,
+            ])
+        )
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('companies.show', $company));
+
+    expect($company->fresh()->name)->toBe('Accountless updated company')
+        ->and($company->investor()->exists())->toBeFalse();
+
+    $project = InvestmentProject::create([
+        'name' => 'Project registered before investor account',
+        'company_id' => $company->id,
+        'company_name' => $company->display_name,
+        'region_id' => $region->id,
+        'total_investment' => 1000000,
+        'status' => 'plan',
+        'created_by' => $user->id,
+    ]);
+
+    $this->put(
+        route('companies.update', $company),
+        validCompanyPayload($region, [
+            'bin' => $company->bin,
+            'create_investor' => true,
+            'investor_email' => '  Later-Investor@Example.Test  ',
+        ])
+    )
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('companies.show', $company));
+
+    $investor = $company->investor()->sole();
+
+    expect($investor->company_id)->toBe($company->id)
+        ->and($investor->roleModel->name)->toBe('investor')
+        ->and($investor->email)->toBe('later-investor@example.test')
+        ->and(Hash::check('password123', $investor->password))->toBeTrue();
+
+    $this->actingAs($investor)
+        ->get(route('investment-projects.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $project->id)
+        );
+    $this->get(route('investment-projects.show', $project))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('project.id', $project->id)
+            ->where('project.investors.0.id', $investor->id)
+        );
+});
+
+test('requested or partial investor details must form a valid account', function (
+    array $investorFields,
+    array $expectedErrors
+) {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $payload = companyPayloadWithoutInvestor($region, $investorFields);
+
+    $this->actingAs($user)
+        ->post(route('companies.store'), $payload)
+        ->assertSessionHasErrors($expectedErrors);
+
+    $this->assertDatabaseCount('companies', 0);
+    $this->assertDatabaseCount('users', 1);
+
+    $company = Company::factory()->create(['region_id' => $region->id]);
+    $this->put(route('companies.update', $company), [
+        ...$payload,
+        'bin' => $company->bin,
+        'name' => 'Must not be saved',
+    ])->assertSessionHasErrors($expectedErrors);
+
+    expect($company->fresh()->name)->toBe($company->name)
+        ->and($company->investor()->exists())->toBeFalse();
+})->with([
+    'explicit account request' => [
+        ['create_investor' => true],
+        ['investor_full_name', 'investor_email', 'investor_password'],
+    ],
+    'partially entered name' => [
+        ['create_investor' => false, 'investor_full_name' => 'Partial investor'],
+        ['investor_email', 'investor_password'],
+    ],
+    'confirmation alone cannot silently skip account validation' => [
+        ['investor_password_confirmation' => 'password123'],
+        ['investor_full_name', 'investor_email', 'investor_password'],
+    ],
+    'invalid email and mismatched password' => [
+        [
+            'investor_full_name' => 'Invalid investor',
+            'investor_email' => 'not-an-email',
+            'investor_password' => 'password123',
+            'investor_password_confirmation' => 'different-password',
+        ],
+        ['investor_email', 'investor_password'],
+    ],
+]);
+
+test('an existing investor cannot be removed by unchecking account creation', function () {
+    $user = createCompanyManagementUser('superadmin');
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+    $investor = createCompanyManagementInvestor($company);
+
+    $this->actingAs($user)
+        ->put(
+            route('companies.update', $company),
+            companyPayloadWithoutInvestor($region, [
+                'bin' => $company->bin,
+                'create_investor' => false,
+            ])
+        )
+        ->assertSessionHasErrors(['investor_full_name', 'investor_email']);
+
+    expect($company->investor()->sole()->id)->toBe($investor->id)
+        ->and($investor->fresh()->password)->toBe($investor->password);
 });
 
 test('company documents reject unsupported file formats', function () {
@@ -318,7 +509,188 @@ test('company access follows read and write role boundaries', function () {
         ->assertForbidden();
 });
 
-test('project creation uses an active complete company and syncs its name', function () {
+test('turkistan invest and moderator can manage companies but cannot delete them', function (
+    string $roleName,
+    ?string $investSubRole
+) {
+    Storage::fake('local');
+
+    $user = createCompanyManagementUser($roleName, $investSubRole);
+    $region = createCompanyManagementRegion();
+
+    $this->actingAs($user)
+        ->get(route('companies.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canManage', true)
+            ->where('canDelete', false)
+        );
+
+    $this->get(route('companies.create'))
+        ->assertOk();
+
+    $this->post(
+        route('companies.store'),
+        companyPayloadWithoutInvestor($region, [
+            'documents' => [UploadedFile::fake()->create('license.pdf', 10, 'application/pdf')],
+        ])
+    )
+        ->assertSessionHasNoErrors()
+        ->assertRedirect();
+
+    $company = Company::query()->sole();
+    $document = $company->documents()->sole();
+
+    $this->get(route('companies.show', $company))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('company.id', $company->id)
+            ->where('canManage', true)
+            ->where('canDelete', false)
+        );
+    $this->get(route('companies.edit', $company))
+        ->assertOk();
+
+    $this->put(
+        route('companies.update', $company),
+        validCompanyPayload($region, [
+            'name' => 'Managed company with later investor',
+            'create_investor' => true,
+        ])
+    )
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('companies.show', $company));
+
+    expect($company->fresh()->name)->toBe('Managed company with later investor')
+        ->and($company->created_by)->toBe($user->id)
+        ->and($company->investor()->count())->toBe(1);
+
+    $this->get(route('companies.documents.download', [$company, $document]))
+        ->assertOk();
+    $this->delete(route('companies.documents.destroy', [$company, $document]))
+        ->assertRedirect();
+    $this->delete(route('companies.destroy', $company))
+        ->assertForbidden();
+
+    $this->assertDatabaseHas('companies', ['id' => $company->id]);
+    $this->assertDatabaseHas('users', ['company_id' => $company->id]);
+})->with([
+    'turkistan invest' => ['invest', 'turkistan_invest'],
+    'moderator' => ['moderator', null],
+]);
+
+test('other invest directions cannot access company routes', function (?string $investSubRole) {
+    $user = createCompanyManagementUser('invest', $investSubRole);
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+
+    $this->actingAs($user);
+    foreach (['index', 'create', 'show', 'edit'] as $action) {
+        $this->get(route('companies.'.$action, $company))->assertForbidden();
+    }
+    $this->post(route('companies.store'), companyPayloadWithoutInvestor($region))
+        ->assertForbidden();
+    $this->put(
+        route('companies.update', $company),
+        companyPayloadWithoutInvestor($region, ['bin' => $company->bin])
+    )->assertForbidden();
+    $this->delete(route('companies.destroy', $company))->assertForbidden();
+})->with(['aea', 'ia', 'prom_zone', null]);
+
+test('existing company readers retain read access without management permissions', function (string $roleName) {
+    $user = createCompanyManagementUser($roleName);
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+
+    $this->actingAs($user)
+        ->get(route('companies.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canManage', false)
+            ->where('canDelete', false)
+        );
+    $this->get(route('companies.show', $company))
+        ->assertOk();
+    $this->get(route('companies.edit', $company))
+        ->assertForbidden();
+    $this->post(route('companies.store'), companyPayloadWithoutInvestor($region))
+        ->assertForbidden();
+    $this->put(
+        route('companies.update', $company),
+        companyPayloadWithoutInvestor($region, ['bin' => $company->bin])
+    )->assertForbidden();
+    $this->delete(route('companies.destroy', $company))->assertForbidden();
+})->with(['prokuror', 'akim', 'zamakim']);
+
+test('company project lists and counts expose only the turkistan curator scope', function (
+    string $roleName,
+    ?string $investSubRole
+) {
+    $user = createCompanyManagementUser($roleName, $investSubRole);
+    $peer = createCompanyManagementUser('invest', 'turkistan_invest');
+    $moderator = createCompanyManagementUser('moderator');
+    $outsideInvest = createCompanyManagementUser('invest', 'aea');
+    $region = createCompanyManagementRegion();
+    $company = Company::factory()->create(['region_id' => $region->id]);
+
+    $createProject = function (string $name, array $curators, array $attributes = []) use ($company, $region, $user): InvestmentProject {
+        $project = InvestmentProject::create([
+            'name' => $name,
+            'company_id' => $company->id,
+            'company_name' => $company->display_name,
+            'region_id' => $region->id,
+            'total_investment' => 1000000,
+            'status' => 'plan',
+            'created_by' => $user->id,
+            ...$attributes,
+        ]);
+        $project->curators()->sync($curators);
+
+        return $project;
+    };
+
+    $own = $createProject('Own curated project', [$user->id]);
+    $shared = $createProject('Peer curated project', [$peer->id, $outsideInvest->id]);
+    $moderated = $createProject('Moderator curated project', [$moderator->id]);
+    $createProject('Outside project created by viewer', [$outsideInvest->id]);
+    $createProject('Creator without curator is outside scope', []);
+    $createProject('Deleted own project', [$user->id], [
+        'is_deleted' => true,
+        'deleted_by' => $user->id,
+        'deleted_at' => now(),
+    ]);
+    $createProject('Deleted outside project', [$outsideInvest->id], [
+        'is_deleted' => true,
+        'deleted_by' => $user->id,
+        'deleted_at' => now(),
+    ]);
+
+    $visibleIds = collect([$own->id, $shared->id, $moderated->id])->sort()->values()->all();
+
+    $this->actingAs($user)
+        ->get(route('companies.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('companies.data', 1)
+            ->where('companies.data.0.id', $company->id)
+            ->where('companies.data.0.projects_count', 3)
+        );
+    $this->get(route('companies.show', $company))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('company.id', $company->id)
+            ->where('projectCount', 3)
+            ->where('projects.total', 3)
+            ->has('projects.data', 3)
+            ->where('projects.data', fn ($projects) => collect($projects)
+                ->pluck('id')->sort()->values()->all() === $visibleIds)
+        );
+})->with([
+    'turkistan invest' => ['invest', 'turkistan_invest'],
+    'moderator' => ['moderator', null],
+]);
+
+test('project creation uses an active complete company without an investor and syncs its name', function () {
     $user = createCompanyManagementUser('superadmin');
     $region = createCompanyManagementRegion();
     $projectType = ProjectType::create(['name' => 'Test project type']);
@@ -327,7 +699,6 @@ test('project creation uses an active complete company and syncs its name', func
         'name' => 'Selectable Company',
         'bin' => '111111111111',
     ]);
-    createCompanyManagementInvestor($completeCompany);
     $incompleteCompany = Company::create([
         'legal_form' => 'other',
         'name' => 'Legacy Company',
@@ -406,7 +777,6 @@ test('legacy project keeps an incomplete company while other fields are edited',
         'name' => 'B Complete Replacement Company',
         'bin' => '555555555555',
     ]);
-    createCompanyManagementInvestor($replacementCompany);
 
     $incompleteReplacement = Company::create([
         'legal_form' => 'other',
