@@ -78,7 +78,7 @@ Route::get('akim-analytics', \App\Http\Controllers\OblastAkimAnalyticsController
     ->name('akim.analytics');
 
 Route::resource('project-types', \App\Http\Controllers\ProjectTypeController::class)
-    ->middleware(['auth', 'role.access']);
+    ->middleware(['auth', 'role.access'])->except(['show']);
 
 Route::resource('companies', \App\Http\Controllers\CompanyController::class)
     ->middleware(['auth', 'role.access']);
@@ -300,10 +300,10 @@ Route::prefix('subsoil-users/{subsoilUser}')->middleware(['auth', 'role.access']
 });
 
 Route::resource('roles', \App\Http\Controllers\RoleController::class)
-    ->middleware(['auth', 'role.access']);
+    ->middleware(['auth', 'role.access'])->except(['show']);
 
 Route::resource('users', \App\Http\Controllers\UserController::class)
-    ->middleware(['auth', 'role.access']);
+    ->middleware(['auth', 'role.access'])->except(['show']);
 
 Route::get('issues', [\App\Http\Controllers\IssuesController::class, 'index'])
     ->middleware(['auth', 'role.access'])
