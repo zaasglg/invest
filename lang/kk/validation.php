@@ -248,6 +248,13 @@ return [
         'investment_type' => 'Инвестиция түрі',
         'planned_end_year' => 'Жоспарланған аяқталу жылы',
         'planned_start_year' => 'Жоспарланған басталу жылы',
+        'company_registration_date' => 'Компания тіркелген күні',
+        'company_legal_form' => 'Компанияның заңды формасы',
+        'company_bin' => 'Компанияның БИН',
+        'company_activity_type' => 'Компанияның негізгі қызмет саласы',
+        'company_investment_type' => 'Компанияның инвестиция түрі',
+        'director full name' => 'Директордың толық аты-жөні',
+        'director position' => 'Директордың лауазымы',
     ],
 
 ];

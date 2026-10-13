@@ -10,6 +10,7 @@ use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use Inertia\Testing\AssertableInertia as Assert;
 
 uses(\Illuminate\Foundation\Testing\RefreshDatabase::class);
 
@@ -66,6 +67,7 @@ function configureWeeklyPhotoTelegram(): void
 {
     config()->set('services.telegram.bot_token', 'weekly-photo-test-token');
 
+    Http::preventStrayRequests();
     Http::fake([
         'api.telegram.org/*' => Http::response(['ok' => true], 200),
     ]);
@@ -192,6 +194,74 @@ test('weekly check notifies district executors but not other executor types or c
         true
     ));
     Http::assertSentCount(1);
+});
+
+test('weekly telegram summary project links open their matching project cards', function () {
+    configureWeeklyPhotoTelegram();
+
+    $region = createWeeklyPhotoRegion();
+    $curator = createWeeklyPhotoUser('invest');
+    $executor = createWeeklyPhotoUser('ispolnitel', $region, [
+        'baskarma_type' => 'district',
+        'telegram_chat_id' => 'district-executor-chat',
+    ]);
+    $projects = collect([
+        createWeeklyPhotoProject($curator, $region, 'Бірінші жоба & жаңа кезең'),
+        createWeeklyPhotoProject($curator, $region, 'Екінші жоба <құрылыс>'),
+    ])->keyBy('name');
+    $origin = rtrim((string) config('app.url'), '/');
+
+    // Run before any web request so console URLs use the configured APP_URL.
+    expect(Artisan::call('photos:check-weekly'))->toBe(0);
+    Http::assertSentCount(1);
+
+    $sentRequest = Http::recorded()->sole()[0];
+    expect($sentRequest['chat_id'])->toBe($executor->telegram_chat_id)
+        ->and($sentRequest['parse_mode'])->toBe('HTML');
+
+    preg_match_all(
+        '/<a href="([^"]+)">(.*?)<\/a>/us',
+        $sentRequest['text'],
+        $anchors,
+        PREG_SET_ORDER
+    );
+    expect($anchors)->toHaveCount(3);
+
+    $footer = array_pop($anchors);
+    $footerUrl = html_entity_decode($footer[1], ENT_QUOTES, 'UTF-8');
+
+    expect($footer[2])->toBe('Сайтқа өту')
+        ->and($footerUrl)->toBe($origin.'/notifications');
+
+    $this->actingAs($executor);
+    $visitedProjectIds = [];
+
+    foreach ($anchors as $anchor) {
+        $projectName = html_entity_decode(strip_tags($anchor[2]), ENT_QUOTES, 'UTF-8');
+        $project = $projects->get($projectName);
+        $projectUrl = html_entity_decode($anchor[1], ENT_QUOTES, 'UTF-8');
+
+        expect($project)->not->toBeNull();
+        expect($projectUrl)->toBe($origin.'/investment-projects/'.$project->id)
+            ->not->toBe($footerUrl);
+
+        $this->get($projectUrl)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('investment-projects/show')
+                ->where('project.id', $project->id)
+                ->where('project.name', $project->name)
+            );
+        $visitedProjectIds[] = $project->id;
+    }
+
+    expect($visitedProjectIds)->toEqualCanonicalizing($projects->pluck('id')->all());
+
+    $this->get($footerUrl)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('notifications/index')
+        );
 });
 
 test('weekly check does not notify when the same district executor uploaded a recent gallery photo', function () {
