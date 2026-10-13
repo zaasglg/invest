@@ -7,7 +7,10 @@ use App\Models\Company;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\CompanyAccessService;
 use App\Services\CompanyDocumentService;
+use App\Services\InvestmentProjectAccessService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -16,7 +19,9 @@ use Inertia\Inertia;
 class CompanyController extends Controller
 {
     public function __construct(
-        private readonly CompanyDocumentService $documents
+        private readonly CompanyDocumentService $documents,
+        private readonly CompanyAccessService $access,
+        private readonly InvestmentProjectAccessService $projectAccess
     ) {}
 
     public function index(Request $request)
@@ -32,7 +37,10 @@ class CompanyController extends Controller
 
         $query = Company::query()
             ->with('region:id,name')
-            ->withCount('projects')
+            ->withCount([
+                'projects' => fn (Builder $projects) => $this->projectAccess
+                    ->scopeVisible($projects, $request->user()),
+            ])
             ->when(
                 $validated['search'] ?? null,
                 fn ($companyQuery, $search) => $companyQuery->where(
@@ -98,6 +106,7 @@ class CompanyController extends Controller
             'legalForms' => Company::LEGAL_FORMS,
             'statuses' => Company::STATUSES,
             'canManage' => $this->canManage($request),
+            'canDelete' => $this->access->canDelete($request->user()),
         ]);
     }
 
@@ -105,7 +114,13 @@ class CompanyController extends Controller
     {
         $this->authorizeRead($request);
 
-        $projectCount = $company->allProjects()->count();
+        $projects = $this->projectAccess->scopeVisible(
+            $company->projects()->getQuery(),
+            $request->user()
+        );
+        $projectCount = $this->access->canDelete($request->user())
+            ? $company->allProjects()->count()
+            : (clone $projects)->count();
 
         return Inertia::render('companies/show', [
             'company' => $company->load([
@@ -114,12 +129,13 @@ class CompanyController extends Controller
                 'investor:id,company_id,full_name,email,phone',
                 'documents:id,company_id,name,type,size,created_at',
             ]),
-            'projects' => $company->projects()
+            'projects' => $projects
                 ->with(['region:id,name', 'projectType:id,name', 'projectTypes:id,name'])
                 ->latest()
                 ->paginate(15),
             'projectCount' => $projectCount,
             'canManage' => $this->canManage($request),
+            'canDelete' => $this->access->canDelete($request->user()),
         ]);
     }
 
@@ -144,7 +160,9 @@ class CompanyController extends Controller
                 'created_by' => $request->user()->id,
             ]);
 
-            $this->createInvestor($company, $investorData);
+            if ($investorData !== []) {
+                $this->createInvestor($company, $investorData);
+            }
             $this->documents->storeMany(
                 $company,
                 $request->file('documents', []),
@@ -181,10 +199,12 @@ class CompanyController extends Controller
             $investorData = $this->investorData($validated);
             $investor = $company->investor()->first();
 
-            if ($investor) {
-                $investor->update($investorData);
-            } else {
-                $this->createInvestor($company, $investorData);
+            if ($investorData !== []) {
+                if ($investor) {
+                    $investor->update($investorData);
+                } else {
+                    $this->createInvestor($company, $investorData);
+                }
             }
 
             $company->projects()->update([
@@ -205,7 +225,7 @@ class CompanyController extends Controller
 
     public function destroy(Request $request, Company $company)
     {
-        abort_unless($this->canManage($request), 403);
+        abort_unless($this->access->canDelete($request->user()), 403);
 
         $projectCount = $company->allProjects()->count();
         if ($projectCount > 0) {
@@ -249,19 +269,12 @@ class CompanyController extends Controller
 
     private function authorizeRead(Request $request): void
     {
-        abort_unless(
-            in_array(
-                $request->user()?->roleModel?->name,
-                ['superadmin', 'prokuror', 'akim', 'zamakim'],
-                true
-            ),
-            403
-        );
+        abort_unless($this->access->canView($request->user()), 403);
     }
 
     private function canManage(Request $request): bool
     {
-        return $request->user()?->roleModel?->name === 'superadmin';
+        return $this->access->canManage($request->user());
     }
 
     /**
@@ -271,6 +284,7 @@ class CompanyController extends Controller
     private function companyData(array $validated): array
     {
         unset(
+            $validated['create_investor'],
             $validated['investor_full_name'],
             $validated['investor_email'],
             $validated['investor_password'],
@@ -287,6 +301,11 @@ class CompanyController extends Controller
      */
     private function investorData(array $validated): array
     {
+        if (empty($validated['investor_full_name'])
+            || empty($validated['investor_email'])) {
+            return [];
+        }
+
         $data = [
             'full_name' => $validated['investor_full_name'],
             'email' => Str::lower($validated['investor_email']),

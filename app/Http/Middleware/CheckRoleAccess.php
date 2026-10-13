@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\InvestmentProject;
+use App\Services\CompanyAccessService;
 use App\Services\InvestmentProjectAccessService;
 use Closure;
 use Illuminate\Http\Request;
@@ -11,7 +12,8 @@ use Symfony\Component\HttpFoundation\Response;
 class CheckRoleAccess
 {
     public function __construct(
-        private readonly InvestmentProjectAccessService $projectAccess
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly CompanyAccessService $companyAccess
     ) {}
 
     /**
@@ -154,21 +156,21 @@ class CheckRoleAccess
         }
 
         if ($routeName && str_starts_with($routeName, 'companies.')) {
-            $companyReadRoles = [
-                'superadmin',
-                'prokuror',
-                'akim',
-                'zamakim',
-            ];
-
-            if (! in_array($roleName, $companyReadRoles, true)) {
+            if (! $this->companyAccess->canView($user)) {
                 abort(403, 'Сіздің компаниялар бөліміне қол жеткізуіңіз жоқ.');
             }
 
+            if ($routeName === 'companies.destroy'
+                && ! $this->companyAccess->canDelete($user)) {
+                abort(403, 'Сізде компанияны жою құқығы жоқ.');
+            }
+
             if ($this->isWriteAction($request)
-                && $roleName !== 'superadmin') {
+                && ! $this->companyAccess->canManage($user)) {
                 abort(403, 'Сізде компания мәліметтерін өзгерту құқығы жоқ.');
             }
+
+            return $next($request);
         }
 
         // Superadmin manages regions; prokuror may view them.

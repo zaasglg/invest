@@ -10,6 +10,8 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
+import { getRoleKey } from '@/config/navigation';
+import * as companiesRoutes from '@/routes/companies';
 import type { SharedData } from '@/types';
 
 export interface CompanyOption {
@@ -38,7 +40,13 @@ export default function CompanySelect({
     error,
 }: Props) {
     const { auth } = usePage<SharedData>().props;
-    const canCreateCompany = auth.user?.role_model?.name === 'superadmin';
+    const roleKey = getRoleKey(auth.user);
+    const canCreateCompany =
+        auth.user?.role_model?.name === 'superadmin' ||
+        auth.user?.role === 'superadmin' ||
+        roleKey === 'moderator' ||
+        (roleKey === 'invest' &&
+            auth.user?.invest_sub_role === 'turkistan_invest');
     const [search, setSearch] = useState('');
     const selectedCompany = companies.find(
         (company) => company.id.toString() === value,
@@ -68,7 +76,7 @@ export default function CompanySelect({
                 </Label>
                 {canCreateCompany && (
                     <Link
-                        href="/companies/create"
+                        href={companiesRoutes.create.url()}
                         className="inline-flex items-center gap-1 text-xs font-medium text-[#a9842f] hover:underline"
                     >
                         <Plus className="h-3.5 w-3.5" />

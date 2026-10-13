@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -88,32 +89,60 @@ export default function CompanyForm({
     method,
     submitLabel,
 }: Props) {
-    const { data, setData, post, processing, errors, transform } = useForm({
-        legal_form: company?.legal_form || 'too',
-        name: company?.name || '',
-        bin: company?.bin || '',
-        registration_date: company?.registration_date
-            ? company.registration_date.slice(0, 10)
-            : '',
-        region_id: company?.region_id?.toString() || '',
-        activity_type: company?.activity_type || '',
-        director_full_name: company?.director_full_name || '',
-        contact_person: company?.contact_person || '',
-        phone: company?.phone || '',
-        email: company?.email || '',
-        website: company?.website || '',
-        legal_address: company?.legal_address || '',
-        actual_address: company?.actual_address || '',
-        licenses_and_regulatory_documents:
-            company?.licenses_and_regulatory_documents || '',
-        documents: [] as File[],
-        status: company?.status || 'active',
-        notes: company?.notes || '',
-        investor_full_name: company?.investor?.full_name || '',
-        investor_email: company?.investor?.email || '',
-        investor_password: '',
-        investor_password_confirmation: '',
-    });
+    const { data, setData, post, processing, errors, clearErrors, transform } =
+        useForm({
+            legal_form: company?.legal_form || 'too',
+            name: company?.name || '',
+            bin: company?.bin || '',
+            registration_date: company?.registration_date
+                ? company.registration_date.slice(0, 10)
+                : '',
+            region_id: company?.region_id?.toString() || '',
+            activity_type: company?.activity_type || '',
+            director_full_name: company?.director_full_name || '',
+            contact_person: company?.contact_person || '',
+            phone: company?.phone || '',
+            email: company?.email || '',
+            website: company?.website || '',
+            legal_address: company?.legal_address || '',
+            actual_address: company?.actual_address || '',
+            licenses_and_regulatory_documents:
+                company?.licenses_and_regulatory_documents || '',
+            documents: [] as File[],
+            status: company?.status || 'active',
+            notes: company?.notes || '',
+            create_investor: Boolean(company?.investor),
+            investor_full_name: company?.investor?.full_name || '',
+            investor_email: company?.investor?.email || '',
+            investor_password: '',
+            investor_password_confirmation: '',
+        });
+
+    const toggleInvestorAccount = (enabled: boolean) => {
+        if (company?.investor) {
+            return;
+        }
+
+        setData((values) => ({
+            ...values,
+            create_investor: enabled,
+            ...(enabled
+                ? {}
+                : {
+                      investor_full_name: '',
+                      investor_email: '',
+                      investor_password: '',
+                      investor_password_confirmation: '',
+                  }),
+        }));
+        clearErrors(
+            'create_investor',
+            'investor_full_name',
+            'investor_email',
+            'investor_password',
+            'investor_password_confirmation',
+        );
+    };
 
     const submit = (event: FormEvent<HTMLFormElement>) => {
         event.preventDefault();
@@ -330,88 +359,116 @@ export default function CompanyForm({
                             Инвестор аккаунты
                         </h2>
                         <p className="text-sm text-gray-500">
-                            Әр компанияға бір міндетті аккаунт ашылады. Осы
-                            аккаунт компанияның барлық жобасын автоматты көреді.
+                            {company?.investor
+                                ? 'Осы аккаунт компанияның барлық жобасын автоматты көреді. Аккаунт мәліметтерін төменде өзгерте аласыз.'
+                                : 'Аккаунт ашу міндетті емес. Оны қазір немесе кейін компанияны өңдеу кезінде қосуға болады. Аккаунт компанияның барлық жобасын автоматты көреді.'}
                         </p>
                     </div>
                 </div>
 
-                <div className="grid gap-5 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="investor_full_name">
-                            Инвестор өкілінің аты-жөні *
-                        </Label>
-                        <Input
-                            id="investor_full_name"
-                            value={data.investor_full_name}
-                            onChange={(event) =>
-                                setData(
-                                    'investor_full_name',
-                                    event.target.value,
-                                )
-                            }
-                            autoComplete="name"
-                        />
-                        {fieldError('investor_full_name')}
+                {!company?.investor && (
+                    <div className="mb-5 space-y-2">
+                        <div className="flex items-center gap-3">
+                            <Checkbox
+                                id="create_investor"
+                                checked={data.create_investor}
+                                onCheckedChange={(checked) =>
+                                    toggleInvestorAccount(checked === true)
+                                }
+                            />
+                            <Label htmlFor="create_investor">
+                                Инвестор аккаунтын қазір қосу
+                            </Label>
+                        </div>
+                        {fieldError('create_investor')}
                     </div>
+                )}
 
-                    <div className="space-y-2">
-                        <Label htmlFor="investor_email">
-                            Жүйеге кіру email-ы *
-                        </Label>
-                        <Input
-                            id="investor_email"
-                            type="email"
-                            value={data.investor_email}
-                            onChange={(event) =>
-                                setData('investor_email', event.target.value)
-                            }
-                            autoComplete="username"
-                            placeholder="investor@company.kz"
-                        />
-                        {fieldError('investor_email')}
-                    </div>
+                {(company?.investor || data.create_investor) && (
+                    <div className="grid gap-5 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="investor_full_name">
+                                Инвестор өкілінің аты-жөні *
+                            </Label>
+                            <Input
+                                id="investor_full_name"
+                                value={data.investor_full_name}
+                                onChange={(event) =>
+                                    setData(
+                                        'investor_full_name',
+                                        event.target.value,
+                                    )
+                                }
+                                autoComplete="name"
+                            />
+                            {fieldError('investor_full_name')}
+                        </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="investor_password">
-                            <KeyRound className="mr-1 inline h-4 w-4" />
-                            Құпия сөз {company?.investor ? '' : '*'}
-                        </Label>
-                        <Input
-                            id="investor_password"
-                            type="password"
-                            value={data.investor_password}
-                            onChange={(event) =>
-                                setData('investor_password', event.target.value)
-                            }
-                            autoComplete="new-password"
-                        />
-                        {company?.investor && (
-                            <p className="text-xs text-gray-500">
-                                Өзгертпесеңіз бос қалдырыңыз.
-                            </p>
-                        )}
-                        {fieldError('investor_password')}
-                    </div>
+                        <div className="space-y-2">
+                            <Label htmlFor="investor_email">
+                                Жүйеге кіру email-ы *
+                            </Label>
+                            <Input
+                                id="investor_email"
+                                type="email"
+                                value={data.investor_email}
+                                onChange={(event) =>
+                                    setData(
+                                        'investor_email',
+                                        event.target.value,
+                                    )
+                                }
+                                autoComplete="username"
+                                placeholder="investor@company.kz"
+                            />
+                            {fieldError('investor_email')}
+                        </div>
 
-                    <div className="space-y-2">
-                        <Label htmlFor="investor_password_confirmation">
-                            Құпия сөзді растау {company?.investor ? '' : '*'}
-                        </Label>
-                        <Input
-                            id="investor_password_confirmation"
-                            type="password"
-                            value={data.investor_password_confirmation}
-                            onChange={(event) =>
-                                setData(
-                                    'investor_password_confirmation',
-                                    event.target.value,
-                                )
-                            }
-                            autoComplete="new-password"
-                        />
+                        <div className="space-y-2">
+                            <Label htmlFor="investor_password">
+                                <KeyRound className="mr-1 inline h-4 w-4" />
+                                Құпия сөз {company?.investor ? '' : '*'}
+                            </Label>
+                            <Input
+                                id="investor_password"
+                                type="password"
+                                value={data.investor_password}
+                                onChange={(event) =>
+                                    setData(
+                                        'investor_password',
+                                        event.target.value,
+                                    )
+                                }
+                                autoComplete="new-password"
+                            />
+                            {company?.investor && (
+                                <p className="text-xs text-gray-500">
+                                    Өзгертпесеңіз бос қалдырыңыз.
+                                </p>
+                            )}
+                            {fieldError('investor_password')}
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label htmlFor="investor_password_confirmation">
+                                Құпия сөзді растау{' '}
+                                {company?.investor ? '' : '*'}
+                            </Label>
+                            <Input
+                                id="investor_password_confirmation"
+                                type="password"
+                                value={data.investor_password_confirmation}
+                                onChange={(event) =>
+                                    setData(
+                                        'investor_password_confirmation',
+                                        event.target.value,
+                                    )
+                                }
+                                autoComplete="new-password"
+                            />
+                        </div>
                     </div>
-                </div>
+                )}
             </section>
 
             <section className="rounded-xl border border-gray-200 bg-white p-6">

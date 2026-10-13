@@ -17,6 +17,7 @@ import { dashboard } from '@/routes';
 import * as akim from '@/routes/akim';
 import * as applicant from '@/routes/applicant';
 import * as applicantApplications from '@/routes/applicant/applications';
+import * as companies from '@/routes/companies';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentApplications from '@/routes/investment-applications';
 import * as investmentProjects from '@/routes/investment-projects';
@@ -78,7 +79,7 @@ export const projectNavItems: NavItem[] = [
     },
     {
         title: 'Компаниялар',
-        href: '/companies',
+        href: companies.index.url(),
         icon: Building2,
     },
     {
@@ -148,7 +149,6 @@ const HIDDEN_NAV_TITLES_BY_ROLE: Record<string, Set<string>> = {
     ]),
     moderator: new Set([
         'Аймақтар',
-        'Компаниялар',
         'Жоба түрлері',
         'Рөлдер',
         'Пайдаланушылар',
@@ -283,9 +283,9 @@ export const filterNavItemsByRole = (
 
     if (!roleKey) return filteredItems;
 
-    if (roleKey === 'invest') {
+    if (roleKey === 'invest' && user?.invest_sub_role !== 'turkistan_invest') {
         filteredItems = filteredItems.filter(
-            (item) => item.href !== '/companies',
+            (item) => item.href !== companies.index.url(),
         );
     }
 

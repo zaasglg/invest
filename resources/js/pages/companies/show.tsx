@@ -79,6 +79,7 @@ interface Props {
     projects: PaginatedData<Project>;
     projectCount: number;
     canManage: boolean;
+    canDelete: boolean;
 }
 
 const projectStatuses: Record<string, string> = {
@@ -118,6 +119,7 @@ export default function Show({
     projects,
     projectCount,
     canManage,
+    canDelete,
 }: Props) {
     const removeCompany = () => {
         if (projectCount > 0) {
@@ -194,20 +196,22 @@ export default function Show({
                                             Өңдеу
                                         </Link>
                                     </Button>
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        onClick={removeCompany}
-                                        title={
-                                            projectCount > 0
-                                                ? `Компанияға ${projectCount} жоба тіркелген — жоюға болмайды`
-                                                : undefined
-                                        }
-                                        className="border-white/15 bg-white/5 text-rose-200 hover:bg-rose-500/15 hover:text-white"
-                                    >
-                                        <Trash2 className="mr-2 size-4" />
-                                        Жою
-                                    </Button>
+                                    {canDelete && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={removeCompany}
+                                            title={
+                                                projectCount > 0
+                                                    ? `Компанияға ${projectCount} жоба тіркелген — жоюға болмайды`
+                                                    : undefined
+                                            }
+                                            className="border-white/15 bg-white/5 text-rose-200 hover:bg-rose-500/15 hover:text-white"
+                                        >
+                                            <Trash2 className="mr-2 size-4" />
+                                            Жою
+                                        </Button>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -249,7 +253,7 @@ export default function Show({
                     </div>
                 </section>
 
-                {(!company.is_profile_complete || !company.investor) && (
+                {!company.is_profile_complete && (
                     <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
                         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
                         <div>
@@ -258,7 +262,7 @@ export default function Show({
                             </p>
                             <p className="mt-1">
                                 Жаңа жобаға таңдау үшін міндетті реквизиттерін
-                                толықтырып, инвестор аккаунтын ашыңыз.
+                                толықтырыңыз.
                             </p>
                         </div>
                     </div>
@@ -487,8 +491,9 @@ export default function Show({
                                 </div>
                             ) : (
                                 <p className="mt-3 text-sm text-amber-800">
-                                    Аккаунт ашылмаған. Компанияны өңдеп,
-                                    міндетті аккаунтты толтырыңыз.
+                                    Аккаунт ашылмаған. Қажет кезде компанияны
+                                    өңдеу арқылы инвестор аккаунтын қосуға
+                                    болады.
                                 </p>
                             )}
                         </div>
@@ -585,7 +590,7 @@ export default function Show({
                         </div>
                     ) : (
                         <div className="px-6 py-12 text-center text-sm text-gray-500">
-                            Бұл компанияға әзірге жоба тіркелмеген.
+                            Бұл компанияның сізге қолжетімді жобалары жоқ.
                         </div>
                     )}
                 </section>

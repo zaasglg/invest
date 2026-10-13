@@ -446,7 +446,6 @@ class InvestmentProjectController extends Controller
             'companies' => Company::query()
                 ->active()
                 ->profileComplete()
-                ->whereHas('investor')
                 ->orderBy('name')
                 ->get(),
         ]);
@@ -534,12 +533,11 @@ class InvestmentProjectController extends Controller
         $company = Company::query()
             ->active()
             ->profileComplete()
-            ->whereHas('investor')
             ->find($validated['company_id']);
 
         if (! $company) {
             throw ValidationException::withMessages([
-                'company_id' => 'Компания белсенді, толық және инвестор аккаунтымен бірге болуы керек.',
+                'company_id' => 'Компания белсенді және ақпараты толық болуы керек.',
             ]);
         }
 
@@ -958,14 +956,12 @@ class InvestmentProjectController extends Controller
         $restrictedSectorType = $user?->restrictedSectorType();
 
         $companies = Company::query()
-            ->withExists('investor')
             ->where(function ($query) use ($investmentProject) {
                 $query
                     ->where(function ($availableQuery) {
                         $availableQuery
                             ->active()
-                            ->profileComplete()
-                            ->whereHas('investor');
+                            ->profileComplete();
                     })
                     ->when(
                         $investmentProject->company_id,
@@ -981,7 +977,6 @@ class InvestmentProjectController extends Controller
                 'is_project_selectable',
                 $company->status === 'active'
                     && $company->is_profile_complete
-                    && (bool) $company->investor_exists
             );
         });
 
@@ -1304,10 +1299,9 @@ class InvestmentProjectController extends Controller
         if (! $company
             || (! $keepsCurrentCompany
                 && ($company->status !== 'active'
-                    || ! $company->is_profile_complete
-                    || ! $company->investor()->exists()))) {
+                    || ! $company->is_profile_complete))) {
             throw ValidationException::withMessages([
-                'company_id' => 'Тек белсенді, ақпараты толық және инвестор аккаунты бар компанияны таңдаңыз.',
+                'company_id' => 'Тек белсенді және ақпараты толық компанияны таңдаңыз.',
             ]);
         }
 
