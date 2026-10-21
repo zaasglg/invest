@@ -104,6 +104,59 @@ export function getEmptyProjectInfrastructure(): ProjectInfrastructureData {
     ) as ProjectInfrastructureData;
 }
 
+export function withDefaultProjectUsedCapacity(
+    infrastructure: ProjectInfrastructureData,
+): ProjectInfrastructureData {
+    const result = { ...infrastructure };
+
+    for (const { key } of PROJECT_INFRASTRUCTURE_FIELDS) {
+        const details = infrastructure[key];
+
+        if (
+            details.needed &&
+            details.used_capacity.trim() === '' &&
+            details.required_capacity.trim() !== ''
+        ) {
+            result[key] = {
+                ...details,
+                used_capacity: details.required_capacity,
+            };
+        }
+    }
+
+    return result;
+}
+
+export function getProjectInfrastructureErrors(
+    infrastructure: ProjectInfrastructureData,
+): Record<string, string> {
+    const errors: Record<string, string> = {};
+
+    for (const { key } of PROJECT_INFRASTRUCTURE_FIELDS) {
+        const details = infrastructure[key];
+        if (!details.needed) continue;
+
+        for (const field of ['required_capacity', 'used_capacity'] as const) {
+            const value = details[field].trim();
+            const label =
+                field === 'required_capacity' ? 'Қажетті' : 'Пайдаланудағы';
+
+            if (value === '') {
+                errors[`infrastructure.${key}.${field}`] =
+                    `${label} мәнді енгізіңіз`;
+            } else if (!Number.isFinite(Number(value)) || Number(value) < 0) {
+                errors[`infrastructure.${key}.${field}`] =
+                    'Нөл немесе одан үлкен сан енгізіңіз';
+            } else if (Number(value) > 2000000000) {
+                errors[`infrastructure.${key}.${field}`] =
+                    'Мән 2 000 000 000 санынан аспауы керек';
+            }
+        }
+    }
+
+    return errors;
+}
+
 function formatNumericValue(value: number): string {
     if (!Number.isFinite(value)) return '';
 

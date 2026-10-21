@@ -253,8 +253,7 @@ return [
         'company_bin' => 'Компанияның БИН',
         'company_activity_type' => 'Компанияның негізгі қызмет саласы',
         'company_investment_type' => 'Компанияның инвестиция түрі',
-        'director full name' => 'Директордың толық аты-жөні',
-        'director position' => 'Директордың лауазымы',
+        'director_full_name' => 'Директордың толық аты-жөні',
     ],
 
 ];

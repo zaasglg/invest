@@ -32,8 +32,10 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import {
+    getProjectInfrastructureErrors,
     normalizeProjectInfrastructure,
     PROJECT_INFRASTRUCTURE_FIELDS,
+    withDefaultProjectUsedCapacity,
 } from '@/lib/infrastructure';
 import type { ProductionPlanInput } from '@/lib/production';
 import { normalizeProductionPlans } from '@/lib/production';
@@ -185,7 +187,7 @@ export default function Edit({
     const queryParams = new URLSearchParams(url.split('?')[1]);
     const returnUrl = queryParams.get('return_to');
 
-    const { data, setData, put, processing, errors } = useForm({
+    const { data, setData, put, transform, processing, errors } = useForm({
         name: project.name || '',
         company_id: project.company_id?.toString() || '',
         description: project.description || '',
@@ -470,6 +472,12 @@ export default function Edit({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!validateStep2()) return;
+
+        transform((form) => ({
+            ...form,
+            infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
+        }));
         put(investmentProjects.update.url(project.id), {
             onError: handleServerErrors,
         });
@@ -500,10 +508,31 @@ export default function Edit({
         return Object.keys(errors).length === 0;
     };
 
+    const validateStep2 = (): boolean => {
+        const infrastructure = withDefaultProjectUsedCapacity(
+            data.infrastructure,
+        );
+        const errors = getProjectInfrastructureErrors(infrastructure);
+
+        setData('infrastructure', infrastructure);
+        setValidationErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            handleServerErrors(errors);
+            return false;
+        }
+
+        return true;
+    };
+
     const nextStep = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
         if (currentStep === 1 && !validateStep1()) {
+            return;
+        }
+
+        if (currentStep === 2 && !validateStep2()) {
             return;
         }
 
@@ -1342,6 +1371,10 @@ export default function Edit({
                                     </div>
 
                                     <ProjectInfrastructureForm
+                                        errors={{
+                                            ...errors,
+                                            ...validationErrors,
+                                        }}
                                         onChange={(infrastructure) =>
                                             setData(
                                                 'infrastructure',

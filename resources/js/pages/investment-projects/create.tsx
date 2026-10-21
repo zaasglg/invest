@@ -31,7 +31,9 @@ import { Textarea } from '@/components/ui/textarea';
 import AppLayout from '@/layouts/app-layout';
 import {
     getEmptyProjectInfrastructure,
+    getProjectInfrastructureErrors,
     PROJECT_INFRASTRUCTURE_FIELDS,
+    withDefaultProjectUsedCapacity,
 } from '@/lib/infrastructure';
 import type { ProductionPlanInput } from '@/lib/production';
 import { formatMoneyCompact } from '@/lib/utils';
@@ -160,7 +162,7 @@ export default function Create({
         return '';
     }, [userDistrict]);
 
-    const { data, setData, post, processing, errors } = useForm({
+    const { data, setData, post, transform, processing, errors } = useForm({
         name: '',
         company_id: '',
         description: '',
@@ -428,6 +430,12 @@ export default function Create({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!validateStep2()) return;
+
+        transform((form) => ({
+            ...form,
+            infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
+        }));
         post(investmentProjects.store.url(), {
             onError: handleServerErrors,
         });
@@ -461,10 +469,31 @@ export default function Create({
         return Object.keys(errors).length === 0;
     };
 
+    const validateStep2 = (): boolean => {
+        const infrastructure = withDefaultProjectUsedCapacity(
+            data.infrastructure,
+        );
+        const errors = getProjectInfrastructureErrors(infrastructure);
+
+        setData('infrastructure', infrastructure);
+        setValidationErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            handleServerErrors(errors);
+            return false;
+        }
+
+        return true;
+    };
+
     const nextStep = (e: React.MouseEvent<HTMLButtonElement>) => {
         e.preventDefault();
 
         if (currentStep === 1 && !validateStep1()) {
+            return;
+        }
+
+        if (currentStep === 2 && !validateStep2()) {
             return;
         }
 
@@ -1311,6 +1340,10 @@ export default function Create({
                                     </div>
 
                                     <ProjectInfrastructureForm
+                                        errors={{
+                                            ...errors,
+                                            ...validationErrors,
+                                        }}
                                         onChange={(infrastructure) =>
                                             setData(
                                                 'infrastructure',
