@@ -22,6 +22,7 @@ use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
 use App\Support\ProductionPlanValidationRules;
+use App\Support\ProjectInfrastructureInput;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -453,6 +454,14 @@ class InvestmentProjectController extends Controller
 
     public function store(Request $request)
     {
+        if ($request->has('infrastructure')) {
+            $request->merge([
+                'infrastructure' => ProjectInfrastructureInput::withDefaultUsedCapacity(
+                    $request->input('infrastructure')
+                ),
+            ]);
+        }
+
         $user = auth()->user();
         $roleName = $user?->roleModel?->name;
         $isSuperAdmin = $roleName === 'superadmin';
@@ -1193,6 +1202,14 @@ class InvestmentProjectController extends Controller
     public function update(Request $request, InvestmentProject $investmentProject)
     {
         $this->authorizeDistrictAccess($investmentProject);
+
+        if ($request->has('infrastructure')) {
+            $request->merge([
+                'infrastructure' => ProjectInfrastructureInput::withDefaultUsedCapacity(
+                    $request->input('infrastructure')
+                ),
+            ]);
+        }
 
         $user = auth()->user();
         $isDistrictScoped = $user && $user->isDistrictScoped();

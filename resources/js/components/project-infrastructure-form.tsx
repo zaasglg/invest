@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -31,9 +32,11 @@ const INFRASTRUCTURE_ICONS: Record<ProjectInfrastructureKey, LucideIcon> = {
 export default function ProjectInfrastructureForm({
     value,
     onChange,
+    errors = {},
 }: {
     value: ProjectInfrastructureData;
     onChange: (value: ProjectInfrastructureData) => void;
+    errors?: Partial<Record<string, string>>;
 }) {
     const updateNeeded = (key: ProjectInfrastructureKey, needed: boolean) => {
         onChange({
@@ -61,6 +64,11 @@ export default function ProjectInfrastructureForm({
 
     return (
         <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
+            <p className="p-4 text-xs text-gray-500">
+                «Пайдалануда» бос қалса, келесі қадамда «Қажетті» мәні автоматты
+                алынады.
+            </p>
+            <InputError message={errors.infrastructure} className="p-4" />
             {PROJECT_INFRASTRUCTURE_FIELDS.map((field) => {
                 const details = value[field.key];
                 const Icon = INFRASTRUCTURE_ICONS[field.key];
@@ -70,7 +78,7 @@ export default function ProjectInfrastructureForm({
                         key={field.key}
                         className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center"
                     >
-                        <div className="flex min-w-56 items-center gap-3">
+                        <div className="flex min-w-56 flex-wrap items-center gap-3">
                             <span className="flex size-8 items-center justify-center rounded-md bg-gray-50 text-gray-500">
                                 <Icon className="size-4" />
                             </span>
@@ -93,11 +101,27 @@ export default function ProjectInfrastructureForm({
                                     {field.label}
                                 </Label>
                             </div>
+                            <InputError
+                                className="w-full"
+                                message={errors[`infrastructure.${field.key}`]}
+                            />
+                            <InputError
+                                className="w-full"
+                                message={
+                                    errors[`infrastructure.${field.key}.needed`]
+                                }
+                            />
                         </div>
 
                         {details.needed && (
                             <div className="grid flex-1 gap-3 sm:grid-cols-2">
                                 <CapacityInput
+                                    id={`infra-${field.key}-required-capacity`}
+                                    error={
+                                        errors[
+                                            `infrastructure.${field.key}.required_capacity`
+                                        ]
+                                    }
                                     label="Қажетті"
                                     onChange={(capacity) =>
                                         updateCapacity(
@@ -110,6 +134,12 @@ export default function ProjectInfrastructureForm({
                                     value={details.required_capacity}
                                 />
                                 <CapacityInput
+                                    id={`infra-${field.key}-used-capacity`}
+                                    error={
+                                        errors[
+                                            `infrastructure.${field.key}.used_capacity`
+                                        ]
+                                    }
                                     label="Пайдалануда"
                                     onChange={(capacity) =>
                                         updateCapacity(
@@ -131,11 +161,15 @@ export default function ProjectInfrastructureForm({
 }
 
 function CapacityInput({
+    id,
+    error,
     label,
     unit,
     value,
     onChange,
 }: {
+    id: string;
+    error?: string;
     label: string;
     unit: string;
     value: string;
@@ -143,11 +177,17 @@ function CapacityInput({
 }) {
     return (
         <div>
-            <Label className="mb-1.5 block text-xs font-medium text-gray-500">
+            <Label
+                htmlFor={id}
+                className="mb-1.5 block text-xs font-medium text-gray-500"
+            >
                 {label}
             </Label>
             <div className="relative">
                 <Input
+                    id={id}
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? `${id}-error` : undefined}
                     aria-label={label}
                     className="h-9 border-gray-200 bg-transparent pr-20 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                     inputMode="decimal"
@@ -162,6 +202,7 @@ function CapacityInput({
                     {unit}
                 </span>
             </div>
+            <InputError id={`${id}-error`} message={error} className="mt-1" />
         </div>
     );
 }
