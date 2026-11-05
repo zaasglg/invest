@@ -35,6 +35,7 @@ class TaskNotificationController extends Controller
                 'completion.submitter',
                 'subsoilCompletion.task.subsoilUser',
                 'subsoilCompletion.submitter',
+                'attractionActivity.project',
             ])
             ->when(
                 $filter === 'unread',
@@ -73,6 +74,7 @@ class TaskNotificationController extends Controller
             'subsoilTask:id,subsoil_user_id',
             'subsoilCompletion:id,task_id',
             'subsoilCompletion.task:id,subsoil_user_id',
+            'attractionActivity:id,project_id',
         ]);
         $notification->update(['is_read' => true]);
 

@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import React, { useState } from 'react';
 import DetailSectionNav from '@/components/detail-section-nav';
+import ProjectInvestmentValue from '@/components/investment-projects/project-investment-value';
 import Map from '@/components/map';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -137,6 +138,7 @@ interface InvestmentProject {
     description?: string;
     status: string;
     total_investment: number | string | null;
+    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     start_date?: string;
     end_date?: string;
     geometry?: { lat: number; lng: number }[];
@@ -1724,13 +1726,14 @@ export default function Show({
                                                                                         )}
                                                                                     </TableCell>
                                                                                     <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                                        {project.total_investment
-                                                                                            ? formatCurrency(
-                                                                                                  Number(
-                                                                                                      project.total_investment,
-                                                                                                  ),
-                                                                                              )
-                                                                                            : '—'}
+                                                                                        <ProjectInvestmentValue
+                                                                                            value={
+                                                                                                project.total_investment
+                                                                                            }
+                                                                                            amountType={
+                                                                                                project.investment_amount_type
+                                                                                            }
+                                                                                        />
                                                                                     </TableCell>
                                                                                 </SortableProjectRow>
                                                                             ),
@@ -1899,13 +1902,14 @@ export default function Show({
                                                                             )}
                                                                         </TableCell>
                                                                         <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                            {project.total_investment
-                                                                                ? formatCurrency(
-                                                                                      Number(
-                                                                                          project.total_investment,
-                                                                                      ),
-                                                                                  )
-                                                                                : '—'}
+                                                                            <ProjectInvestmentValue
+                                                                                value={
+                                                                                    project.total_investment
+                                                                                }
+                                                                                amountType={
+                                                                                    project.investment_amount_type
+                                                                                }
+                                                                            />
                                                                         </TableCell>
                                                                     </SortableProjectRow>
                                                                 ),
@@ -2066,13 +2070,14 @@ export default function Show({
                                                                             )}
                                                                         </TableCell>
                                                                         <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                            {project.total_investment
-                                                                                ? formatCurrency(
-                                                                                      Number(
-                                                                                          project.total_investment,
-                                                                                      ),
-                                                                                  )
-                                                                                : '—'}
+                                                                            <ProjectInvestmentValue
+                                                                                value={
+                                                                                    project.total_investment
+                                                                                }
+                                                                                amountType={
+                                                                                    project.investment_amount_type
+                                                                                }
+                                                                            />
                                                                         </TableCell>
                                                                     </SortableProjectRow>
                                                                 ),
@@ -2233,13 +2238,14 @@ export default function Show({
                                                                             )}
                                                                         </TableCell>
                                                                         <TableCell className="py-3 text-right text-sm font-semibold text-[#0f1b3d]">
-                                                                            {project.total_investment
-                                                                                ? formatCurrency(
-                                                                                      Number(
-                                                                                          project.total_investment,
-                                                                                      ),
-                                                                                  )
-                                                                                : '—'}
+                                                                            <ProjectInvestmentValue
+                                                                                value={
+                                                                                    project.total_investment
+                                                                                }
+                                                                                amountType={
+                                                                                    project.investment_amount_type
+                                                                                }
+                                                                            />
                                                                         </TableCell>
                                                                     </SortableProjectRow>
                                                                 ),

@@ -49,7 +49,7 @@ function createAuthorizationTestProject(
         'name' => 'Authorization тест жобасы',
         'region_id' => $region->id,
         'total_investment' => 1000000,
-        'status' => 'plan',
+        'status' => 'implementation',
         'current_status' => 'Жоспарлау',
         'created_by' => $creator->id,
     ]);

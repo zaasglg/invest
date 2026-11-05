@@ -3,8 +3,10 @@
 namespace App\Http\Middleware;
 
 use App\Models\InvestmentProject;
+use App\Models\ProjectAttractionActivity;
 use App\Services\CompanyAccessService;
 use App\Services\InvestmentProjectAccessService;
+use App\Services\ProjectAttractionService;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -127,6 +129,24 @@ class CheckRoleAccess
         );
 
         $routeName = $request->route()?->getName();
+
+        if ($routeName
+            && str_starts_with($routeName, 'investment-projects.tasks.')
+            && ! $request->isMethodSafe()) {
+            $project = $this->routeInvestmentProject($request);
+            abort_if(
+                $project?->status === 'plan',
+                409,
+                'Жоспарланған жоба үшін жол картасы қолжетімсіз. Инвестор тарту іс-шараларын пайдаланыңыз.'
+            );
+        }
+
+        if ($routeName
+            && str_starts_with($routeName, 'investment-projects.attraction-activities.')) {
+            $this->authorizeAttractionActivityManagement($request, $user, $roleName);
+
+            return $next($request);
+        }
 
         if ($roleName === 'applicant') {
             abort(403, 'Өтінім берушіге бұл ішкі бөлім қолжетімсіз.');
@@ -308,6 +328,64 @@ class CheckRoleAccess
     protected function getRoleName($user): ?string
     {
         return $user->roleModel?->name;
+    }
+
+    private function routeInvestmentProject(Request $request): ?InvestmentProject
+    {
+        $project = $request->route('investmentProject')
+            ?? $request->route('investment_project');
+
+        return $project instanceof InvestmentProject
+            ? $project
+            : InvestmentProject::find((int) $project);
+    }
+
+    private function authorizeAttractionActivityManagement(
+        Request $request,
+        $user,
+        ?string $roleName
+    ): void {
+        $project = $this->routeInvestmentProject($request);
+        abort_unless(
+            $project
+                && ! $project->is_archived
+                && ! $project->is_deleted
+                && $this->projectAccess->canView($user, $project),
+            403,
+            'Бұл жобаның инвестор тарту іс-шараларын өзгертуге рұқсат жоқ.'
+        );
+        abort_unless(
+            $project->status === 'plan',
+            409,
+            'Инвестор тарту іс-шаралары тек жоспарланған жобаларға қолжетімді.'
+        );
+
+        $activity = $request->route('activity');
+        if ($activity instanceof ProjectAttractionActivity) {
+            abort_unless((int) $activity->project_id === (int) $project->id, 404);
+        }
+
+        $service = app(ProjectAttractionService::class);
+        $routeName = $request->route()?->getName();
+        if ($routeName === 'investment-projects.attraction-activities.report') {
+            abort_unless($activity instanceof ProjectAttractionActivity
+                && $service->canReport($user, $project, $activity), 403);
+
+            return;
+        }
+
+        if ($routeName === 'investment-projects.attraction-activities.review') {
+            abort_unless($activity instanceof ProjectAttractionActivity
+                && $service->canReview($user, $project, $activity), 403);
+
+            return;
+        }
+
+        abort_unless(
+            in_array($roleName, ['superadmin', 'invest', 'moderator'], true),
+            403,
+            'Сізде инвестор тарту іс-шараларын басқару құқығы жоқ.'
+        );
     }
 
     /**

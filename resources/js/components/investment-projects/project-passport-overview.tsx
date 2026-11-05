@@ -22,8 +22,17 @@ import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { attractionStageLabel } from '@/lib/project-attraction';
 
 export interface ProjectPassportSummary {
+    workflow?: 'attraction' | 'roadmap';
+    attraction?: {
+        total: number;
+        open: number;
+        completed: number;
+        pending_review: number;
+        overdue: number;
+    };
     health: {
         level: 'critical' | 'warning' | 'healthy';
         label: string;
@@ -79,6 +88,8 @@ interface ProjectPassportOverviewProps {
     canEdit: boolean;
     canDownload: boolean;
     canSeeOperationalDetails: boolean;
+    isPlanned?: boolean;
+    attractionStage?: string | null;
 }
 
 const healthStyles = {
@@ -130,11 +141,19 @@ export default function ProjectPassportOverview({
     canEdit,
     canDownload,
     canSeeOperationalDetails,
+    isPlanned = false,
+    attractionStage,
 }: ProjectPassportOverviewProps) {
     const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
         'idle',
     );
     const healthStyle = healthStyles[summary.health.level];
+    const attractionOverdue = isPlanned
+        ? Math.max(
+              summary.attraction?.overdue ?? 0,
+              summary.next_milestone?.is_overdue ? 1 : 0,
+          )
+        : 0;
 
     const copyProjectLink = async () => {
         try {
@@ -270,27 +289,46 @@ export default function ProjectPassportOverview({
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="mb-3 flex items-center justify-between">
                         <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                            Жол картасы
+                            {isPlanned
+                                ? 'Инвестор тарту кезеңі'
+                                : 'Жол картасы'}
                         </span>
                         <ListChecks className="h-4 w-4 text-blue-600" />
                     </div>
-                    <div className="flex items-end justify-between gap-2">
-                        <p className="text-2xl font-bold text-slate-900">
-                            {summary.progress_percent}%
+                    {isPlanned ? (
+                        <p className="text-sm leading-relaxed font-semibold text-slate-900">
+                            {attractionStageLabel(attractionStage)}
                         </p>
-                        <p className="text-xs text-slate-500">
-                            {summary.tasks.completed}/{summary.tasks.total}{' '}
-                            орындалды
-                        </p>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                            className="h-full rounded-full bg-blue-600 transition-all"
-                            style={{
-                                width: `${summary.progress_percent}%`,
-                            }}
-                        />
-                    </div>
+                    ) : (
+                        <>
+                            <div className="flex items-end justify-between gap-2">
+                                <p className="text-2xl font-bold text-slate-900">
+                                    {summary.progress_percent}%
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                    {summary.tasks.completed}/
+                                    {summary.tasks.total} орындалды
+                                </p>
+                            </div>
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                    className="h-full rounded-full bg-blue-600 transition-all"
+                                    style={{
+                                        width: `${summary.progress_percent}%`,
+                                    }}
+                                />
+                            </div>
+                        </>
+                    )}
+                    {isPlanned &&
+                        canSeeOperationalDetails &&
+                        summary.attraction && (
+                            <p className="mt-2 text-xs text-slate-500">
+                                Орындалды: {summary.attraction.completed} ·
+                                Ашық: {summary.attraction.open} · Қабылдауды
+                                күтуде: {summary.attraction.pending_review}
+                            </p>
+                        )}
                 </div>
 
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -338,19 +376,22 @@ export default function ProjectPassportOverview({
                     <div className="flex items-end justify-between gap-2">
                         <p className="text-2xl font-bold text-slate-900">
                             {canSeeOperationalDetails
-                                ? summary.issues.open
+                                ? summary.issues.open + attractionOverdue
                                 : '—'}
                         </p>
                         <p className="text-right text-xs text-slate-500">
                             {canSeeOperationalDetails
-                                ? `${summary.issues.critical} жоғары/сыни, ${summary.tasks.overdue} кешіккен іс`
+                                ? isPlanned
+                                    ? `${summary.issues.critical} жоғары/сыни мәселе, ${attractionOverdue} кешіккен іс-шара`
+                                    : `${summary.issues.critical} жоғары/сыни, ${summary.tasks.overdue} кешіккен іс`
                                 : 'Қолжетімділік шектелген'}
                         </p>
                     </div>
                     <div className="mt-3 flex items-center gap-1.5 text-xs">
                         {canSeeOperationalDetails &&
                         summary.issues.open === 0 &&
-                        summary.tasks.overdue === 0 ? (
+                        summary.tasks.overdue === 0 &&
+                        attractionOverdue === 0 ? (
                             <>
                                 <CheckCircle2 className="h-4 w-4 text-emerald-600" />
                                 <span className="text-emerald-700">
@@ -438,7 +479,9 @@ export default function ProjectPassportOverview({
                 <div className="rounded-xl border border-slate-200 bg-white p-4">
                     <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
                         <Flag className="h-4 w-4 text-[#a9842f]" />
-                        Келесі бақылау нүктесі
+                        {isPlanned
+                            ? 'Келесі іс-шара'
+                            : 'Келесі бақылау нүктесі'}
                     </div>
                     {summary.next_milestone ? (
                         <div className="mt-3">
@@ -459,7 +502,9 @@ export default function ProjectPassportOverview({
                         </div>
                     ) : (
                         <p className="mt-3 text-sm text-slate-500">
-                            Белсенді бақылау нүктесі белгіленбеген.
+                            {isPlanned
+                                ? 'Келесі іс-шара белгіленбеген.'
+                                : 'Белсенді бақылау нүктесі белгіленбеген.'}
                         </p>
                     )}
                 </div>

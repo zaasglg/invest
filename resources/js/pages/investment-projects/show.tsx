@@ -27,6 +27,9 @@ import {
 } from 'lucide-react';
 import React, { useState, useRef } from 'react';
 import DetailSectionNav from '@/components/detail-section-nav';
+import AttractionActivityCard from '@/components/investment-projects/attraction-activity-card';
+import type { AttractionActivity } from '@/components/investment-projects/attraction-activity-card';
+import AttractionStageDetailsCard from '@/components/investment-projects/attraction-stage-details-card';
 import ProductionMonitoringCard from '@/components/investment-projects/production-monitoring-card';
 import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
 import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
@@ -115,11 +118,20 @@ interface InvestmentProject {
     industrial_zones?: SectorEntity[];
     prom_zones?: SectorEntity[];
     subsoil_users?: SectorEntity[];
-    total_investment?: number;
+    total_investment?: number | null;
+    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     jobs_count?: number | null;
     production_not_applicable?: boolean;
     production_plans?: ProductionPlanInput[];
     status: 'plan' | 'implementation' | 'launched' | 'suspended';
+    attraction_stage?: string | null;
+    attraction_handover_to?: { id: number; full_name: string } | null;
+    attraction_handover_acceptor?: { full_name: string } | null;
+    attraction_handover_requested_at?: string | null;
+    attraction_handover_accepted_at?: string | null;
+    attraction_decline_reason?: string | null;
+    attraction_resume_on?: string | null;
+    attraction_activities?: AttractionActivity[];
     start_date?: string;
     end_date?: string;
     creator?: User;
@@ -230,6 +242,13 @@ interface Props {
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
     passportSummary?: ProjectPassportSummary | null;
+    canManageAttraction?: boolean;
+    canAcceptAttractionHandover?: boolean;
+    attractionResponsibleUsers?: {
+        id: number;
+        full_name: string;
+        position?: string | null;
+    }[];
 }
 
 function DescriptionTabs({
@@ -422,6 +441,9 @@ export default function Show({
     canReportProduction = false,
     isInvolved = true,
     passportSummary,
+    canManageAttraction = false,
+    canAcceptAttractionHandover = false,
+    attractionResponsibleUsers = [],
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
@@ -535,7 +557,7 @@ export default function Show({
     const [isSubmittingTask, setIsSubmittingTask] = useState(false);
     const [taskFilter, setTaskFilter] = useState('all');
 
-    const tasks = project.tasks || [];
+    const tasks = project.status === 'plan' ? [] : project.tasks || [];
 
     // Dot color based on deadline: green=done, red=overdue, amber=pending
     const isTaskOverdue = (task: ProjectTaskItem): boolean => {
@@ -1054,6 +1076,8 @@ export default function Show({
                         ),
                     }}
                     summary={effectivePassportSummary}
+                    isPlanned={project.status === 'plan'}
+                    attractionStage={project.attraction_stage}
                     canEdit={canEditProject}
                     canDownload={
                         canDownload &&
@@ -1077,10 +1101,20 @@ export default function Show({
                             icon: FileText,
                         },
                         {
-                            label: 'Жол картасы',
-                            href: '#project-roadmap',
+                            label:
+                                project.status === 'plan'
+                                    ? 'Инвестор тарту жұмыстары'
+                                    : 'Жол картасы',
+                            href:
+                                project.status === 'plan'
+                                    ? '#project-attraction'
+                                    : '#project-roadmap',
                             icon: Activity,
-                            count: tasks.length,
+                            count:
+                                project.status === 'plan'
+                                    ? (project.attraction_activities?.length ??
+                                      0)
+                                    : tasks.length,
                         },
                         {
                             label: 'Команда',
@@ -1091,6 +1125,19 @@ export default function Show({
                                 (project.investors?.length ?? 0) +
                                 (project.executors?.length ?? 0),
                         },
+                        ...(!isRestrictedView &&
+                        project.status !== 'plan' &&
+                        project.attraction_activities?.length
+                            ? [
+                                  {
+                                      label: 'Инвестор тарту тарихы',
+                                      href: '#project-attraction',
+                                      icon: ScrollText,
+                                      count: project.attraction_activities
+                                          .length,
+                                  },
+                              ]
+                            : []),
                     ]}
                 />
 
@@ -1181,12 +1228,20 @@ export default function Show({
                                                 Инвестиция сомасы
                                             </p>
                                             <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.total_investment
+                                                {project.investment_amount_type !==
+                                                    'unknown' &&
+                                                project.total_investment != null
                                                     ? formatCurrency(
                                                           project.total_investment,
                                                       )
-                                                    : 'Көрсетілмеген'}
+                                                    : 'Әзірге белгісіз'}
                                             </p>
+                                            {project.investment_amount_type ===
+                                                'estimated' && (
+                                                <p className="mt-1 text-xs text-[#a9842f]">
+                                                    Болжамды сома
+                                                </p>
+                                            )}
                                         </div>
                                         <div className="rounded-lg border border-gray-200 p-4">
                                             <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
@@ -1583,6 +1638,45 @@ export default function Show({
 
                         {/* Roadmap / Дорожная карта */}
                         {!isRestrictedView && (
+                            <AttractionStageDetailsCard
+                                projectId={project.id}
+                                stage={project.attraction_stage}
+                                handoverTo={project.attraction_handover_to}
+                                requestedAt={
+                                    project.attraction_handover_requested_at
+                                }
+                                acceptedAt={
+                                    project.attraction_handover_accepted_at
+                                }
+                                acceptedBy={
+                                    project.attraction_handover_acceptor
+                                }
+                                declineReason={
+                                    project.attraction_decline_reason
+                                }
+                                resumeOn={project.attraction_resume_on}
+                                canAccept={canAcceptAttractionHandover}
+                                historical={project.status !== 'plan'}
+                            />
+                        )}
+                        {!isRestrictedView &&
+                            (project.status === 'plan' ||
+                                Boolean(
+                                    project.attraction_activities?.length,
+                                )) && (
+                                <AttractionActivityCard
+                                    key={`${project.id}-${project.status}-${project.updated_at}`}
+                                    projectId={project.id}
+                                    stage={project.attraction_stage}
+                                    activities={
+                                        project.attraction_activities ?? []
+                                    }
+                                    canManage={canManageAttraction}
+                                    historical={project.status !== 'plan'}
+                                    users={attractionResponsibleUsers}
+                                />
+                            )}
+                        {!isRestrictedView && project.status !== 'plan' && (
                             <Card
                                 id="project-roadmap"
                                 className="scroll-mt-24 overflow-hidden py-0 shadow-none"

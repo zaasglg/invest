@@ -19,12 +19,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
+import type { PaginatedData } from '@/types/pagination';
 import {
     index as notificationsIndex,
     open as openNotification,
     readAll as readAllNotifications,
 } from '@/routes/notifications';
-import type { PaginatedData } from '@/types/pagination';
 
 type RelatedTask = {
     id: number;
@@ -57,6 +57,10 @@ type NotificationItem = {
     subsoil_task?: RelatedSubsoilTask;
     completion?: { task?: RelatedTask };
     subsoil_completion?: { task?: RelatedSubsoilTask };
+    attraction_activity?: {
+        id: number;
+        project?: { id: number; name: string };
+    };
 };
 
 type NotificationSummary = {
@@ -100,6 +104,11 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
     },
     task_assigned: {
         label: 'Жаңа тапсырма',
+        icon: ListChecks,
+        iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    attraction_assigned: {
+        label: 'Жаңа іс-шара',
         icon: ListChecks,
         iconClassName: 'bg-sky-100 text-sky-700',
     },
@@ -150,7 +159,9 @@ const FILTERS = [
 
 function contextLabel(notification: NotificationItem): string | null {
     const project =
-        notification.task?.project ?? notification.completion?.task?.project;
+        notification.task?.project ??
+        notification.completion?.task?.project ??
+        notification.attraction_activity?.project;
     if (project) return `Жоба: ${project.name}`;
 
     const subsoilUser =

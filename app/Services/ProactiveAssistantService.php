@@ -69,6 +69,7 @@ class ProactiveAssistantService
 
         $projectTasks = ProjectTask::query()
             ->with('project:id,name')
+            ->whereHas('project', fn ($project) => $project->where('status', '!=', 'plan'))
             ->where('assigned_to', $user->id)
             ->where('approval_status', 'approved')
             ->whereNotIn('status', ['done'])

@@ -13,16 +13,18 @@ Inertia v2 + React 19 (TypeScript) frontend. UI text is Kazakh/Russian (`lang/kk
   entity), shared components in `resources/js/components`, Radix-based
   primitives in `resources/js/components/ui`. Maps use Leaflet; 3D via
   react-three-fiber. React Compiler is enabled via Babel plugin.
-- **Generated code — do not hand-edit**: `resources/js/actions`,
-  `resources/js/routes`, and `resources/js/wayfinder` are produced by Laravel
-  Wayfinder (Vite plugin). Import routes/actions from these instead of
-  hardcoding URLs.
+- **Generated code — do not hand-edit**: `resources/js/generated/actions`,
+  `resources/js/generated/routes`, and `resources/js/generated/wayfinder` are
+  produced by Laravel Wayfinder (Vite plugin). Import through `@/actions`,
+  `@/routes`, and `@/wayfinder` instead of hardcoding URLs. The old generated
+  folders directly under `resources/js` are unused and ignored.
 
 ## Build, Test, and Development Commands
 - `composer setup` — full install (composer, .env, migrate, npm, build)
 - `composer dev` — serve + queue + logs (pail) + Vite, concurrently
 - `npm run build` / `npm run build:ssr` — production / SSR build
 - `npm run types` — TypeScript check (strict mode, `@/*` → `resources/js/*`)
+- `npm run routes:generate` — regenerate Wayfinder routes/actions in the configured output folder
 - `npm run lint` / `npm run format` — ESLint autofix / Prettier
 - `composer lint` / `composer test:lint` — Pint fix / check-only
 - `composer test` — clears config, runs Pint check + full Pest suite

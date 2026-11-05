@@ -31,6 +31,7 @@ interface Props {
     value: string;
     onValueChange: (value: string) => void;
     error?: string;
+    required?: boolean;
 }
 
 export default function CompanySelect({
@@ -38,6 +39,7 @@ export default function CompanySelect({
     value,
     onValueChange,
     error,
+    required = true,
 }: Props) {
     const { auth } = usePage<SharedData>().props;
     const roleKey = getRoleKey(auth.user);
@@ -72,7 +74,14 @@ export default function CompanySelect({
                     htmlFor="company_id"
                     className="text-xs font-medium tracking-wide text-gray-500 uppercase"
                 >
-                    Компания <span className="text-red-500">*</span>
+                    Компания{' '}
+                    {required ? (
+                        <span className="text-red-500">*</span>
+                    ) : (
+                        <span className="font-normal text-gray-400 normal-case">
+                            (міндетті емес)
+                        </span>
+                    )}
                 </Label>
                 {canCreateCompany && (
                     <Link
@@ -97,14 +106,30 @@ export default function CompanySelect({
                 </div>
             )}
 
-            <Select value={value} onValueChange={onValueChange}>
+            <Select
+                value={value}
+                onValueChange={(selected) =>
+                    onValueChange(selected === '__unknown__' ? '' : selected)
+                }
+            >
                 <SelectTrigger
                     id="company_id"
                     className={error ? 'border-red-500' : ''}
                 >
-                    <SelectValue placeholder="Компанияны таңдаңыз" />
+                    <SelectValue
+                        placeholder={
+                            required
+                                ? 'Компанияны таңдаңыз'
+                                : 'Компания белгілі болса, таңдаңыз'
+                        }
+                    />
                 </SelectTrigger>
                 <SelectContent>
+                    {!required && (
+                        <SelectItem value="__unknown__">
+                            Әзірге белгісіз
+                        </SelectItem>
+                    )}
                     {filteredCompanies.map((company) => (
                         <SelectItem
                             key={company.id}

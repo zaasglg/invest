@@ -47,7 +47,9 @@ class OblastAkimAnalyticsService
                 'projectTypes:id,name',
                 'executor:id,full_name,position',
                 'curators:id,full_name,position',
-                'tasks:id,project_id,assigned_to,status,due_date,approval_status,updated_at',
+                'tasks' => fn ($tasks) => $tasks
+                    ->select('id', 'project_id', 'assigned_to', 'status', 'due_date', 'approval_status', 'updated_at')
+                    ->whereHas('project', fn ($project) => $project->where('status', '!=', 'plan')),
                 'tasks.completions:id,task_id,status,reviewed_at,created_at',
                 'issues:id,project_id,title,status,severity,created_at,updated_at',
                 'productionPlans.facts',

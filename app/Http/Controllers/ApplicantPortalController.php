@@ -157,6 +157,7 @@ class ApplicantPortalController extends Controller
                 'name' => $project->name,
                 'company_name' => (string) ($project->company_name ?? ''),
                 'total_investment' => $project->total_investment,
+                'investment_amount_type' => $project->investment_amount_type,
                 'status' => $project->status,
                 'geometry' => $project->geometry,
                 'region' => $project->region?->only(['id', 'name']),

@@ -67,7 +67,8 @@ interface CompanyDocument {
 interface Project {
     id: number;
     name: string;
-    total_investment: number | string;
+    total_investment: number | string | null;
+    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     status: string;
     region?: { id: number; name: string } | null;
     project_type?: { id: number; name: string } | null;
@@ -575,11 +576,23 @@ export default function Show({
                                         </p>
                                     </div>
                                     <p className="text-sm font-medium">
-                                        {formatMoneyCompact(
-                                            Number(
-                                                project.total_investment || 0,
-                                            ),
-                                        )}
+                                        {project.investment_amount_type ===
+                                            'unknown' ||
+                                        project.total_investment === null
+                                            ? 'Әзірге белгісіз'
+                                            : formatMoneyCompact(
+                                                  Number(
+                                                      project.total_investment,
+                                                  ),
+                                              )}
+                                        {project.investment_amount_type ===
+                                            'estimated' &&
+                                            project.total_investment !==
+                                                null && (
+                                                <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                                                    Болжамды сома
+                                                </span>
+                                            )}
                                     </p>
                                     <p className="text-sm text-gray-500">
                                         {projectStatuses[project.status] ||

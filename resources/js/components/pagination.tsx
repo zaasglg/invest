@@ -8,12 +8,14 @@ interface PaginationProps<T> {
     paginator: PaginatedData<T>;
     preserveState?: boolean;
     preserveScroll?: boolean;
+    locale?: 'kk' | 'ru';
 }
 
 export default function Pagination<T>({
     paginator,
     preserveState = true,
     preserveScroll = false,
+    locale = 'ru',
 }: PaginationProps<T>) {
     if (paginator.last_page <= 1) {
         return null;
@@ -30,11 +32,12 @@ export default function Pagination<T>({
     return (
         <div className="flex flex-col items-center justify-between gap-4 rounded-xl border border-gray-100 bg-white px-5 py-3.5 shadow-sm sm:flex-row">
             <p className="text-sm font-medium text-gray-500">
-                Показано{' '}
+                {locale === 'kk' ? 'Көрсетілгені' : 'Показано'}{' '}
                 <span className="text-[#0f1b3d]">
                     {paginator.from ?? 0}–{paginator.to ?? 0}
                 </span>{' '}
-                из <span className="text-[#0f1b3d]">{paginator.total}</span>
+                {locale === 'kk' ? '/ барлығы' : 'из'}{' '}
+                <span className="text-[#0f1b3d]">{paginator.total}</span>
             </p>
 
             <div className="flex items-center gap-1">

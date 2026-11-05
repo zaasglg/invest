@@ -41,7 +41,12 @@ class TaskNotificationObserver implements ShouldHandleEventsAfterCommit
                 'subsoilTask:id,subsoil_user_id',
                 'subsoilCompletion:id,task_id',
                 'subsoilCompletion.task:id,subsoil_user_id',
+                'attractionActivity:id,project_id',
             ]);
+
+            $message = $notification->type === 'attraction_assigned'
+                ? htmlspecialchars($notification->message, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
+                : $notification->message;
 
             // Resolve the destination from the task that actually owns this
             // notification. Completion relations cover older notifications
@@ -52,20 +57,20 @@ class TaskNotificationObserver implements ShouldHandleEventsAfterCommit
             if ($notification->action_url) {
                 $formattedMessage = $telegram->formatNotificationForTarget(
                     $notification->type,
-                    $notification->message,
+                    $message,
                     url($notification->destination_url)
                 );
             } elseif ($subsoilUserId) {
                 $targetUrl = route('subsoil-users.show', $subsoilUserId);
                 $formattedMessage = $telegram->formatNotificationForTarget(
                     $notification->type,
-                    $notification->message,
+                    $message,
                     $targetUrl
                 );
             } else {
                 $formattedMessage = $telegram->formatNotification(
                     $notification->type,
-                    $notification->message,
+                    $message,
                     $projectId,
                 );
             }

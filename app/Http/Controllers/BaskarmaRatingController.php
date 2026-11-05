@@ -131,7 +131,7 @@ class BaskarmaRatingController extends Controller
 
         $tasks = ProjectTask::where('assigned_to', $user->id)
             ->where('approval_status', 'approved')
-            ->whereHas('project', fn ($project) => $project->active())
+            ->whereHas('project', fn ($project) => $project->active()->where('status', '!=', 'plan'))
             ->with(['project:id,name,region_id', 'project.region:id,name', 'latestCompletion'])
             ->get();
         $visibleProjectIds = array_fill_keys(

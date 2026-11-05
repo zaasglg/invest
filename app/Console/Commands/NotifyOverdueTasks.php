@@ -15,6 +15,7 @@ class NotifyOverdueTasks extends Command
     public function handle(): int
     {
         $overdueTasks = ProjectTask::with(['project', 'assignee'])
+            ->whereHas('project', fn ($project) => $project->where('status', '!=', 'plan'))
             ->whereNotNull('due_date')
             ->where('due_date', '<', now()->startOfDay())
             ->whereNotIn('status', ['done'])

@@ -16,12 +16,30 @@ class ProjectPassportSummaryService
         InvestmentProject $project,
         bool $includeOperationalDetails = true
     ): array {
-        $tasks = $includeOperationalDetails
+        $isPlanned = $project->status === 'plan';
+        $tasks = $includeOperationalDetails && ! $isPlanned
             ? $project->tasks
             : collect();
         $issues = $includeOperationalDetails
             ? $project->issues
             : collect();
+        $attractionActivities = $includeOperationalDetails && $isPlanned
+            ? $project->attractionActivities
+            : collect();
+        $openAttractionActivities = $attractionActivities
+            ->filter(fn ($activity) => in_array(
+                $activity->status ?? 'planned',
+                ['planned', 'in_progress', 'pending_review'],
+                true
+            ));
+        $nextAttractionActivity = $openAttractionActivities
+            ->filter(fn ($activity) => filled($activity->next_action))
+            ->sortBy(fn ($activity) => $activity->next_action_due_date?->getTimestamp()
+                ?? PHP_INT_MAX)
+            ->first();
+        $attractionOverdue = $openAttractionActivities
+            ->filter(fn ($activity) => $activity->next_action_due_date?->lt(today()))
+            ->count();
 
         $taskTotal = $tasks->count();
         $taskCompleted = $tasks->where('status', 'done')->count();
@@ -44,7 +62,7 @@ class ProjectPassportSummaryService
             : 0;
         $timeline = $this->timeline($project);
         $completeness = $this->completeness($project);
-        $nextMilestone = $tasks
+        $nextTask = $tasks
             ->filter(fn ($task) => $task->status !== 'done'
                 && in_array(
                     $task->approval_status,
@@ -54,6 +72,37 @@ class ProjectPassportSummaryService
             ->sortBy(fn ($task) => $task->due_date?->getTimestamp()
                 ?? PHP_INT_MAX)
             ->first();
+        $nextMilestone = $isPlanned
+            ? ($nextAttractionActivity
+                ? [
+                    'id' => $nextAttractionActivity->id,
+                    'title' => $nextAttractionActivity->next_action,
+                    'due_date' => $nextAttractionActivity->next_action_due_date?->toDateString(),
+                    'is_overdue' => $nextAttractionActivity->next_action_due_date?->lt(today())
+                        ?? false,
+                ]
+                : null)
+            : ($nextTask
+                ? [
+                    'id' => $nextTask->id,
+                    'title' => $nextTask->title,
+                    'due_date' => $nextTask->due_date?->toDateString(),
+                    'is_overdue' => $nextTask->due_date?->lt(today()) ?? false,
+                ]
+                : null);
+
+        if ($isPlanned && $includeOperationalDetails
+            && $project->attraction_stage === 'paused'
+            && $project->attraction_resume_on !== null
+            && ($nextMilestone === null || $nextMilestone['due_date'] === null
+                || $project->attraction_resume_on->toDateString() < $nextMilestone['due_date'])) {
+            $nextMilestone = [
+                'id' => $project->id,
+                'title' => 'Инвестормен қайта байланысу',
+                'due_date' => $project->attraction_resume_on->toDateString(),
+                'is_overdue' => $project->attraction_resume_on->lt(today()),
+            ];
+        }
 
         $health = $this->health(
             $project,
@@ -63,10 +112,12 @@ class ProjectPassportSummaryService
             $openIssues->count(),
             $criticalIssues,
             $completeness['percent'],
-            $includeOperationalDetails
+            $includeOperationalDetails,
+            $isPlanned && ($attractionOverdue > 0 || ($nextMilestone['is_overdue'] ?? false))
         );
 
         return [
+            'workflow' => $isPlanned ? 'attraction' : 'roadmap',
             'health' => $health,
             'progress_percent' => $taskProgress,
             'timeline' => $timeline,
@@ -78,6 +129,13 @@ class ProjectPassportSummaryService
                     ->count(),
                 'overdue' => $taskOverdue,
                 'pending_approval' => $taskPendingApproval,
+            ],
+            'attraction' => [
+                'total' => $attractionActivities->count(),
+                'open' => $openAttractionActivities->count(),
+                'completed' => $attractionActivities->where('status', 'completed')->count(),
+                'pending_review' => $attractionActivities->where('status', 'pending_review')->count(),
+                'overdue' => $attractionOverdue,
             ],
             'issues' => [
                 'total' => $issues->count(),
@@ -92,19 +150,12 @@ class ProjectPassportSummaryService
                 : 0,
             'photos_count' => (int) ($project->photos_count ?? 0),
             'completeness' => $completeness,
-            'next_milestone' => $nextMilestone
-                ? [
-                    'id' => $nextMilestone->id,
-                    'title' => $nextMilestone->title,
-                    'due_date' => $nextMilestone->due_date?->toDateString(),
-                    'is_overdue' => $nextMilestone->due_date?->lt(today())
-                        ?? false,
-                ]
-                : null,
+            'next_milestone' => $nextMilestone,
             'last_updated_at' => $this->lastUpdatedAt(
                 $project,
                 $tasks,
-                $issues
+                $issues,
+                $attractionActivities
             )?->toISOString(),
         ];
     }
@@ -157,34 +208,53 @@ class ProjectPassportSummaryService
      */
     private function completeness(InvestmentProject $project): array
     {
-        $checks = [
-            'Жоба атауы' => filled($project->name),
-            'Бастамашы компания' => $project->company_id !== null
-                || filled($project->company_name),
-            'Аймақ' => $project->region !== null,
-            'Жоба түрі' => ($project->relationLoaded('projectTypes')
-                && $project->projectTypes->isNotEmpty())
-                || $project->projectType !== null,
-            'Жоба сипаттамасы' => filled($project->description),
-            'Ағымдағы жағдай' => filled($project->current_status),
-            'Инвестиция сомасы' => (float) $project->total_investment > 0,
-            'Жұмыс орындары' => $project->jobs_count !== null,
-            'Жоспарлы өндіріс' => $project->production_not_applicable
-                || ($project->relationLoaded('productionPlans')
-                    ? $project->productionPlans->contains(
-                        fn ($plan) => $plan->is_complete
-                    )
-                    : $project->productionPlans()
-                        ->whereNotNull('planned_quantity')
-                        ->whereNotNull('planned_amount')
-                        ->exists()),
-            'Басталу мерзімі' => $project->start_date !== null,
-            'Аяқталу мерзімі' => $project->end_date !== null,
-            'Жауапты тұлға' => $project->curators->isNotEmpty()
-                || $project->creator !== null,
-            'Құжаттар' => $project->documents->isNotEmpty(),
-            'Фотогалерея' => (int) ($project->photos_count ?? 0) > 0,
-        ];
+        if ($project->status === 'plan') {
+            $checks = [
+                'Жоба атауы' => filled($project->name),
+                'Аймақ' => $project->region !== null,
+                'Инвестор тарту кезеңі' => filled($project->attraction_stage),
+                'Жауапты тұлға' => $project->curators->isNotEmpty()
+                    || $project->creator !== null,
+            ];
+
+            if ($project->attraction_stage === 'handover') {
+                $checks['Сүйемелдеуді қабылдайтын жауапты'] = $project->attraction_handover_to_id !== null;
+                $checks['Сүйемелдеуге берілген күні'] = $project->attraction_handover_requested_at !== null;
+            } elseif ($project->attraction_stage === 'declined') {
+                $checks['Инвестордың бас тарту себебі'] = filled($project->attraction_decline_reason);
+            } elseif ($project->attraction_stage === 'paused') {
+                $checks['Инвестормен қайта байланысу күні'] = $project->attraction_resume_on !== null;
+            }
+        } else {
+            $checks = [
+                'Жоба атауы' => filled($project->name),
+                'Бастамашы компания' => $project->company_id !== null
+                    || filled($project->company_name),
+                'Аймақ' => $project->region !== null,
+                'Жоба түрі' => ($project->relationLoaded('projectTypes')
+                    && $project->projectTypes->isNotEmpty())
+                    || $project->projectType !== null,
+                'Жоба сипаттамасы' => filled($project->description),
+                'Ағымдағы жағдай' => filled($project->current_status),
+                'Инвестиция сомасы' => (float) $project->total_investment > 0,
+                'Жұмыс орындары' => $project->jobs_count !== null,
+                'Жоспарлы өндіріс' => $project->production_not_applicable
+                    || ($project->relationLoaded('productionPlans')
+                        ? $project->productionPlans->contains(
+                            fn ($plan) => $plan->is_complete
+                        )
+                        : $project->productionPlans()
+                            ->whereNotNull('planned_quantity')
+                            ->whereNotNull('planned_amount')
+                            ->exists()),
+                'Басталу мерзімі' => $project->start_date !== null,
+                'Аяқталу мерзімі' => $project->end_date !== null,
+                'Жауапты тұлға' => $project->curators->isNotEmpty()
+                    || $project->creator !== null,
+                'Құжаттар' => $project->documents->isNotEmpty(),
+                'Фотогалерея' => (int) ($project->photos_count ?? 0) > 0,
+            ];
+        }
         $missing = collect($checks)
             ->filter(fn (bool $complete) => ! $complete)
             ->keys()
@@ -212,7 +282,8 @@ class ProjectPassportSummaryService
         int $openIssues,
         int $criticalIssues,
         int $completeness,
-        bool $includeOperationalDetails
+        bool $includeOperationalDetails,
+        bool $attractionOverdue = false
     ): array {
         $criticalReasons = [];
         $warningReasons = [];
@@ -231,6 +302,10 @@ class ProjectPassportSummaryService
 
         if ($includeOperationalDetails && $taskOverdue > 0) {
             $warningReasons[] = "{$taskOverdue} тапсырманың мерзімі өткен";
+        }
+
+        if ($includeOperationalDetails && $attractionOverdue) {
+            $warningReasons[] = 'Инвестор тарту бойынша келесі іс-шараның мерзімі өткен';
         }
 
         if ($includeOperationalDetails
@@ -275,10 +350,12 @@ class ProjectPassportSummaryService
     private function lastUpdatedAt(
         InvestmentProject $project,
         Collection $tasks,
-        Collection $issues
+        Collection $issues,
+        Collection $attractionActivities
     ): ?CarbonInterface {
         return collect([
             $project->updated_at,
+            ...$attractionActivities->pluck('updated_at')->all(),
             ...$project->documents->pluck('updated_at')->all(),
             ...$tasks->pluck('updated_at')->all(),
             ...$issues->pluck('updated_at')->all(),

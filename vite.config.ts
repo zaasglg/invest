@@ -1,3 +1,4 @@
+import { fileURLToPath } from 'node:url';
 import { wayfinder } from '@laravel/vite-plugin-wayfinder';
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -19,11 +20,46 @@ export default defineConfig({
         tailwindcss(),
         wayfinder({
             formVariants: true,
+            path: 'resources/js/generated',
         }),
     ],
+
+    resolve: {
+        alias: [
+            {
+                find: /^@\/routes(?=\/|$)/,
+                replacement: fileURLToPath(
+                    new URL('./resources/js/generated/routes', import.meta.url),
+                ),
+            },
+            {
+                find: /^@\/actions(?=\/|$)/,
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/generated/actions',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: /^@\/wayfinder(?=\/|$)/,
+                replacement: fileURLToPath(
+                    new URL(
+                        './resources/js/generated/wayfinder',
+                        import.meta.url,
+                    ),
+                ),
+            },
+            {
+                find: '@',
+                replacement: fileURLToPath(
+                    new URL('./resources/js', import.meta.url),
+                ),
+            },
+        ],
+    },
 
     esbuild: {
         jsx: 'automatic',
     },
-
 });

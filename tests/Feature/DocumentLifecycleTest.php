@@ -113,6 +113,7 @@ test('approved task document keeps its complete audit trail', function () {
     $executor = createDocumentLifecycleUser('ispolnitel');
     $region = createDocumentLifecycleRegion();
     $project = createDocumentLifecycleProject($admin, $region);
+    $project->update(['status' => 'implementation']);
     $task = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Лицензияны өткізу',

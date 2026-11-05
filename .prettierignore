@@ -1,2 +1,6 @@
 resources/js/components/ui/*
+resources/js/actions/**
+resources/js/routes/**
+resources/js/wayfinder/**
+resources/js/generated/**
 resources/views/mail/*

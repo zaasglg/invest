@@ -334,12 +334,14 @@ test('only turkistan invest tasks require moderator approval', function () {
         $dependencies,
         'Task scope жобасы'
     );
+    $visibleProject->update(['status' => 'implementation']);
     $visibleProject->curators()->attach($turkistanInvest);
     $foreignProject = createModeratorScopeProject(
         $otherInvest,
         $dependencies,
         'Task жабық жобасы'
     );
+    $foreignProject->update(['status' => 'implementation']);
     $turkistanTaskPayload = [
         'title' => 'Расталатын тапсырма',
         'assigned_to' => $executor->id,
@@ -450,11 +452,13 @@ test('rating stays global while project links follow viewer access', function ()
         $dependencies,
         'Turkistan Invest rating project'
     );
+    $turkistanProject->update(['status' => 'implementation']);
     $aeaProject = createModeratorScopeProject(
         $aeaInvest,
         $dependencies,
         'AEA rating project'
     );
+    $aeaProject->update(['status' => 'implementation']);
 
     $turkistanTask = ProjectTask::create([
         'project_id' => $turkistanProject->id,

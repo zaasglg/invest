@@ -60,6 +60,8 @@ class InvestmentProjectResource extends JsonResource
             'subsoil_users' => $this->namedRelation('subsoilUsers'),
             'jobs_count' => $this->jobs_count,
             'total_investment' => $this->total_investment,
+            'investment_amount_type' => $this->investment_amount_type,
+            'attraction_stage' => $this->status === 'plan' ? $this->attraction_stage : null,
             'status' => $this->status,
             'start_date' => $this->start_date?->toDateString(),
             'end_date' => $this->end_date?->toDateString(),

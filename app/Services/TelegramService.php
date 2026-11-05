@@ -89,7 +89,7 @@ class TelegramService
         string $targetUrl
     ): string {
         $emoji = match ($type) {
-            'task_assigned' => '📋',
+            'task_assigned', 'attraction_assigned' => '📋',
             'task_overdue', 'task_due_soon', 'subsoil_task_due_soon' => '⏰',
             'assistant_suggestion' => '✨',
             'completion_submitted' => '📩',

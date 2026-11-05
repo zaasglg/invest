@@ -108,12 +108,26 @@
         // "skipDefaultLibCheck": true,                      /* Skip type checking .d.ts files that are included with TypeScript. */
         "skipLibCheck": true /* Skip type checking all .d.ts files. */,
         "paths": {
-            "@/*": ["./resources/js/*"]
+            "@/*": ["./resources/js/*"],
+            "@/routes": ["./resources/js/generated/routes/index.ts"],
+            "@/routes/*": ["./resources/js/generated/routes/*"],
+            "@/actions/*": ["./resources/js/generated/actions/*"],
+            "@/wayfinder": ["./resources/js/generated/wayfinder/index.ts"],
+            "@/wayfinder/*": ["./resources/js/generated/wayfinder/*"]
         },
         "jsx": "react-jsx"
     },
-    "include": ["resources/js/**/*.ts", "resources/js/**/*.d.ts", "resources/js/**/*.tsx"],
+    "include": [
+        "resources/js/**/*.ts",
+        "resources/js/**/*.d.ts",
+        "resources/js/**/*.tsx"
+    ],
     // Standalone Next.js/Cloudflare source of the landing page — ported into
     // resources/js/components/inmap-landing, not built by this app.
-    "exclude": ["resources/js/inmap-web-new"]
+    "exclude": [
+        "resources/js/inmap-web-new",
+        "resources/js/actions",
+        "resources/js/routes",
+        "resources/js/wayfinder"
+    ]
 }

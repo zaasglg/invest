@@ -60,6 +60,7 @@ interface InvestmentProject {
     status?: string;
     geometry?: { lat: number; lng: number }[];
     total_investment?: number | string | null;
+    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     start_date?: string;
     end_date?: string;
     project_type?: { id: number; name: string };
@@ -219,6 +220,7 @@ interface Plot {
     companyName?: string;
     description?: string;
     totalInvestment?: number | string | null;
+    investmentAmountType?: 'exact' | 'estimated' | 'unknown';
     startDate?: string;
     endDate?: string;
     projectTypeName?: string;
@@ -907,6 +909,7 @@ export default function Map({
                     companyName: project.company_name,
                     description: project.description,
                     totalInvestment: project.total_investment ?? null,
+                    investmentAmountType: project.investment_amount_type,
                     startDate: project.start_date,
                     endDate: project.end_date,
                     projectTypeName: formatProjectTypeNames(project, ''),
@@ -1833,21 +1836,30 @@ export default function Map({
                             )}
 
                             {/* Инвестициялар */}
-                            {activePlot.totalInvestment !== undefined &&
-                                activePlot.totalInvestment !== null && (
-                                    <div className="flex items-center justify-between px-5 py-3">
-                                        <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
-                                            Инвестициялар
-                                        </p>
-                                        <p className="text-sm font-bold text-[#c8a44e]">
-                                            {formatInvestment(
-                                                Number(
-                                                    activePlot.totalInvestment,
-                                                ),
-                                            )}
-                                        </p>
-                                    </div>
-                                )}
+                            <div className="flex items-center justify-between gap-3 px-5 py-3">
+                                <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
+                                    Инвестициялар
+                                </p>
+                                <p className="text-right text-sm font-bold text-[#c8a44e]">
+                                    {activePlot.investmentAmountType ===
+                                        'unknown' ||
+                                    activePlot.totalInvestment === null ||
+                                    activePlot.totalInvestment === undefined
+                                        ? 'Әзірге белгісіз'
+                                        : formatInvestment(
+                                              Number(
+                                                  activePlot.totalInvestment,
+                                              ),
+                                          )}
+                                    {activePlot.investmentAmountType ===
+                                        'estimated' &&
+                                        activePlot.totalInvestment !== null && (
+                                            <span className="mt-0.5 block text-xs font-normal text-slate-500">
+                                                Болжамды сома
+                                            </span>
+                                        )}
+                                </p>
+                            </div>
 
                             {/* Жоба түрі */}
                             {activePlot.projectTypeName && (
