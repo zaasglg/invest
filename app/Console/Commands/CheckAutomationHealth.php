@@ -110,6 +110,8 @@ class CheckAutomationHealth extends Command
         $expected = [
             'assistant:notify' => 'әр сағат сайын',
             'photos:check-weekly' => 'дүйсенбі 09:00',
+            'attraction:notify-deadlines' => 'күн сайын 09:00',
+            'notifications:retry-telegram' => 'әр минут сайын',
         ];
         $rows = [];
         $allRegistered = true;

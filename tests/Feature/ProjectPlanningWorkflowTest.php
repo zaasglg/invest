@@ -204,6 +204,15 @@ test('planned edits and later status changes preserve optional operational data'
 
     $this->actingAs($manager)->put(route('investment-projects.update', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
+    $receiver = planningFlowUser();
+    $this->put(route('investment-projects.update', $project), [
+        ...$payload,
+        'attraction_stage' => 'handover',
+        'attraction_handover_to_id' => $receiver->id,
+    ])->assertSessionHasNoErrors()->assertRedirect();
+    $this->actingAs($receiver)->post(route('investment-projects.attraction-handover.accept', $project))
+        ->assertRedirect();
+    $this->actingAs($manager);
     $this->put(route('investment-projects.update', $project), [
         ...$payload,
         'status' => 'implementation',

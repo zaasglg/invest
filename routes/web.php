@@ -223,6 +223,7 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
     Route::put('attraction-activities/{activity}', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'update'])->name('investment-projects.attraction-activities.update');
     Route::delete('attraction-activities/{activity}', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'destroy'])->name('investment-projects.attraction-activities.destroy');
     Route::post('attraction-activities/{activity}/report', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'report'])->name('investment-projects.attraction-activities.report');
+    Route::post('attraction-activities/{activity}/view', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'markViewed'])->name('investment-projects.attraction-activities.view');
     Route::put('attraction-activities/{activity}/review', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'review'])->name('investment-projects.attraction-activities.review');
     Route::put('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'update'])->name('investment-projects.tasks.update');
     Route::delete('tasks/{task}', [\App\Http\Controllers\ProjectTaskController::class, 'destroy'])->name('investment-projects.tasks.destroy');

@@ -27,23 +27,26 @@ class CompanyController extends Controller
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
 
-        $companies = Company::query()
+        $client = $request->attributes->get('api_client');
+        $companies = $client->scopeCompanies(Company::query())
             ->with([
                 'region:id,name',
                 'investor:id,company_id,full_name,phone',
             ])
-            ->withCount('projects')
+            ->withCount(['projects' => fn ($query) => $client->scopeProjects($query)])
             ->when(
                 $validated['search'] ?? null,
                 fn ($query, $search) => $query->where(
-                    function ($searchQuery) use ($search): void {
+                    function ($searchQuery) use ($search, $client): void {
                         $searchQuery
                             ->whereLike('name', '%'.$search.'%')
-                            ->orWhere('bin', 'like', '%'.$search.'%')
-                            ->orWhereLike(
+                            ->orWhere('bin', 'like', '%'.$search.'%');
+                        if ($client->include_contacts) {
+                            $searchQuery->orWhereLike(
                                 'director_full_name',
                                 '%'.$search.'%'
                             );
+                        }
                     }
                 )
             )

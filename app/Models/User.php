@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Notifications\ResetPasswordNotification;
 use App\Notifications\VerifyEmailNotification;
+use App\Services\InvestmentProjectAccessService;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -177,7 +178,7 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Determine if the user is scoped to their district.
-     * This applies to 'invest' role only.
+     * Invest accounts with a region and district leadership are scoped.
      * All ispolnitel types can see everything.
      */
     public function isDistrictScoped(): bool
@@ -193,8 +194,8 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
-        // Akim assigned to a specific district/city is scoped to that region
-        if ($roleName === 'akim') {
+        // District/city leadership is scoped to the assigned region.
+        if (in_array($roleName, ['akim', 'zamakim'], true)) {
             $this->loadMissing('region');
 
             return $this->region && $this->region->type !== 'oblast';
@@ -205,12 +206,12 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * Determine if the user is an akim scoped to an entire oblast
+     * Determine if the user is oblast leadership (akim or zamakim)
      * (sees all projects of that oblast and its districts).
      */
     public function isOblastScopedAkim(): bool
     {
-        if ($this->roleModel?->name !== 'akim') {
+        if (! in_array($this->roleModel?->name, ['akim', 'zamakim'], true)) {
             return false;
         }
 
@@ -258,6 +259,11 @@ class User extends Authenticatable implements MustVerifyEmail
             return true;
         }
 
+        if ($project->attractionActivities()->where('responsible_id', $this->id)
+            ->whereIn('status', ['planned', 'in_progress', 'pending_review'])->exists()) {
+            return true;
+        }
+
         return false;
     }
 
@@ -267,6 +273,10 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function canDownloadFromProject(InvestmentProject $project): bool
     {
+        if (! app(InvestmentProjectAccessService::class)->canView($this, $project)) {
+            return false;
+        }
+
         $roleName = $this->roleModel?->name;
 
         // Ispolnitel and investor can only download from involved projects

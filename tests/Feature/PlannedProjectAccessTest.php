@@ -153,10 +153,10 @@ test('attraction activity writes require an active nondeleted planned project', 
 
     $this->actingAs($admin);
     $project->update(['is_archived' => true]);
-    $this->post($url)->assertForbidden();
+    $this->post($url)->assertStatus(409);
 
     $project->update(['is_archived' => false, 'is_deleted' => true]);
-    $this->post($url)->assertForbidden();
+    $this->post($url)->assertStatus(409);
 
     $project->update(['is_deleted' => false, 'status' => 'implementation']);
     $this->post($url)->assertStatus(409);

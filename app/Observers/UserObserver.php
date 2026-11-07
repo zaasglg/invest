@@ -13,6 +13,8 @@ class UserObserver
 
     public function saved(User $user): void
     {
-        $this->assignments->attachExecutorToRegionProjects($user);
+        if ($user->wasRecentlyCreated || $user->wasChanged(['region_id', 'role_id', 'baskarma_type'])) {
+            $this->assignments->attachExecutorToRegionProjects($user);
+        }
     }
 }

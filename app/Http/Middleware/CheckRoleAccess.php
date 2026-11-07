@@ -130,6 +130,32 @@ class CheckRoleAccess
 
         $routeName = $request->route()?->getName();
 
+        if ($routeName && str_starts_with($routeName, 'investment-projects.')) {
+            $project = $this->routeInvestmentProject($request);
+            if ($project) {
+                abort_unless($this->projectAccess->canView($user, $project), 403,
+                    'Бұл жобаға қол жеткізуге рұқсат жоқ.');
+
+                abort_if($project->is_deleted && $this->isWriteAction($request), 409,
+                    'Өшірілген жобаны өзгерту үшін алдымен қалпына келтіріңіз.');
+
+                if ($project->is_archived && $this->isWriteAction($request)
+                    && ! in_array($routeName, ['investment-projects.unarchive', 'investment-projects.restore-deleted'], true)) {
+                    abort(409, 'Архивтегі жобаны өзгерту үшін алдымен архивтен қайтарыңыз.');
+                }
+
+                if ($roleName === 'invest' && $this->isWriteAction($request)
+                    && ! in_array($routeName, [
+                        'investment-projects.attraction-activities.report',
+                        'investment-projects.attraction-activities.view',
+                        'investment-projects.attraction-handover.accept',
+                    ], true)) {
+                    abort_unless($this->projectAccess->canManage($user, $project), 403,
+                        'Бұл жобаны өзгертуге рұқсатыңыз жоқ.');
+                }
+            }
+        }
+
         if ($routeName
             && str_starts_with($routeName, 'investment-projects.tasks.')
             && ! $request->isMethodSafe()) {
@@ -333,7 +359,8 @@ class CheckRoleAccess
     private function routeInvestmentProject(Request $request): ?InvestmentProject
     {
         $project = $request->route('investmentProject')
-            ?? $request->route('investment_project');
+            ?? $request->route('investment_project')
+            ?? $request->route('id');
 
         return $project instanceof InvestmentProject
             ? $project
@@ -367,6 +394,12 @@ class CheckRoleAccess
 
         $service = app(ProjectAttractionService::class);
         $routeName = $request->route()?->getName();
+        if ($routeName === 'investment-projects.attraction-activities.view') {
+            abort_unless($activity instanceof ProjectAttractionActivity
+                && app(\App\Services\ProjectAttractionHistoryService::class)->canRecordView($user, $project, $activity), 403);
+
+            return;
+        }
         if ($routeName === 'investment-projects.attraction-activities.report') {
             abort_unless($activity instanceof ProjectAttractionActivity
                 && $service->canReport($user, $project, $activity), 403);
@@ -651,8 +684,8 @@ class CheckRoleAccess
      * - prom_zone users can only access Prom Zones (not AEA / IA / Subsoil).
      * - turkistan_invest users are not restricted here.
      *
-     * Additionally, all invest users can only access investment projects
-     * where they are listed as a curator (admin-managed).
+     * Invest users share projects curated by colleagues in the same direction.
+     * Users without a direction must be direct curators.
      */
     protected function enforceInvestSubRoleScope(Request $request, $user, ?string $roleName): void
     {
@@ -688,8 +721,8 @@ class CheckRoleAccess
     }
 
     /**
-     * Allow an invest user to access a specific investment project only if
-     * they are one of its curators. Creation/listing/bulk routes are skipped.
+     * Allow access to projects curated by the user's Invest direction, or by
+     * the user directly when no direction is assigned. Bulk routes are skipped.
      */
     protected function enforceInvestCuratorAccess(Request $request, $user, string $routeName): void
     {
@@ -744,7 +777,7 @@ class CheckRoleAccess
                     ->where('users.invest_sub_role', $subRole)
                     ->exists();
             if (! $hasSubRoleCurator) {
-                abort(403, 'Сіз бұл жобаның кураторы емессіз.');
+                abort(403, 'Бұл жоба сіздің Invest бағытыңызға кірмейді.');
             }
         } else {
             // No sub-role assigned — must be a direct curator.

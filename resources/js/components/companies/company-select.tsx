@@ -1,6 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Building2, Plus, Search } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Building2, Plus, Search, X } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
@@ -50,6 +50,7 @@ export default function CompanySelect({
         (roleKey === 'invest' &&
             auth.user?.invest_sub_role === 'turkistan_invest');
     const [search, setSearch] = useState('');
+    const searchRef = useRef<HTMLInputElement>(null);
     const selectedCompany = companies.find(
         (company) => company.id.toString() === value,
     );
@@ -60,10 +61,20 @@ export default function CompanySelect({
             return companies;
         }
 
-        return companies.filter((company) =>
-            [company.display_name, company.name, company.bin || ''].some(
-                (field) => field.toLocaleLowerCase('kk-KZ').includes(query),
-            ),
+        const binQuery = /^[\d\s-]+$/.test(query)
+            ? query.replace(/[\s-]/g, '')
+            : null;
+
+        return companies.filter(
+            (company) =>
+                [company.display_name, company.name, company.bin || ''].some(
+                    (field) => field.toLocaleLowerCase('kk-KZ').includes(query),
+                ) ||
+                (binQuery !== null &&
+                    binQuery.length > 0 &&
+                    (company.bin || '')
+                        .replace(/[\s-]/g, '')
+                        .includes(binQuery)),
         );
     }, [companies, search]);
 
@@ -94,26 +105,43 @@ export default function CompanySelect({
                 )}
             </div>
 
-            {companies.length > 8 && (
-                <div className="relative">
-                    <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
-                    <Input
-                        value={search}
-                        onChange={(event) => setSearch(event.target.value)}
-                        placeholder="Атауы немесе БСН/БИН бойынша іздеу"
-                        className="h-9 pl-9"
-                    />
-                </div>
-            )}
+            <div className="relative">
+                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                    ref={searchRef}
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    aria-label="Компанияны атауы немесе БСН бойынша іздеу"
+                    placeholder="Атауы немесе БСН/БИН бойынша іздеу"
+                    autoComplete="off"
+                    className="h-10 pr-10 pl-9"
+                />
+                {search && (
+                    <button
+                        type="button"
+                        aria-label="Компания іздеуін тазалау"
+                        onClick={() => {
+                            setSearch('');
+                            searchRef.current?.focus();
+                        }}
+                        className="absolute top-1/2 right-2 flex size-7 -translate-y-1/2 items-center justify-center rounded-md text-gray-400 hover:bg-gray-100 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-[#c8a44e] focus-visible:outline-none"
+                    >
+                        <X className="size-4" />
+                    </button>
+                )}
+            </div>
 
             <Select
                 value={value}
-                onValueChange={(selected) =>
-                    onValueChange(selected === '__unknown__' ? '' : selected)
-                }
+                onValueChange={(selected) => {
+                    onValueChange(selected === '__unknown__' ? '' : selected);
+                    setSearch('');
+                }}
             >
                 <SelectTrigger
                     id="company_id"
+                    aria-invalid={Boolean(error)}
+                    aria-describedby={error ? 'company-error' : undefined}
                     className={error ? 'border-red-500' : ''}
                 >
                     <SelectValue
@@ -122,7 +150,11 @@ export default function CompanySelect({
                                 ? 'Компанияны таңдаңыз'
                                 : 'Компания белгілі болса, таңдаңыз'
                         }
-                    />
+                    >
+                        {selectedCompany
+                            ? `${selectedCompany.display_name}${selectedCompany.bin ? ` · ${selectedCompany.bin}` : ''}`
+                            : undefined}
+                    </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                     {!required && (
@@ -142,6 +174,11 @@ export default function CompanySelect({
                                 : ''}
                         </SelectItem>
                     ))}
+                    {filteredCompanies.length === 0 && (
+                        <p className="px-3 py-2 text-sm text-gray-500">
+                            Сәйкес компания табылмады
+                        </p>
+                    )}
                 </SelectContent>
             </Select>
 
@@ -167,12 +204,24 @@ export default function CompanySelect({
                 </div>
             )}
 
-            {filteredCompanies.length === 0 && (
-                <p className="text-xs text-amber-700">
-                    Сәйкес компания табылмады. Алдымен жаңа компания ашыңыз.
+            {search.trim() && (
+                <p role="status" className="text-xs text-gray-500">
+                    {filteredCompanies.length > 0
+                        ? `Табылған компаниялар: ${filteredCompanies.length}. Тізімнен таңдаңыз.`
+                        : 'Сәйкес компания табылмады. Атауын немесе БСН нөмірін тексеріңіз.'}
                 </p>
             )}
-            {error && <span className="text-sm text-red-500">{error}</span>}
+            {!search.trim() && companies.length === 0 && (
+                <p className="text-xs text-amber-700">
+                    Таңдауға қолжетімді компания жоқ.
+                    {canCreateCompany && ' Алдымен жаңа компания қосыңыз.'}
+                </p>
+            )}
+            {error && (
+                <span id="company-error" className="text-sm text-red-500">
+                    {error}
+                </span>
+            )}
         </div>
     );
 }

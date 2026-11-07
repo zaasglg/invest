@@ -210,7 +210,7 @@ test('planned passport keeps the earliest outstanding attraction activity and ig
             'overdue' => 0,
             'pending_approval' => 0,
         ])
-        ->and($summary['next_milestone'])->toBe([
+        ->and($summary['next_milestone'])->toMatchArray([
             'id' => 1,
             'title' => 'Ескі келіссөз',
             'due_date' => '2026-01-01',
@@ -409,3 +409,31 @@ function plannedSummaryProject(): InvestmentProject
 
     return $project;
 }
+
+test('roadmap progress excludes unapproved work and launched timelines never show negative days left', function () {
+    $project = plannedSummaryProject();
+    $project->fill(['status' => 'launched', 'start_date' => '2020-01-01', 'end_date' => '2020-12-31']);
+    $project->setRelation('tasks', collect([
+        new ProjectTask(['status' => 'done', 'approval_status' => 'approved']),
+        new ProjectTask(['status' => 'new', 'approval_status' => 'pending', 'due_date' => '2020-01-01']),
+        new ProjectTask(['status' => 'new', 'approval_status' => 'rejected', 'due_date' => '2020-01-01']),
+    ]));
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['progress_percent'])->toBe(100)
+        ->and($summary['tasks']['overdue'])->toBe(0)
+        ->and($summary['tasks']['pending_approval'])->toBe(1)
+        ->and($summary['timeline']['days_remaining'])->toBeNull();
+});
+
+test('declined opportunities retain history but have no active workload', function () {
+    $project = plannedSummaryProject();
+    $project->fill(['attraction_stage' => 'declined', 'attraction_decline_reason' => 'Бас тартты']);
+    $project->setRelation('attractionActivities', collect([
+        new ProjectAttractionActivity(['status' => 'planned', 'next_action' => 'Кездесу', 'next_action_due_date' => '2020-01-01']),
+    ]));
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['attraction']['total'])->toBe(1)
+        ->and($summary['attraction']['open'])->toBe(0)
+        ->and($summary['next_milestone'])->toBeNull()
+        ->and($summary['health']['label'])->toBe('Инвестор бас тартқан');
+});

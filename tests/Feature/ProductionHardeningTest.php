@@ -116,6 +116,7 @@ test('failed completion persistence rolls back database and uploaded files', fun
     $executor = createHardeningTestUser('ispolnitel');
     $region = createHardeningTestRegion();
     $project = createHardeningTestProject($executor, $region);
+    $project->update(['status' => 'implementation']);
     $task = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Atomic submission',
@@ -166,6 +167,7 @@ test('failed completion document copy rolls back the review decision', function 
     $executor = createHardeningTestUser('ispolnitel');
     $region = createHardeningTestRegion();
     $project = createHardeningTestProject($reviewer, $region);
+    $project->update(['status' => 'implementation']);
     $task = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Atomic review',

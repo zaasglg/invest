@@ -28,6 +28,7 @@ class InvestmentProject extends Model
         'attraction_handover_accepted_by',
         'attraction_decline_reason',
         'attraction_resume_on',
+        'planning_started_at',
         'status',
         'attraction_stage',
         'start_date',
@@ -49,6 +50,7 @@ class InvestmentProject extends Model
             'attraction_handover_requested_at' => 'datetime',
             'attraction_handover_accepted_at' => 'datetime',
             'attraction_resume_on' => 'date:Y-m-d',
+            'planning_started_at' => 'datetime',
             'start_date' => 'date',
             'end_date' => 'date',
             'geometry' => 'array',
@@ -63,6 +65,10 @@ class InvestmentProject extends Model
     protected static function booted(): void
     {
         static::saving(function (InvestmentProject $project) {
+            if ($project->status === 'plan' && $project->planning_started_at === null) {
+                $project->planning_started_at = now();
+            }
+
             $project->attraction_stage = $project->status === 'plan'
                 ? ($project->attraction_stage ?? 'potential')
                 : null;
@@ -268,7 +274,8 @@ class InvestmentProject extends Model
     // Исполнители (Many to Many)
     public function executors()
     {
-        return $this->belongsToMany(User::class, 'investment_project_user');
+        return $this->belongsToMany(User::class, 'investment_project_user')
+            ->withPivot('assignment_source');
     }
 
     public function tasks()

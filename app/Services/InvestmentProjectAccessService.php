@@ -13,6 +13,10 @@ class InvestmentProjectAccessService
         $user->loadMissing(['roleModel', 'region']);
         $roleName = $user->roleModel?->name;
 
+        if (! $user->hasSupportedRole() || $roleName === 'applicant') {
+            return $query->whereRaw('1 = 0');
+        }
+
         if ($roleName === 'investor') {
             if ($user->company_id === null) {
                 $query->whereRaw('1 = 0');
@@ -70,9 +74,31 @@ class InvestmentProjectAccessService
 
     public function canView(User $user, InvestmentProject $project): bool
     {
+        $user->loadMissing('roleModel');
+        if ($project->is_deleted && $user->roleModel?->name === 'superadmin') {
+            return true;
+        }
+
         return $this->scopeVisible(
             InvestmentProject::query()->whereKey($project->id),
             $user
         )->exists();
+    }
+
+    public function canManage(User $user, InvestmentProject $project): bool
+    {
+        $user->loadMissing('roleModel');
+
+        if ($project->is_deleted || ! in_array($user->roleModel?->name, ['superadmin', 'invest', 'moderator'], true)
+            || ! $this->canView($user, $project)) {
+            return false;
+        }
+
+        return $user->roleModel?->name !== 'invest'
+            // Known Invest directions share management of their visible projects.
+            // canView above still enforces the direction and regional boundaries.
+            || in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)
+            || $project->curators()->whereKey($user->id)->exists()
+            || (! $project->curators()->exists() && (int) $project->created_by === (int) $user->id);
     }
 }

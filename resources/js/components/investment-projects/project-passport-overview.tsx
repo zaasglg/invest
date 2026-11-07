@@ -1,28 +1,35 @@
 import { Link } from '@inertiajs/react';
 import {
-    AlertTriangle,
     ArrowLeft,
-    Building2,
+    ArrowRight,
     CalendarClock,
     Check,
-    CheckCircle2,
+    ChevronDown,
     ClipboardCopy,
-    Clock3,
     Download,
     Edit3,
     FileCheck2,
     Flag,
     ListChecks,
     MapPin,
+    MoreHorizontal,
     Printer,
     ShieldAlert,
-    Sparkles,
+    Users,
 } from 'lucide-react';
 import { useState } from 'react';
 
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { attractionStageLabel } from '@/lib/project-attraction';
+import * as projectRoutes from '@/routes/investment-projects';
 
 export interface ProjectPassportSummary {
     workflow?: 'attraction' | 'roadmap';
@@ -71,6 +78,10 @@ export interface ProjectPassportSummary {
         title: string;
         due_date: string | null;
         is_overdue: boolean;
+        kind?: 'attraction' | 'task' | 'resume';
+        responsible_id?: number | null;
+        responsible_name?: string | null;
+        status?: string | null;
     } | null;
     last_updated_at: string | null;
 }
@@ -83,56 +94,32 @@ interface ProjectPassportOverviewProps {
         statusClassName: string;
         regionName: string;
         projectTypeName: string;
+        curatorName?: string;
     };
     summary: ProjectPassportSummary;
     canEdit: boolean;
     canDownload: boolean;
     canSeeOperationalDetails: boolean;
     isPlanned?: boolean;
+    isLaunched?: boolean;
+    isArchived?: boolean;
     attractionStage?: string | null;
+    onOpenNextAction?: () => void;
 }
 
-const healthStyles = {
-    critical: {
-        panel: 'border-red-200 bg-red-50',
-        icon: 'bg-red-100 text-red-700',
-        badge: 'bg-red-100 text-red-700',
-        progress: 'bg-red-500',
-    },
-    warning: {
-        panel: 'border-amber-200 bg-amber-50',
-        icon: 'bg-amber-100 text-amber-700',
-        badge: 'bg-amber-100 text-amber-700',
-        progress: 'bg-amber-500',
-    },
-    healthy: {
-        panel: 'border-emerald-200 bg-emerald-50',
-        icon: 'bg-emerald-100 text-emerald-700',
-        badge: 'bg-emerald-100 text-emerald-700',
-        progress: 'bg-emerald-500',
-    },
-};
-
-function formatDate(value: string | null): string {
-    if (!value) return 'Жаңарту уақыты белгісіз';
-
-    return new Intl.DateTimeFormat('kk-KZ', {
+function dateLabel(value: string | null): string {
+    if (!value) return 'Мерзімі белгіленбеген';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Мерзімі белгіленбеген';
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Qyzylorda',
         day: '2-digit',
-        month: 'long',
+        month: '2-digit',
         year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-    }).format(new Date(value));
-}
-
-function formatShortDate(value: string | null): string {
-    if (!value) return 'Мерзімі көрсетілмеген';
-
-    return new Intl.DateTimeFormat('kk-KZ', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-    }).format(new Date(value));
+    }).formatToParts(date);
+    const part = (type: string) =>
+        parts.find((item) => item.type === type)?.value;
+    return `${part('day')}.${part('month')}.${part('year')}`;
 }
 
 export default function ProjectPassportOverview({
@@ -142,373 +129,318 @@ export default function ProjectPassportOverview({
     canDownload,
     canSeeOperationalDetails,
     isPlanned = false,
+    isLaunched = false,
+    isArchived = false,
     attractionStage,
+    onOpenNextAction,
 }: ProjectPassportOverviewProps) {
     const [copyState, setCopyState] = useState<'idle' | 'copied' | 'error'>(
         'idle',
     );
-    const healthStyle = healthStyles[summary.health.level];
-    const attractionOverdue = isPlanned
-        ? Math.max(
-              summary.attraction?.overdue ?? 0,
-              summary.next_milestone?.is_overdue ? 1 : 0,
-          )
-        : 0;
-
-    const copyProjectLink = async () => {
+    const next = canSeeOperationalDetails ? summary.next_milestone : null;
+    const overdue = isPlanned
+        ? Math.max(summary.attraction?.overdue ?? 0, next?.is_overdue ? 1 : 0)
+        : summary.tasks.overdue;
+    const risks = summary.issues.open + overdue;
+    const closedLead = isPlanned && attractionStage === 'declined';
+    const workTarget = isPlanned ? '#project-attraction' : '#project-roadmap';
+    const copyLink = async () => {
         try {
             await navigator.clipboard.writeText(window.location.href);
             setCopyState('copied');
         } catch {
             setCopyState('error');
         }
-
         window.setTimeout(() => setCopyState('idle'), 2500);
     };
-
-    const timelineLabel = !summary.timeline.has_dates
-        ? 'Мерзім жоқ'
+    const timelineLabel = isLaunched
+        ? 'Жоба іске қосылған'
         : summary.timeline.is_overdue
           ? `${Math.abs(summary.timeline.days_remaining ?? 0)} күнге кешікті`
-          : summary.timeline.days_remaining === 0
-            ? 'Соңғы күн'
+          : (summary.timeline.days_remaining ?? 0) <= 0
+            ? 'Жоспарланған мерзім аяқталды'
             : `${summary.timeline.days_remaining} күн қалды`;
 
     return (
         <section
             id="passport-overview"
-            className="project-passport-overview min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
+            className="min-w-0 scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:border-0 print:shadow-none"
         >
-            <div className="relative overflow-hidden bg-gradient-to-br from-[#0b1735] via-[#122752] to-[#1b3b73] px-5 py-6 text-white sm:px-7 sm:py-7">
-                <div className="pointer-events-none absolute -top-24 -right-20 h-64 w-64 rounded-full bg-[#c8a44e]/15 blur-2xl" />
-                <div className="pointer-events-none absolute -bottom-32 left-1/3 h-64 w-64 rounded-full bg-blue-400/10 blur-3xl" />
-
-                <div className="relative">
-                    <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
-                        <Link
-                            href="/investment-projects"
-                            className="inline-flex items-center gap-2 text-sm text-white/70 transition-colors hover:text-white"
-                        >
-                            <ArrowLeft className="h-4 w-4" />
-                            Жобалар тізіміне қайту
-                        </Link>
-
-                        <div className="flex flex-wrap items-center gap-2">
+            <div className="bg-gradient-to-br from-[#0b1735] via-[#122752] to-[#1b3b73] p-5 text-white sm:p-6">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3 print:hidden">
+                    <Link
+                        href={projectRoutes.index.url()}
+                        className="inline-flex items-center gap-2 text-sm text-white/75 hover:text-white"
+                    >
+                        <ArrowLeft className="size-4" /> Жобаларға қайту
+                    </Link>
+                    <div className="flex items-center gap-2">
+                        {canEdit && (
                             <Button
-                                type="button"
-                                variant="outline"
+                                asChild
                                 size="sm"
-                                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                                onClick={copyProjectLink}
+                                className="bg-[#c8a44e] text-white hover:bg-[#b8943e]"
                             >
-                                {copyState === 'copied' ? (
-                                    <Check className="mr-2 h-4 w-4" />
-                                ) : (
-                                    <ClipboardCopy className="mr-2 h-4 w-4" />
-                                )}
-                                {copyState === 'copied'
-                                    ? 'Көшірілді'
-                                    : copyState === 'error'
-                                      ? 'Көшіру мүмкін болмады'
-                                      : 'Сілтемені көшіру'}
-                            </Button>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                size="sm"
-                                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                                onClick={() => window.print()}
-                            >
-                                <Printer className="mr-2 h-4 w-4" />
-                                Басып шығару
-                            </Button>
-                            {canEdit && (
                                 <Link
-                                    href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
+                                    href={projectRoutes.edit.url(project.id, {
+                                        query: {
+                                            return_to: projectRoutes.show.url(
+                                                project.id,
+                                            ),
+                                        },
+                                    })}
                                 >
-                                    <Button
-                                        size="sm"
-                                        className="bg-[#c8a44e] text-white shadow-none hover:bg-[#b8943e]"
-                                    >
-                                        <Edit3 className="mr-2 h-4 w-4" />
-                                        Өңдеу
-                                    </Button>
+                                    <Edit3 className="mr-2 size-4" />
+                                    Өңдеу
                                 </Link>
-                            )}
-                        </div>
-                    </div>
-
-                    <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-                        <div className="max-w-4xl min-w-0">
-                            <div className="mb-3 flex flex-wrap items-center gap-2">
-                                <span className="rounded-md border border-white/15 bg-white/10 px-2.5 py-1 text-xs font-semibold tracking-wide text-white/80 uppercase">
-                                    Жоба паспорты № {project.id}
-                                </span>
-                                <Badge
-                                    className={`${project.statusClassName} max-w-full border-0 px-2.5 py-1 [overflow-wrap:anywhere] break-words whitespace-normal`}
+                            </Button>
+                        )}
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="border-white/25 bg-white/10 text-white hover:bg-white/20 hover:text-white"
                                 >
-                                    {project.statusLabel}
-                                </Badge>
-                            </div>
-                            <h1 className="min-w-0 text-2xl leading-tight font-bold tracking-tight [overflow-wrap:anywhere] break-words text-white sm:text-3xl">
-                                {project.name}
-                            </h1>
-                            <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/70">
-                                <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 [overflow-wrap:anywhere] break-words">
-                                    <MapPin className="h-4 w-4 shrink-0 text-[#dec36e]" />
-                                    {project.regionName}
-                                </span>
-                                <span className="inline-flex max-w-full min-w-0 items-center gap-1.5 [overflow-wrap:anywhere] break-words">
-                                    <Building2 className="h-4 w-4 shrink-0 text-[#dec36e]" />
-                                    {project.projectTypeName}
-                                </span>
-                                <span className="inline-flex items-center gap-1.5">
-                                    <Clock3 className="h-4 w-4 text-[#dec36e]" />
-                                    Соңғы жаңарту:{' '}
-                                    {formatDate(summary.last_updated_at)}
-                                </span>
-                            </div>
-                        </div>
-
-                        {canDownload && (
-                            <a
-                                href={`/investment-projects/${project.id}/passport`}
-                                className="print:hidden"
-                            >
-                                <Button className="w-full bg-white text-[#0f1b3d] shadow-none hover:bg-slate-100 lg:w-auto">
-                                    <Download className="mr-2 h-4 w-4" />
-                                    Паспортты жүктеу
+                                    <MoreHorizontal className="mr-2 size-4" />
+                                    Қосымша
                                 </Button>
-                            </a>
-                        )}
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-60">
+                                <DropdownMenuItem onSelect={copyLink}>
+                                    {copyState === 'copied' ? (
+                                        <Check />
+                                    ) : (
+                                        <ClipboardCopy />
+                                    )}
+                                    {copyState === 'copied'
+                                        ? 'Сілтеме көшірілді'
+                                        : copyState === 'error'
+                                          ? 'Көшіру мүмкін болмады'
+                                          : 'Сілтемені көшіру'}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                    onSelect={() => window.print()}
+                                >
+                                    <Printer />
+                                    Басып шығару
+                                </DropdownMenuItem>
+                                {canDownload && (
+                                    <>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem asChild>
+                                            <a
+                                                href={projectRoutes.passport.url(
+                                                    project.id,
+                                                )}
+                                            >
+                                                <Download />
+                                                Паспортты жүктеу
+                                            </a>
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem asChild>
+                                            <a
+                                                href={projectRoutes.presentation.url(
+                                                    project.id,
+                                                )}
+                                            >
+                                                <Download />
+                                                Презентацияны жүктеу
+                                            </a>
+                                        </DropdownMenuItem>
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
-            </div>
-
-            <div className="grid gap-4 border-b border-slate-200 bg-slate-50/70 p-5 sm:grid-cols-2 lg:grid-cols-4 lg:p-6">
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                            {isPlanned
-                                ? 'Инвестор тарту кезеңі'
-                                : 'Жол картасы'}
-                        </span>
-                        <ListChecks className="h-4 w-4 text-blue-600" />
-                    </div>
-                    {isPlanned ? (
-                        <p className="text-sm leading-relaxed font-semibold text-slate-900">
-                            {attractionStageLabel(attractionStage)}
-                        </p>
-                    ) : (
-                        <>
-                            <div className="flex items-end justify-between gap-2">
-                                <p className="text-2xl font-bold text-slate-900">
-                                    {summary.progress_percent}%
-                                </p>
-                                <p className="text-xs text-slate-500">
-                                    {summary.tasks.completed}/
-                                    {summary.tasks.total} орындалды
-                                </p>
-                            </div>
-                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                                <div
-                                    className="h-full rounded-full bg-blue-600 transition-all"
-                                    style={{
-                                        width: `${summary.progress_percent}%`,
-                                    }}
-                                />
-                            </div>
-                        </>
+                <div className="mb-3 flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-medium text-white/60">
+                        Жоба №{project.id}
+                    </span>
+                    <Badge
+                        className={`${project.statusClassName} border-0 whitespace-normal`}
+                    >
+                        {project.statusLabel}
+                    </Badge>
+                    {isArchived && (
+                        <Badge className="border-white/20 bg-white/10 text-white">
+                            Архив · тек көру
+                        </Badge>
                     )}
-                    {isPlanned &&
-                        canSeeOperationalDetails &&
-                        summary.attraction && (
-                            <p className="mt-2 text-xs text-slate-500">
-                                Орындалды: {summary.attraction.completed} ·
-                                Ашық: {summary.attraction.open} · Қабылдауды
-                                күтуде: {summary.attraction.pending_review}
-                            </p>
-                        )}
                 </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                            Күнтізбелік мерзім
+                <h1 className="text-2xl leading-tight font-bold [overflow-wrap:anywhere] break-words text-white sm:text-3xl">
+                    {project.name}
+                </h1>
+                <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-white/75">
+                    <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="size-4 shrink-0 text-[#dec36e]" />
+                        {project.regionName}
+                    </span>
+                    {project.curatorName && (
+                        <span className="inline-flex min-w-0 items-center gap-1.5">
+                            <Users className="size-4 shrink-0 text-[#dec36e]" />
+                            <span className="break-words">
+                                Куратор: {project.curatorName}
+                            </span>
                         </span>
-                        <CalendarClock className="h-4 w-4 text-violet-600" />
-                    </div>
-                    <div className="flex items-end justify-between gap-2">
-                        <p className="text-2xl font-bold text-slate-900">
-                            {summary.timeline.elapsed_percent}%
-                        </p>
-                        <p
-                            className={`text-right text-xs ${
-                                summary.timeline.is_overdue
-                                    ? 'font-semibold text-red-600'
-                                    : 'text-slate-500'
-                            }`}
-                        >
-                            {timelineLabel}
-                        </p>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                            className={`h-full rounded-full transition-all ${
-                                summary.timeline.is_overdue
-                                    ? 'bg-red-500'
-                                    : 'bg-violet-500'
-                            }`}
-                            style={{
-                                width: `${summary.timeline.elapsed_percent}%`,
-                            }}
-                        />
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                            Тәуекелдер
-                        </span>
-                        <ShieldAlert className="h-4 w-4 text-amber-600" />
-                    </div>
-                    <div className="flex items-end justify-between gap-2">
-                        <p className="text-2xl font-bold text-slate-900">
-                            {canSeeOperationalDetails
-                                ? summary.issues.open + attractionOverdue
-                                : '—'}
-                        </p>
-                        <p className="text-right text-xs text-slate-500">
-                            {canSeeOperationalDetails
-                                ? isPlanned
-                                    ? `${summary.issues.critical} жоғары/сыни мәселе, ${attractionOverdue} кешіккен іс-шара`
-                                    : `${summary.issues.critical} жоғары/сыни, ${summary.tasks.overdue} кешіккен іс`
-                                : 'Қолжетімділік шектелген'}
-                        </p>
-                    </div>
-                    <div className="mt-3 flex items-center gap-1.5 text-xs">
-                        {canSeeOperationalDetails &&
-                        summary.issues.open === 0 &&
-                        summary.tasks.overdue === 0 &&
-                        attractionOverdue === 0 ? (
-                            <>
-                                <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                                <span className="text-emerald-700">
-                                    Ашық тәуекел жоқ
-                                </span>
-                            </>
-                        ) : (
-                            <>
-                                <AlertTriangle className="h-4 w-4 text-amber-600" />
-                                <span className="text-slate-600">
-                                    Бақылауды қажет етеді
-                                </span>
-                            </>
-                        )}
-                    </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                        <span className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                            Паспорт толықтығы
-                        </span>
-                        <FileCheck2 className="h-4 w-4 text-emerald-600" />
-                    </div>
-                    <div className="flex items-end justify-between gap-2">
-                        <p className="text-2xl font-bold text-slate-900">
-                            {summary.completeness.percent}%
-                        </p>
-                        <p className="text-xs text-slate-500">
-                            {summary.completeness.completed}/
-                            {summary.completeness.total} бөлім
-                        </p>
-                    </div>
-                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
-                        <div
-                            className="h-full rounded-full bg-emerald-500 transition-all"
-                            style={{
-                                width: `${summary.completeness.percent}%`,
-                            }}
-                        />
-                    </div>
+                    )}
                 </div>
             </div>
 
-            <div className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1.25fr)_minmax(280px,0.75fr)] lg:p-6">
-                <div className={`rounded-xl border p-4 ${healthStyle.panel}`}>
-                    <div className="flex items-start gap-3">
-                        <div className={`rounded-lg p-2 ${healthStyle.icon}`}>
-                            {summary.health.level === 'healthy' ? (
-                                <Sparkles className="h-5 w-5" />
-                            ) : (
-                                <AlertTriangle className="h-5 w-5" />
+            {canSeeOperationalDetails && (
+                <div className="border-b border-slate-200 bg-[#c8a44e]/5 p-5 sm:p-6">
+                    <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                        <div className="min-w-0">
+                            <p className="flex items-center gap-2 text-xs font-semibold tracking-wide text-[#9b782c] uppercase">
+                                <Flag className="size-4" />
+                                {isArchived
+                                    ? 'Сақталған жұмыс тарихы'
+                                    : closedLead
+                                      ? 'Инвестормен жұмыс аяқталды'
+                                      : 'Қазір не істеу керек?'}
+                            </p>
+                            <p className="mt-2 text-base font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                                {isArchived
+                                    ? 'Жоба архивте. Өзгерту үшін алдымен архивтен шығарыңыз.'
+                                    : closedLead
+                                      ? 'Инвестордың бас тартуы тіркелген.'
+                                      : (next?.title ??
+                                        (isPlanned
+                                            ? 'Келесі іс-шараны белгілеңіз'
+                                            : 'Белсенді тапсырма жоқ'))}
+                            </p>
+                            {next && !isArchived && !closedLead && (
+                                <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1.5 text-sm text-slate-600">
+                                    <span className="inline-flex items-center gap-1.5">
+                                        <Users className="size-4 shrink-0" />
+                                        {next.responsible_name ||
+                                            'Жауапты адам көрсетілмеген'}
+                                    </span>
+                                    <span
+                                        className={`inline-flex items-center gap-1.5 ${next.is_overdue ? 'font-medium text-red-600' : ''}`}
+                                    >
+                                        <CalendarClock className="size-4 shrink-0" />
+                                        {dateLabel(next.due_date)}
+                                        {next.is_overdue
+                                            ? ' · мерзімі өткен'
+                                            : ''}
+                                    </span>
+                                </div>
                             )}
                         </div>
-                        <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-semibold text-slate-900">
-                                    Жобаның жалпы жағдайы
-                                </p>
-                                <Badge
-                                    className={`${healthStyle.badge} border-0`}
-                                >
-                                    {summary.health.label}
-                                </Badge>
-                            </div>
-                            <ul className="mt-2 space-y-1 text-sm text-slate-600">
-                                {summary.health.reasons
-                                    .slice(0, 3)
-                                    .map((reason) => (
-                                        <li
-                                            key={reason}
-                                            className="flex min-w-0 items-start gap-2 [overflow-wrap:anywhere] break-words"
-                                        >
-                                            <span
-                                                className={`mt-2 h-1.5 w-1.5 shrink-0 rounded-full ${healthStyle.progress}`}
-                                            />
-                                            {reason}
-                                        </li>
-                                    ))}
-                            </ul>
-                        </div>
+                        <Button
+                            asChild
+                            variant="outline"
+                            className="shrink-0 border-[#c8a44e]/40 bg-white text-[#0f1b3d] hover:bg-[#c8a44e]/10"
+                        >
+                            <a
+                                href={workTarget}
+                                onClick={
+                                    next && onOpenNextAction
+                                        ? (event) => {
+                                              event.preventDefault();
+                                              onOpenNextAction();
+                                          }
+                                        : undefined
+                                }
+                            >
+                                {isArchived || closedLead
+                                    ? 'Тарихты қарау'
+                                    : next
+                                      ? 'Жұмысты ашу'
+                                      : 'Жұмыстарға өту'}
+                                <ArrowRight className="ml-2 size-4" />
+                            </a>
+                        </Button>
                     </div>
                 </div>
+            )}
 
-                <div className="rounded-xl border border-slate-200 bg-white p-4">
-                    <div className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                        <Flag className="h-4 w-4 text-[#a9842f]" />
+            <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <div className="p-5">
+                    <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <ListChecks className="size-4" />
                         {isPlanned
-                            ? 'Келесі іс-шара'
-                            : 'Келесі бақылау нүктесі'}
-                    </div>
-                    {summary.next_milestone ? (
-                        <div className="mt-3">
-                            <p className="line-clamp-2 min-w-0 text-sm font-medium [overflow-wrap:anywhere] break-words text-slate-800">
-                                {summary.next_milestone.title}
-                            </p>
-                            <p
-                                className={`mt-1 text-xs ${
-                                    summary.next_milestone.is_overdue
-                                        ? 'font-semibold text-red-600'
-                                        : 'text-slate-500'
-                                }`}
-                            >
-                                {formatShortDate(
-                                    summary.next_milestone.due_date,
-                                )}
-                            </p>
-                        </div>
-                    ) : (
-                        <p className="mt-3 text-sm text-slate-500">
+                            ? 'Инвестор тарту сатысы'
+                            : 'Жол картасының орындалуы'}
+                    </p>
+                    <p
+                        className={`mt-2 font-semibold text-[#0f1b3d] ${isPlanned ? 'text-sm' : 'text-2xl'}`}
+                    >
+                        {isPlanned
+                            ? attractionStageLabel(attractionStage)
+                            : canSeeOperationalDetails
+                              ? `${summary.progress_percent}%`
+                              : '—'}
+                    </p>
+                    {canSeeOperationalDetails && (
+                        <p className="mt-2 text-xs text-slate-500">
                             {isPlanned
-                                ? 'Келесі іс-шара белгіленбеген.'
-                                : 'Белсенді бақылау нүктесі белгіленбеген.'}
+                                ? `Орындалды: ${summary.attraction?.completed ?? 0} · Тексеруде: ${summary.attraction?.pending_review ?? 0}`
+                                : `${summary.tasks.completed}/${summary.tasks.total} тапсырма орындалды`}
                         </p>
                     )}
                 </div>
+                <div className="p-5">
+                    <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <ShieldAlert className="size-4" />
+                        Ашық тәуекелдер
+                    </p>
+                    <p
+                        className={`mt-2 text-2xl font-semibold ${risks > 0 ? 'text-amber-700' : 'text-[#0f1b3d]'}`}
+                    >
+                        {canSeeOperationalDetails ? risks : '—'}
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500">
+                        {canSeeOperationalDetails
+                            ? `${summary.issues.open} ашық мәселе · ${overdue} кешіккен жұмыс`
+                            : 'Жұмыс мәліметтері шектеулі'}
+                    </p>
+                </div>
+                <div className="p-5">
+                    <p className="flex items-center gap-2 text-xs font-medium text-slate-500">
+                        <FileCheck2 className="size-4" />
+                        {isPlanned
+                            ? 'Осы кезеңге қажетті деректер'
+                            : 'Паспорт деректері'}
+                    </p>
+                    <p className="mt-2 text-2xl font-semibold text-[#0f1b3d]">
+                        {summary.completeness.percent}%
+                    </p>
+                    <p className="mt-2 text-xs text-slate-500">
+                        {summary.completeness.completed}/
+                        {summary.completeness.total} дерек толтырылған
+                    </p>
+                </div>
             </div>
+            {(summary.completeness.missing.length > 0 ||
+                (canSeeOperationalDetails && risks > 0) ||
+                (!isPlanned && summary.timeline.has_dates)) && (
+                <details className="group border-t border-slate-100 px-5 py-3">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm text-slate-600">
+                        Толықтық пен мерзім туралы
+                        <ChevronDown className="size-4 shrink-0 transition-transform group-open:rotate-180" />
+                    </summary>
+                    <div className="space-y-3 py-3 text-sm text-slate-600">
+                        {canSeeOperationalDetails && risks > 0 && (
+                            <p>{summary.health.reasons.join(' · ')}</p>
+                        )}
+                        {summary.completeness.missing.length > 0 && (
+                            <p>
+                                Толтыру қажет:{' '}
+                                {summary.completeness.missing.join(', ')}.
+                            </p>
+                        )}
+                        {!isPlanned && summary.timeline.has_dates && (
+                            <p>{timelineLabel}</p>
+                        )}
+                        <p className="text-xs text-slate-400">
+                            Соңғы жаңарту: {dateLabel(summary.last_updated_at)}
+                        </p>
+                    </div>
+                </details>
+            )}
         </section>
     );
 }

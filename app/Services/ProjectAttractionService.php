@@ -9,9 +9,11 @@ use App\Models\TaskNotification;
 use App\Models\User;
 use App\Support\ProjectAttractionStages;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class ProjectAttractionService
 {
@@ -24,7 +26,7 @@ class ProjectAttractionService
         return $project->status === 'plan'
             && ! $project->is_archived && ! $project->is_deleted
             && in_array($user->roleModel?->name, ['superadmin', 'invest', 'moderator'], true)
-            && $this->access->canView($user, $project);
+            && $this->access->canManage($user, $project);
     }
 
     public function canEdit(User $user, InvestmentProject $project, ProjectAttractionActivity $activity): bool
@@ -50,14 +52,11 @@ class ProjectAttractionService
             return false;
         }
 
-        if ($this->canManage($user, $project)) {
-            return true;
-        }
-
-        return in_array($user->roleModel?->name, ['ispolnitel', 'investor'], true)
+        return in_array($user->roleModel?->name, ['superadmin', 'invest', 'moderator', 'ispolnitel', 'investor'], true)
             && (int) $activity->responsible_id === (int) $user->id
             && $this->access->canView($user, $project)
-            && $user->isInvolvedInProject($project);
+            && (! in_array($user->roleModel?->name, ['ispolnitel', 'investor'], true)
+                || $user->isInvolvedInProject($project));
     }
 
     public function canReview(User $user, InvestmentProject $project, ProjectAttractionActivity $activity): bool
@@ -72,7 +71,8 @@ class ProjectAttractionService
 
     public function responsibleUsers(InvestmentProject $project, User $actor): Collection
     {
-        return User::query()->select('id', 'full_name', 'position')
+        return User::query()->select('id', 'full_name', 'position', 'role_id', 'region_id', 'invest_sub_role', 'company_id', 'baskarma_type')
+            ->with('roleModel', 'region')
             ->whereHas('roleModel', fn (Builder $query) => $query
                 ->whereIn('name', ['superadmin', 'invest', 'moderator', 'ispolnitel', 'investor']))
             ->where(function (Builder $query) use ($project, $actor) {
@@ -80,9 +80,15 @@ class ProjectAttractionService
                     ->orWhere('id', $project->created_by)
                     ->orWhereIn('id', $project->curators()->select('users.id'))
                     ->orWhereIn('id', $project->executors()->select('users.id'))
-                    ->orWhereIn('id', $project->investors()->select('users.id'));
+                    ->orWhereIn('id', $project->investors()->select('users.id'))
+                    ->orWhereIn('id', $project->attractionActivities()->reorder()->whereIn('status', ['planned', 'in_progress', 'pending_review'])->select('responsible_id'));
             })
-            ->orderBy('full_name')->get();
+            ->orderBy('full_name')->get()
+            ->filter(fn (User $candidate) => $this->access->canView($candidate, $project)
+                && (in_array($candidate->roleModel?->name, ['superadmin', 'invest', 'moderator'], true)
+                    ? $this->access->canManage($candidate, $project)
+                    : $candidate->isInvolvedInProject($project)))
+            ->values()->map(fn (User $candidate) => $candidate->only(['id', 'full_name', 'position']));
     }
 
     public function save(
@@ -91,12 +97,13 @@ class ProjectAttractionService
         array $data,
         ?ProjectAttractionActivity $activity = null
     ): void {
+        $data = Arr::only($data, ['next_action', 'description', 'next_action_due_date', 'responsible_id']);
         DB::transaction(function () use ($actor, $project, $data, $activity) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless($this->canManage($actor, $locked), 403);
-            ProjectAttractionStages::assertAvailableForActivity($locked, $data['attraction_stage']);
             $before = [];
             $responsibleChanged = false;
+            $definitionChanged = false;
 
             if ($activity) {
                 abort_unless((int) $activity->project_id === (int) $locked->id, 404);
@@ -107,16 +114,14 @@ class ProjectAttractionService
                 $responsibleChanged = (int) $activity->responsible_id !== (int) $data['responsible_id'];
                 $definitionChanged = $responsibleChanged
                     || $activity->next_action !== $data['next_action']
+                    || (array_key_exists('description', $data) && $activity->description !== $data['description'])
                     || $activity->next_action_due_date?->toDateString() !== Carbon::parse($data['next_action_due_date'])->toDateString();
                 $reviewedOrPending = in_array($activity->status, ['pending_review', 'completed'], true);
-                $explicitReopen = array_key_exists('status', $data)
-                    && $data['status'] !== $activity->status
-                    && in_array($activity->status, ['pending_review', 'completed', 'cancelled'], true);
 
-                if ($responsibleChanged || ($reviewedOrPending && $definitionChanged) || $explicitReopen) {
+                if ($responsibleChanged || ($reviewedOrPending && $definitionChanged)) {
                     $data = [
                         ...$data,
-                        'status' => $data['status'] ?? 'planned',
+                        'status' => $activity->status === 'cancelled' ? 'cancelled' : 'planned',
                         'report_result' => null,
                         'reported_at' => null,
                         'reported_by' => null,
@@ -128,19 +133,22 @@ class ProjectAttractionService
 
                 $activity->update($data);
             } else {
+                $stage = $locked->attraction_stage ?? 'potential';
+                ProjectAttractionStages::assertAvailableForActivity($locked, $stage);
+                if ($stage === 'declined') {
+                    throw ValidationException::withMessages([
+                        'next_action' => 'Инвестор бас тартқан жобаға жаңа іс-шара қоспас бұрын жоба кезеңін өзгертіңіз.',
+                    ]);
+                }
                 $activity = $locked->attractionActivities()->create([
                     ...$data,
-                    'status' => $data['status'] ?? 'planned',
+                    'attraction_stage' => $stage,
+                    'status' => 'planned',
                     'created_by' => $actor->id,
                 ]);
             }
 
-            // Editing history must not replace the stage of a newer entry.
-            if ((int) $locked->attractionActivities()->reorder()->latest('id')->value('id') === (int) $activity->id) {
-                $locked->update(['attraction_stage' => $data['attraction_stage']]);
-            } else {
-                $locked->touch();
-            }
+            $locked->touch();
 
             KpiLog::activity(
                 projectId: $locked->id,
@@ -152,6 +160,7 @@ class ProjectAttractionService
                     'details' => $data,
                     'before' => $before,
                     'after' => $activity->only($activity->getFillable()),
+                    'definition_changed' => $definitionChanged,
                 ],
                 actor: $actor
             );
@@ -165,6 +174,7 @@ class ProjectAttractionService
                 && $this->canReport($responsible, $locked, $activity)) {
                 TaskNotification::create([
                     'user_id' => $activity->responsible_id,
+                    'project_id' => $locked->id,
                     'attraction_activity_id' => $activity->id,
                     'type' => 'attraction_assigned',
                     'message' => "Сізге инвестор тарту іс-шарасы берілді: \"{$activity->next_action}\" (Жоба: {$locked->name}). Орындалу мерзімі: ".$activity->next_action_due_date->format('d.m.Y'),
@@ -184,8 +194,6 @@ class ProjectAttractionService
             $activity = $locked->attractionActivities()->lockForUpdate()->findOrFail($activity->id);
             abort_unless($this->canDelete($actor, $locked, $activity), 403);
 
-            $isLatest = (int) $locked->attractionActivities()->reorder()->latest('id')->value('id') === (int) $activity->id;
-
             KpiLog::activity(
                 projectId: $locked->id,
                 event: 'attraction.deleted',
@@ -196,12 +204,6 @@ class ProjectAttractionService
                 actor: $actor
             );
             $activity->delete();
-
-            if ($isLatest) {
-                $restoredStage = $locked->attractionActivities()->reorder()->latest('id')->value('attraction_stage') ?? 'potential';
-                $locked->attraction_stage = ProjectAttractionStages::canRestore($locked, $restoredStage)
-                    ? $restoredStage : 'potential';
-            }
 
             $locked->touch();
         });
@@ -215,6 +217,9 @@ class ProjectAttractionService
             $activity = $locked->attractionActivities()->lockForUpdate()->findOrFail($activity->id);
             abort_unless($this->canReport($actor, $locked, $activity), 403);
 
+            // Submission proves the assignee saw this definition even if the
+            // modal's independent receipt request has not reached the server.
+            app(ProjectAttractionHistoryService::class)->markViewed($actor, $locked, $activity);
             $submitted = $data['status'] === 'pending_review';
             $activity->update([
                 'status' => $data['status'],
@@ -239,11 +244,23 @@ class ProjectAttractionService
                 ]],
                 actor: $actor
             );
+            if ($submitted) {
+                User::query()->whereHas('roleModel', fn (Builder $query) => $query
+                    ->whereIn('name', ['superadmin', 'invest', 'moderator']))
+                    ->get()->filter(fn (User $reviewer) => $reviewer->id !== $actor->id && $this->canReview($reviewer, $locked, $activity))
+                    ->each(fn (User $reviewer) => $this->notifyActivity(
+                        $reviewer, $locked, $activity, 'attraction_report_submitted',
+                        "Іс-шараның нәтижесі тексеруді күтуде: \"{$activity->next_action}\" (Жоба: {$locked->name})"
+                    ));
+            }
         });
     }
 
     public function review(User $actor, InvestmentProject $project, ProjectAttractionActivity $activity, array $data): void
     {
+        if ($data['decision'] === 'rejected' && blank($data['reviewer_comment'] ?? null)) {
+            throw ValidationException::withMessages(['reviewer_comment' => 'Нені түзету керегін жазыңыз.']);
+        }
         DB::transaction(function () use ($actor, $project, $activity, $data) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless((int) $activity->project_id === (int) $locked->id, 404);
@@ -272,6 +289,27 @@ class ProjectAttractionService
                 ]],
                 actor: $actor
             );
+            User::query()->whereIn('id', array_filter([$activity->responsible_id, $activity->reported_by]))
+                ->get()->filter(fn (User $recipient) => $recipient->id !== $actor->id && $this->access->canView($recipient, $locked))
+                ->each(fn (User $recipient) => $this->notifyActivity(
+                    $recipient, $locked, $activity,
+                    $approved ? 'attraction_report_approved' : 'attraction_report_rejected',
+                    'Іс-шараның нәтижесі '.($approved ? 'қабылданды' : 'толықтыруға қайтарылды').": \"{$activity->next_action}\" (Жоба: {$locked->name})"
+                        .($approved ? '' : '. '.$activity->reviewer_comment)
+                ));
         });
+    }
+
+    private function notifyActivity(User $recipient, InvestmentProject $project, ProjectAttractionActivity $activity, string $type, string $message): void
+    {
+        TaskNotification::create([
+            'user_id' => $recipient->id,
+            'project_id' => $project->id,
+            'attraction_activity_id' => $activity->id,
+            'type' => $type,
+            'message' => $message,
+            'action_url' => route('investment-projects.show', $project, false).'#project-attraction',
+            'action_label' => 'Іс-шараны ашу',
+        ]);
     }
 }

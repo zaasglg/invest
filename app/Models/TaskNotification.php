@@ -17,6 +17,8 @@ class TaskNotification extends Model
 
     protected $fillable = [
         'user_id',
+        'project_id',
+        'dedupe_key',
         'task_id',
         'subsoil_task_id',
         'completion_id',
@@ -38,6 +40,8 @@ class TaskNotification extends Model
     {
         return [
             'is_read' => 'boolean',
+            'telegram_next_attempt_at' => 'datetime',
+            'telegram_sent_at' => 'datetime',
         ];
     }
 
@@ -54,6 +58,14 @@ class TaskNotification extends Model
             );
         $user->loadMissing('roleModel');
 
+        foreach (['task_id' => 'task.project', 'completion_id' => 'completion.task.project'] as $foreignKey => $relation) {
+            $query->where(function (Builder $visible) use ($user, $foreignKey, $relation) {
+                $visible->whereNull($foreignKey)->orWhereHas($relation, function (Builder $project) use ($user) {
+                    app(InvestmentProjectAccessService::class)->scopeVisible($project->active(), $user);
+                });
+            });
+        }
+
         $query->where(function (Builder $visible) use ($user) {
             $visible->whereNull('attraction_activity_id')
                 ->orWhereHas('attractionActivity', function (Builder $activity) use ($user) {
@@ -61,19 +73,36 @@ class TaskNotification extends Model
                         $activity->whereRaw('1 = 0');
                     }
 
-                    $activity->where('responsible_id', $user->id)
-                        ->whereHas('project', function (Builder $project) use ($user) {
-                            app(InvestmentProjectAccessService::class)->scopeVisible($project->active(), $user);
-
-                            if ($user->roleModel?->name === 'ispolnitel') {
-                                $project->where(function (Builder $involved) use ($user) {
-                                    $involved->where('created_by', $user->id)
-                                        ->orWhereHas('executors', fn (Builder $executors) => $executors->where('users.id', $user->id))
-                                        ->orWhereHas('tasks', fn (Builder $tasks) => $tasks->where('assigned_to', $user->id));
-                                });
-                            }
+                    if (! in_array($user->roleModel?->name, ['superadmin', 'invest', 'moderator'], true)) {
+                        $activity->where(function (Builder $participant) use ($user) {
+                            $participant->where('responsible_id', $user->id)->orWhere('reported_by', $user->id);
                         });
+                    }
+                    $activity->whereHas('project', function (Builder $project) use ($user) {
+                        app(InvestmentProjectAccessService::class)->scopeVisible($project->active(), $user);
+
+                        if ($user->roleModel?->name === 'ispolnitel') {
+                            $project->where(function (Builder $involved) use ($user) {
+                                $involved->where('created_by', $user->id)
+                                    ->orWhereHas('executors', fn (Builder $executors) => $executors->where('users.id', $user->id))
+                                    ->orWhereHas('attractionActivities', fn (Builder $work) => $work->where('responsible_id', $user->id)->whereIn('status', ['planned', 'in_progress', 'pending_review']))
+                                    ->orWhereHas('tasks', fn (Builder $tasks) => $tasks->where('assigned_to', $user->id));
+                            });
+                        }
+                    });
                 });
+        });
+
+        $query->where(function (Builder $visible) use ($user) {
+            $visible->whereNull('project_id')->orWhereHas('project', function (Builder $project) use ($user) {
+                app(InvestmentProjectAccessService::class)->scopeVisible($project->active(), $user);
+            });
+        })->where(function (Builder $assignment) use ($user) {
+            $assignment->whereNotIn('type', ['attraction_assigned', 'attraction_due_soon', 'attraction_overdue'])
+                ->orWhereHas('attractionActivity', fn (Builder $work) => $work->where('responsible_id', $user->id));
+        })->where(function (Builder $assignment) use ($user) {
+            $assignment->where('type', '!=', 'task_assigned')->orWhereNull('task_id')
+                ->orWhereHas('task', fn (Builder $task) => $task->where('assigned_to', $user->id));
         });
 
         if ($user->roleModel?->name !== 'moderator') {
@@ -123,6 +152,11 @@ class TaskNotification extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function project()
+    {
+        return $this->belongsTo(InvestmentProject::class);
+    }
+
     public function task()
     {
         return $this->belongsTo(ProjectTask::class, 'task_id');
@@ -150,7 +184,7 @@ class TaskNotification extends Model
 
     public function telegramProjectId(): ?int
     {
-        $projectId = $this->task?->project_id
+        $projectId = $this->project_id ?? $this->task?->project_id
             ?? $this->completion?->task?->project_id
             ?? $this->attractionActivity?->project_id;
 

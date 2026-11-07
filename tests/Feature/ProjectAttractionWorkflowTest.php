@@ -145,7 +145,7 @@ test('project creation and editing reject unknown attraction stages', function (
         ->and($project->fresh()->attraction_stage)->toBe('potential');
 });
 
-test('project managers manage attraction activities and update the current stage', function (string $roleName) {
+test('project managers manage attraction definitions without changing the project stage', function (string $roleName) {
     $manager = attractionWorkflowUser($roleName);
     $project = attractionWorkflowProject($manager);
     $payload = attractionWorkflowActivityPayload($manager);
@@ -157,7 +157,9 @@ test('project managers manage attraction activities and update the current stage
     expect($activity->created_by)->toBe($manager->id)
         ->and($activity->responsible_id)->toBe($manager->id)
         ->and($activity->event_name)->toBeNull()
-        ->and($project->fresh()->attraction_stage)->toBe('negotiation');
+        ->and($activity->attraction_stage)->toBe('potential')
+        ->and($activity->status)->toBe('planned')
+        ->and($project->fresh()->attraction_stage)->toBe('potential');
 
     $this->put(route('investment-projects.attraction-activities.update', [$project, $activity]), [
         ...$payload,
@@ -165,10 +167,14 @@ test('project managers manage attraction activities and update the current stage
         'event_name' => 'Инвестормен кездесу',
         'event_date' => now()->subDay()->toDateString(),
         'result' => 'Жобаның негізгі шарттары талқыланды',
+        'description' => 'Кездесуге ұсыныстарды дайындау',
     ])->assertSessionHasNoErrors()->assertRedirect();
 
-    expect($activity->fresh()->result)->toBe('Жобаның негізгі шарттары талқыланды')
-        ->and($project->fresh()->attraction_stage)->toBe('conditions');
+    expect($activity->fresh()->result)->toBeNull()
+        ->and($activity->fresh()->event_name)->toBeNull()
+        ->and($activity->fresh()->description)->toBe('Кездесуге ұсыныстарды дайындау')
+        ->and($activity->fresh()->attraction_stage)->toBe('potential')
+        ->and($project->fresh()->attraction_stage)->toBe('potential');
 
     $this->delete(route('investment-projects.attraction-activities.destroy', [$project, $activity]))
         ->assertRedirect();
@@ -192,32 +198,35 @@ test('attraction activities require a next action deadline and responsible perso
         'responsible_id' => null,
         'attraction_stage' => 'unknown-stage',
     ])->assertSessionHasErrors([
-        'next_action', 'next_action_due_date', 'responsible_id', 'attraction_stage',
+        'next_action', 'next_action_due_date', 'responsible_id',
     ]);
 
     expect($project->attractionActivities()->count())->toBe(0)
         ->and($project->fresh()->attraction_stage)->toBe('potential');
 });
 
-test('a completed attraction event needs its name date and result together', function (array $event, array $expectedErrors) {
+test('legacy event inputs cannot write a completed event through the definition form', function (array $event) {
     $manager = attractionWorkflowUser('superadmin');
     $project = attractionWorkflowProject($manager);
 
     $this->actingAs($manager)->post(
         route('investment-projects.attraction-activities.store', $project),
         attractionWorkflowActivityPayload($manager, $event)
-    )->assertSessionHasErrors($expectedErrors);
+    )->assertSessionHasNoErrors()->assertRedirect();
 
-    expect($project->attractionActivities()->count())->toBe(0);
+    $activity = $project->attractionActivities()->sole();
+    expect($activity->event_name)->toBeNull()
+        ->and($activity->event_date)->toBeNull()
+        ->and($activity->result)->toBeNull();
 })->with([
-    'name alone' => [['event_name' => 'Кездесу'], ['event_date', 'result']],
-    'date alone' => [['event_date' => '2026-01-01'], ['event_name', 'result']],
-    'result alone' => [['result' => 'Шарттар талқыланды'], ['event_name', 'event_date']],
+    'name alone' => [['event_name' => 'Кездесу']],
+    'date alone' => [['event_date' => '2026-01-01']],
+    'result alone' => [['result' => 'Шарттар талқыланды']],
     'future completed event' => [[
         'event_name' => 'Кездесу',
         'event_date' => '2099-01-01',
         'result' => 'Шарттар талқыланды',
-    ], ['event_date']],
+    ]],
 ]);
 
 test('the responsible person must belong to the project', function () {
@@ -301,7 +310,7 @@ test('scoped managers cannot manage another curators project', function (string 
     expect($project->attractionActivities()->count())->toBe(0);
 })->with(['invest', 'moderator']);
 
-test('editing older attraction history does not replace the latest stage', function () {
+test('editing older attraction history preserves its stage snapshot and the project stage', function () {
     $manager = attractionWorkflowUser('superadmin');
     $project = attractionWorkflowProject($manager);
     $project->update([
@@ -312,6 +321,7 @@ test('editing older attraction history does not replace the latest stage', funct
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.store', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
     $older = $project->attractionActivities()->sole();
+    $project->update(['attraction_stage' => 'agreements']);
     $this->post(route('investment-projects.attraction-activities.store', $project), [
         ...$payload,
         'attraction_stage' => 'agreements',
@@ -322,7 +332,7 @@ test('editing older attraction history does not replace the latest stage', funct
         'attraction_stage' => 'declined',
     ])->assertSessionHasNoErrors()->assertRedirect();
 
-    expect($older->fresh()->attraction_stage)->toBe('declined')
+    expect($older->fresh()->attraction_stage)->toBe('potential')
         ->and($project->fresh()->attraction_stage)->toBe('agreements');
 });
 
@@ -334,6 +344,16 @@ test('switching out of plan clears its stage but preserves and locks attraction 
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.store', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
     $activity = $project->attractionActivities()->sole();
+    $activity->update(['status' => 'completed']);
+    $receiver = attractionWorkflowUser('superadmin');
+    $project->update([
+        'attraction_stage' => 'handover',
+        'attraction_handover_to_id' => $receiver->id,
+        'attraction_handover_requested_at' => now(),
+    ]);
+    $this->actingAs($receiver)->post(route('investment-projects.attraction-handover.accept', $project))
+        ->assertRedirect();
+    $this->actingAs($manager);
 
     $this->put(route('investment-projects.update', $project), attractionWorkflowProjectPayload($project, [
         'status' => 'implementation',
@@ -341,7 +361,7 @@ test('switching out of plan clears its stage but preserves and locks attraction 
     ]))->assertSessionHasNoErrors()->assertRedirect();
 
     expect($project->fresh()->attraction_stage)->toBeNull()
-        ->and($activity->fresh()->attraction_stage)->toBe('negotiation');
+        ->and($activity->fresh()->attraction_stage)->toBe('potential');
 
     $this->post(route('investment-projects.attraction-activities.store', $project), $payload)->assertStatus(409);
     $this->put(route('investment-projects.attraction-activities.update', [$project, $activity]), $payload)
@@ -359,7 +379,7 @@ test('switching out of plan clears its stage but preserves and locks attraction 
         ->and($project->attractionActivities()->count())->toBe(1);
 });
 
-test('deleting attraction history reconciles the current stage only for its newest row', function () {
+test('deleting any attraction activity leaves the project stage unchanged', function () {
     $manager = attractionWorkflowUser('superadmin');
     $project = attractionWorkflowProject($manager);
     $payload = attractionWorkflowActivityPayload($manager);
@@ -367,6 +387,7 @@ test('deleting attraction history reconciles the current stage only for its newe
     $this->actingAs($manager);
 
     foreach (['negotiation', 'conditions', 'agreements'] as $stage) {
+        $project->update(['attraction_stage' => $stage]);
         $this->post(route('investment-projects.attraction-activities.store', $project), [
             ...$payload,
             'attraction_stage' => $stage,
@@ -380,11 +401,11 @@ test('deleting attraction history reconciles the current stage only for its newe
 
     $this->delete(route('investment-projects.attraction-activities.destroy', [$project, $activities[0]]))
         ->assertRedirect();
-    expect($project->fresh()->attraction_stage)->toBe('conditions');
+    expect($project->fresh()->attraction_stage)->toBe('agreements');
 
     $this->delete(route('investment-projects.attraction-activities.destroy', [$project, $activities[1]]))
         ->assertRedirect();
-    expect($project->fresh()->attraction_stage)->toBe('potential')
+    expect($project->fresh()->attraction_stage)->toBe('agreements')
         ->and($project->attractionActivities()->count())->toBe(0);
 });
 
@@ -394,6 +415,7 @@ test('attraction activities stay in insertion order after edits and status chang
     $this->actingAs($manager);
 
     foreach (['negotiation', 'conditions', 'agreements'] as $stage) {
+        $project->update(['attraction_stage' => $stage]);
         $this->post(route('investment-projects.attraction-activities.store', $project),
             attractionWorkflowActivityPayload($manager, ['attraction_stage' => $stage]))
             ->assertSessionHasNoErrors()->assertRedirect();

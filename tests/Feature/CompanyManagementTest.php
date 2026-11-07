@@ -792,7 +792,7 @@ test('legacy project keeps an incomplete company while other fields are edited',
         'region_id' => $region->id,
         'project_type_id' => $projectType->id,
         'total_investment' => 1000000,
-        'status' => 'plan',
+        'status' => 'implementation',
         'created_by' => $user->id,
     ]);
     $project->projectTypes()->sync([$projectType->id]);
@@ -896,7 +896,7 @@ test('project creation and editing support multiple project types', function () 
             'region_id' => $region->id,
             'project_type_ids' => [$secondType->id, $thirdType->id],
             'total_investment' => 300000000,
-            'status' => 'implementation',
+            'status' => 'plan',
         ])
         ->assertRedirect(route('investment-projects.show', $project));
 

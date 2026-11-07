@@ -7,7 +7,9 @@ use App\Http\Requests\ReportProjectAttractionActivityRequest;
 use App\Http\Requests\ReviewProjectAttractionActivityRequest;
 use App\Models\InvestmentProject;
 use App\Models\ProjectAttractionActivity;
+use App\Services\ProjectAttractionHistoryService;
 use App\Services\ProjectAttractionService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -50,5 +52,10 @@ class ProjectAttractionActivityController extends Controller
 
         return back()->with('success', $request->validated('decision') === 'approved'
             ? 'Іс-шараның орындалуы расталды.' : 'Нәтиже толықтыруға қайтарылды.');
+    }
+
+    public function markViewed(Request $request, InvestmentProject $investmentProject, ProjectAttractionActivity $activity, ProjectAttractionHistoryService $history): JsonResponse
+    {
+        return response()->json($history->markViewed($request->user(), $investmentProject, $activity));
     }
 }

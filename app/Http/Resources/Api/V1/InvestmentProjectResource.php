@@ -13,6 +13,9 @@ class InvestmentProjectResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $contacts = (bool) $request->attributes->get('api_client')?->include_contacts;
+        $internal = (bool) $request->attributes->get('api_client')?->include_internal;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -25,8 +28,8 @@ class InvestmentProjectResource extends JsonResource
                     'display_name' => $this->company->display_name,
                     'bin' => $this->company->bin,
                     'activity_type' => $this->company->activity_type,
-                    'director_full_name' => $this->company->director_full_name,
-                    'phone' => $this->company->phone,
+                    'director_full_name' => $this->when($contacts, $this->company->director_full_name),
+                    'phone' => $this->when($contacts, $this->company->phone),
                     'region' => $this->company->relationLoaded('region')
                         && $this->company->region
                         ? [
@@ -37,7 +40,7 @@ class InvestmentProjectResource extends JsonResource
                 ]
                 : null),
             'description' => $this->description,
-            'current_status' => $this->current_status,
+            'current_status' => $this->when($internal, $this->current_status),
             'region' => $this->whenLoaded('region', fn () => $this->region
                 ? [
                     'id' => $this->region->id,
@@ -79,7 +82,7 @@ class InvestmentProjectResource extends JsonResource
             'curators' => $this->usersRelation('curators'),
             'investors' => $this->usersRelation('investors'),
             'executors' => $this->usersRelation('executors'),
-            'issues' => $this->issues(),
+            'issues' => $this->when($internal, fn () => $this->issues()),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
@@ -116,7 +119,7 @@ class InvestmentProjectResource extends JsonResource
         return [
             'id' => $user->id,
             'full_name' => $user->full_name,
-            'phone' => $user->phone,
+            'phone' => $this->when((bool) request()->attributes->get('api_client')?->include_contacts, $user->phone),
             'position' => $user->position,
             'baskarma_type' => $user->baskarma_type,
         ];
@@ -148,7 +151,7 @@ class InvestmentProjectResource extends JsonResource
                         'period_number' => $fact->period_number,
                         'actual_quantity' => $fact->actual_quantity,
                         'actual_amount' => $fact->actual_amount,
-                        'notes' => $fact->notes,
+                        'notes' => $this->when((bool) request()->attributes->get('api_client')?->include_internal, $fact->notes),
                         'reporter' => $fact->relationLoaded('reporter')
                             ? $this->userData($fact->reporter)
                             : null,

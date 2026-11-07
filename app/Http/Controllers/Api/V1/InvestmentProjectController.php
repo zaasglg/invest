@@ -34,7 +34,8 @@ class InvestmentProjectController extends Controller
             'per_page' => ['nullable', 'integer', 'between:1,100'],
         ]);
 
-        $projects = InvestmentProject::query()
+        $client = $request->attributes->get('api_client');
+        $projects = $client->scopeProjects(InvestmentProject::query())
             ->with($this->analyticsRelations())
             ->when(
                 $validated['search'] ?? null,

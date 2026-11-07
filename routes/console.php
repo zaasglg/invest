@@ -29,3 +29,7 @@ Schedule::command('applications:expire-reservations')
     ->hourly()
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
+
+Schedule::command('notifications:retry-telegram')->everyMinute()->withoutOverlapping();
+Schedule::command('attraction:notify-deadlines')->dailyAt('09:00')
+    ->timezone(config('app.timezone'))->withoutOverlapping();

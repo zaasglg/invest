@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
+use App\Models\TaskNotification;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -32,6 +33,22 @@ class ProjectAttractionHandoverService
     public function prepare(array $validated, User $actor, ?InvestmentProject $project = null): array
     {
         if ($validated['status'] !== 'plan') {
+            if (! $project && $actor->roleModel?->name !== 'superadmin') {
+                throw ValidationException::withMessages([
+                    'status' => 'Жаңа жобаны алдымен «Жоспарланған» мәртебесінде ашыңыз. Бұрыннан іске асырылып жатқан немесе тоқтатылған жобаны әкімші енгізе алады.',
+                ]);
+            }
+            if ($project && $project->status !== $validated['status']) {
+                $this->ensureWorkClosed($project, 'status');
+            }
+            if (in_array($validated['status'], ['implementation', 'launched'], true)
+                && (! $project || $project->status !== $validated['status'])
+                && $project && ($project->planning_started_at || $project->status === 'plan')
+                && ! $project?->attraction_handover_accepted_at) {
+                throw ValidationException::withMessages([
+                    'status' => 'Алдымен жоспарланған жобаны сүйемелдеуге беріп, қабылдаушының растауын алыңыз. Бұрыннан іске асырылып жатқан жобаны әкімші енгізе алады.',
+                ]);
+            }
             if (in_array($validated['status'], ['implementation', 'launched'], true)
                 && $project?->attraction_handover_requested_at
                 && $project->attraction_handover_to_id
@@ -45,6 +62,9 @@ class ProjectAttractionHandoverService
         }
 
         $stage = $validated['attraction_stage'];
+        if ($stage === 'declined' && $project && $project->attraction_stage !== 'declined') {
+            $this->ensureWorkClosed($project, 'attraction_stage');
+        }
         if ($stage !== 'handover' && $project?->attraction_handover_requested_at
             && ! $project->attraction_handover_accepted_at) {
             $validated['attraction_handover_to_id'] = null;
@@ -93,6 +113,7 @@ class ProjectAttractionHandoverService
                 'attraction_handover_accepted_at' => now(),
                 'attraction_handover_accepted_by' => $user->id,
             ]);
+            $locked->curators()->syncWithoutDetaching([$user->id]);
             KpiLog::activity(
                 projectId: $locked->id,
                 event: 'attraction.handover_accepted',
@@ -101,6 +122,63 @@ class ProjectAttractionHandoverService
                 subject: $locked,
                 actor: $user
             );
+            $recipientIds = $locked->curators()->pluck('users.id')->push($locked->created_by)->unique()->filter();
+            User::query()->whereIn('id', $recipientIds)->get()
+                ->filter(fn (User $recipient) => $recipient->id !== $user->id && $this->access->canManage($recipient, $locked))
+                ->each(fn (User $recipient) => TaskNotification::create([
+                    'user_id' => $recipient->id,
+                    'project_id' => $locked->id,
+                    'type' => 'attraction_handover_accepted',
+                    'message' => "{$user->full_name} жобаны сүйемелдеуге қабылдады: {$locked->name}",
+                    'action_url' => route('investment-projects.show', $locked, false),
+                    'action_label' => 'Жобаны ашу',
+                ]));
         });
+    }
+
+    public function notifyRequested(InvestmentProject $project): void
+    {
+        if (! $project->wasChanged(['attraction_handover_requested_at', 'attraction_handover_to_id'])
+            && ! $project->wasRecentlyCreated) {
+            return;
+        }
+        if (! $project->attraction_handover_requested_at || ! $project->attraction_handover_to_id) {
+            return;
+        }
+        $receiverId = (int) $project->attraction_handover_to_id;
+        $requestedAt = $project->attraction_handover_requested_at->toDateTimeString();
+        DB::afterCommit(function () use ($project, $receiverId, $requestedAt) {
+            $saved = $project->fresh();
+            $recipient = User::find($receiverId);
+            if (! $saved || ! $recipient || ! $this->canAccept($recipient, $saved)
+                || $saved->attraction_handover_requested_at?->toDateTimeString() !== $requestedAt
+                || TaskNotification::query()->where('project_id', $saved->id)
+                    ->where('user_id', $receiverId)->where('type', 'attraction_handover_requested')
+                    ->where('created_at', '>=', $requestedAt)->exists()) {
+                return;
+            }
+            TaskNotification::create([
+                'user_id' => $recipient->id,
+                'project_id' => $saved->id,
+                'type' => 'attraction_handover_requested',
+                'message' => "Жобаны сүйемелдеуге қабылдауыңыз сұралды: {$saved->name}",
+                'action_url' => route('investment-projects.show', $saved, false),
+                'action_label' => 'Жобаны қабылдау',
+            ]);
+        });
+    }
+
+    private function ensureWorkClosed(InvestmentProject $project, string $field): void
+    {
+        $counts = $project->attractionActivities()
+            ->whereIn('status', ['planned', 'in_progress', 'pending_review'])
+            ->reorder()->selectRaw('status, count(*) as total')->groupBy('status')->pluck('total', 'status');
+        $open = (int) $counts->get('planned', 0) + (int) $counts->get('in_progress', 0);
+        $review = (int) $counts->get('pending_review', 0);
+        if ($open + $review > 0) {
+            throw ValidationException::withMessages([
+                $field => "Аяқталмаған іс-шара: {$open}. Тексеруді күткен есеп: {$review}. Алдымен нәтижелерін тексеріп, қалған жұмыстарды аяқтаңыз немесе тоқтатыңыз.",
+            ]);
+        }
     }
 }

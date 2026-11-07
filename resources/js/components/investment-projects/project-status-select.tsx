@@ -12,10 +12,12 @@ export default function ProjectStatusSelect({
     value,
     onChange,
     error,
+    plannedOnly = false,
 }: {
     value: string;
     onChange: (value: string) => void;
     error?: string;
+    plannedOnly?: boolean;
 }) {
     return (
         <div className="space-y-2 rounded-lg border border-[#e7d8ad] bg-[#fffaf0] p-4">
@@ -33,15 +35,23 @@ export default function ProjectStatusSelect({
                 </SelectTrigger>
                 <SelectContent>
                     <SelectItem value="plan">Жоспарланған</SelectItem>
-                    <SelectItem value="implementation">Іске асыру</SelectItem>
-                    <SelectItem value="launched">Іске қосылған</SelectItem>
-                    <SelectItem value="suspended">Тоқтатылған</SelectItem>
+                    <SelectItem value="implementation" disabled={plannedOnly}>
+                        Іске асыру
+                    </SelectItem>
+                    <SelectItem value="launched" disabled={plannedOnly}>
+                        Іске қосылған
+                    </SelectItem>
+                    <SelectItem value="suspended" disabled={plannedOnly}>
+                        Тоқтатылған
+                    </SelectItem>
                 </SelectContent>
             </Select>
             <p className="text-xs leading-relaxed text-slate-500">
-                {value === 'plan'
-                    ? 'Бастапқы жоба үшін атау, аудан және инвестор тарту кезеңі жеткілікті. Белгісіз деректерді кейін толықтыра аласыз.'
-                    : 'Осы мәртебеде компанияны, жоба түрін және инвестиция сомасын толық көрсетіңіз.'}
+                {plannedOnly
+                    ? 'Жаңа жоба жоспарланған мәртебеден басталады. Іске асыруға өту үшін жұмыстарды аяқтап, жобаны сүйемелдеуге беру керек.'
+                    : value === 'plan'
+                      ? 'Бастапқы жоба үшін атау, аудан және инвестор тарту кезеңі жеткілікті. Белгісіз деректерді кейін толықтыра аласыз.'
+                      : 'Осы мәртебеде компанияны, жоба түрін және инвестиция сомасын толық көрсетіңіз.'}
             </p>
             <InputError message={error} />
         </div>

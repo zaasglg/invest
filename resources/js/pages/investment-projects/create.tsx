@@ -110,6 +110,7 @@ interface Props {
     isDistrictScoped?: boolean;
     userRegionId?: number | null;
     canSelectCurators?: boolean;
+    canCreateOperationalProject?: boolean;
     requiresCuratorSelection?: boolean;
     investUsers?: InvestUser[];
     investSubRole?: string | null;
@@ -162,6 +163,7 @@ export default function Create({
     isDistrictScoped,
     userRegionId,
     canSelectCurators = false,
+    canCreateOperationalProject = false,
     requiresCuratorSelection = false,
     investUsers = [],
     restrictedSectorType = null,
@@ -665,6 +667,7 @@ export default function Create({
                             <div className="space-y-6">
                                 <ProjectStatusSelect
                                     value={data.status}
+                                    plannedOnly={!canCreateOperationalProject}
                                     onChange={(value) => {
                                         setData((previous) => ({
                                             ...previous,
@@ -1484,7 +1487,7 @@ export default function Create({
                                             болады.
                                         </p>
                                         <span className="rounded-full bg-gray-200 px-3 py-1 text-xs font-medium text-gray-600">
-                                            Келесі қадамда қолжетімді
+                                            Жобаны сақтағаннан кейін қолжетімді
                                         </span>
                                     </div>
                                 </div>
@@ -1767,7 +1770,7 @@ export default function Create({
                                                 {districtUsers.length > 0 && (
                                                     <div className="mb-3">
                                                         <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                            Аудан исполнителі
+                                                            Аудан орындаушысы
                                                         </p>
                                                         <div className="space-y-2">
                                                             {districtUsers.map(

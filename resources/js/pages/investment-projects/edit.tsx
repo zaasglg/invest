@@ -1845,7 +1845,7 @@ export default function Edit({
                                                 {districtUsers.length > 0 && (
                                                     <div className="mb-3">
                                                         <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                            Аудан исполнителі
+                                                            Аудан орындаушысы
                                                         </p>
                                                         <div className="space-y-2">
                                                             {districtUsers.map(

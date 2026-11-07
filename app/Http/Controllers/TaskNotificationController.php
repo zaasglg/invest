@@ -36,6 +36,7 @@ class TaskNotificationController extends Controller
                 'subsoilCompletion.task.subsoilUser',
                 'subsoilCompletion.submitter',
                 'attractionActivity.project',
+                'project:id,name',
             ])
             ->when(
                 $filter === 'unread',

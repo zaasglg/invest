@@ -110,7 +110,7 @@ test('editing does not duplicate an assignment but changing responsible notifies
     Http::assertNothingSent();
 });
 
-test('cancelled and self assigned activities do not send assignment notifications', function () {
+test('self assignment sends no notification and stale creation status cannot suppress an assignment', function () {
     $manager = attractionNotificationUser('superadmin');
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('ispolnitel', ['region_id' => $project->region_id]);
@@ -118,16 +118,20 @@ test('cancelled and self assigned activities do not send assignment notification
     $service = app(ProjectAttractionService::class);
 
     $service->save($manager, $project, attractionNotificationPayload($manager));
-    $service->save($manager, $project, attractionNotificationPayload($responsible, ['status' => 'cancelled']));
     expect(TaskNotification::count())->toBe(0);
-
-    $cancelled = $project->attractionActivities()->where('status', 'cancelled')->sole();
-    $service->save($manager, $project, attractionNotificationPayload($responsible, ['status' => 'planned']), $cancelled);
+    $service->save($manager, $project, attractionNotificationPayload($responsible, ['status' => 'cancelled']));
     expect(TaskNotification::count())->toBe(1);
+
+    $activity = $project->attractionActivities()->where('responsible_id', $responsible->id)->sole();
+    expect($activity->status)->toBe('planned');
+    $activity->update(['status' => 'cancelled']);
+    $service->save($manager, $project, attractionNotificationPayload($responsible, ['status' => 'planned']), $activity);
+    expect(TaskNotification::count())->toBe(1);
+    expect($activity->fresh()->status)->toBe('cancelled');
     Http::assertNothingSent();
 });
 
-test('attraction notifications are hidden when the recipient loses project access or involvement', function () {
+test('active attraction responsibility preserves access and archived project hides notifications', function () {
     $manager = attractionNotificationUser('superadmin');
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('ispolnitel', ['region_id' => $project->region_id]);
@@ -137,12 +141,13 @@ test('attraction notifications are hidden when the recipient loses project acces
 
     expect(TaskNotification::visibleTo($responsible)->count())->toBe(1);
     $project->executors()->detach($responsible);
-    expect(TaskNotification::visibleTo($responsible)->count())->toBe(0);
-    $this->actingAs($responsible)->post(route('notifications.open', $notification))->assertForbidden();
+    expect(TaskNotification::visibleTo($responsible)->count())->toBe(1);
+    $this->actingAs($responsible)->post(route('notifications.open', $notification))->assertRedirect();
 
     $project->executors()->attach($responsible);
     $project->update(['is_archived' => true]);
     expect(TaskNotification::visibleTo($responsible)->count())->toBe(0);
+    $this->post(route('notifications.open', $notification))->assertForbidden();
 });
 
 test('moderators receive visible attraction assignments without reviving planned roadmap notifications', function () {

@@ -1,7 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import type { ReactNode } from 'react';
-import { ChatWidget } from '@/components/chat-widget';
-import { ProactiveAssistantWidget } from '@/components/proactive-assistant-widget';
+import { AssistantHub } from '@/components/assistant-hub';
 import { SidebarProvider } from '@/components/ui/sidebar';
 import type { SharedData } from '@/types';
 
@@ -19,8 +18,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
         return (
             <div className="app-shell flex min-h-screen w-full flex-col overflow-x-hidden">
                 {children}
-                {showChat && <ProactiveAssistantWidget />}
-                {showChat && <ChatWidget />}
+                {showChat && <AssistantHub key={auth.user.id} />}
             </div>
         );
     }
@@ -28,8 +26,7 @@ export function AppShell({ children, variant = 'header' }: Props) {
     return (
         <SidebarProvider defaultOpen={isOpen}>
             {children}
-            {showChat && <ProactiveAssistantWidget />}
-            {showChat && <ChatWidget />}
+            {showChat && <AssistantHub key={auth.user.id} />}
         </SidebarProvider>
     );
 }

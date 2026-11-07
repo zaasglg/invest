@@ -4,7 +4,6 @@ namespace App\Http\Requests;
 
 use App\Models\InvestmentProject;
 use App\Services\ProjectAttractionService;
-use App\Support\ProjectAttractionStages;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -25,12 +24,13 @@ class ProjectAttractionActivityRequest extends FormRequest
             ->pluck('id')->all();
 
         return [
-            'status' => ['sometimes', 'required', Rule::in(['planned', 'in_progress', 'cancelled'])],
-            'attraction_stage' => ['required', 'string', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
-            'event_name' => ['nullable', 'required_with:event_date,result', 'string', 'max:1000'],
-            'event_date' => ['nullable', 'required_with:event_name,result', 'date', 'before_or_equal:today'],
-            'result' => ['nullable', 'required_with:event_name,event_date', 'string', 'max:10000'],
+            'status' => ['exclude'],
+            'attraction_stage' => ['exclude'],
+            'event_name' => ['exclude'],
+            'event_date' => ['exclude'],
+            'result' => ['exclude'],
             'next_action' => ['required', 'string', 'max:1000'],
+            'description' => ['nullable', 'string', 'max:10000'],
             'next_action_due_date' => ['required', 'date'],
             'responsible_id' => ['required', 'integer', Rule::in($responsibleIds)],
         ];
@@ -43,7 +43,8 @@ class ProjectAttractionActivityRequest extends FormRequest
             'event_name' => 'Соңғы өткізілген іс-шара',
             'event_date' => 'Іс-шара күні',
             'result' => 'Іс-шара нәтижесі',
-            'next_action' => 'Келесі іс-шара',
+            'next_action' => 'Тақырып',
+            'description' => 'Сипаттама',
             'next_action_due_date' => 'Орындалу мерзімі',
             'responsible_id' => 'Жауапты адам',
             'status' => 'Іс-шара мәртебесі',

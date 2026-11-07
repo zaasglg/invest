@@ -58,6 +58,12 @@ export default function ProjectInfrastructureForm({
             [key]: {
                 ...value[key],
                 [field]: capacity,
+                ...(field === 'required_capacity' &&
+                value[key].use_required_capacity
+                    ? { used_capacity: capacity }
+                    : field === 'used_capacity'
+                      ? { use_required_capacity: false }
+                      : {}),
             },
         });
     };
@@ -65,8 +71,9 @@ export default function ProjectInfrastructureForm({
     return (
         <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
             <p className="p-4 text-xs text-gray-500">
-                «Пайдалануда» бос қалса, келесі қадамда «Қажетті» мәні автоматты
-                алынады.
+                «Пайдалануда» — нақты пайдаланылып жатқан көлем. Екі көлем
+                бірдей болса, «Қажетті көлемге тең» белгісін қалдырыңыз. Өзге
+                жағдайда белгіні алып, нақты мәнді енгізіңіз.
             </p>
             <InputError message={errors.infrastructure} className="p-4" />
             {PROJECT_INFRASTRUCTURE_FIELDS.map((field) => {
@@ -149,8 +156,41 @@ export default function ProjectInfrastructureForm({
                                         )
                                     }
                                     unit={field.unit}
-                                    value={details.used_capacity}
+                                    value={
+                                        details.use_required_capacity
+                                            ? details.required_capacity
+                                            : details.used_capacity
+                                    }
                                 />
+                                <div className="flex items-center gap-2 sm:col-start-2">
+                                    <Checkbox
+                                        id={`infra-${field.key}-same`}
+                                        checked={
+                                            details.use_required_capacity ??
+                                            false
+                                        }
+                                        onCheckedChange={(checked) =>
+                                            onChange({
+                                                ...value,
+                                                [field.key]: {
+                                                    ...details,
+                                                    use_required_capacity:
+                                                        checked === true,
+                                                    used_capacity:
+                                                        checked === true
+                                                            ? details.required_capacity
+                                                            : '',
+                                                },
+                                            })
+                                        }
+                                    />
+                                    <Label
+                                        htmlFor={`infra-${field.key}-same`}
+                                        className="text-xs font-normal text-slate-600"
+                                    >
+                                        Қажетті көлемге тең
+                                    </Label>
+                                </div>
                             </div>
                         )}
                     </div>

@@ -17,9 +17,10 @@ class ProjectPassportSummaryService
         bool $includeOperationalDetails = true
     ): array {
         $isPlanned = $project->status === 'plan';
-        $tasks = $includeOperationalDetails && ! $isPlanned
+        $allTasks = $includeOperationalDetails && ! $isPlanned
             ? $project->tasks
             : collect();
+        $tasks = $allTasks->filter(fn ($task) => in_array($task->approval_status, [null, 'approved'], true));
         $issues = $includeOperationalDetails
             ? $project->issues
             : collect();
@@ -32,6 +33,9 @@ class ProjectPassportSummaryService
                 ['planned', 'in_progress', 'pending_review'],
                 true
             ));
+        if ($project->attraction_stage === 'declined') {
+            $openAttractionActivities = collect();
+        }
         $nextAttractionActivity = $openAttractionActivities
             ->filter(fn ($activity) => filled($activity->next_action))
             ->sortBy(fn ($activity) => $activity->next_action_due_date?->getTimestamp()
@@ -47,7 +51,7 @@ class ProjectPassportSummaryService
             ->filter(fn ($task) => $task->status !== 'done'
                 && $task->due_date?->lt(today()))
             ->count();
-        $taskPendingApproval = $tasks
+        $taskPendingApproval = $allTasks
             ->where('approval_status', 'pending')
             ->count();
 
@@ -76,6 +80,10 @@ class ProjectPassportSummaryService
             ? ($nextAttractionActivity
                 ? [
                     'id' => $nextAttractionActivity->id,
+                    'kind' => 'attraction',
+                    'status' => $nextAttractionActivity->status ?? 'planned',
+                    'responsible_id' => $nextAttractionActivity->responsible_id,
+                    'responsible_name' => $nextAttractionActivity->responsible?->full_name,
                     'title' => $nextAttractionActivity->next_action,
                     'due_date' => $nextAttractionActivity->next_action_due_date?->toDateString(),
                     'is_overdue' => $nextAttractionActivity->next_action_due_date?->lt(today())
@@ -85,6 +93,10 @@ class ProjectPassportSummaryService
             : ($nextTask
                 ? [
                     'id' => $nextTask->id,
+                    'kind' => 'task',
+                    'status' => $nextTask->status,
+                    'responsible_id' => $nextTask->assigned_to,
+                    'responsible_name' => $nextTask->assignee?->full_name,
                     'title' => $nextTask->title,
                     'due_date' => $nextTask->due_date?->toDateString(),
                     'is_overdue' => $nextTask->due_date?->lt(today()) ?? false,
@@ -98,6 +110,10 @@ class ProjectPassportSummaryService
                 || $project->attraction_resume_on->toDateString() < $nextMilestone['due_date'])) {
             $nextMilestone = [
                 'id' => $project->id,
+                'kind' => 'resume',
+                'status' => 'planned',
+                'responsible_id' => $project->curators->first()?->id ?? $project->created_by,
+                'responsible_name' => $project->curators->first()?->full_name ?? $project->creator?->full_name,
                 'title' => 'Инвестормен қайта байланысу',
                 'due_date' => $project->attraction_resume_on->toDateString(),
                 'is_overdue' => $project->attraction_resume_on->lt(today()),
@@ -134,7 +150,7 @@ class ProjectPassportSummaryService
                 'total' => $attractionActivities->count(),
                 'open' => $openAttractionActivities->count(),
                 'completed' => $attractionActivities->where('status', 'completed')->count(),
-                'pending_review' => $attractionActivities->where('status', 'pending_review')->count(),
+                'pending_review' => $openAttractionActivities->where('status', 'pending_review')->count(),
                 'overdue' => $attractionOverdue,
             ],
             'issues' => [
@@ -153,7 +169,7 @@ class ProjectPassportSummaryService
             'next_milestone' => $nextMilestone,
             'last_updated_at' => $this->lastUpdatedAt(
                 $project,
-                $tasks,
+                $allTasks,
                 $issues,
                 $attractionActivities
             )?->toISOString(),
@@ -191,7 +207,7 @@ class ProjectPassportSummaryService
 
         return [
             'elapsed_percent' => $elapsedPercent,
-            'days_remaining' => $daysRemaining,
+            'days_remaining' => $project->status === 'launched' ? null : $daysRemaining,
             'is_overdue' => $daysRemaining < 0
                 && $project->status !== 'launched',
             'has_dates' => true,
@@ -285,6 +301,14 @@ class ProjectPassportSummaryService
         bool $includeOperationalDetails,
         bool $attractionOverdue = false
     ): array {
+        if ($project->status === 'plan' && $project->attraction_stage === 'declined') {
+            return [
+                'level' => 'warning',
+                'label' => 'Инвестор бас тартқан',
+                'reasons' => ['Жоба белсенді инвестор тарту жұмыстарынан шығарылған. Тарихы сақталған.'],
+            ];
+        }
+
         $criticalReasons = [];
         $warningReasons = [];
 

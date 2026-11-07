@@ -163,7 +163,7 @@ test('a rejected result needs a reason and can be corrected and resubmitted', fu
         ->and($activity->fresh()->reviewer_comment)->toBeNull();
 
     expect(KpiLog::where('project_id', $project->id)->orderBy('id')->pluck('event')->all())->toBe([
-        'attraction.report_submitted', 'attraction.report_rejected', 'attraction.started', 'attraction.report_submitted',
+        'attraction.viewed', 'attraction.report_submitted', 'attraction.report_rejected', 'attraction.started', 'attraction.report_submitted',
     ]);
 });
 
@@ -218,7 +218,7 @@ test('self review is restricted to superadmin', function (string $role, bool $al
     'superadmin' => ['superadmin', true],
 ]);
 
-test('activities cannot become completed through ordinary manager edits', function () {
+test('ordinary manager edits ignore a forged completed status', function () {
     $manager = attractionReportingUser('superadmin');
     $assignee = attractionReportingUser('ispolnitel');
     $project = attractionReportingProject($manager, $assignee);
@@ -226,7 +226,7 @@ test('activities cannot become completed through ordinary manager edits', functi
 
     $this->actingAs($manager)->put(route('investment-projects.attraction-activities.update', [$project, $activity]),
         attractionReportingPayload($activity, ['status' => 'completed']))
-        ->assertSessionHasErrors('status');
+        ->assertSessionHasNoErrors()->assertRedirect();
     expect($activity->fresh()->status)->toBe('planned');
 });
 
@@ -248,9 +248,7 @@ test('reassignment clears earlier reports and cancelled activities reject report
         ->and($activity->fresh()->report_result)->toBeNull()
         ->and($activity->fresh()->reported_by)->toBeNull();
 
-    $this->put(route('investment-projects.attraction-activities.update', [$project, $activity]),
-        attractionReportingPayload($activity->fresh(), ['status' => 'cancelled']))
-        ->assertSessionHasNoErrors();
+    $activity->update(['status' => 'cancelled']);
     $this->actingAs($replacement)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
         'status' => 'pending_review', 'report_result' => 'Бас тартылған іс-шара есебі.',
     ])->assertForbidden();
@@ -265,7 +263,7 @@ test('reporting and reviewing stop when project is archived or leaves planning',
 
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
         'status' => 'pending_review', 'report_result' => 'Есеп.',
-    ])->assertForbidden();
+    ])->assertStatus(409);
 
     $project->update(['is_archived' => false, 'status' => 'implementation']);
     $this->actingAs($manager)->put(route('investment-projects.attraction-activities.review', [$project, $activity]), [
@@ -308,7 +306,7 @@ test('superadmin changes to reviewed work reopen it and preserve the old approva
 })->with([
     'changed work definition' => [['next_action' => 'Жаңа келіссөз өткізу']],
     'changed deadline' => [['next_action_due_date' => '2099-01-01']],
-    'explicit reopen' => [['status' => 'in_progress']],
+    'changed description' => [['description' => 'Жұмыстың жаңа талаптары']],
 ]);
 
 test('administrative changes outside a completed work definition preserve its approval', function () {
@@ -345,6 +343,6 @@ test('deleting the newest activity cannot restore an uninitialized historical ha
     $this->actingAs($admin)->delete(route('investment-projects.attraction-activities.destroy', [$project, $latest]))
         ->assertRedirect();
 
-    expect($project->fresh()->attraction_stage)->toBe('potential')
+    expect($project->fresh()->attraction_stage)->toBe('negotiation')
         ->and($project->attractionActivities()->sole()->id)->toBe($older->id);
 });

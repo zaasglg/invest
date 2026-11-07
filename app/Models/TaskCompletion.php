@@ -14,12 +14,14 @@ class TaskCompletion extends Model
         'reviewer_comment',
         'reviewed_by',
         'reviewed_at',
+        'task_definition_version',
     ];
 
     protected function casts(): array
     {
         return [
             'reviewed_at' => 'datetime',
+            'task_definition_version' => 'integer',
         ];
     }
 

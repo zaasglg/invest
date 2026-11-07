@@ -85,10 +85,15 @@ class CompletionWorkflowService
                 $photos,
                 &$storedPaths
             ): TaskCompletion {
+                $lockedProject = InvestmentProject::query()->lockForUpdate()->findOrFail($task->project_id);
                 $lockedTask = ProjectTask::query()
                     ->whereKey($task->id)
                     ->lockForUpdate()
                     ->firstOrFail();
+
+                abort_unless((int) $lockedTask->assigned_to === (int) $submitter->id, 403);
+                abort_unless(($lockedTask->approval_status ?? 'approved') === 'approved', 409, 'Тапсырманың жаңа нұсқасы әлі расталмаған.');
+                abort_if($lockedProject->status === 'plan' || $lockedProject->is_archived || $lockedProject->is_deleted, 409);
 
                 abort_unless(
                     in_array($lockedTask->status, ['new', 'rejected'], true),
@@ -105,6 +110,7 @@ class CompletionWorkflowService
 
                 $completion = TaskCompletion::create([
                     'task_id' => $lockedTask->id,
+                    'task_definition_version' => $lockedTask->definition_version ?? 1,
                     'submitted_by' => $submitter->id,
                     'comment' => $comment,
                     'status' => 'pending',
@@ -257,6 +263,9 @@ class CompletionWorkflowService
         string $status,
         ?string $comment
     ): void {
+        if ($status === 'rejected' && blank($comment)) {
+            throw ValidationException::withMessages(['reviewer_comment' => 'Нені түзету керегін жазыңыз.']);
+        }
         $copiedPaths = [];
 
         try {
@@ -269,6 +278,12 @@ class CompletionWorkflowService
                 $comment,
                 &$copiedPaths
             ): void {
+                $lockedProject = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
+                $lockedTask = ProjectTask::query()
+                    ->whereKey($task->id)
+                    ->where('project_id', $project->id)
+                    ->lockForUpdate()
+                    ->firstOrFail();
                 $lockedCompletion = TaskCompletion::query()
                     ->whereKey($completion->id)
                     ->where('task_id', $task->id)
@@ -276,15 +291,13 @@ class CompletionWorkflowService
                     ->firstOrFail();
 
                 abort_unless(
-                    $lockedCompletion->status === 'pending',
+                    $lockedCompletion->status === 'pending'
+                        && (int) $lockedCompletion->task_definition_version === (int) $lockedTask->definition_version,
                     409,
-                    'Бұл нәтиже бұған дейін тексерілген.'
+                    'Бұл нәтиже бұған дейін тексерілген немесе тапсырманың бұрынғы нұсқасына тиесілі.'
                 );
-
-                $lockedTask = ProjectTask::query()
-                    ->whereKey($task->id)
-                    ->lockForUpdate()
-                    ->firstOrFail();
+                abort_unless(($lockedTask->approval_status ?? 'approved') === 'approved' && $lockedTask->status === 'in_progress', 409);
+                abort_if($lockedProject->status === 'plan' || $lockedProject->is_archived || $lockedProject->is_deleted, 409);
 
                 $lockedCompletion->update([
                     'status' => $status,

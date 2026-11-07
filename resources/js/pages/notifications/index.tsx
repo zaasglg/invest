@@ -19,12 +19,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
-import type { PaginatedData } from '@/types/pagination';
 import {
     index as notificationsIndex,
     open as openNotification,
     readAll as readAllNotifications,
 } from '@/routes/notifications';
+import type { PaginatedData } from '@/types/pagination';
 
 type RelatedTask = {
     id: number;
@@ -53,6 +53,8 @@ type NotificationItem = {
     created_at: string;
     action_label?: string | null;
     destination_url: string;
+    project?: { id: number; name: string };
+    telegram_status?: string;
     task?: RelatedTask;
     subsoil_task?: RelatedSubsoilTask;
     completion?: { task?: RelatedTask };
@@ -112,6 +114,46 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
         icon: ListChecks,
         iconClassName: 'bg-sky-100 text-sky-700',
     },
+    attraction_report_submitted: {
+        label: 'Іс-шара есебі тексеруде',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    attraction_report_approved: {
+        label: 'Іс-шара есебі қабылданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    attraction_report_rejected: {
+        label: 'Іс-шара есебі қайтарылды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    attraction_handover_requested: {
+        label: 'Жобаны қабылдау қажет',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    attraction_handover_accepted: {
+        label: 'Жоба сүйемелдеуге қабылданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    attraction_due_soon: {
+        label: 'Іс-шара мерзімі жақындады',
+        icon: CalendarClock,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    attraction_overdue: {
+        label: 'Іс-шара мерзімі өтті',
+        icon: CalendarClock,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    attraction_resume: {
+        label: 'Инвестормен қайта байланысу',
+        icon: CalendarClock,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
     completion_submitted: {
         label: 'Орындау жіберілді',
         icon: Clock3,
@@ -161,7 +203,8 @@ function contextLabel(notification: NotificationItem): string | null {
     const project =
         notification.task?.project ??
         notification.completion?.task?.project ??
-        notification.attraction_activity?.project;
+        notification.attraction_activity?.project ??
+        notification.project;
     if (project) return `Жоба: ${project.name}`;
 
     const subsoilUser =
@@ -404,6 +447,32 @@ export default function NotificationsIndex({
                                                             {context}
                                                         </span>
                                                     )}
+                                                    {notification.telegram_status &&
+                                                        [
+                                                            'sent',
+                                                            'retry',
+                                                            'pending',
+                                                            'failed',
+                                                        ].includes(
+                                                            notification.telegram_status,
+                                                        ) && (
+                                                            <span
+                                                                className={
+                                                                    notification.telegram_status ===
+                                                                    'failed'
+                                                                        ? 'text-amber-700'
+                                                                        : ''
+                                                                }
+                                                            >
+                                                                {notification.telegram_status ===
+                                                                'sent'
+                                                                    ? 'Telegram-ға жіберілді'
+                                                                    : notification.telegram_status ===
+                                                                        'failed'
+                                                                      ? 'Telegram-ға жеткізілмеді'
+                                                                      : 'Telegram-ға жіберуді күтуде'}
+                                                            </span>
+                                                        )}
                                                     <time>
                                                         {new Date(
                                                             notification.created_at,

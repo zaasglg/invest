@@ -14,6 +14,7 @@ class ProjectAttractionActivity extends Model
         'event_date',
         'result',
         'next_action',
+        'description',
         'next_action_due_date',
         'responsible_id',
         'created_by',

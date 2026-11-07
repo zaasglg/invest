@@ -20,7 +20,7 @@ class TelegramService
     /**
      * Send a text message to a Telegram chat.
      */
-    public function sendMessage(string $chatId, string $text, ?string $parseMode = 'HTML'): bool
+    public function sendMessage(string $chatId, string $text, ?string $parseMode = 'HTML', int $attempts = 3): bool
     {
         if (empty($this->botToken) || empty($chatId)) {
             return false;
@@ -28,7 +28,7 @@ class TelegramService
 
         try {
             $response = Http::timeout(10)
-                ->retry(3, 1000)
+                ->retry($attempts, 1000)
                 ->post("{$this->apiUrl}/sendMessage", [
                     'chat_id' => $chatId,
                     'text' => $text,
@@ -92,9 +92,10 @@ class TelegramService
             'task_assigned', 'attraction_assigned' => '📋',
             'task_overdue', 'task_due_soon', 'subsoil_task_due_soon' => '⏰',
             'assistant_suggestion' => '✨',
-            'completion_submitted' => '📩',
-            'completion_approved' => '✅',
-            'completion_rejected' => '❌',
+            'completion_submitted', 'attraction_report_submitted', 'attraction_handover_requested' => '📩',
+            'completion_approved', 'attraction_report_approved', 'attraction_handover_accepted' => '✅',
+            'completion_rejected', 'attraction_report_rejected' => '❌',
+            'attraction_due_soon', 'attraction_overdue', 'attraction_resume' => '⏰',
             'photo_missing' => '📸',
             default => '🔔',
         };
