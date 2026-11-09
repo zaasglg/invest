@@ -117,7 +117,6 @@ class ProjectExecutorAssignmentService
     private function hasAssignedWork(InvestmentProject $project, int $userId): bool
     {
         return $project->tasks()->where('assigned_to', $userId)->exists()
-            || $project->attractionActivities()->where('responsible_id', $userId)
-                ->whereIn('status', ['planned', 'in_progress', 'pending_review'])->exists();
+            || $project->attractionActivities()->where('responsible_id', $userId)->exists();
     }
 }

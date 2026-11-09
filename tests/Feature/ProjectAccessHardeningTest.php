@@ -99,7 +99,7 @@ test('direction colleagues can create attraction work and roadmap tasks with the
 
     $this->actingAs($colleague)->post(route('investment-projects.attraction-activities.store', $planned), [
         'attraction_stage' => 'potential', 'next_action' => 'Colleague attraction work',
-        'next_action_due_date' => today()->addWeek()->toDateString(), 'responsible_id' => $owner->id,
+        'next_action_due_date' => today()->addWeek()->toDateString(), 'responsible_id' => $executor->id,
     ])->assertRedirect()->assertSessionHasNoErrors();
     expect($planned->attractionActivities()->sole()->created_by)->toBe($colleague->id);
 
@@ -207,7 +207,7 @@ test('curator changes preserve actual creator and reject invalid participant rol
     $outsider = hardenedProjectUser('applicant');
     $project = hardenedProject($admin);
     $payload = ['name' => $project->name, 'region_id' => $project->region_id,
-        'status' => 'plan', 'curator_ids' => [$curator->id]];
+        'status' => 'plan', 'total_investment' => 1000, 'curator_ids' => [$curator->id]];
     $this->actingAs($admin)->put(route('investment-projects.update', $project), $payload)
         ->assertRedirect()->assertSessionHasNoErrors();
     expect($project->fresh()->created_by)->toBe($admin->id);
@@ -256,6 +256,7 @@ test('active responsibilities prevent losing curator or investor access during p
         'created_by' => $admin->id, 'status' => 'planned',
     ]);
     $payload = ['name' => $project->name, 'region_id' => $project->region_id, 'status' => 'plan',
+        'total_investment' => 1000,
         'company_id' => $role === 'investor' ? null : $company->id,
         'curator_ids' => [$admin->id]];
     $this->actingAs($admin)->put(route('investment-projects.update', $project), $payload)

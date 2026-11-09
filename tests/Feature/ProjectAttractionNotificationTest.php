@@ -110,14 +110,17 @@ test('editing does not duplicate an assignment but changing responsible notifies
     Http::assertNothingSent();
 });
 
-test('self assignment sends no notification and stale creation status cannot suppress an assignment', function () {
+test('editing legacy self assignment sends no notification and stale creation status cannot suppress an assignment', function () {
     $manager = attractionNotificationUser('superadmin');
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('ispolnitel', ['region_id' => $project->region_id]);
     $project->executors()->attach($responsible);
     $service = app(ProjectAttractionService::class);
 
-    $service->save($manager, $project, attractionNotificationPayload($manager));
+    $legacy = $project->attractionActivities()->create([
+        ...attractionNotificationPayload($manager), 'created_by' => $manager->id, 'status' => 'planned',
+    ]);
+    $service->save($manager, $project, attractionNotificationPayload($manager), $legacy);
     expect(TaskNotification::count())->toBe(0);
     $service->save($manager, $project, attractionNotificationPayload($responsible, ['status' => 'cancelled']));
     expect(TaskNotification::count())->toBe(1);
@@ -150,12 +153,19 @@ test('active attraction responsibility preserves access and archived project hid
     $this->post(route('notifications.open', $notification))->assertForbidden();
 });
 
-test('moderators receive visible attraction assignments without reviving planned roadmap notifications', function () {
+test('legacy moderator attraction assignments remain visible only while the project is in scope', function () {
     $manager = attractionNotificationUser('invest', ['invest_sub_role' => 'turkistan_invest']);
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('moderator');
     $project->curators()->attach($responsible);
-    app(ProjectAttractionService::class)->save($manager, $project, attractionNotificationPayload($responsible));
+    $activity = $project->attractionActivities()->create([
+        ...attractionNotificationPayload($responsible), 'created_by' => $manager->id, 'status' => 'planned',
+    ]);
+    TaskNotification::create([
+        'user_id' => $responsible->id, 'project_id' => $project->id,
+        'attraction_activity_id' => $activity->id, 'type' => 'attraction_assigned',
+        'message' => 'Бұрын берілген іс-шара',
+    ]);
 
     expect(TaskNotification::visibleTo($responsible)->count())->toBe(1);
     $project->curators()->detach([$manager->id, $responsible->id]);

@@ -157,7 +157,9 @@ export default function AttractionStageDetailsCard({
                                         >
                                             {acceptedAt
                                                 ? 'Қабылданды'
-                                                : 'Қабылдауды күтуде'}
+                                                : historical
+                                                  ? 'Қабылданбаған'
+                                                  : 'Қабылдауды күтуде'}
                                         </Badge>
                                     </div>
                                     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[180px_1fr]">

@@ -12,7 +12,9 @@ use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\ProjectAttractionHandoverService;
 use App\Services\ProjectAttractionService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
 function hardenedWorkflowUser(string $role, array $attributes = []): User
@@ -49,6 +51,7 @@ function hardenedWorkflowTask(InvestmentProject $project, User $responsible, arr
 }
 
 beforeEach(function () {
+    Storage::fake('local');
     Http::preventStrayRequests();
     Http::fake();
 });
@@ -131,7 +134,7 @@ test('roadmap rejection requires actionable feedback', function () {
     expect($report->fresh()->status)->toBe('pending');
 });
 
-test('planning status transitions count outstanding work and cannot bypass handover through suspension', function () {
+test('planning status transitions still count outstanding work but do not require a handover', function () {
     $admin = hardenedWorkflowUser('superadmin');
     $project = hardenedWorkflowProject($admin, 'plan');
     $activity = $project->attractionActivities()->create([
@@ -150,10 +153,8 @@ test('planning status transitions count outstanding work and cannot bypass hando
     $service->prepare(['status' => 'suspended'], $admin, $project);
     $project->update(['status' => 'suspended']);
     expect($project->fresh()->planning_started_at)->not->toBeNull();
-    expect(fn () => $service->prepare(['status' => 'implementation'], $admin, $project->fresh()))
-        ->toThrow(ValidationException::class);
-    $project->update(['attraction_handover_accepted_at' => now(), 'attraction_handover_accepted_by' => $admin->id]);
     expect($service->prepare(['status' => 'implementation'], $admin, $project->fresh())['status'])->toBe('implementation');
+    expect($project->fresh()->attraction_handover_accepted_at)->toBeNull();
 });
 
 test('only administrator can directly import an existing nonplanned project', function (string $status) {
@@ -186,11 +187,12 @@ test('a suspended project cannot be created as a shortcut around the planning wo
 
 test('declining a project cannot conceal outstanding work through the activity editor', function () {
     $admin = hardenedWorkflowUser('superadmin');
+    $executor = hardenedWorkflowUser('ispolnitel');
     $project = hardenedWorkflowProject($admin, 'plan');
     $project->update(['attraction_decline_reason' => 'Инвестор шешімі']);
     $data = [
         'attraction_stage' => 'declined', 'next_action' => 'Бас тартуды тіркеу',
-        'next_action_due_date' => today()->toDateString(), 'responsible_id' => $admin->id,
+        'next_action_due_date' => today()->toDateString(), 'responsible_id' => $executor->id,
     ];
     $this->actingAs($admin)->post(route('investment-projects.attraction-activities.store', $project), $data)
         ->assertSessionHasNoErrors()->assertRedirect();
@@ -217,10 +219,16 @@ test('attraction reports notify eligible reviewers and review results notify the
         'created_by' => $manager->id, 'status' => 'planned',
     ]);
     $service = app(ProjectAttractionService::class);
-    $service->report($executor, $project, $activity, ['status' => 'pending_review', 'report_result' => 'Келісім алынды']);
+    $service->report($executor, $project, $activity, [
+        'status' => 'pending_review', 'report_result' => 'Келісім алынды',
+        'documents' => [UploadedFile::fake()->create('agreement.pdf', 10, 'application/pdf')],
+    ]);
     expect(TaskNotification::where('type', 'attraction_report_submitted')->where('user_id', $manager->id)->count())->toBe(1)
         ->and(TaskNotification::where('user_id', $unrelated->id)->count())->toBe(0);
-    $service->review($manager, $project, $activity->fresh(), ['decision' => 'rejected', 'reviewer_comment' => 'Құжат нөмірін қосыңыз']);
+    $service->review($manager, $project, $activity->fresh(), [
+        'report_id' => $activity->reports()->sole()->id,
+        'decision' => 'rejected', 'reviewer_comment' => 'Құжат нөмірін қосыңыз',
+    ]);
     expect(TaskNotification::where('type', 'attraction_report_rejected')->where('user_id', $executor->id)->sole()->message)->toContain('Құжат нөмірін');
 });
 

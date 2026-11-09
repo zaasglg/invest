@@ -111,7 +111,6 @@ interface InvestmentProject {
     production_not_applicable?: boolean;
     production_plans?: ProductionPlanInput[];
     total_investment: string | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     status: string;
     attraction_stage?: string | null;
     attraction_handover_to_id?: number | null;
@@ -158,7 +157,6 @@ interface Props {
 
 const PROJECT_FORM_ERROR_FIELDS = [
     { field: 'status', step: 1 },
-    { field: 'investment_amount_type', step: 1 },
     { field: 'name', step: 1 },
     { field: 'company_id', step: 1 },
     { field: 'curator_ids', step: 1 },
@@ -233,9 +231,6 @@ export default function Edit({
                 project.production_plans,
             ),
             total_investment: project.total_investment ?? '',
-            investment_amount_type:
-                project.investment_amount_type ??
-                (project.total_investment === null ? 'unknown' : 'exact'),
             status: project.status || 'plan',
             attraction_stage: project.attraction_stage || 'potential',
             attraction_handover_to_id:
@@ -525,10 +520,6 @@ export default function Edit({
 
         transform((form) => ({
             ...form,
-            total_investment:
-                form.investment_amount_type === 'unknown'
-                    ? null
-                    : form.total_investment,
             attraction_stage:
                 form.status === 'plan' ? form.attraction_stage : null,
             infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
@@ -550,11 +541,7 @@ export default function Edit({
         if (!isPlanned && data.project_type_ids.length === 0) {
             errors.project_type_ids = 'Кемінде бір жоба түрін таңдаңыз';
         }
-        if (data.investment_amount_type === 'unknown') {
-            if (!isPlanned)
-                errors.investment_amount_type =
-                    'Осы мәртебе үшін нақты немесе болжамды соманы көрсетіңіз';
-        } else if (!data.total_investment.trim()) {
+        if (!data.total_investment.trim()) {
             errors.total_investment = 'Жалпы инвестицияны енгізіңіз';
         } else if (
             !Number.isFinite(Number(data.total_investment)) ||
@@ -722,12 +709,6 @@ export default function Edit({
                                         setData((previous) => ({
                                             ...previous,
                                             status: value,
-                                            investment_amount_type:
-                                                value !== 'plan' &&
-                                                previous.investment_amount_type ===
-                                                    'unknown'
-                                                    ? 'estimated'
-                                                    : previous.investment_amount_type,
                                         }));
                                         clearErrors();
                                         setValidationErrors({});
@@ -1265,30 +1246,9 @@ export default function Edit({
                                 {/* Жұмыс орындары және инвестиция */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <InvestmentAmountInput
-                                        planned={isPlanned}
-                                        amountType={data.investment_amount_type}
                                         value={data.total_investment}
-                                        onTypeChange={(value) => {
-                                            setData(
-                                                'investment_amount_type',
-                                                value,
-                                            );
-                                            clearErrors(
-                                                'investment_amount_type',
-                                                'total_investment',
-                                            );
-                                            setValidationErrors((previous) => ({
-                                                ...previous,
-                                                investment_amount_type: '',
-                                                total_investment: '',
-                                            }));
-                                        }}
                                         onValueChange={(value) =>
                                             setData('total_investment', value)
-                                        }
-                                        typeError={
-                                            errors.investment_amount_type ||
-                                            validationErrors.investment_amount_type
                                         }
                                         error={
                                             errors.total_investment ||
@@ -1715,16 +1675,13 @@ export default function Edit({
                                                 Инвестиция:
                                             </span>
                                             <p className="font-medium">
-                                                {data.investment_amount_type ===
-                                                'unknown'
-                                                    ? 'Әзірге белгісіз'
-                                                    : data.total_investment
-                                                      ? `${data.investment_amount_type === 'estimated' ? 'Болжамды: ' : ''}${formatMoneyCompact(
-                                                            parseFloat(
-                                                                data.total_investment,
-                                                            ),
-                                                        )}`
-                                                      : '—'}
+                                                {data.total_investment
+                                                    ? formatMoneyCompact(
+                                                          parseFloat(
+                                                              data.total_investment,
+                                                          ),
+                                                      )
+                                                    : '—'}
                                             </p>
                                         </div>
                                     </div>

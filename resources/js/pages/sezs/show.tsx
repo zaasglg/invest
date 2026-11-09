@@ -64,7 +64,6 @@ interface InvestmentProject {
     name: string;
     company_name?: string;
     total_investment?: number | string | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     status: string;
     region?: Region;
     geometry?: { lat: number; lng: number }[];
@@ -527,9 +526,6 @@ export default function Show({
                                                             <ProjectInvestmentValue
                                                                 value={
                                                                     project.total_investment
-                                                                }
-                                                                amountType={
-                                                                    project.investment_amount_type
                                                                 }
                                                             />
                                                         </TableCell>

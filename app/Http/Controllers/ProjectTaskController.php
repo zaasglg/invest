@@ -10,16 +10,17 @@ use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\ProjectExecutorAssignmentService;
+use App\Services\ProjectTaskAssigneeService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\ValidationException;
 
 class ProjectTaskController extends Controller
 {
     public function __construct(
         private readonly ProjectExecutorAssignmentService $projectExecutors,
-        private readonly InvestmentProjectAccessService $projectAccess
+        private readonly InvestmentProjectAccessService $projectAccess,
+        private readonly ProjectTaskAssigneeService $assignees
     ) {}
 
     public function store(Request $request, InvestmentProject $investmentProject)
@@ -409,28 +410,7 @@ class ProjectTaskController extends Controller
         int $userId,
         InvestmentProject $investmentProject
     ): User {
-        $assignee = User::with('roleModel')->findOrFail($userId);
-
-        if (! in_array(
-            $assignee->roleModel?->name,
-            ['ispolnitel', 'investor'],
-            true
-        )) {
-            throw ValidationException::withMessages([
-                'assigned_to' => 'Тапсырманы тек орындаушыға немесе жоба инвесторына беруге болады.',
-            ]);
-        }
-
-        if ($assignee->roleModel?->name === 'investor'
-            && ! $investmentProject->investors()
-                ->where('users.id', $assignee->id)
-                ->exists()) {
-            throw ValidationException::withMessages([
-                'assigned_to' => 'Инвестор бұл жобаға бекітілмеген.',
-            ]);
-        }
-
-        return $assignee;
+        return $this->assignees->validate($userId, $investmentProject);
     }
 
     private function authorizeTaskManagement(

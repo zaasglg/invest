@@ -373,6 +373,14 @@ class CheckRoleAccess
         ?string $roleName
     ): void {
         $project = $this->routeInvestmentProject($request);
+        if (in_array($request->route()?->getName(), [
+            'investment-projects.attraction-activities.files.download',
+            'investment-projects.attraction-activities.files.preview',
+        ], true)) {
+            abort_unless($project && $user->canDownloadFromProject($project), 403);
+
+            return;
+        }
         abort_unless(
             $project
                 && ! $project->is_archived

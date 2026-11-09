@@ -120,16 +120,6 @@ interface InvestmentProject {
     can_manage?: boolean;
     can_delete?: boolean;
     attraction_stage?: string | null;
-    next_action?: {
-        id: number;
-        title: string;
-        due_date: string | null;
-        responsible_name: string | null;
-        responsible_id: number | null;
-        is_overdue: boolean;
-        kind: 'attraction' | 'task' | 'resume';
-        status?: string | null;
-    } | null;
     name: string;
     company_name: string | null;
     region: Region | null;
@@ -137,7 +127,6 @@ interface InvestmentProject {
     project_types?: ProjectType[];
     sector: string;
     total_investment: string | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     status: string;
     start_date: string | null;
     end_date: string | null;
@@ -528,12 +517,8 @@ export default function Index({
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
-    const formatInvestment = (
-        value: string | number | null,
-        amountType?: string,
-    ) => {
-        if (amountType === 'unknown' || value === null || value === '')
-            return 'Әзірге белгісіз';
+    const formatInvestment = (value: string | number | null) => {
+        if (value === null || value === '') return '—';
         const num = Number(value);
         if (isNaN(num)) return String(value);
 
@@ -1131,7 +1116,7 @@ export default function Index({
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
                     >
-                        <Table>
+                        <Table className="[&_td]:px-3 [&_th]:px-3">
                             <TableHeader>
                                 <TableRow>
                                     {canReorderProjects && (
@@ -1143,9 +1128,6 @@ export default function Index({
                                     <TableHead>Сектор</TableHead>
                                     <TableHead>Инвестиция</TableHead>
                                     <TableHead>Орындаушылар</TableHead>
-                                    <TableHead className="min-w-56">
-                                        Келесі жұмыс
-                                    </TableHead>
                                     <TableHead>Мәртебесі</TableHead>
                                     <TableHead className="text-right">
                                         Әрекеттер
@@ -1156,9 +1138,7 @@ export default function Index({
                                 {orderedProjects.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={
-                                                canReorderProjects ? 10 : 9
-                                            }
+                                            colSpan={canReorderProjects ? 9 : 8}
                                             className="py-12 text-center text-gray-400"
                                         >
                                             Деректер жоқ
@@ -1175,7 +1155,7 @@ export default function Index({
                                                 id={project.id}
                                                 isEnabled={canReorderProjects}
                                             >
-                                                <TableCell>
+                                                <TableCell className="[overflow-wrap:anywhere]">
                                                     <div className="flex flex-col">
                                                         <Link
                                                             href={investmentProjectsRoutes.show.url(
@@ -1211,18 +1191,9 @@ export default function Index({
                                                 <TableCell className="whitespace-nowrap">
                                                     {formatInvestment(
                                                         project.total_investment,
-                                                        project.investment_amount_type,
                                                     )}
-                                                    {project.investment_amount_type ===
-                                                        'estimated' &&
-                                                        project.total_investment !==
-                                                            null && (
-                                                            <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                                                                Болжамды сома
-                                                            </span>
-                                                        )}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="[overflow-wrap:anywhere]">
                                                     {project.executors?.length >
                                                     0
                                                         ? project.executors
@@ -1233,52 +1204,7 @@ export default function Index({
                                                               .join(', ')
                                                         : '—'}
                                                 </TableCell>
-                                                <TableCell className="max-w-72">
-                                                    {project.next_action ? (
-                                                        <Link
-                                                            href={`${investmentProjectsRoutes.show.url(project.id)}${project.next_action.kind === 'attraction' ? `#attraction-activity-${project.next_action.id}` : project.next_action.kind === 'resume' ? '#project-attraction' : '#project-roadmap'}`}
-                                                            className="block space-y-1.5 rounded-sm focus-visible:outline-2 focus-visible:outline-gold"
-                                                        >
-                                                            <p className="line-clamp-2 text-sm font-medium text-navy hover:text-gold-dark">
-                                                                {
-                                                                    project
-                                                                        .next_action
-                                                                        .title
-                                                                }
-                                                            </p>
-                                                            <p className="text-xs text-slate-500">
-                                                                {project
-                                                                    .next_action
-                                                                    .responsible_name ||
-                                                                    'Жауапты адам көрсетілмеген'}
-                                                            </p>
-                                                            <p
-                                                                className={`text-xs ${project.next_action.is_overdue ? 'font-semibold text-red-600' : 'text-slate-500'}`}
-                                                            >
-                                                                {project
-                                                                    .next_action
-                                                                    .due_date
-                                                                    ? new Date(
-                                                                          project
-                                                                              .next_action
-                                                                              .due_date,
-                                                                      ).toLocaleDateString(
-                                                                          'kk-KZ',
-                                                                      )
-                                                                    : 'Мерзімі белгіленбеген'}
-                                                                {project
-                                                                    .next_action
-                                                                    .is_overdue
-                                                                    ? ' · кешікті'
-                                                                    : ''}
-                                                            </p>
-                                                        </Link>
-                                                    ) : (
-                                                        <span className="text-xs text-slate-400">
-                                                            Белсенді жұмыс жоқ
-                                                        </span>
-                                                    )}
-                                                </TableCell>
+
                                                 <TableCell>
                                                     <Badge
                                                         className={`${getStatusColor(project.status)} border-0 px-3 py-1 text-sm font-medium`}

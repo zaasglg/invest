@@ -17,10 +17,12 @@ use App\Services\InvestmentProjectStatusService;
 use App\Services\PrivateFileService;
 use App\Services\ProjectAttractionHandoverService;
 use App\Services\ProjectAttractionHistoryService;
+use App\Services\ProjectAttractionReportService;
 use App\Services\ProjectAttractionService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
 use App\Services\ProjectProductionService;
+use App\Services\ProjectTaskAssigneeService;
 use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
@@ -240,9 +242,7 @@ class InvestmentProjectController extends Controller
         ];
 
         $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
-        $projects->getCollection()->load(['attractionActivities.responsible:id,full_name', 'tasks.assignee:id,full_name', 'tasks.completions:id,task_id,status,task_definition_version']);
-        $projects->getCollection()->each(function ($project) use ($user, $worklist, $filters) {
-            $project->setAttribute('next_action', $worklist->nextAction($project, $user, $filters));
+        $projects->getCollection()->each(function ($project) use ($user) {
             $project->setAttribute('can_manage', $this->projectAccess->canManage($user, $project));
             $project->setAttribute('can_delete', $this->projectAccess->canManage($user, $project)
                 && in_array($user->roleModel?->name, ['superadmin', 'invest'], true));
@@ -487,7 +487,6 @@ class InvestmentProjectController extends Controller
 
     public function store(Request $request)
     {
-        ProjectPlanningInput::prepare($request);
         $isPlanned = $request->input('status') === 'plan';
         if ($request->has('infrastructure')) {
             $request->merge([
@@ -835,37 +834,7 @@ class InvestmentProjectController extends Controller
         }
 
         $user = request()->user();
-        $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
-            ->with('roleModel:id,name,display_name')
-            ->where(function ($query) use ($id) {
-                $query
-                    ->whereHas('roleModel', function ($roleQuery) {
-                        $roleQuery->where('name', 'ispolnitel');
-                    })
-                    ->orWhere(function ($investorQuery) use ($id) {
-                        $investorQuery
-                            ->whereHas('roleModel', function ($roleQuery) {
-                                $roleQuery->where('name', 'investor');
-                            })
-                            ->whereHas('investorProjects', function ($projectQuery) use ($id) {
-                                $projectQuery->where('investment_projects.id', (int) $id);
-                            });
-                    });
-            })
-            ->orderBy('full_name');
-
-        if ($user && $user->isDistrictScoped()) {
-            $assignableUsersQuery->where(function ($query) use ($user) {
-                // Users in same region
-                $query->where('region_id', $user->region_id)
-                    // Or executor-style accounts allowed for this project
-                    ->orWhere(function ($q) {
-                        $q->whereHas('roleModel', function ($roleQuery) {
-                            $roleQuery->whereIn('name', ['ispolnitel', 'investor']);
-                        });
-                    });
-            });
-        }
+        $assignableUsersQuery = app(ProjectTaskAssigneeService::class)->query((int) $id);
 
         $canDownload = $user && is_object($project) ? $user->canDownloadFromProject($project) : true;
 
@@ -909,6 +878,7 @@ class InvestmentProjectController extends Controller
             });
             if ($includeOperationalDetails) {
                 app(ProjectAttractionHistoryService::class)->hydrate($project, $user);
+                app(ProjectAttractionReportService::class)->hydrateReports($project, $user);
             }
             if ($project->status === 'plan') {
                 $project->setRelation('tasks', collect());
@@ -1301,7 +1271,6 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
-        ProjectPlanningInput::prepare($request);
         $isPlanned = $request->input('status') === 'plan';
 
         if ($request->has('infrastructure')) {
@@ -1358,7 +1327,7 @@ class InvestmentProjectController extends Controller
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'executor_ids' => 'nullable|array',
-            'executor_ids.*' => ProjectParticipantRules::executor((int) $request->input('region_id')),
+            'executor_ids.*' => ProjectParticipantRules::executor((int) $request->input('region_id'), $investmentProject),
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
             ...ProductionPlanValidationRules::rules(),
@@ -1597,7 +1566,6 @@ class InvestmentProjectController extends Controller
                     : $names)
                 ->all(),
             'total_investment' => $project->total_investment,
-            'investment_amount_type' => $project->investment_amount_type,
             'attraction_handover_to_id' => $project->attraction_handover_to_id,
             'attraction_handover_accepted_at' => $project->attraction_handover_accepted_at,
             'attraction_decline_reason' => $project->attraction_decline_reason,
@@ -1646,7 +1614,6 @@ class InvestmentProjectController extends Controller
             'region' => 'Өңір',
             'project_types' => 'Жоба түрлері',
             'total_investment' => 'Инвестиция сомасы',
-            'investment_amount_type' => 'Инвестиция сомасының нақтылығы',
             'attraction_handover_to_id' => 'Сүйемелдеуге қабылдаушы',
             'attraction_handover_accepted_at' => 'Сүйемелдеуге қабылданған уақыты',
             'attraction_decline_reason' => 'Бас тарту себебі',
@@ -1772,10 +1739,14 @@ class InvestmentProjectController extends Controller
                     $document->name,
                     $document->file_path
                 );
-                $folder = $document->is_completed
-                    ? 'Құжаттар/Тапсырма бойынша орындалған құжаттар'
-                    : 'Құжаттар/Жүктелген құжаттар';
-                $zip->addFile($filePath, $folder.'/'.$docName);
+                $folder = $document->source === 'attraction_activity'
+                    ? 'Құжаттар/Іс-шаралар'
+                    : ($document->is_completed
+                        ? 'Құжаттар/Тапсырма бойынша орындалған құжаттар'
+                        : 'Құжаттар/Жүктелген құжаттар');
+                $archiveFileName = $document->source === 'attraction_activity'
+                    ? $document->id.'_'.$docName : $docName;
+                $zip->addFile($filePath, $folder.'/'.$archiveFileName);
             }
         }
 
@@ -2194,8 +2165,8 @@ class InvestmentProjectController extends Controller
         $infoItems = [
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
             ['Құны', $project->total_investment === null
-                ? 'Әзірге белгісіз'
-                : ($project->investment_amount_type === 'estimated' ? 'Болжамды: ' : '').$formatCurrency($project->total_investment)],
+                ? '—'
+                : $formatCurrency($project->total_investment)],
             [
                 'Саласы',
                 $project->projectTypes->pluck('name')->join(', ')

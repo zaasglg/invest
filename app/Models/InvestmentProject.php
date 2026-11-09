@@ -72,10 +72,6 @@ class InvestmentProject extends Model
             $project->attraction_stage = $project->status === 'plan'
                 ? ($project->attraction_stage ?? 'potential')
                 : null;
-
-            if ($project->investment_amount_type === 'unknown') {
-                $project->total_investment = null;
-            }
         });
 
         static::addGlobalScope(

@@ -41,22 +41,6 @@ class ProjectAttractionHandoverService
             if ($project && $project->status !== $validated['status']) {
                 $this->ensureWorkClosed($project, 'status');
             }
-            if (in_array($validated['status'], ['implementation', 'launched'], true)
-                && (! $project || $project->status !== $validated['status'])
-                && $project && ($project->planning_started_at || $project->status === 'plan')
-                && ! $project?->attraction_handover_accepted_at) {
-                throw ValidationException::withMessages([
-                    'status' => 'Алдымен жоспарланған жобаны сүйемелдеуге беріп, қабылдаушының растауын алыңыз. Бұрыннан іске асырылып жатқан жобаны әкімші енгізе алады.',
-                ]);
-            }
-            if (in_array($validated['status'], ['implementation', 'launched'], true)
-                && $project?->attraction_handover_requested_at
-                && $project->attraction_handover_to_id
-                && ! $project->attraction_handover_accepted_at) {
-                throw ValidationException::withMessages([
-                    'status' => 'Алдымен тағайындалған қабылдаушы жобаны сүйемелдеуге қабылдауы керек.',
-                ]);
-            }
 
             return $validated;
         }

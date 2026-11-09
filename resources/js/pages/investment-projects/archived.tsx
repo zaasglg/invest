@@ -43,7 +43,6 @@ interface InvestmentProject {
     project_type: ProjectType;
     project_types?: ProjectType[];
     total_investment: string | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     status: string;
     start_date: string | null;
     end_date: string | null;
@@ -101,12 +100,8 @@ export default function Archived({ projects, filters }: Props) {
         return colors[status] || 'bg-gray-100 text-gray-800';
     };
 
-    const formatInvestment = (
-        value: string | number | null,
-        amountType?: string,
-    ) => {
-        if (amountType === 'unknown' || value === null || value === '')
-            return 'Әзірге белгісіз';
+    const formatInvestment = (value: string | number | null) => {
+        if (value === null || value === '') return '—';
         const num = Number(value);
         if (isNaN(num)) return String(value);
 
@@ -215,16 +210,7 @@ export default function Archived({ projects, filters }: Props) {
                                         <TableCell className="text-sm font-medium">
                                             {formatInvestment(
                                                 project.total_investment,
-                                                project.investment_amount_type,
                                             )}
-                                            {project.investment_amount_type ===
-                                                'estimated' &&
-                                                project.total_investment !==
-                                                    null && (
-                                                    <span className="mt-0.5 block text-xs font-normal text-slate-500">
-                                                        Болжамды сома
-                                                    </span>
-                                                )}
                                         </TableCell>
                                         <TableCell>
                                             <Badge

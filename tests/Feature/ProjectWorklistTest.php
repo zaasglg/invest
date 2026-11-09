@@ -55,12 +55,12 @@ function worklistTask(InvestmentProject $project, User $responsible, array $attr
     ]);
 }
 
-test('my work combines active attraction and approved roadmap assignments and opens the matching action', function () {
+test('my work filters projects by active attraction and approved roadmap assignments', function () {
     $manager = worklistUser();
     $colleague = worklistUser('invest');
     $planned = worklistProject($manager);
     worklistActivity($planned, $colleague, ['next_action_due_date' => today()->subDay()]);
-    $mine = worklistActivity($planned, $manager);
+    worklistActivity($planned, $manager);
     $implementation = worklistProject($manager, ['status' => 'implementation']);
     worklistTask($implementation, $manager);
     $foreign = worklistProject($manager);
@@ -73,12 +73,12 @@ test('my work combines active attraction and approved roadmap assignments and op
     $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'my']))
         ->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('projects.data', 2)
-        ->where('projects.data', function ($rows) use ($planned, $implementation, $mine) {
+        ->where('projects.data', function ($rows) use ($planned, $implementation) {
             $rows = collect($rows);
 
-            return $rows->pluck('id')->sort()->values()->all() === collect([$planned->id, $implementation->id])->sort()->values()->all()
-                && data_get($rows->firstWhere('id', $planned->id), 'next_action.id') === $mine->id;
+            return $rows->pluck('id')->sort()->values()->all() === collect([$planned->id, $implementation->id])->sort()->values()->all();
         })
+        ->missing('projects.data.0.next_action')
         ->where('filters.work_filter', 'my'));
 });
 
@@ -98,8 +98,7 @@ test('stage and responsible filters combine without including other lifecycle st
         'attraction_stage' => 'conditions', 'responsible_id' => $manager->id,
     ]))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('projects.data', 1)
-        ->where('projects.data.0.id', $matching->id)
-        ->where('projects.data.0.next_action.responsible_id', $manager->id));
+        ->where('projects.data.0.id', $matching->id));
 });
 
 test('overdue work excludes closed declined archived and unapproved work', function () {
@@ -153,7 +152,7 @@ test('unrelated executors see no operational next action in the project list', f
     $this->actingAs($executor)->get(route('investment-projects.index'))
         ->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('projects.data', 1)
-        ->where('projects.data.0.next_action', null)
+        ->missing('projects.data.0.next_action')
         ->missing('projects.data.0.attraction_activities')
         ->missing('projects.data.0.tasks'));
 });

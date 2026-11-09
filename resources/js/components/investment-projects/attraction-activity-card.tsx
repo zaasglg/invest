@@ -2,9 +2,12 @@ import { useForm, usePage } from '@inertiajs/react';
 import { Content as DialogPrimitiveContent } from '@radix-ui/react-dialog';
 import {
     CheckCircle2,
+    Download,
     Edit,
     Eye,
+    FileText,
     Flag,
+    ImageIcon,
     Plus,
     Search,
     Trash2,
@@ -19,6 +22,7 @@ import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogClose,
@@ -44,6 +48,7 @@ import {
     isAttractionActivityOverdue,
 } from '@/lib/attraction-activity';
 import type { AttractionActivityStatus } from '@/lib/attraction-activity';
+import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { cn } from '@/lib/utils';
 import * as activityRoutes from '@/routes/investment-projects/attraction-activities';
 
@@ -56,6 +61,41 @@ export interface AttractionActivityEvent {
     comment?: string | null;
 }
 
+interface ActivityReportFile {
+    id: number;
+    file_name: string;
+    type: 'document' | 'photo';
+    download_url: string | null;
+    preview_url?: string | null;
+}
+
+interface ActivityReport {
+    id: number;
+    result: string;
+    status: 'pending' | 'approved' | 'rejected' | 'superseded';
+    submitter?: { id: number; full_name: string } | null;
+    created_at: string;
+    reviewed_at?: string | null;
+    reviewer?: { id: number; full_name: string } | null;
+    comment?: string | null;
+    recorded_as_completed: boolean;
+    files: ActivityReportFile[];
+}
+
+interface ActivityResponsible {
+    id: number;
+    full_name: string;
+    position?: string | null;
+    baskarma_type?: string | null;
+    role_model?: { name: string } | null;
+}
+
+function responsibleTypeLabel(user: ActivityResponsible): string {
+    return user.role_model?.name === 'investor'
+        ? 'Инвестор'
+        : getIspolnitelTypeLabel(user.baskarma_type, true);
+}
+
 export interface AttractionActivity {
     id: number;
     attraction_stage: string;
@@ -66,11 +106,7 @@ export interface AttractionActivity {
     description?: string | null;
     next_action_due_date: string;
     responsible_id: number | null;
-    responsible?: {
-        id: number;
-        full_name: string;
-        position?: string | null;
-    } | null;
+    responsible?: ActivityResponsible | null;
     creator?: { id: number; full_name: string } | null;
     created_at: string;
     status?: AttractionActivityStatus;
@@ -87,6 +123,7 @@ export interface AttractionActivity {
     can_mark_viewed?: boolean;
     viewed_at?: string | null;
     events?: AttractionActivityEvent[];
+    reports?: ActivityReport[];
 }
 
 interface Props {
@@ -94,7 +131,7 @@ interface Props {
     activities: AttractionActivity[];
     canManage: boolean;
     historical?: boolean;
-    users: { id: number; full_name: string; position?: string | null }[];
+    users: ActivityResponsible[];
 }
 
 const STATUS_BADGE_CLASSES: Record<AttractionActivityStatus, string> = {
@@ -107,6 +144,219 @@ const STATUS_BADGE_CLASSES: Record<AttractionActivityStatus, string> = {
 
 const TEXTAREA_CLASSES =
     'min-h-0 rounded-md border-gray-200 px-3 py-2 shadow-none focus-visible:border-cyan-400 focus-visible:ring-1 focus-visible:ring-cyan-400';
+
+const MAX_FILE_SIZE = 20 * 1024 * 1024;
+const MAX_TOTAL_FILE_SIZE = 100 * 1024 * 1024;
+
+function attachmentErrors(documents: File[], photos: File[]) {
+    const errors: { documents?: string; photos?: string } = {};
+    for (const [field, files] of Object.entries({ documents, photos })) {
+        const key = field as 'documents' | 'photos';
+        if (files.length > 10) {
+            errors[key] = 'Әр бөлімге ең көбі 10 файл тіркеуге болады.';
+        } else {
+            const oversized = files.find((file) => file.size > MAX_FILE_SIZE);
+            if (oversized) {
+                errors[key] =
+                    `«${oversized.name}» файлы 20 МБ-тан аспауы керек.`;
+            }
+        }
+    }
+    if (documents.length === 0) {
+        errors.documents = 'Кемінде бір құжат тіркеңіз.';
+    } else if (
+        [...documents, ...photos].reduce((size, file) => size + file.size, 0) >
+        MAX_TOTAL_FILE_SIZE
+    ) {
+        errors.documents = 'Файлдардың жалпы көлемі 100 МБ-тан аспауы керек.';
+    }
+    return errors;
+}
+
+function ActivityFileInputs({
+    id,
+    documents,
+    photos,
+    errors,
+    disabled,
+    onChange,
+}: {
+    id: string;
+    documents: File[];
+    photos: File[];
+    errors: Record<string, string | undefined>;
+    disabled: boolean;
+    onChange: (field: 'documents' | 'photos', files: File[]) => void;
+}) {
+    return (
+        <div className="space-y-4">
+            {(['documents', 'photos'] as const).map((field) => {
+                const isDocument = field === 'documents';
+                const files = isDocument ? documents : photos;
+                const fieldErrors = Object.entries(errors)
+                    .filter(
+                        ([key]) => key === field || key.startsWith(`${field}.`),
+                    )
+                    .map(([, value]) => value)
+                    .filter((value): value is string => Boolean(value));
+                return (
+                    <div key={field} className="space-y-1.5">
+                        <Label
+                            htmlFor={`${id}-${field}`}
+                            className="text-sm font-semibold text-[#0f1b3d]"
+                        >
+                            {isDocument ? (
+                                <FileText className="mr-1 inline h-4 w-4" />
+                            ) : (
+                                <ImageIcon className="mr-1 inline h-4 w-4" />
+                            )}
+                            {isDocument
+                                ? 'Құжаттар'
+                                : 'Суреттер (міндетті емес)'}
+                            {isDocument && (
+                                <span className="ml-1 text-red-500">*</span>
+                            )}
+                        </Label>
+                        <Input
+                            id={`${id}-${field}`}
+                            type="file"
+                            multiple
+                            disabled={disabled}
+                            accept={
+                                isDocument
+                                    ? '.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar'
+                                    : '.jpg,.jpeg,.png,.gif,.webp,.bmp'
+                            }
+                            aria-invalid={fieldErrors.length > 0}
+                            aria-describedby={`${id}-${field}-help ${id}-${field}-error`}
+                            className="h-auto px-3 py-2 text-sm file:mr-4 file:rounded-md file:border-0 file:bg-cyan-50 file:px-4 file:py-1.5 file:text-sm file:font-medium file:text-cyan-700 hover:file:bg-cyan-100"
+                            onChange={(event) => {
+                                const selected = Array.from(
+                                    event.target.files ?? [],
+                                );
+                                const combined = [...files, ...selected];
+                                onChange(
+                                    field,
+                                    combined.filter(
+                                        (file, index) =>
+                                            combined.findIndex(
+                                                (other) =>
+                                                    other.name === file.name &&
+                                                    other.size === file.size &&
+                                                    other.lastModified ===
+                                                        file.lastModified,
+                                            ) === index,
+                                    ),
+                                );
+                                event.target.value = '';
+                            }}
+                        />
+                        <p
+                            id={`${id}-${field}-help`}
+                            className="text-xs text-gray-500"
+                        >
+                            Ең көбі 10 файл, әрқайсысы 20 МБ-қа дейін.
+                            {isDocument &&
+                                ' Кемінде бір құжат міндетті. Сурет құжаттың орнын алмастырмайды.'}
+                        </p>
+                        {files.length > 0 && (
+                            <ul className="divide-y divide-gray-100 rounded-md border border-gray-200">
+                                {files.map((file, index) => (
+                                    <li
+                                        key={`${file.name}-${file.size}-${file.lastModified}`}
+                                        className="flex items-center gap-2 px-3 py-2 text-sm"
+                                    >
+                                        <span className="min-w-0 flex-1 break-words wrap-anywhere">
+                                            {file.name}
+                                        </span>
+                                        <span className="shrink-0 text-xs text-gray-500">
+                                            {(file.size / 1024 / 1024).toFixed(
+                                                1,
+                                            )}{' '}
+                                            МБ
+                                        </span>
+                                        <Button
+                                            type="button"
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 shrink-0 text-gray-400 hover:text-red-600"
+                                            disabled={disabled}
+                                            aria-label={`${file.name} файлын алып тастау`}
+                                            onClick={() =>
+                                                onChange(
+                                                    field,
+                                                    files.filter(
+                                                        (_, current) =>
+                                                            current !== index,
+                                                    ),
+                                                )
+                                            }
+                                        >
+                                            <X className="h-4 w-4" />
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                        <div id={`${id}-${field}-error`}>
+                            {[...new Set(fieldErrors)].map((error) => (
+                                <InputError key={error} message={error} />
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+            <p className="text-xs text-gray-500">
+                Барлық файлдың жалпы көлемі 100 МБ-тан аспауы керек.
+            </p>
+        </div>
+    );
+}
+
+function ActivityReportFiles({ files }: { files: ActivityReportFile[] }) {
+    if (files.length === 0) return null;
+    return (
+        <ul className="mt-3 divide-y divide-gray-100 rounded-md border border-gray-200">
+            {files.map((file) => (
+                <li
+                    key={file.id}
+                    className="flex items-center gap-2 px-3 py-2 text-sm"
+                >
+                    {file.type === 'photo' ? (
+                        <ImageIcon className="h-4 w-4 shrink-0 text-gray-400" />
+                    ) : (
+                        <FileText className="h-4 w-4 shrink-0 text-gray-400" />
+                    )}
+                    <span className="min-w-0 flex-1 font-normal break-words wrap-anywhere">
+                        {file.file_name}
+                    </span>
+                    {file.preview_url && (
+                        <a
+                            href={file.preview_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="rounded p-1.5 text-gray-500 hover:bg-cyan-50 hover:text-cyan-700"
+                            aria-label={`${file.file_name} файлын көру`}
+                            title="Көру"
+                        >
+                            <Eye className="h-4 w-4" />
+                        </a>
+                    )}
+                    {file.download_url && (
+                        <a
+                            href={file.download_url}
+                            className="rounded p-1.5 text-gray-500 hover:bg-cyan-50 hover:text-cyan-700"
+                            aria-label={`${file.file_name} файлын жүктеу`}
+                            title="Жүктеу"
+                        >
+                            <Download className="h-4 w-4" />
+                        </a>
+                    )}
+                </li>
+            ))}
+        </ul>
+    );
+}
 
 function ActivityDialogContent({
     className,
@@ -199,6 +449,7 @@ function ActivityTimeline({ events }: { events: AttractionActivityEvent[] }) {
         'attraction.report_submitted': 'bg-indigo-500',
         'attraction.report_approved': 'bg-green-600',
         'attraction.report_rejected': 'bg-rose-600',
+        'attraction.recorded_completed': 'bg-green-600',
     };
     return (
         <div className="rounded-lg border border-gray-200">
@@ -344,14 +595,26 @@ export default function AttractionActivityCard({
         description: '',
         next_action_due_date: '',
         responsible_id: '',
+        already_completed: false,
+        report_result: '',
+        documents: [] as File[],
+        photos: [] as File[],
     };
     const form = useForm(emptyData);
-    const filteredUsers = users.filter((user) =>
-        `${user.full_name} ${user.position ?? ''}`
+    const editingResponsible = activities.find(
+        (activity) => activity.id === editing,
+    )?.responsible;
+    const availableUsers =
+        editingResponsible &&
+        !users.some((user) => user.id === editingResponsible.id)
+            ? [...users, editingResponsible]
+            : users;
+    const filteredUsers = availableUsers.filter((user) =>
+        `${responsibleTypeLabel(user)} ${user.full_name} ${user.position ?? ''}`
             .toLocaleLowerCase()
             .includes(userSearch.trim().toLocaleLowerCase()),
     );
-    const selectedUser = users.find(
+    const selectedUser = availableUsers.find(
         (user) => user.id.toString() === form.data.responsible_id,
     );
     const deleteForm = useForm({});
@@ -361,10 +624,13 @@ export default function AttractionActivityCard({
     const reportForm = useForm({
         status: 'pending_review' as const,
         report_result: '',
+        documents: [] as File[],
+        photos: [] as File[],
     });
     const reviewForm = useForm({
         decision: 'approved' as 'approved' | 'rejected',
         reviewer_comment: '',
+        report_id: null as number | null,
     });
     const reviewCommentRef = useRef<HTMLTextAreaElement>(null);
 
@@ -471,6 +737,7 @@ export default function AttractionActivityCard({
         form.setData(
             activity
                 ? {
+                      ...emptyData,
                       next_action: activity.next_action,
                       description: activity.description ?? '',
                       next_action_due_date: activity.next_action_due_date.slice(
@@ -486,6 +753,21 @@ export default function AttractionActivityCard({
 
     const submit = (event: FormEvent) => {
         event.preventDefault();
+        if (!editing && form.data.already_completed) {
+            const errors = attachmentErrors(
+                form.data.documents,
+                form.data.photos,
+            );
+            if (Object.keys(errors).length > 0) {
+                form.setError(errors);
+                document
+                    .getElementById(
+                        `attraction-completed-${errors.documents ? 'documents' : 'photos'}`,
+                    )
+                    ?.focus();
+                return;
+            }
+        }
         const options = {
             preserveScroll: true,
             onSuccess: () => setOpen(false),
@@ -526,6 +808,8 @@ export default function AttractionActivityCard({
         reportForm.setData({
             status: 'pending_review',
             report_result: activity.report_result ?? '',
+            documents: [],
+            photos: [],
         });
         setReporting(activity);
     };
@@ -533,6 +817,19 @@ export default function AttractionActivityCard({
     const submitReport = (event: FormEvent) => {
         event.preventDefault();
         if (!reporting) return;
+        const errors = attachmentErrors(
+            reportForm.data.documents,
+            reportForm.data.photos,
+        );
+        if (Object.keys(errors).length > 0) {
+            reportForm.setError(errors);
+            document
+                .getElementById(
+                    `attraction-report-${errors.documents ? 'documents' : 'photos'}`,
+                )
+                ?.focus();
+            return;
+        }
         reportForm.post(
             activityRoutes.report.url({
                 investmentProject: projectId,
@@ -549,7 +846,11 @@ export default function AttractionActivityCard({
         lastReviewedId.current = activity.id;
         closeDetails();
         reviewForm.clearErrors();
-        reviewForm.setData({ decision: 'approved', reviewer_comment: '' });
+        reviewForm.setData({
+            decision: 'approved',
+            reviewer_comment: '',
+            report_id: activity.reports?.[0]?.id ?? null,
+        });
         setReviewing(activity);
     };
 
@@ -953,16 +1254,61 @@ export default function AttractionActivityCard({
                                     )}
                                 </ActivityDetailField>
                             )}
-                            {selectedActivity.report_result && (
-                                <ActivityDetailField label="Орындалу есебі">
-                                    <p>{selectedActivity.report_result}</p>
+                            {selectedActivity.reports?.map((report, index) => (
+                                <ActivityDetailField
+                                    key={report.id}
+                                    label={
+                                        index === 0
+                                            ? 'Орындалу есебі'
+                                            : 'Алдыңғы есеп'
+                                    }
+                                >
+                                    <div className="mb-2">
+                                        <Badge
+                                            className={cn(
+                                                'border-0 text-xs',
+                                                report.status === 'approved'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : report.status ===
+                                                        'rejected'
+                                                      ? 'bg-red-100 text-red-700'
+                                                      : 'bg-slate-100 text-slate-600',
+                                            )}
+                                        >
+                                            {report.recorded_as_completed
+                                                ? 'Бұрын орындалған'
+                                                : {
+                                                      pending: 'Тексеруде',
+                                                      approved: 'Қабылданды',
+                                                      rejected:
+                                                          'Толықтыруға қайтарылды',
+                                                      superseded:
+                                                          'Жаңа нұсқамен ауыстырылды',
+                                                  }[report.status]}
+                                        </Badge>
+                                    </div>
+                                    <p>{report.result}</p>
                                     <p className="mt-2 text-xs text-gray-500">
-                                        {selectedActivity.reporter?.full_name}
-                                        {selectedActivity.reported_at &&
-                                            ` · ${dateLabel(selectedActivity.reported_at)}`}
+                                        {report.submitter?.full_name}
+                                        {` · ${eventDateLabel(report.created_at)}`}
                                     </p>
+                                    <ActivityReportFiles files={report.files} />
                                 </ActivityDetailField>
-                            )}
+                            ))}
+                            {!selectedActivity.reports?.length &&
+                                selectedActivity.report_result && (
+                                    <ActivityDetailField label="Орындалу есебі">
+                                        <p>{selectedActivity.report_result}</p>
+                                        <p className="mt-2 text-xs text-gray-500">
+                                            {
+                                                selectedActivity.reporter
+                                                    ?.full_name
+                                            }
+                                            {selectedActivity.reported_at &&
+                                                ` · ${dateLabel(selectedActivity.reported_at)}`}
+                                        </p>
+                                    </ActivityDetailField>
+                                )}
                             {(selectedActivity.reviewed_at ||
                                 selectedActivity.reviewer_comment) && (
                                 <ActivityDetailField label="Куратордың тексеруі">
@@ -1092,6 +1438,120 @@ export default function AttractionActivityCard({
                                 />
                                 <InputError message={form.errors.description} />
                             </div>
+                            {!editing && (
+                                <div className="space-y-4 rounded-lg border border-gray-200 p-4">
+                                    <div className="flex items-start gap-3">
+                                        <Checkbox
+                                            id="attraction-already-completed"
+                                            checked={
+                                                form.data.already_completed
+                                            }
+                                            disabled={form.processing}
+                                            onCheckedChange={(checked) => {
+                                                form.setData({
+                                                    ...form.data,
+                                                    already_completed:
+                                                        checked === true,
+                                                    report_result: '',
+                                                    documents: [],
+                                                    photos: [],
+                                                });
+                                                form.clearErrors(
+                                                    'already_completed',
+                                                    'report_result',
+                                                    'documents',
+                                                    'photos',
+                                                );
+                                            }}
+                                        />
+                                        <div className="space-y-1">
+                                            <Label
+                                                htmlFor="attraction-already-completed"
+                                                className="font-semibold text-[#0f1b3d]"
+                                            >
+                                                Орындалды
+                                            </Label>
+                                            <p className="text-xs text-gray-500">
+                                                Бұрын орындалған іс-шараны
+                                                нәтижесі мен құжаттарын тіркеп
+                                                енгізу.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <InputError
+                                        message={form.errors.already_completed}
+                                    />
+                                    {form.data.already_completed && (
+                                        <>
+                                            <div className="space-y-1.5">
+                                                <Label
+                                                    htmlFor="attraction-completed-result"
+                                                    className="text-sm font-semibold text-[#0f1b3d]"
+                                                >
+                                                    Орындалу нәтижесі{' '}
+                                                    <span className="text-red-500">
+                                                        *
+                                                    </span>
+                                                </Label>
+                                                <Textarea
+                                                    id="attraction-completed-result"
+                                                    className={TEXTAREA_CLASSES}
+                                                    rows={4}
+                                                    required
+                                                    maxLength={10000}
+                                                    value={
+                                                        form.data.report_result
+                                                    }
+                                                    onChange={(event) =>
+                                                        form.setData(
+                                                            'report_result',
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    placeholder="Атқарылған жұмысты және қол жеткізілген нәтижені жазыңыз"
+                                                />
+                                                <InputError
+                                                    message={
+                                                        form.errors
+                                                            .report_result
+                                                    }
+                                                />
+                                            </div>
+                                            <ActivityFileInputs
+                                                id="attraction-completed"
+                                                documents={form.data.documents}
+                                                photos={form.data.photos}
+                                                errors={form.errors}
+                                                disabled={form.processing}
+                                                onChange={(field, files) => {
+                                                    form.setData(field, files);
+                                                    const keys = Object.keys(
+                                                        form.errors,
+                                                    ).filter(
+                                                        (key) =>
+                                                            key === field ||
+                                                            key.startsWith(
+                                                                `${field}.`,
+                                                            ),
+                                                    ) as Parameters<
+                                                        typeof form.clearErrors
+                                                    >;
+                                                    if (keys.length)
+                                                        form.clearErrors(
+                                                            ...keys,
+                                                        );
+                                                }}
+                                            />
+                                            <p className="text-xs text-emerald-700">
+                                                Іс-шара бірден орындалған болып
+                                                сақталады. Тіркелген файлдар
+                                                «Құжаттар → Іс-шаралар» бөліміне
+                                                қосылады.
+                                            </p>
+                                        </>
+                                    )}
+                                </div>
+                            )}
                             <div className="space-y-1.5">
                                 <Label
                                     htmlFor="attraction-due"
@@ -1165,6 +1625,16 @@ export default function AttractionActivityCard({
                                                     <span className="mr-2 text-gray-400">
                                                         {index + 1}
                                                     </span>
+                                                    {responsibleTypeLabel(
+                                                        user,
+                                                    ) && (
+                                                        <span className="mr-1 text-gray-500">
+                                                            {responsibleTypeLabel(
+                                                                user,
+                                                            )}
+                                                            :
+                                                        </span>
+                                                    )}
                                                     {user.full_name}
                                                     {user.position &&
                                                         ` — ${user.position}`}
@@ -1191,6 +1661,15 @@ export default function AttractionActivityCard({
                                     message={form.errors.responsible_id}
                                 />
                             </div>
+                            {form.progress && (
+                                <p
+                                    role="status"
+                                    className="text-sm text-gray-500"
+                                >
+                                    Файлдар жүктелуде:{' '}
+                                    {form.progress.percentage}%
+                                </p>
+                            )}
                             <div className="flex flex-wrap justify-end gap-3 pt-2">
                                 <Button
                                     type="submit"
@@ -1279,6 +1758,7 @@ export default function AttractionActivityCard({
                                     className={TEXTAREA_CLASSES}
                                     rows={4}
                                     required
+                                    maxLength={10000}
                                     value={reportForm.data.report_result}
                                     onChange={(event) =>
                                         reportForm.setData(
@@ -1296,6 +1776,36 @@ export default function AttractionActivityCard({
                                     модератор қабылдайды.
                                 </p>
                             </div>
+                            <ActivityFileInputs
+                                id="attraction-report"
+                                documents={reportForm.data.documents}
+                                photos={reportForm.data.photos}
+                                errors={reportForm.errors}
+                                disabled={reportForm.processing}
+                                onChange={(field, files) => {
+                                    reportForm.setData(field, files);
+                                    const keys = Object.keys(
+                                        reportForm.errors,
+                                    ).filter(
+                                        (key) =>
+                                            key === field ||
+                                            key.startsWith(`${field}.`),
+                                    ) as Parameters<
+                                        typeof reportForm.clearErrors
+                                    >;
+                                    if (keys.length)
+                                        reportForm.clearErrors(...keys);
+                                }}
+                            />
+                            {reportForm.progress && (
+                                <p
+                                    role="status"
+                                    className="text-sm text-gray-500"
+                                >
+                                    Файлдар жүктелуде:{' '}
+                                    {reportForm.progress.percentage}%
+                                </p>
+                            )}
                             <div className="flex flex-wrap justify-center gap-3 pt-2">
                                 <Button
                                     type="submit"
@@ -1378,6 +1888,19 @@ export default function AttractionActivityCard({
                                         'Нәтиже енгізілмеген'}
                                 </p>
                             </ActivityDetailField>
+                            {(reviewing?.reports?.[0]?.files.length ?? 0) >
+                                0 && (
+                                <ActivityDetailField
+                                    label="Есеп файлдары"
+                                    className="p-4"
+                                >
+                                    <ActivityReportFiles
+                                        files={
+                                            reviewing?.reports?.[0]?.files ?? []
+                                        }
+                                    />
+                                </ActivityDetailField>
+                            )}
                             <form
                                 className="space-y-4 border-t border-gray-200 pt-4"
                                 onSubmit={(event) => event.preventDefault()}
@@ -1393,6 +1916,9 @@ export default function AttractionActivityCard({
                                 )}
                                 <InputError
                                     message={reviewForm.errors.decision}
+                                />
+                                <InputError
+                                    message={reviewForm.errors.report_id}
                                 />
                                 <div className="space-y-1.5">
                                     <Label

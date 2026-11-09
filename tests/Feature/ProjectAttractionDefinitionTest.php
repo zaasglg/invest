@@ -8,7 +8,13 @@ use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\ProjectAttractionService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    Storage::fake('local');
+});
 
 function attractionDefinitionFixture(string $managerRole = 'superadmin'): array
 {
@@ -60,13 +66,13 @@ test('project managers cannot send attraction reports unless they are the respon
     $this->actingAs($manager)->get(route('investment-projects.show', $project))->assertOk()
         ->assertInertia(fn (Assert $page) => $page->where('project.attraction_activities.0.can_report', false));
     $this->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Басқа адамның орнына жіберілген есеп',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Басқа адамның орнына жіберілген есеп',
     ])->assertForbidden();
     expect($activity->fresh()->status)->toBe('planned');
 
     $activity->update(['responsible_id' => $manager->id]);
     $this->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Өзіме берілген жұмыстың есебі',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Өзіме берілген жұмыстың есебі',
     ])->assertSessionHasNoErrors()->assertRedirect();
     expect($activity->fresh()->reported_by)->toBe($manager->id);
 })->with(['superadmin', 'invest', 'moderator']);
@@ -141,12 +147,13 @@ test('description validates its length and a change beyond the audit preview res
 
 test('editing and reassigning an existing cancelled definition does not reopen it', function () {
     [$manager, $assignee, $project] = attractionDefinitionFixture();
+    $replacement = User::factory()->create(['role_id' => $assignee->role_id]);
     $activity = attractionDefinitionActivity($project, $assignee, ['status' => 'cancelled']);
     $this->actingAs($manager)->put(route('investment-projects.attraction-activities.update', [$project, $activity]),
-        attractionDefinitionPayload($manager, ['status' => 'planned', 'description' => 'Өзгертілген сипаттама']))
+        attractionDefinitionPayload($replacement, ['status' => 'planned', 'description' => 'Өзгертілген сипаттама']))
         ->assertSessionHasNoErrors()->assertRedirect();
     expect($activity->fresh()->status)->toBe('cancelled')
-        ->and(app(ProjectAttractionService::class)->canReport($manager, $project, $activity->fresh()))->toBeFalse();
+        ->and(app(ProjectAttractionService::class)->canReport($replacement, $project, $activity->fresh()))->toBeFalse();
 });
 
 test('a declined project cannot receive new open activities until its project stage changes', function () {
@@ -163,7 +170,7 @@ test('direct submission records a single actual assignee view before the report'
     [$manager, $assignee, $project] = attractionDefinitionFixture();
     $activity = attractionDefinitionActivity($project, $assignee);
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Жіберілген есеп',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Жіберілген есеп',
     ])->assertSessionHasNoErrors()->assertRedirect();
     $logs = KpiLog::where('subject_type', 'ProjectAttractionActivity')->where('subject_id', $activity->id)->orderBy('id')->get();
     expect($logs->pluck('event')->all())->toBe(['attraction.viewed', 'attraction.report_submitted'])

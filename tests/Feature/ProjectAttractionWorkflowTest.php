@@ -147,15 +147,16 @@ test('project creation and editing reject unknown attraction stages', function (
 
 test('project managers manage attraction definitions without changing the project stage', function (string $roleName) {
     $manager = attractionWorkflowUser($roleName);
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
-    $payload = attractionWorkflowActivityPayload($manager);
+    $payload = attractionWorkflowActivityPayload($responsible);
 
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.store', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
 
     $activity = $project->attractionActivities()->sole();
     expect($activity->created_by)->toBe($manager->id)
-        ->and($activity->responsible_id)->toBe($manager->id)
+        ->and($activity->responsible_id)->toBe($responsible->id)
         ->and($activity->event_name)->toBeNull()
         ->and($activity->attraction_stage)->toBe('potential')
         ->and($activity->status)->toBe('planned')
@@ -207,11 +208,12 @@ test('attraction activities require a next action deadline and responsible perso
 
 test('legacy event inputs cannot write a completed event through the definition form', function (array $event) {
     $manager = attractionWorkflowUser('superadmin');
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
 
     $this->actingAs($manager)->post(
         route('investment-projects.attraction-activities.store', $project),
-        attractionWorkflowActivityPayload($manager, $event)
+        attractionWorkflowActivityPayload($responsible, $event)
     )->assertSessionHasNoErrors()->assertRedirect();
 
     $activity = $project->attractionActivities()->sole();
@@ -229,7 +231,7 @@ test('legacy event inputs cannot write a completed event through the definition 
     ]],
 ]);
 
-test('the responsible person must belong to the project', function () {
+test('assigning a new executor adds project participation and company investors remain assignable', function () {
     $manager = attractionWorkflowUser('superadmin');
     $project = attractionWorkflowProject($manager);
     $executor = attractionWorkflowUser('ispolnitel');
@@ -238,13 +240,8 @@ test('the responsible person must belong to the project', function () {
     $this->actingAs($manager)->post(
         route('investment-projects.attraction-activities.store', $project),
         attractionWorkflowActivityPayload($executor)
-    )->assertSessionHasErrors('responsible_id');
-
-    $project->executors()->attach($executor);
-    $this->post(
-        route('investment-projects.attraction-activities.store', $project),
-        attractionWorkflowActivityPayload($executor)
     )->assertSessionHasNoErrors()->assertRedirect();
+    expect($project->executors()->whereKey($executor->id)->exists())->toBeTrue();
     $this->post(
         route('investment-projects.attraction-activities.store', $project),
         attractionWorkflowActivityPayload($investor)
@@ -312,11 +309,12 @@ test('scoped managers cannot manage another curators project', function (string 
 
 test('editing older attraction history preserves its stage snapshot and the project stage', function () {
     $manager = attractionWorkflowUser('superadmin');
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
     $project->update([
         'attraction_decline_reason' => 'Алдыңғы ұсыныстан инвестор бас тартқан',
     ]);
-    $payload = attractionWorkflowActivityPayload($manager);
+    $payload = attractionWorkflowActivityPayload($responsible);
 
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.store', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
@@ -338,8 +336,9 @@ test('editing older attraction history preserves its stage snapshot and the proj
 
 test('switching out of plan clears its stage but preserves and locks attraction history', function () {
     $manager = attractionWorkflowUser('superadmin');
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
-    $payload = attractionWorkflowActivityPayload($manager);
+    $payload = attractionWorkflowActivityPayload($responsible);
 
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.store', $project), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
@@ -381,8 +380,9 @@ test('switching out of plan clears its stage but preserves and locks attraction 
 
 test('deleting any attraction activity leaves the project stage unchanged', function () {
     $manager = attractionWorkflowUser('superadmin');
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
-    $payload = attractionWorkflowActivityPayload($manager);
+    $payload = attractionWorkflowActivityPayload($responsible);
 
     $this->actingAs($manager);
 
@@ -411,13 +411,14 @@ test('deleting any attraction activity leaves the project stage unchanged', func
 
 test('attraction activities stay in insertion order after edits and status changes', function () {
     $manager = attractionWorkflowUser('superadmin');
+    $responsible = attractionWorkflowUser('ispolnitel');
     $project = attractionWorkflowProject($manager);
     $this->actingAs($manager);
 
     foreach (['negotiation', 'conditions', 'agreements'] as $stage) {
         $project->update(['attraction_stage' => $stage]);
         $this->post(route('investment-projects.attraction-activities.store', $project),
-            attractionWorkflowActivityPayload($manager, ['attraction_stage' => $stage]))
+            attractionWorkflowActivityPayload($responsible, ['attraction_stage' => $stage]))
             ->assertSessionHasNoErrors()->assertRedirect();
     }
 
@@ -426,7 +427,7 @@ test('attraction activities stay in insertion order after edits and status chang
         ->toBe(['negotiation', 'conditions', 'agreements']);
 
     $this->put(route('investment-projects.attraction-activities.update', [$project, $activities[0]]),
-        attractionWorkflowActivityPayload($manager, [
+        attractionWorkflowActivityPayload($responsible, [
             'next_action' => 'Бірінші енгізілген іс-шараның жаңартылған атауы',
         ]))->assertSessionHasNoErrors()->assertRedirect();
 

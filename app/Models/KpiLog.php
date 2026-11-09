@@ -74,7 +74,7 @@ class KpiLog extends Model
         // Preserve validated attraction report snapshots across later resubmissions.
         // Other audit fields keep the standard normalization limits.
         if ($subject instanceof ProjectAttractionActivity && in_array($event, [
-            'attraction.report_submitted', 'attraction.report_approved', 'attraction.report_rejected',
+            'attraction.report_submitted', 'attraction.report_approved', 'attraction.report_rejected', 'attraction.recorded_completed',
         ], true)) {
             foreach (['Орындалу нәтижесі' => 10000, 'Тексерушінің түсіндірмесі' => 5000] as $key => $limit) {
                 $value = $properties['details'][$key] ?? null;

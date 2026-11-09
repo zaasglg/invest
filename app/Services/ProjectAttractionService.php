@@ -17,7 +17,11 @@ use Illuminate\Validation\ValidationException;
 
 class ProjectAttractionService
 {
-    public function __construct(private readonly InvestmentProjectAccessService $access) {}
+    public function __construct(
+        private readonly InvestmentProjectAccessService $access,
+        private readonly ProjectAttractionReportService $reports,
+        private readonly ProjectExecutorAssignmentService $executors
+    ) {}
 
     public function canManage(User $user, InvestmentProject $project): bool
     {
@@ -69,26 +73,13 @@ class ProjectAttractionService
                     && (int) $activity->responsible_id !== (int) $user->id));
     }
 
-    public function responsibleUsers(InvestmentProject $project, User $actor): Collection
+    public function responsibleUsers(InvestmentProject $project, User $actor, ?ProjectAttractionActivity $activity = null): Collection
     {
-        return User::query()->select('id', 'full_name', 'position', 'role_id', 'region_id', 'invest_sub_role', 'company_id', 'baskarma_type')
-            ->with('roleModel', 'region')
-            ->whereHas('roleModel', fn (Builder $query) => $query
-                ->whereIn('name', ['superadmin', 'invest', 'moderator', 'ispolnitel', 'investor']))
-            ->where(function (Builder $query) use ($project, $actor) {
-                $query->whereKey($actor->id)
-                    ->orWhere('id', $project->created_by)
-                    ->orWhereIn('id', $project->curators()->select('users.id'))
-                    ->orWhereIn('id', $project->executors()->select('users.id'))
-                    ->orWhereIn('id', $project->investors()->select('users.id'))
-                    ->orWhereIn('id', $project->attractionActivities()->reorder()->whereIn('status', ['planned', 'in_progress', 'pending_review'])->select('responsible_id'));
-            })
-            ->orderBy('full_name')->get()
-            ->filter(fn (User $candidate) => $this->access->canView($candidate, $project)
-                && (in_array($candidate->roleModel?->name, ['superadmin', 'invest', 'moderator'], true)
-                    ? $this->access->canManage($candidate, $project)
-                    : $candidate->isInvolvedInProject($project)))
-            ->values()->map(fn (User $candidate) => $candidate->only(['id', 'full_name', 'position']));
+        return app(ProjectTaskAssigneeService::class)->attractionUsers($project, $activity?->responsible_id)
+            ->map(fn (User $candidate) => [
+                ...$candidate->only(['id', 'full_name', 'position', 'baskarma_type']),
+                'role_model' => $candidate->roleModel?->only(['id', 'name', 'display_name']),
+            ]);
     }
 
     public function save(
@@ -97,8 +88,10 @@ class ProjectAttractionService
         array $data,
         ?ProjectAttractionActivity $activity = null
     ): void {
+        $submission = $data;
+        $alreadyCompleted = ! $activity && (bool) ($data['already_completed'] ?? false);
         $data = Arr::only($data, ['next_action', 'description', 'next_action_due_date', 'responsible_id']);
-        DB::transaction(function () use ($actor, $project, $data, $activity) {
+        $this->reports->transaction(function (array &$paths) use ($actor, $project, $data, $activity, $submission, $alreadyCompleted) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless($this->canManage($actor, $locked), 403);
             $before = [];
@@ -110,6 +103,7 @@ class ProjectAttractionService
                 $activity = $locked->attractionActivities()->lockForUpdate()->findOrFail($activity->id);
                 abort_unless($this->canEdit($actor, $locked, $activity), 403);
                 $before = $activity->only($activity->getFillable());
+                $this->validateResponsible($locked, $actor, $data, $activity);
 
                 $responsibleChanged = (int) $activity->responsible_id !== (int) $data['responsible_id'];
                 $definitionChanged = $responsibleChanged
@@ -119,6 +113,7 @@ class ProjectAttractionService
                 $reviewedOrPending = in_array($activity->status, ['pending_review', 'completed'], true);
 
                 if ($responsibleChanged || ($reviewedOrPending && $definitionChanged)) {
+                    $activity->reports()->where('status', 'pending')->update(['status' => 'superseded']);
                     $data = [
                         ...$data,
                         'status' => $activity->status === 'cancelled' ? 'cancelled' : 'planned',
@@ -133,6 +128,7 @@ class ProjectAttractionService
 
                 $activity->update($data);
             } else {
+                $this->validateResponsible($locked, $actor, $data);
                 $stage = $locked->attraction_stage ?? 'potential';
                 ProjectAttractionStages::assertAvailableForActivity($locked, $stage);
                 if ($stage === 'declined') {
@@ -145,6 +141,22 @@ class ProjectAttractionService
                     'attraction_stage' => $stage,
                     'status' => 'planned',
                     'created_by' => $actor->id,
+                ]);
+            }
+
+            if ($activity->responsible?->roleModel?->name === 'ispolnitel') {
+                $this->executors->assignTaskExecutor($locked, (int) $activity->responsible_id);
+            }
+            if ($responsibleChanged && ($before['responsible_id'] ?? null)) {
+                $this->executors->releaseTaskAssignment($locked, (int) $before['responsible_id']);
+            }
+            if ($alreadyCompleted) {
+                $this->reports->submit($locked, $activity, $actor, $submission, true, $paths);
+                $activity->update([
+                    'status' => 'completed',
+                    'report_result' => $submission['report_result'],
+                    'reported_at' => now(),
+                    'reported_by' => $actor->id,
                 ]);
             }
 
@@ -164,6 +176,18 @@ class ProjectAttractionService
                 ],
                 actor: $actor
             );
+
+            if ($alreadyCompleted) {
+                KpiLog::activity(
+                    projectId: $locked->id,
+                    event: 'attraction.recorded_completed',
+                    category: 'project',
+                    action: 'Бұрын орындалған іс-шара тіркелді',
+                    subject: $activity,
+                    properties: ['details' => ['Орындалу нәтижесі' => $activity->report_result]],
+                    actor: $actor
+                );
+            }
 
             $reopened = in_array($before['status'] ?? null, ['cancelled', 'completed'], true);
 
@@ -203,7 +227,17 @@ class ProjectAttractionService
                 properties: ['details' => $activity->only($activity->getFillable())],
                 actor: $actor
             );
+            $responsibleId = $activity->responsible_id;
+            $paths = $activity->reports()->with('files')->get()->flatMap(fn ($report) => $report->files->pluck('file_path'))->all();
             $activity->delete();
+            if ($responsibleId) {
+                $this->executors->releaseTaskAssignment($locked, (int) $responsibleId);
+            }
+            DB::afterCommit(function () use ($paths) {
+                foreach ($paths as $path) {
+                    app(PrivateFileService::class)->delete($path);
+                }
+            });
 
             $locked->touch();
         });
@@ -211,7 +245,7 @@ class ProjectAttractionService
 
     public function report(User $actor, InvestmentProject $project, ProjectAttractionActivity $activity, array $data): void
     {
-        DB::transaction(function () use ($actor, $project, $activity, $data) {
+        $this->reports->transaction(function (array &$paths) use ($actor, $project, $activity, $data) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless((int) $activity->project_id === (int) $locked->id, 404);
             $activity = $locked->attractionActivities()->lockForUpdate()->findOrFail($activity->id);
@@ -221,6 +255,9 @@ class ProjectAttractionService
             // modal's independent receipt request has not reached the server.
             app(ProjectAttractionHistoryService::class)->markViewed($actor, $locked, $activity);
             $submitted = $data['status'] === 'pending_review';
+            if ($submitted) {
+                $this->reports->submit($locked, $activity, $actor, $data, false, $paths);
+            }
             $activity->update([
                 'status' => $data['status'],
                 'report_result' => $data['report_result'] ?? $activity->report_result,
@@ -261,7 +298,7 @@ class ProjectAttractionService
         if ($data['decision'] === 'rejected' && blank($data['reviewer_comment'] ?? null)) {
             throw ValidationException::withMessages(['reviewer_comment' => 'Нені түзету керегін жазыңыз.']);
         }
-        DB::transaction(function () use ($actor, $project, $activity, $data) {
+        $this->reports->transaction(function (array &$paths) use ($actor, $project, $activity, $data) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless((int) $activity->project_id === (int) $locked->id, 404);
             $activity = $locked->attractionActivities()->lockForUpdate()->findOrFail($activity->id);
@@ -274,6 +311,7 @@ class ProjectAttractionService
                 'reviewed_by' => $actor->id,
                 'reviewer_comment' => $data['reviewer_comment'] ?? null,
             ]);
+            $this->reports->review($locked, $activity, $actor, $data, $paths);
             $locked->touch();
 
             KpiLog::activity(
@@ -311,5 +349,12 @@ class ProjectAttractionService
             'action_url' => route('investment-projects.show', $project, false).'#project-attraction',
             'action_label' => 'Іс-шараны ашу',
         ]);
+    }
+
+    private function validateResponsible(InvestmentProject $project, User $actor, array $data, ?ProjectAttractionActivity $activity = null): void
+    {
+        if (! $this->responsibleUsers($project, $actor, $activity)->contains('id', (int) $data['responsible_id'])) {
+            throw ValidationException::withMessages(['responsible_id' => 'Бұл адамды іс-шараға жауапты етіп тағайындауға болмайды.']);
+        }
     }
 }

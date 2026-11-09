@@ -36,13 +36,14 @@ final class ProjectParticipantRules
         }
     }
 
-    public static function executor(int $regionId): array
+    public static function executor(int $regionId, ?InvestmentProject $project = null): array
     {
         return ['bail', 'integer', 'distinct', 'exists:users,id',
-            function (string $attribute, mixed $value, Closure $fail) use ($regionId) {
+            function (string $attribute, mixed $value, Closure $fail) use ($regionId, $project) {
                 $user = User::with('roleModel')->find($value);
                 if ($user?->roleModel?->name !== 'ispolnitel'
-                    || ($user->baskarma_type === 'district' && (int) $user->region_id !== $regionId)) {
+                    || ($user->baskarma_type === 'district' && (int) $user->region_id !== $regionId
+                        && ! $project?->executors()->whereKey($user->id)->exists())) {
                     $fail('Жобаның ауданына тиісті аудан орындаушысын немесе облыстық/қосымша орындаушыны таңдаңыз.');
                 }
             },

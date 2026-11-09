@@ -8,6 +8,12 @@ use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\ProjectAttractionService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+
+beforeEach(function () {
+    Storage::fake('local');
+});
 
 function attractionReportingUser(string $role): User
 {
@@ -81,12 +87,12 @@ test('assigned participants start and submit their own attraction work', functio
         ->assertSessionHasNoErrors()->assertRedirect();
     expect($activity->fresh()->status)->toBe('in_progress');
 
-    $this->post($reportRoute, ['status' => 'pending_review', 'report_result' => ''])
+    $this->post($reportRoute, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => ''])
         ->assertSessionHasErrors('report_result');
     expect($activity->fresh()->status)->toBe('in_progress');
 
     $this->post($reportRoute, [
-        'status' => 'pending_review',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review',
         'report_result' => 'Кездесу өтті, ұсыныстар келісілді.',
         'responsible_id' => $manager->id,
     ])->assertSessionHasNoErrors()->assertRedirect();
@@ -106,11 +112,11 @@ test('manager approval completes an attraction activity and locks ordinary editi
     $project = attractionReportingProject($manager, $assignee);
     $activity = attractionReportingActivity($project, $assignee);
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Шарттар талқыланды.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Шарттар талқыланды.',
     ])->assertSessionHasNoErrors();
 
     $this->actingAs($manager)->put(route('investment-projects.attraction-activities.review', [$project, $activity]), [
-        'decision' => 'approved', 'reviewer_comment' => 'Қабылданды.',
+        'report_id' => $activity->reports()->first()?->id, 'decision' => 'approved', 'reviewer_comment' => 'Қабылданды.',
     ])->assertSessionHasNoErrors()->assertRedirect();
 
     $activity->refresh();
@@ -126,7 +132,7 @@ test('manager approval completes an attraction activity and locks ordinary editi
     $this->delete(route('investment-projects.attraction-activities.destroy', [$project, $activity]))
         ->assertForbidden();
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Ауыстырылған нәтиже.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Ауыстырылған нәтиже.',
     ])->assertForbidden();
 });
 
@@ -138,13 +144,13 @@ test('a rejected result needs a reason and can be corrected and resubmitted', fu
     $report = route('investment-projects.attraction-activities.report', [$project, $activity]);
     $review = route('investment-projects.attraction-activities.review', [$project, $activity]);
 
-    $this->actingAs($assignee)->post($report, ['status' => 'pending_review', 'report_result' => 'Алғашқы есеп.'])
+    $this->actingAs($assignee)->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Алғашқы есеп.'])
         ->assertSessionHasNoErrors();
-    $this->actingAs($manager)->put($review, ['decision' => 'rejected'])
+    $this->actingAs($manager)->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'rejected'])
         ->assertSessionHasErrors('reviewer_comment');
     expect($activity->fresh()->status)->toBe('pending_review');
 
-    $this->put($review, ['decision' => 'rejected', 'reviewer_comment' => 'Нақты нәтижені толықтырыңыз.'])
+    $this->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'rejected', 'reviewer_comment' => 'Нақты нәтижені толықтырыңыз.'])
         ->assertSessionHasNoErrors();
     expect($activity->fresh()->status)->toBe('in_progress')
         ->and($activity->fresh()->reviewer_comment)->toBe('Нақты нәтижені толықтырыңыз.');
@@ -155,7 +161,7 @@ test('a rejected result needs a reason and can be corrected and resubmitted', fu
         ->and($activity->fresh()->reviewed_by)->toBe($manager->id)
         ->and($activity->fresh()->reported_by)->toBe($assignee->id);
 
-    $this->actingAs($assignee)->post($report, ['status' => 'pending_review', 'report_result' => 'Толықтырылған есеп.'])
+    $this->actingAs($assignee)->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Толықтырылған есеп.'])
         ->assertSessionHasNoErrors();
     expect($activity->fresh()->status)->toBe('pending_review')
         ->and($activity->fresh()->report_result)->toBe('Толықтырылған есеп.')
@@ -176,14 +182,14 @@ test('attraction reports and reviews cannot be sent for another persons work or 
     $activity = attractionReportingActivity($project, $assignee);
 
     $this->actingAs($other)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Бөтен нәтиже.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Бөтен нәтиже.',
     ])->assertForbidden();
-    $this->put(route('investment-projects.attraction-activities.review', [$project, $activity]), ['decision' => 'approved'])
+    $this->put(route('investment-projects.attraction-activities.review', [$project, $activity]), ['report_id' => $activity->reports()->first()?->id, 'decision' => 'approved'])
         ->assertForbidden();
 
     $foreignProject = attractionReportingProject($manager, $assignee);
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.report', [$foreignProject, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Бөтен жоба.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Бөтен жоба.',
     ])->assertNotFound();
     expect($activity->fresh()->status)->toBe('planned');
 });
@@ -195,7 +201,7 @@ test('read-only roles cannot report even when responsible for an activity', func
     $activity = attractionReportingActivity($project, $assignee);
 
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Жарамсыз есеп.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Жарамсыз есеп.',
     ])->assertForbidden();
 })->with(['akim', 'zamakim', 'prokuror']);
 
@@ -205,10 +211,10 @@ test('self review is restricted to superadmin', function (string $role, bool $al
     $activity = attractionReportingActivity($project, $manager);
 
     $this->actingAs($manager)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Өз есебім.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Өз есебім.',
     ])->assertSessionHasNoErrors();
     $response = $this->put(route('investment-projects.attraction-activities.review', [$project, $activity]), [
-        'decision' => 'approved',
+        'report_id' => $activity->reports()->first()?->id, 'decision' => 'approved',
     ]);
     $allowed ? $response->assertRedirect() : $response->assertForbidden();
     expect($activity->fresh()->status)->toBe($allowed ? 'completed' : 'pending_review');
@@ -250,7 +256,7 @@ test('reassignment clears earlier reports and cancelled activities reject report
 
     $activity->update(['status' => 'cancelled']);
     $this->actingAs($replacement)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Бас тартылған іс-шара есебі.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Бас тартылған іс-шара есебі.',
     ])->assertForbidden();
 });
 
@@ -262,12 +268,12 @@ test('reporting and reviewing stop when project is archived or leaves planning',
     $project->update(['is_archived' => true]);
 
     $this->actingAs($assignee)->post(route('investment-projects.attraction-activities.report', [$project, $activity]), [
-        'status' => 'pending_review', 'report_result' => 'Есеп.',
+        'documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Есеп.',
     ])->assertStatus(409);
 
     $project->update(['is_archived' => false, 'status' => 'implementation']);
     $this->actingAs($manager)->put(route('investment-projects.attraction-activities.review', [$project, $activity]), [
-        'decision' => 'approved',
+        'report_id' => $activity->reports()->first()?->id, 'decision' => 'approved',
     ])->assertStatus(409);
 });
 

@@ -2,6 +2,7 @@
 
 use App\Models\Company;
 use App\Models\InvestmentProject;
+use App\Models\KpiLog;
 use App\Models\ProjectType;
 use App\Models\Region;
 use App\Models\Role;
@@ -50,7 +51,6 @@ function planningFlowProject(User $creator): InvestmentProject
         'company_name' => $company->display_name,
         'region_id' => $district->id,
         'project_type_id' => $type->id,
-        'investment_amount_type' => 'exact',
         'total_investment' => '3500000000.50',
         'status' => 'plan',
         'attraction_stage' => 'potential',
@@ -69,7 +69,6 @@ function planningFlowPayload(InvestmentProject $project, array $overrides = []):
         'company_id' => $project->company_id,
         'region_id' => $project->region_id,
         'project_type_ids' => $project->projectTypes()->pluck('project_types.id')->all(),
-        'investment_amount_type' => $project->investment_amount_type,
         'total_investment' => $project->total_investment,
         'status' => $project->status,
         'attraction_stage' => $project->attraction_stage,
@@ -77,7 +76,7 @@ function planningFlowPayload(InvestmentProject $project, array $overrides = []):
     ];
 }
 
-test('minimal planned projects keep unknown data null through creation and editing', function () {
+test('planned projects keep optional company data but require a single investment amount', function () {
     $manager = planningFlowUser();
     $district = planningFlowDistrict();
     $payload = [
@@ -85,19 +84,18 @@ test('minimal planned projects keep unknown data null through creation and editi
         'region_id' => $district->id,
         'status' => 'plan',
         'attraction_stage' => 'potential',
-        'investment_amount_type' => 'unknown',
+        'total_investment' => '2500000.75',
     ];
 
     $this->actingAs($manager)->post(route('investment-projects.store'), $payload)
         ->assertSessionHasNoErrors()->assertRedirect();
 
     $project = InvestmentProject::where('name', 'Early investor lead')->sole();
-    expect($project->total_investment)->toBeNull()
+    expect($project->total_investment)->toBe('2500000.75')
         ->and($project->company_id)->toBeNull()
         ->and($project->company_name)->toBeNull()
         ->and($project->project_type_id)->toBeNull()
-        ->and($project->projectTypes()->count())->toBe(0)
-        ->and($project->investment_amount_type)->toBe('unknown');
+        ->and($project->projectTypes()->count())->toBe(0);
 
     $this->put(route('investment-projects.update', $project), [
         ...$payload,
@@ -106,27 +104,26 @@ test('minimal planned projects keep unknown data null through creation and editi
     ])->assertSessionHasNoErrors()->assertRedirect();
 
     expect($project->fresh()->name)->toBe('Updated early investor lead')
-        ->and($project->fresh()->total_investment)->toBeNull()
+        ->and($project->fresh()->total_investment)->toBe('2500000.75')
         ->and($project->fresh()->description)->toBe('Алғашқы келіссөз жоспарланған');
 
     $this->get(route('investment-projects.edit', $project))->assertOk()
         ->assertInertia(fn (Assert $page) => $page
-            ->where('project.total_investment', null)
-            ->where('project.investment_amount_type', 'unknown')
+            ->where('project.total_investment', '2500000.75')
             ->where('project.company_id', null));
 });
 
 test('planned projects still require their name and district', function () {
     $this->actingAs(planningFlowUser())->post(route('investment-projects.store'), [
         'status' => 'plan',
-        'investment_amount_type' => 'unknown',
+        'total_investment' => '1000',
         'attraction_stage' => 'potential',
     ])->assertSessionHasErrors(['name', 'region_id']);
 
     expect(InvestmentProject::count())->toBe(0);
 });
 
-test('planned exact and estimated amounts preserve explicit values including zero', function (string $amountType, string $amount) {
+test('single investment amounts preserve zero decimals and large values', function (string $amount) {
     $manager = planningFlowUser();
     $district = planningFlowDistrict();
 
@@ -134,34 +131,63 @@ test('planned exact and estimated amounts preserve explicit values including zer
         'name' => 'Known investment lead',
         'region_id' => $district->id,
         'status' => 'plan',
-        'investment_amount_type' => $amountType,
         'total_investment' => $amount,
     ])->assertSessionHasNoErrors()->assertRedirect();
 
     $project = InvestmentProject::where('name', 'Known investment lead')->sole();
-    expect($project->investment_amount_type)->toBe($amountType)
-        ->and((float) $project->total_investment)->toBe((float) $amount);
+    expect((float) $project->total_investment)->toBe((float) $amount);
 
     $this->put(route('investment-projects.update', $project), planningFlowPayload($project))
         ->assertSessionHasNoErrors()->assertRedirect();
     expect((float) $project->fresh()->total_investment)->toBe((float) $amount);
 })->with([
-    'exact zero' => ['exact', '0'],
-    'estimated zero' => ['estimated', '0'],
-    'estimated large amount' => ['estimated', '3500000000.50'],
+    'zero' => '0',
+    'decimal amount' => '2020.25',
+    'large amount' => '3500000000.50',
 ]);
 
-test('known investment modes require a numeric amount even for planned projects', function (string $amountType) {
+test('planned investment amounts reject empty negative and nonnumeric values', function (mixed $amount) {
     $district = planningFlowDistrict();
     $this->actingAs(planningFlowUser())->post(route('investment-projects.store'), [
         'name' => 'Missing investment amount',
         'region_id' => $district->id,
         'status' => 'plan',
-        'investment_amount_type' => $amountType,
+        'total_investment' => $amount,
     ])->assertSessionHasErrors('total_investment');
-})->with(['exact', 'estimated']);
+})->with([null, '', '-1', 'invalid']);
 
-test('other project statuses require company type and a known investment amount', function (string $status) {
+test('obsolete investment classifications cannot erase the submitted amount', function () {
+    $manager = planningFlowUser();
+    $project = planningFlowProject($manager);
+    $project->update(['investment_amount_type' => 'unknown', 'total_investment' => null]);
+
+    $project->update(['description' => 'Legacy amount is not yet entered']);
+    expect($project->fresh()->total_investment)->toBeNull();
+
+    $this->actingAs($manager)->put(route('investment-projects.update', $project), planningFlowPayload($project, [
+        'investment_amount_type' => 'unknown',
+        'total_investment' => '7800000000.75',
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+    expect($project->fresh()->total_investment)->toBe('7800000000.75');
+
+    $project->refresh()->update(['current_status' => 'Сома енгізілді']);
+    expect($project->fresh()->total_investment)->toBe('7800000000.75');
+
+    $this->post(route('investment-projects.store'), planningFlowPayload($project, [
+        'name' => 'Stale form amount',
+        'investment_amount_type' => 'unknown',
+        'total_investment' => '1500000.25',
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+    expect(InvestmentProject::where('name', 'Stale form amount')->sole()->total_investment)->toBe('1500000.25');
+
+    $this->put(route('investment-projects.update', $project), planningFlowPayload($project, [
+        'investment_amount_type' => 'unknown',
+        'total_investment' => null,
+    ]))->assertSessionHasErrors('total_investment');
+    expect($project->fresh()->total_investment)->toBe('7800000000.75');
+});
+
+test('other project statuses require company type and an investment amount', function (string $status) {
     $manager = planningFlowUser();
     $project = planningFlowProject($manager);
 
@@ -169,14 +195,12 @@ test('other project statuses require company type and a known investment amount'
         'name' => 'Incomplete execution project',
         'region_id' => $project->region_id,
         'status' => $status,
-        'investment_amount_type' => 'exact',
     ])->assertSessionHasErrors(['company_id', 'project_type_ids', 'total_investment']);
 
     $this->put(route('investment-projects.update', $project), planningFlowPayload($project, [
         'status' => $status,
-        'investment_amount_type' => 'unknown',
         'total_investment' => null,
-    ]))->assertSessionHasErrors('investment_amount_type');
+    ]))->assertSessionHasErrors('total_investment');
 
     expect($project->fresh()->status)->toBe('plan');
 })->with(['implementation', 'launched', 'suspended']);
@@ -199,7 +223,6 @@ test('planned edits and later status changes preserve optional operational data'
         'infrastructure' => $infrastructure,
         'start_date' => '2027-01-01',
         'end_date' => '2028-12-31',
-        'investment_amount_type' => 'estimated',
     ]);
 
     $this->actingAs($manager)->put(route('investment-projects.update', $project), $payload)
@@ -226,7 +249,7 @@ test('planned edits and later status changes preserve optional operational data'
         ->and($project->geometry)->toBe($payload['geometry'])
         ->and(data_get($project->infrastructure, 'electricity.used_capacity'))->toBe('25')
         ->and($project->start_date->toDateString())->toBe('2027-01-01')
-        ->and($project->investment_amount_type)->toBe('estimated');
+        ->and($project->total_investment)->toBe('3500000000.50');
 });
 
 test('special attraction stages require their own metadata', function (string $stage, string $field) {
@@ -264,7 +287,7 @@ test('decline reasons and pause dates remain in history after status changes', f
     'temporary pause' => ['paused', 'attraction_resume_on', '2027-01-15'],
 ]);
 
-test('handover is accepted only by its receiver before execution can begin', function () {
+test('optional handover is accepted only by its receiver and its history survives execution', function () {
     $manager = planningFlowUser();
     $receiver = planningFlowUser();
     $other = planningFlowUser();
@@ -278,13 +301,6 @@ test('handover is accepted only by its receiver before execution can begin', fun
         ->assertSessionHasNoErrors()->assertRedirect();
     expect($project->fresh()->attraction_handover_requested_at)->not->toBeNull()
         ->and($project->fresh()->attraction_handover_accepted_at)->toBeNull();
-
-    foreach (['implementation', 'launched'] as $status) {
-        $this->put(route('investment-projects.update', $project), [
-            ...$payload,
-            'status' => $status,
-        ])->assertSessionHasErrors('status');
-    }
 
     $this->actingAs($other)->post(route('investment-projects.attraction-handover.accept', $project))
         ->assertForbidden();
@@ -338,7 +354,7 @@ test('handover refuses self assignment and foreign receivers then resets accepta
         ->assertForbidden();
 });
 
-test('a pending handover can be suspended without deleting its request', function () {
+test('a pending handover survives suspension and does not prevent returning to implementation', function () {
     $manager = planningFlowUser();
     $receiver = planningFlowUser();
     $project = planningFlowProject($manager);
@@ -358,6 +374,65 @@ test('a pending handover can be suspended without deleting its request', functio
 
     $this->put(route('investment-projects.update', $project), planningFlowPayload($project->fresh(), [
         'status' => 'implementation',
-    ]))->assertSessionHasErrors('status');
-    expect($project->fresh()->status)->toBe('suspended');
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+    expect($project->fresh()->status)->toBe('implementation')
+        ->and($project->fresh()->attraction_handover_to_id)->toBe($receiver->id)
+        ->and($project->fresh()->attraction_handover_requested_at)->not->toBeNull()
+        ->and($project->fresh()->attraction_handover_accepted_at)->toBeNull();
 });
+
+test('authorized curators can change planned status directly without a handover', function (string $role, string $status) {
+    $manager = planningFlowUser($role);
+    $project = planningFlowProject($manager);
+
+    $this->actingAs($manager)->put(route('investment-projects.update', $project), planningFlowPayload($project, [
+        'status' => $status,
+    ]))->assertSessionHasNoErrors()->assertRedirect(route('investment-projects.show', $project));
+
+    expect($project->fresh()->status)->toBe($status)
+        ->and($project->fresh()->attraction_handover_to_id)->toBeNull()
+        ->and($project->fresh()->attraction_handover_requested_at)->toBeNull()
+        ->and($project->fresh()->attraction_handover_accepted_at)->toBeNull()
+        ->and($project->fresh()->planning_started_at)->not->toBeNull();
+    $log = KpiLog::where('project_id', $project->id)->where('event', 'project.updated')->sole();
+    expect($log->user_id)->toBe($manager->id)
+        ->and(data_get($log->properties, 'changes.status.old'))->toBe('plan')
+        ->and(data_get($log->properties, 'changes.status.new'))->toBe($status);
+})->with(['superadmin', 'invest'])->with(['implementation', 'launched', 'suspended']);
+
+test('direct status changes preserve pending handover metadata without fabricating acceptance', function (string $status) {
+    $manager = planningFlowUser('invest');
+    $receiver = planningFlowUser();
+    $project = planningFlowProject($manager);
+    $this->actingAs($manager)->put(route('investment-projects.update', $project), planningFlowPayload($project, [
+        'attraction_stage' => 'handover',
+        'attraction_handover_to_id' => $receiver->id,
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+    $requestedAt = $project->fresh()->attraction_handover_requested_at;
+
+    $this->put(route('investment-projects.update', $project), planningFlowPayload($project->fresh(), [
+        'status' => $status,
+    ]))->assertSessionHasNoErrors()->assertRedirect();
+
+    expect($project->fresh()->status)->toBe($status)
+        ->and($project->fresh()->attraction_handover_to_id)->toBe($receiver->id)
+        ->and($project->fresh()->attraction_handover_requested_at->equalTo($requestedAt))->toBeTrue()
+        ->and($project->fresh()->attraction_handover_accepted_at)->toBeNull()
+        ->and($project->fresh()->attraction_handover_accepted_by)->toBeNull();
+    $this->actingAs($receiver)->post(route('investment-projects.attraction-handover.accept', $project))->assertForbidden();
+})->with(['implementation', 'launched']);
+
+test('ordinary status editing does not grant project management to unrelated users', function (string $role) {
+    $owner = planningFlowUser();
+    $project = planningFlowProject($owner);
+    $other = planningFlowUser($role);
+    if ($role === 'ispolnitel') {
+        $project->executors()->attach($other);
+    }
+
+    $this->actingAs($other)->put(route('investment-projects.update', $project), planningFlowPayload($project, [
+        'status' => 'implementation',
+    ]))->assertForbidden();
+    expect($project->fresh()->status)->toBe('plan')
+        ->and($project->fresh()->attraction_handover_accepted_at)->toBeNull();
+})->with(['invest', 'ispolnitel']);

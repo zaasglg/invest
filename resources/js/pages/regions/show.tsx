@@ -138,7 +138,6 @@ interface InvestmentProject {
     description?: string;
     status: string;
     total_investment: number | string | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     start_date?: string;
     end_date?: string;
     geometry?: { lat: number; lng: number }[];
@@ -1730,9 +1729,6 @@ export default function Show({
                                                                                             value={
                                                                                                 project.total_investment
                                                                                             }
-                                                                                            amountType={
-                                                                                                project.investment_amount_type
-                                                                                            }
                                                                                         />
                                                                                     </TableCell>
                                                                                 </SortableProjectRow>
@@ -1906,9 +1902,6 @@ export default function Show({
                                                                                 value={
                                                                                     project.total_investment
                                                                                 }
-                                                                                amountType={
-                                                                                    project.investment_amount_type
-                                                                                }
                                                                             />
                                                                         </TableCell>
                                                                     </SortableProjectRow>
@@ -2074,9 +2067,6 @@ export default function Show({
                                                                                 value={
                                                                                     project.total_investment
                                                                                 }
-                                                                                amountType={
-                                                                                    project.investment_amount_type
-                                                                                }
                                                                             />
                                                                         </TableCell>
                                                                     </SortableProjectRow>
@@ -2241,9 +2231,6 @@ export default function Show({
                                                                             <ProjectInvestmentValue
                                                                                 value={
                                                                                     project.total_investment
-                                                                                }
-                                                                                amountType={
-                                                                                    project.investment_amount_type
                                                                                 }
                                                                             />
                                                                         </TableCell>

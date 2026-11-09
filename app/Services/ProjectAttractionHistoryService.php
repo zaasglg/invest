@@ -21,6 +21,7 @@ class ProjectAttractionHistoryService
         'attraction.report_submitted' => 'Орындаушы есеп жіберді',
         'attraction.report_approved' => 'Есеп қабылданды',
         'attraction.report_rejected' => 'Есеп толықтыруға қайтарылды',
+        'attraction.recorded_completed' => 'Бұрын орындалған іс-шара тіркелді',
     ];
 
     public function __construct(private readonly InvestmentProjectAccessService $access) {}
@@ -118,7 +119,8 @@ class ProjectAttractionHistoryService
         if (! $logs->contains('event', 'attraction.created') && $activity->created_at) {
             $events->push($this->fallback($activity, 'created', $activity->created_at, $activity->creator?->full_name));
         }
-        if ($activity->reported_at && ! $this->hasEventAt($logs, 'attraction.report_submitted', $activity->reported_at)) {
+        if ($activity->reported_at && ! $this->hasEventAt($logs, 'attraction.report_submitted', $activity->reported_at)
+            && ! $this->hasEventAt($logs, 'attraction.recorded_completed', $activity->reported_at)) {
             $events->push($this->fallback($activity, 'report_submitted', $activity->reported_at, $activity->reporter?->full_name));
         }
         $reviewType = match ($activity->status) {
@@ -162,7 +164,7 @@ class ProjectAttractionHistoryService
     private function event(KpiLog $log): array
     {
         $comment = match ($log->event) {
-            'attraction.report_submitted' => $log->properties['details']['Орындалу нәтижесі'] ?? null,
+            'attraction.report_submitted', 'attraction.recorded_completed' => $log->properties['details']['Орындалу нәтижесі'] ?? null,
             'attraction.report_approved', 'attraction.report_rejected' => $log->properties['details']['Тексерушінің түсіндірмесі'] ?? null,
             default => null,
         };

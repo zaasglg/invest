@@ -259,6 +259,9 @@ test('historical planned roadmap tasks do not affect executor KPI or assistant c
 test('planned project pages expose attraction history and role-specific management permissions', function (string $roleName, bool $canManage) {
     $user = plannedAccessUser($roleName);
     $project = plannedAccessProject($user);
+    if ($canManage) {
+        plannedAccessUser('ispolnitel');
+    }
     $activity = $project->attractionActivities()->create([
         'attraction_stage' => 'negotiation',
         'event_name' => 'Инвестормен кездесу',

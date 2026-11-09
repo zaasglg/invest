@@ -8,8 +8,14 @@ use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\ProjectAttractionHistoryService;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
+
+beforeEach(function () {
+    Storage::fake('local');
+});
 
 function attractionHistoryUser(string $role): User
 {
@@ -73,13 +79,13 @@ test('attraction history preserves every report and review with actual actors an
     $this->travel(1)->minutes();
     $this->actingAs($assignee)->postJson($view)->assertOk();
     $this->travel(1)->minutes();
-    $this->post($report, ['status' => 'pending_review', 'report_result' => 'First report'])->assertSessionHasNoErrors();
+    $this->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'First report'])->assertSessionHasNoErrors();
     $this->travel(1)->minutes();
-    $this->actingAs($manager)->put($review, ['decision' => 'rejected', 'reviewer_comment' => 'Add evidence'])->assertSessionHasNoErrors();
+    $this->actingAs($manager)->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'rejected', 'reviewer_comment' => 'Add evidence'])->assertSessionHasNoErrors();
     $this->travel(1)->minutes();
-    $this->actingAs($assignee)->post($report, ['status' => 'pending_review', 'report_result' => 'Corrected report'])->assertSessionHasNoErrors();
+    $this->actingAs($assignee)->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => 'Corrected report'])->assertSessionHasNoErrors();
     $this->travel(1)->minutes();
-    $this->actingAs($manager)->put($review, ['decision' => 'approved', 'reviewer_comment' => 'Accepted'])->assertSessionHasNoErrors();
+    $this->actingAs($manager)->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'approved', 'reviewer_comment' => 'Accepted'])->assertSessionHasNoErrors();
 
     $events = attractionHistoryEvents($project, $assignee);
     expect(array_column($events, 'type'))->toBe([
@@ -126,13 +132,13 @@ test('attraction history retains complete validated reports and review comments 
     $correctedReport = str_repeat('Ө', 10000);
     $acceptance = str_repeat('Ғ', 5000);
 
-    $this->actingAs($assignee)->post($report, ['status' => 'pending_review', 'report_result' => $firstReport])
+    $this->actingAs($assignee)->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => $firstReport])
         ->assertRedirect()->assertSessionHasNoErrors();
-    $this->actingAs($manager)->put($review, ['decision' => 'rejected', 'reviewer_comment' => $rejection])
+    $this->actingAs($manager)->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'rejected', 'reviewer_comment' => $rejection])
         ->assertRedirect()->assertSessionHasNoErrors();
-    $this->actingAs($assignee)->post($report, ['status' => 'pending_review', 'report_result' => $correctedReport])
+    $this->actingAs($assignee)->post($report, ['documents' => [UploadedFile::fake()->create('result.pdf', 1, 'application/pdf')], 'status' => 'pending_review', 'report_result' => $correctedReport])
         ->assertRedirect()->assertSessionHasNoErrors();
-    $this->actingAs($manager)->put($review, ['decision' => 'approved', 'reviewer_comment' => $acceptance])
+    $this->actingAs($manager)->put($review, ['report_id' => $activity->reports()->first()?->id, 'decision' => 'approved', 'reviewer_comment' => $acceptance])
         ->assertRedirect()->assertSessionHasNoErrors();
 
     $events = attractionHistoryEvents($project, $manager);

@@ -61,4 +61,14 @@ class ProjectAttractionActivity extends Model
     {
         return $this->belongsTo(User::class, 'reviewed_by');
     }
+
+    public function reports()
+    {
+        return $this->hasMany(ProjectAttractionReport::class, 'activity_id')->orderByDesc('id');
+    }
+
+    public function latestReport()
+    {
+        return $this->hasOne(ProjectAttractionReport::class, 'activity_id')->latestOfMany();
+    }
 }

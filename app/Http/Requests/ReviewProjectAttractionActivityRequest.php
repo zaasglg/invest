@@ -23,6 +23,7 @@ class ReviewProjectAttractionActivityRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'report_id' => ['nullable', 'integer'],
             'decision' => ['required', Rule::in(['approved', 'rejected'])],
             'reviewer_comment' => ['nullable', 'required_if:decision,rejected', 'string', 'max:5000'],
         ];

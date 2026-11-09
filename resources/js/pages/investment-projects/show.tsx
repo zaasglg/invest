@@ -148,7 +148,6 @@ interface InvestmentProject {
     prom_zones?: SectorEntity[];
     subsoil_users?: SectorEntity[];
     total_investment?: number | null;
-    investment_amount_type?: 'exact' | 'estimated' | 'unknown';
     jobs_count?: number | null;
     production_not_applicable?: boolean;
     production_plans?: ProductionPlanInput[];
@@ -1388,21 +1387,13 @@ export default function Show({
                                                     Инвестиция сомасы
                                                 </p>
                                                 <p className="text-sm font-bold text-[#0f1b3d]">
-                                                    {project.investment_amount_type !==
-                                                        'unknown' &&
-                                                    project.total_investment !=
-                                                        null
+                                                    {project.total_investment !=
+                                                    null
                                                         ? formatCurrency(
                                                               project.total_investment,
                                                           )
-                                                        : 'Әзірге белгісіз'}
+                                                        : '—'}
                                                 </p>
-                                                {project.investment_amount_type ===
-                                                    'estimated' && (
-                                                    <p className="mt-1 text-xs text-[#a9842f]">
-                                                        Болжамды сома
-                                                    </p>
-                                                )}
                                             </div>
                                             <div className="rounded-lg border border-gray-200 p-4">
                                                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
