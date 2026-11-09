@@ -48,6 +48,11 @@ export interface AuditableDocument {
     task_assigner?: AuditUser | null;
     deleter?: AuditUser | null;
     source_task?: AuditTask | null;
+    recorded_as_completed?: boolean;
+    source_attraction_report?: {
+        id: number;
+        recorded_as_completed: boolean;
+    } | null;
 }
 
 interface DocumentDetailsDialogProps {
@@ -96,14 +101,24 @@ export default function DocumentDetailsDialog({
     document,
 }: DocumentDetailsDialogProps) {
     const isTaskDocument = document.source === 'task_completion';
+    const isActivityDocument = document.source === 'attraction_activity';
+    const isWorkflowDocument = isTaskDocument || isActivityDocument;
+    const recordedAsCompleted =
+        isActivityDocument &&
+        (document.recorded_as_completed ??
+            document.source_attraction_report?.recorded_as_completed);
     const taskTitle = document.source_task?.title || document.source_task_title;
     const assignedAt =
         document.task_assigned_at || document.source_task?.created_at;
-    const originLabel = isTaskDocument
-        ? 'Тапсырма нәтижесінен автоматты қосылған'
-        : document.uploader
-          ? 'Қолмен жүктелген'
-          : 'Бұрын жүктелген құжат (авторы сақталмаған)';
+    const originLabel = isActivityDocument
+        ? recordedAsCompleted
+            ? 'Орындалған деп енгізілген іс-шарадан қосылған'
+            : 'Қабылданған іс-шара есебінен автоматты қосылған'
+        : isTaskDocument
+          ? 'Тапсырма нәтижесінен автоматты қосылған'
+          : document.uploader
+            ? 'Қолмен жүктелген'
+            : 'Бұрын жүктелген құжат (авторы сақталмаған)';
 
     return (
         <Dialog>
@@ -151,7 +166,7 @@ export default function DocumentDetailsDialog({
                         <DetailRow
                             icon={<Upload className="h-4 w-4" />}
                             label={
-                                isTaskDocument
+                                isWorkflowDocument
                                     ? 'Құжаттар бөліміне түскен уақыт'
                                     : 'Жүктелген уақыт'
                             }
@@ -167,29 +182,43 @@ export default function DocumentDetailsDialog({
                         />
                     </div>
 
-                    {isTaskDocument && (
+                    {isWorkflowDocument && (
                         <section className="space-y-3">
                             <div className="flex items-center gap-2">
                                 <div className="h-px flex-1 bg-slate-200" />
                                 <p className="text-xs font-semibold tracking-wide text-slate-500 uppercase">
-                                    Тапсырма тарихы
+                                    {isActivityDocument
+                                        ? 'Іс-шара тарихы'
+                                        : 'Тапсырма тарихы'}
                                 </p>
                                 <div className="h-px flex-1 bg-slate-200" />
                             </div>
                             <div className="grid gap-3 sm:grid-cols-2">
                                 <DetailRow
                                     icon={<ListChecks className="h-4 w-4" />}
-                                    label="Тапсырма"
+                                    label={
+                                        isActivityDocument
+                                            ? 'Іс-шара'
+                                            : 'Тапсырма'
+                                    }
                                     value={taskTitle || 'Мәлімет сақталмаған'}
                                 />
                                 <DetailRow
                                     icon={<Clock3 className="h-4 w-4" />}
-                                    label="Тапсырма берілген уақыт"
+                                    label={
+                                        isActivityDocument
+                                            ? 'Іс-шара енгізілген уақыт'
+                                            : 'Тапсырма берілген уақыт'
+                                    }
                                     value={formatDateTime(assignedAt)}
                                 />
                                 <DetailRow
                                     icon={<UserRound className="h-4 w-4" />}
-                                    label="Тапсырманы берген адам"
+                                    label={
+                                        isActivityDocument
+                                            ? 'Іс-шараны енгізген адам'
+                                            : 'Тапсырманы берген адам'
+                                    }
                                     value={
                                         document.task_assigner?.full_name ||
                                         'Мәлімет сақталмаған'
@@ -197,29 +226,47 @@ export default function DocumentDetailsDialog({
                                 />
                                 <DetailRow
                                     icon={<Upload className="h-4 w-4" />}
-                                    label="Орындауға жіберілген уақыт"
+                                    label={
+                                        recordedAsCompleted
+                                            ? 'Нәтиже енгізілген уақыт'
+                                            : 'Есеп жіберілген уақыт'
+                                    }
                                     value={formatDateTime(
                                         document.submitted_at,
                                     )}
                                 />
                                 <DetailRow
                                     icon={<UserRound className="h-4 w-4" />}
-                                    label="Қабылдаған адам"
+                                    label={
+                                        recordedAsCompleted
+                                            ? 'Орындалған деп енгізген адам'
+                                            : 'Қабылдаған адам'
+                                    }
                                     value={
-                                        document.approver?.full_name ||
+                                        (recordedAsCompleted
+                                            ? document.uploader?.full_name
+                                            : document.approver?.full_name) ||
                                         'Мәлімет сақталмаған'
                                     }
                                 />
                                 <DetailRow
                                     icon={<CheckCircle2 className="h-4 w-4" />}
-                                    label="Қабылданған уақыт"
-                                    value={formatDateTime(document.approved_at)}
+                                    label={
+                                        recordedAsCompleted
+                                            ? 'Орындалған деп енгізілген уақыт'
+                                            : 'Қабылданған уақыт'
+                                    }
+                                    value={formatDateTime(
+                                        recordedAsCompleted
+                                            ? document.submitted_at
+                                            : document.approved_at,
+                                    )}
                                 />
                             </div>
                         </section>
                     )}
 
-                    {!isTaskDocument && document.is_completed && (
+                    {!isWorkflowDocument && document.is_completed && (
                         <div className="grid gap-3 sm:grid-cols-2">
                             <DetailRow
                                 icon={<UserRound className="h-4 w-4" />}

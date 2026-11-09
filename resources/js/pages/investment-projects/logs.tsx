@@ -26,6 +26,13 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { PageContainer } from '@/components/ui/page';
 import AppLayout from '@/layouts/app-layout';
+import {
+    activityEventLabel,
+    activityFieldLabel,
+    activityRoleLabel,
+    activitySubjectLabel,
+    formatActivityValue,
+} from '@/lib/activity-log';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import type { PaginatedData } from '@/types';
 
@@ -179,7 +186,7 @@ const CATEGORY_CONFIG: Record<string, CategoryConfig> = {
         iconBox: 'bg-slate-100 text-slate-600',
     },
     legacy: {
-        label: 'Бұрынғы лог',
+        label: 'Бұрынғы жазба',
         icon: ScrollText,
         badge: 'bg-gray-100 text-gray-700',
         iconBox: 'bg-gray-100 text-gray-600',
@@ -218,28 +225,6 @@ function formatDay(dateStr: string): string {
 function dayKey(dateStr: string): string {
     const date = new Date(dateStr);
     return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
-}
-
-function formatValue(value: unknown): string {
-    if (value === null || value === undefined || value === '') {
-        return 'Көрсетілмеген';
-    }
-
-    if (typeof value === 'boolean') {
-        return value ? 'Иә' : 'Жоқ';
-    }
-
-    if (Array.isArray(value)) {
-        return value.length > 0
-            ? value.map((item) => formatValue(item)).join(', ')
-            : 'Бос';
-    }
-
-    if (typeof value === 'object') {
-        return JSON.stringify(value);
-    }
-
-    return String(value);
 }
 
 function actorInitial(log: KpiLog): string {
@@ -512,9 +497,9 @@ export default function Logs({
                                         (log.user_id
                                             ? `Пайдаланушы ID: ${log.user_id}`
                                             : 'Жойылған пайдаланушы');
+                                    const role = log.user?.role_model;
                                     const actorRole =
-                                        log.user?.role_model?.display_name ||
-                                        log.user?.role_model?.name ||
+                                        role?.name ||
                                         log.properties?.actor_role;
 
                                     return (
@@ -562,9 +547,10 @@ export default function Logs({
                                                                 </span>
                                                                 {actorRole && (
                                                                     <span>
-                                                                        {
-                                                                            actorRole
-                                                                        }
+                                                                        {activityRoleLabel(
+                                                                            actorRole,
+                                                                            role?.display_name,
+                                                                        )}
                                                                     </span>
                                                                 )}
                                                                 <span className="inline-flex items-center gap-1">
@@ -626,7 +612,7 @@ export default function Logs({
                 </Card>
 
                 <div className="mt-4">
-                    <Pagination paginator={logs} preserveScroll />
+                    <Pagination paginator={logs} preserveScroll locale="kk" />
                 </div>
             </PageContainer>
         </AppLayout>
@@ -682,16 +668,24 @@ function LogDetails({
                                 className="grid gap-2 rounded-lg bg-gray-50 p-3 text-sm sm:grid-cols-[160px_1fr_auto_1fr]"
                             >
                                 <span className="font-medium text-gray-600">
-                                    {change.label}
+                                    {activityFieldLabel(field, change.label)}
                                 </span>
                                 <span className="break-words text-red-600 line-through decoration-red-300">
-                                    {formatValue(change.old)}
+                                    {formatActivityValue(
+                                        change.old,
+                                        field,
+                                        log,
+                                    )}
                                 </span>
                                 <span className="hidden text-gray-300 sm:block">
                                     →
                                 </span>
                                 <span className="font-medium break-words text-emerald-700">
-                                    {formatValue(change.new)}
+                                    {formatActivityValue(
+                                        change.new,
+                                        field,
+                                        log,
+                                    )}
                                 </span>
                             </div>
                         ))}
@@ -711,10 +705,10 @@ function LogDetails({
                                 className="rounded-lg border border-gray-100 px-3 py-2"
                             >
                                 <p className="text-[11px] text-gray-400">
-                                    {label}
+                                    {activityFieldLabel(label)}
                                 </p>
                                 <p className="mt-0.5 text-sm break-words text-gray-700">
-                                    {formatValue(value)}
+                                    {formatActivityValue(value, label, log)}
                                 </p>
                             </div>
                         ))}
@@ -723,10 +717,12 @@ function LogDetails({
             )}
 
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-[11px] text-gray-400">
-                {log.event && <span>Оқиға: {log.event}</span>}
+                {log.event && (
+                    <span>Оқиға: {activityEventLabel(log.event)}</span>
+                )}
                 {log.subject_type && (
                     <span>
-                        Объект: {log.subject_type}
+                        Нысан: {activitySubjectLabel(log.subject_type)}
                         {log.subject_id ? ` #${log.subject_id}` : ''}
                     </span>
                 )}
@@ -741,7 +737,7 @@ function LogDetails({
                         Құрылғы: {log.properties.user_agent}
                     </span>
                 )}
-                <span>Лог ID: {log.id}</span>
+                <span>Жазба нөмірі: {log.id}</span>
             </div>
         </div>
     );

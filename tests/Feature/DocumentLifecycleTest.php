@@ -113,6 +113,7 @@ test('approved task document keeps its complete audit trail', function () {
     $executor = createDocumentLifecycleUser('ispolnitel');
     $region = createDocumentLifecycleRegion();
     $project = createDocumentLifecycleProject($admin, $region);
+    $project->update(['status' => 'implementation']);
     $task = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Лицензияны өткізу',
@@ -215,6 +216,84 @@ test('deleting a project document archives it for superadmin without removing th
         $project,
         $document,
     ]))->assertOk();
+});
+
+test('activity evidence is grouped separately with its provenance and archive permissions', function () {
+    Storage::fake('local');
+    $admin = createDocumentLifecycleUser('superadmin');
+    $invest = createDocumentLifecycleUser('invest');
+    $project = createDocumentLifecycleProject($admin, createDocumentLifecycleRegion());
+    $project->curators()->attach($invest);
+
+    foreach (['manual', 'task_completion', 'attraction_activity'] as $source) {
+        $document = ProjectDocument::create([
+            'project_id' => $project->id,
+            'name' => $source.'.pdf',
+            'file_path' => 'project-documents/'.$project->id.'/'.$source.'.pdf',
+            'type' => 'pdf',
+            'source' => $source,
+            'is_completed' => $source !== 'manual',
+            'uploaded_by' => $admin->id,
+            'source_task_title' => $source === 'attraction_activity' ? 'Инвестормен кездесу' : null,
+            'recorded_as_completed' => $source === 'attraction_activity',
+        ]);
+        Storage::disk('local')->put($document->file_path, 'evidence');
+    }
+    $activityDocument = ProjectDocument::where('source', 'attraction_activity')->sole();
+
+    $this->actingAs($invest)->get(route('investment-projects.documents.index', $project))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('documents', 1)->where('documents.0.source', 'manual')
+            ->has('completedDocuments', 1)->where('completedDocuments.0.source', 'task_completion')
+            ->has('activityDocuments', 1)
+            ->where('activityDocuments.0.id', $activityDocument->id)
+            ->where('activityDocuments.0.recorded_as_completed', true)
+            ->where('activityDocuments.0.source_task_title', 'Инвестормен кездесу')
+            ->where('activityDocuments.0.uploader.id', $admin->id));
+    $this->get(route('investment-projects.documents.download', [$project, $activityDocument]))->assertOk();
+    $this->delete(route('investment-projects.documents.destroy', [$project, $activityDocument]))->assertRedirect();
+    $this->get(route('investment-projects.documents.index', $project))
+        ->assertInertia(fn (Assert $page) => $page->has('activityDocuments', 0));
+    $this->get(route('investment-projects.documents.download', [$project, $activityDocument]))->assertNotFound();
+    $this->actingAs($admin)->get(route('investment-projects.documents.deleted', $project))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('documents', 1)
+            ->where('documents.0.source', 'attraction_activity')
+            ->where('documents.0.recorded_as_completed', true));
+    Storage::disk('local')->assertExists($activityDocument->file_path);
+});
+
+test('project passport keeps same-named activity files in a separate archive folder', function () {
+    Storage::fake('local');
+    $admin = createDocumentLifecycleUser('superadmin');
+    $project = createDocumentLifecycleProject($admin, createDocumentLifecycleRegion());
+    $expectedEntries = [];
+    foreach (['first report', 'second report'] as $index => $contents) {
+        $document = ProjectDocument::create([
+            'project_id' => $project->id,
+            'name' => 'хаттама.pdf',
+            'file_path' => 'project-documents/'.$project->id.'/'.$index.'.pdf',
+            'type' => 'pdf',
+            'source' => 'attraction_activity',
+            'is_completed' => true,
+            'uploaded_by' => $admin->id,
+        ]);
+        Storage::disk('local')->put($document->file_path, $contents);
+        $expectedEntries['Құжаттар/Іс-шаралар/'.$document->id.'_хаттама.pdf'] = $contents;
+    }
+    $response = $this->actingAs($admin)->get(route('investment-projects.passport', $project))->assertOk();
+    $path = $response->baseResponse->getFile()->getPathname();
+    $zip = new ZipArchive;
+    try {
+        expect($zip->open($path))->toBeTrue()
+            ->and($zip->numFiles)->toBe(2);
+        foreach ($expectedEntries as $name => $contents) {
+            expect($zip->getFromName($name))->toBe($contents);
+        }
+    } finally {
+        $zip->close();
+        unlink($path);
+    }
 });
 
 test('subsoil documents use the same completion and archive rules', function () {

@@ -86,6 +86,7 @@ test('moderator can manage turkistan invest projects but cannot delete them', fu
         $region,
         'Moderator security project'
     );
+    $project->update(['status' => 'implementation']);
     $project->curators()->attach($turkistanInvest);
     $task = ProjectTask::create([
         'project_id' => $project->id,
@@ -199,6 +200,7 @@ test('task status and subsoil task assignment cannot bypass review rules', funct
         $region,
         'Task security project'
     );
+    $project->update(['status' => 'implementation']);
     $projectTask = ProjectTask::create([
         'project_id' => $project->id,
         'title' => 'Project workflow task',

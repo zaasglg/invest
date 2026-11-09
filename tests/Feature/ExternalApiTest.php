@@ -40,6 +40,8 @@ function externalApiToken(array $overrides = []): string
         'name' => 'External API test client',
         'token_hash' => hash('sha256', $token),
         'is_active' => true,
+        'include_contacts' => true,
+        'include_internal' => true,
     ], $overrides));
 
     return $token;

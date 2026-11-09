@@ -19,6 +19,7 @@ final class ProjectInfrastructureInput
             }
 
             if (blank($details['used_capacity'] ?? null)
+                && ! in_array($details['use_required_capacity'] ?? true, [false, 0, '0'], true)
                 && filled($details['required_capacity'] ?? null)) {
                 $infrastructure[$resource]['used_capacity'] = $details['required_capacity'];
             }

@@ -369,6 +369,7 @@ class ChatContextService
         $visibleProjects = $this->visibleProjects($user);
         $tasks = DB::table('project_tasks')
             ->join('investment_projects', 'project_tasks.project_id', '=', 'investment_projects.id')
+            ->where('investment_projects.status', '!=', 'plan')
             ->select(
                 'project_tasks.id',
                 'project_tasks.title',

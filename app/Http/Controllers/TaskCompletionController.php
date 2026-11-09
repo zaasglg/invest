@@ -159,7 +159,7 @@ class TaskCompletionController extends Controller
 
         $validated = $request->validate([
             'status' => 'required|in:approved,rejected',
-            'reviewer_comment' => 'nullable|string|max:2000',
+            'reviewer_comment' => [$request->input('status') === 'rejected' ? 'required' : 'nullable', 'string', 'max:2000'],
         ]);
 
         $this->workflow->reviewProject(

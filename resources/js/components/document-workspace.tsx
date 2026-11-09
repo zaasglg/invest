@@ -44,6 +44,7 @@ interface DocumentWorkspaceProps {
     backLabel: string;
     backUrl: string;
     completedDocuments: WorkspaceDocument[];
+    activityDocuments?: WorkspaceDocument[];
     documents: WorkspaceDocument[];
     canEdit: boolean;
     canDelete: boolean;
@@ -156,6 +157,7 @@ function DocumentRow({
     onDelete: () => void;
 }) {
     const isTaskDocument = document.source === 'task_completion';
+    const isActivityDocument = document.source === 'attraction_activity';
 
     return (
         <div
@@ -172,6 +174,11 @@ function DocumentRow({
                 <p className="truncate text-sm font-semibold text-slate-800 sm:text-[15px]">
                     {document.name}
                 </p>
+                {isActivityDocument && document.source_task_title && (
+                    <p className="mt-1 truncate text-xs text-slate-500">
+                        Іс-шара: {document.source_task_title}
+                    </p>
+                )}
                 <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-400">
                     <span className="rounded-md bg-slate-100 px-1.5 py-0.5 font-semibold text-slate-500 uppercase">
                         {document.type || 'Белгісіз'}
@@ -180,10 +187,12 @@ function DocumentRow({
                         <Clock3 className="h-3 w-3" />
                         {formatDate(document.created_at)}
                     </span>
-                    {isTaskDocument && (
+                    {(isTaskDocument || isActivityDocument) && (
                         <span className="inline-flex items-center gap-1 font-medium text-emerald-600">
                             <Sparkles className="h-3 w-3" />
-                            Тапсырмадан түсті
+                            {isActivityDocument
+                                ? 'Іс-шарадан түсті'
+                                : 'Тапсырмадан түсті'}
                         </span>
                     )}
                 </div>
@@ -326,6 +335,7 @@ export default function DocumentWorkspace({
     backLabel,
     backUrl,
     completedDocuments,
+    activityDocuments,
     documents,
     canEdit,
     canDelete,
@@ -347,7 +357,10 @@ export default function DocumentWorkspace({
     const [documentType, setDocumentType] = useState('');
     const [isCompleted, setIsCompleted] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
-    const totalDocuments = completedDocuments.length + documents.length;
+    const totalDocuments =
+        completedDocuments.length +
+        documents.length +
+        (activityDocuments?.length ?? 0);
 
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const selectedFile = event.target.files?.[0];
@@ -416,6 +429,17 @@ export default function DocumentWorkspace({
             icon: CloudUpload,
             iconClass: 'bg-violet-50 text-violet-700 ring-violet-100',
         },
+        ...(activityDocuments
+            ? [
+                  {
+                      label: 'Іс-шаралардан түскен',
+                      value: activityDocuments.length,
+                      icon: FileCheck2,
+                      iconClass:
+                          'bg-emerald-50 text-emerald-700 ring-emerald-100',
+                  },
+              ]
+            : []),
     ];
 
     return (
@@ -475,7 +499,14 @@ export default function DocumentWorkspace({
                 </div>
             </section>
 
-            <section className="grid gap-3 sm:grid-cols-3">
+            <section
+                className={cn(
+                    'grid gap-3',
+                    activityDocuments
+                        ? 'sm:grid-cols-2 xl:grid-cols-4'
+                        : 'sm:grid-cols-3',
+                )}
+            >
                 {stats.map((stat) => {
                     const Icon = stat.icon;
 
@@ -697,6 +728,19 @@ export default function DocumentWorkspace({
                 )}
 
                 <main className={cn('space-y-6', !canEdit && 'lg:col-span-2')}>
+                    {activityDocuments && (
+                        <DocumentSection
+                            title="Іс-шаралар"
+                            description="Қабылданған есептер мен орындалған деп енгізілген іс-шаралардың файлдары"
+                            documents={activityDocuments}
+                            completed
+                            canDownload={canDownload}
+                            canDelete={canDelete}
+                            downloadUrl={downloadUrl}
+                            onDelete={handleDelete}
+                        />
+                    )}
+
                     <DocumentSection
                         title="Тапсырма бойынша орындалған құжаттар"
                         description="Қабылданған тапсырмалардан автоматты түскен немесе супер әкімші белгілеген құжаттар"

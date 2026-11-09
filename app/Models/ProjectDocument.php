@@ -17,6 +17,9 @@ class ProjectDocument extends Model
         'source',
         'source_task_id',
         'source_completion_id',
+        'source_attraction_activity_id',
+        'source_attraction_report_id',
+        'recorded_as_completed',
         'source_task_title',
         'task_assigned_at',
         'task_assigned_by',
@@ -32,6 +35,7 @@ class ProjectDocument extends Model
     {
         return [
             'is_completed' => 'boolean',
+            'recorded_as_completed' => 'boolean',
             'task_assigned_at' => 'datetime',
             'submitted_at' => 'datetime',
             'approved_at' => 'datetime',
@@ -78,5 +82,15 @@ class ProjectDocument extends Model
     public function sourceCompletion()
     {
         return $this->belongsTo(TaskCompletion::class, 'source_completion_id');
+    }
+
+    public function sourceAttractionActivity()
+    {
+        return $this->belongsTo(ProjectAttractionActivity::class, 'source_attraction_activity_id');
+    }
+
+    public function sourceAttractionReport()
+    {
+        return $this->belongsTo(ProjectAttractionReport::class, 'source_attraction_report_id');
     }
 }

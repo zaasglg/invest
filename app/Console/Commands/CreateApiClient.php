@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\ApiClient;
+use App\Support\ApiClientAccessOptions;
 use Carbon\CarbonImmutable;
 use Illuminate\Console\Command;
 use Throwable;
@@ -11,7 +12,11 @@ class CreateApiClient extends Command
 {
     protected $signature = 'api-client:create
         {name : API пайдаланушысының атауы}
-        {--expires-at= : Token мерзімі (мысалы: 2027-12-31)}';
+        {--expires-at= : Token мерзімі (мысалы: 2027-12-31)}
+        {--region=* : Рұқсат етілген аудан/облыс ID}
+        {--project=* : Рұқсат етілген жоба ID}
+        {--include-contacts : Байланыс деректерін беру}
+        {--include-internal : Ішкі жағдай мен мәселелерді беру}';
 
     protected $description = 'Create an external read-only API client token';
 
@@ -46,6 +51,7 @@ class CreateApiClient extends Command
 
         $plainTextToken = 'inv_'.bin2hex(random_bytes(32));
         $client = ApiClient::create([
+            ...ApiClientAccessOptions::values($this),
             'name' => $name,
             'token_hash' => hash('sha256', $plainTextToken),
             'expires_at' => $expiresAt,

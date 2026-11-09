@@ -36,6 +36,7 @@ interface InvestmentProject {
 interface Props {
     project: InvestmentProject;
     completedDocuments: WorkspaceDocument[];
+    activityDocuments: WorkspaceDocument[];
     documents: WorkspaceDocument[];
     canDownload: boolean;
     participantCanCreate?: boolean;
@@ -47,6 +48,7 @@ interface Props {
 export default function Documents({
     project,
     completedDocuments,
+    activityDocuments,
     documents,
     canDownload,
     participantCanCreate = false,
@@ -83,6 +85,7 @@ export default function Documents({
                 backLabel="Жобаға қайту"
                 backUrl={projectShow.url(project.id)}
                 completedDocuments={completedDocuments}
+                activityDocuments={activityDocuments}
                 documents={documents}
                 canEdit={canEdit}
                 canDelete={canManageProject}

@@ -18,6 +18,7 @@ class ProjectDocumentController extends Controller
         'taskAssigner:id,full_name',
         'deleter:id,full_name',
         'sourceTask:id,title,created_at',
+        'sourceAttractionReport:id,recorded_as_completed',
     ];
 
     public function __construct(
@@ -37,6 +38,13 @@ class ProjectDocumentController extends Controller
 
         $completedDocuments = $investmentProject->documents()
             ->where('is_completed', true)
+            ->where(fn ($query) => $query->whereNull('source')->orWhere('source', '!=', 'attraction_activity'))
+            ->with(self::AUDIT_RELATIONS)
+            ->latest()
+            ->get();
+
+        $activityDocuments = $investmentProject->documents()
+            ->where('source', 'attraction_activity')
             ->with(self::AUDIT_RELATIONS)
             ->latest()
             ->get();
@@ -52,6 +60,7 @@ class ProjectDocumentController extends Controller
         return Inertia::render('investment-projects/documents', [
             'project' => $investmentProject->load(['region', 'projectType', 'projectTypes']),
             'completedDocuments' => $completedDocuments,
+            'activityDocuments' => $activityDocuments,
             'documents' => $documents,
             'canDownload' => $canDownload,
             'participantCanCreate' => $this->participantCanCreate(

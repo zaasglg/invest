@@ -63,8 +63,9 @@ final class InfrastructureValidationRules
             $path = "infrastructure.{$resource}";
             $rules[$path] = [
                 'required_with:infrastructure',
-                'array:needed,required_capacity,used_capacity',
+                'array:needed,required_capacity,used_capacity,use_required_capacity',
             ];
+            $rules["{$path}.use_required_capacity"] = ['sometimes', 'boolean'];
             $rules["{$path}.needed"] = [
                 "required_with:{$path}",
                 'boolean',

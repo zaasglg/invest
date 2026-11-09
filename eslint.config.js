@@ -83,6 +83,10 @@ export default [
             'bootstrap/ssr',
             'tailwind.config.js',
             'vite.config.ts',
+            'resources/js/actions/**',
+            'resources/js/routes/**',
+            'resources/js/wayfinder/**',
+            'resources/js/generated/**',
         ],
     },
     prettier, // Turn off all rules that might conflict with Prettier

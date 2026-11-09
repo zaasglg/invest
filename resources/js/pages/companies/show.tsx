@@ -67,7 +67,7 @@ interface CompanyDocument {
 interface Project {
     id: number;
     name: string;
-    total_investment: number | string;
+    total_investment: number | string | null;
     status: string;
     region?: { id: number; name: string } | null;
     project_type?: { id: number; name: string } | null;
@@ -575,11 +575,13 @@ export default function Show({
                                         </p>
                                     </div>
                                     <p className="text-sm font-medium">
-                                        {formatMoneyCompact(
-                                            Number(
-                                                project.total_investment || 0,
-                                            ),
-                                        )}
+                                        {project.total_investment == null
+                                            ? '—'
+                                            : formatMoneyCompact(
+                                                  Number(
+                                                      project.total_investment,
+                                                  ),
+                                              )}
                                     </p>
                                     <p className="text-sm text-gray-500">
                                         {projectStatuses[project.status] ||

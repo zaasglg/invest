@@ -146,3 +146,10 @@ it('does not change unselected resources or malformed infrastructure', function 
         ->and(ProjectInfrastructureInput::withDefaultUsedCapacity(null))->toBeNull()
         ->and(ProjectInfrastructureInput::withDefaultUsedCapacity('invalid'))->toBe('invalid');
 });
+
+it('does not invent actual usage when the equal-capacity checkbox is explicitly cleared', function () {
+    $prepared = ProjectInfrastructureInput::withDefaultUsedCapacity([
+        'electricity' => ['needed' => true, 'required_capacity' => '60', 'used_capacity' => '', 'use_required_capacity' => false],
+    ]);
+    expect($prepared['electricity']['used_capacity'])->toBe('');
+});

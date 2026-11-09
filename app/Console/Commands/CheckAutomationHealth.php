@@ -110,6 +110,8 @@ class CheckAutomationHealth extends Command
         $expected = [
             'assistant:notify' => 'әр сағат сайын',
             'photos:check-weekly' => 'дүйсенбі 09:00',
+            'attraction:notify-deadlines' => 'күн сайын 09:00',
+            'notifications:retry-telegram' => 'әр минут сайын',
         ];
         $rows = [];
         $allRegistered = true;
@@ -348,6 +350,7 @@ class CheckAutomationHealth extends Command
             ->value('created_at');
         $deadline = today()->addDays(3);
         $projectTasksDueSoon = ProjectTask::query()
+            ->whereHas('project', fn ($project) => $project->where('status', '!=', 'plan'))
             ->where('approval_status', 'approved')
             ->whereNotIn('status', ['done'])
             ->whereBetween('due_date', [today(), $deadline])

@@ -43,7 +43,7 @@ class BaskarmaKpiService
         $tasksByUser = ProjectTask::query()
             ->whereIn('assigned_to', $userIds)
             ->where('approval_status', 'approved')
-            ->whereHas('project', fn ($project) => $project->active())
+            ->whereHas('project', fn ($project) => $project->active()->where('status', '!=', 'plan'))
             ->with([
                 'completions' => fn ($completions) => $completions
                     ->orderBy('created_at')

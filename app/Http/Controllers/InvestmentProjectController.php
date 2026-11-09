@@ -15,14 +15,23 @@ use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\InvestmentProjectStatusService;
 use App\Services\PrivateFileService;
+use App\Services\ProjectAttractionHandoverService;
+use App\Services\ProjectAttractionHistoryService;
+use App\Services\ProjectAttractionReportService;
+use App\Services\ProjectAttractionService;
 use App\Services\ProjectExecutorAssignmentService;
 use App\Services\ProjectPassportSummaryService;
 use App\Services\ProjectProductionService;
+use App\Services\ProjectTaskAssigneeService;
 use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
 use App\Support\ProductionPlanValidationRules;
+use App\Support\ProjectAttractionDetailRules;
+use App\Support\ProjectAttractionStages;
 use App\Support\ProjectInfrastructureInput;
+use App\Support\ProjectParticipantRules;
+use App\Support\ProjectPlanningInput;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -69,6 +78,14 @@ class InvestmentProjectController extends Controller
             'start_date_to',
             'end_date_from',
             'end_date_to',
+            'attraction_stage',
+            'work_filter',
+            'responsible_id',
+        ]);
+        $request->validate([
+            'attraction_stage' => ['nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
+            'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
+            'responsible_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
         if ($isInvestor && ($filters['sector_type'] ?? null) === 'subsoil') {
@@ -94,6 +111,8 @@ class InvestmentProjectController extends Controller
 
         $projectsQuery = InvestmentProject::active()->with($projectRelations);
         $this->projectAccess->scopeVisible($projectsQuery, $user);
+        $worklist = app(\App\Services\ProjectWorklistService::class);
+        $worklist->filter($projectsQuery, $user, $filters);
 
         if (! empty($filters['search'])) {
             $search = trim((string) $filters['search']);
@@ -223,6 +242,18 @@ class InvestmentProjectController extends Controller
         ];
 
         $projects = $projectsQuery->orderBy('sort_order', 'asc')->latest()->paginate(15)->withQueryString();
+        $projects->getCollection()->each(function ($project) use ($user) {
+            $project->setAttribute('can_manage', $this->projectAccess->canManage($user, $project));
+            $project->setAttribute('can_delete', $this->projectAccess->canManage($user, $project)
+                && in_array($user->roleModel?->name, ['superadmin', 'invest'], true));
+            $project->unsetRelation('attractionActivities');
+            $project->unsetRelation('tasks');
+            if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($project)) {
+                $project->makeHidden(['current_status', 'attraction_decline_reason', 'attraction_resume_on',
+                    'attraction_handover_to_id', 'attraction_handover_requested_at',
+                    'attraction_handover_accepted_at', 'attraction_handover_accepted_by']);
+            }
+        });
 
         // dd(Region::where('type','district')->orderBy('name')->get());
         return Inertia::render('investment-projects/index', [
@@ -440,7 +471,9 @@ class InvestmentProjectController extends Controller
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'canSelectCurators' => $canSelectCurators,
+            'canCreateOperationalProject' => $isSuperAdmin,
             'requiresCuratorSelection' => false,
+            'attractionHandoverUsers' => app(ProjectAttractionHandoverService::class)->candidates($user),
             'investUsers' => $investUsers,
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
@@ -454,6 +487,7 @@ class InvestmentProjectController extends Controller
 
     public function store(Request $request)
     {
+        $isPlanned = $request->input('status') === 'plan';
         if ($request->has('infrastructure')) {
             $request->merge([
                 'infrastructure' => ProjectInfrastructureInput::withDefaultUsedCapacity(
@@ -472,7 +506,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
@@ -486,13 +519,12 @@ class InvestmentProjectController extends Controller
                     }
                 },
             ],
-            'project_type_ids' => 'required_without:project_type_id|array|min:1',
             'project_type_ids.*' => 'integer|distinct|exists:project_types,id',
             'project_type_id' => 'nullable|integer|exists:project_types,id',
             'sector' => [
-                $restrictedSectorType ? 'required' : 'nullable',
+                $restrictedSectorType && ! $isPlanned ? 'required' : 'nullable',
                 'array',
-                $restrictedSectorType ? 'min:1' : 'nullable',
+                $restrictedSectorType && ! $isPlanned ? 'min:1' : 'nullable',
             ],
             'sector.*' => [
                 'bail',
@@ -507,17 +539,19 @@ class InvestmentProjectController extends Controller
                     );
                 },
             ],
-            'total_investment' => 'required|numeric|min:0',
+            ...ProjectPlanningInput::rules($request),
+            ...ProjectAttractionDetailRules::rules(),
             'status' => 'required|in:plan,implementation,launched,suspended',
+            'attraction_stage' => ['nullable', 'string', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'executor_ids' => 'nullable|array',
-            'executor_ids.*' => 'exists:users,id',
+            'executor_ids.*' => ProjectParticipantRules::executor((int) $request->input('region_id')),
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
             ...ProductionPlanValidationRules::rules(),
             'curator_ids' => 'nullable|array|max:100',
-            'curator_ids.*' => 'exists:users,id',
+            'curator_ids.*' => ProjectParticipantRules::curator((int) $request->input('region_id')),
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
             'sector.min' => 'Кемінде бір сектор таңдаңыз.',
@@ -527,6 +561,13 @@ class InvestmentProjectController extends Controller
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
+
+        $validated['attraction_stage'] = $validated['status'] === 'plan'
+            ? ($validated['attraction_stage'] ?? 'potential')
+            : null;
+
+        $validated = app(ProjectAttractionHandoverService::class)->prepare($validated, $user);
+        $validated['company_id'] ??= null;
 
         $plannedProduction = $validated['planned_production'] ?? [];
         unset($validated['planned_production']);
@@ -544,16 +585,16 @@ class InvestmentProjectController extends Controller
             ->profileComplete()
             ->find($validated['company_id']);
 
-        if (! $company) {
+        if ($validated['company_id'] !== null && ! $company) {
             throw ValidationException::withMessages([
                 'company_id' => 'Компания белсенді және ақпараты толық болуы керек.',
             ]);
         }
 
-        $validated['company_name'] = $company->display_name;
+        $validated['company_name'] = $company?->display_name;
 
         $projectTypeIds = $this->normalizeProjectTypeIds($validated);
-        $validated['project_type_id'] = $projectTypeIds[0];
+        $validated['project_type_id'] = $projectTypeIds[0] ?? null;
         unset($validated['project_type_ids']);
 
         $curatorIds = $canSelectCurators
@@ -571,8 +612,12 @@ class InvestmentProjectController extends Controller
             $curatorIds = [auth()->id()];
         }
 
-        // Keep created_by in sync with the first curator for backward compatibility
-        $validated['created_by'] = (int) $curatorIds[0];
+        if ($isSuperAdmin && $validated['attraction_stage'] === 'handover') {
+            $curatorIds[] = (int) $validated['attraction_handover_to_id'];
+        }
+
+        // Authorship is immutable; the curator relation owns responsibility.
+        $validated['created_by'] = (int) $user->id;
 
         // Парсим массив sectors
         $sectors = $validated['sector'] ?? [];
@@ -789,37 +834,7 @@ class InvestmentProjectController extends Controller
         }
 
         $user = request()->user();
-        $assignableUsersQuery = User::select('id', 'full_name', 'role_id', 'baskarma_type', 'region_id', 'position')
-            ->with('roleModel:id,name,display_name')
-            ->where(function ($query) use ($id) {
-                $query
-                    ->whereHas('roleModel', function ($roleQuery) {
-                        $roleQuery->where('name', 'ispolnitel');
-                    })
-                    ->orWhere(function ($investorQuery) use ($id) {
-                        $investorQuery
-                            ->whereHas('roleModel', function ($roleQuery) {
-                                $roleQuery->where('name', 'investor');
-                            })
-                            ->whereHas('investorProjects', function ($projectQuery) use ($id) {
-                                $projectQuery->where('investment_projects.id', (int) $id);
-                            });
-                    });
-            })
-            ->orderBy('full_name');
-
-        if ($user && $user->isDistrictScoped()) {
-            $assignableUsersQuery->where(function ($query) use ($user) {
-                // Users in same region
-                $query->where('region_id', $user->region_id)
-                    // Or executor-style accounts allowed for this project
-                    ->orWhere(function ($q) {
-                        $q->whereHas('roleModel', function ($roleQuery) {
-                            $roleQuery->whereIn('name', ['ispolnitel', 'investor']);
-                        });
-                    });
-            });
-        }
+        $assignableUsersQuery = app(ProjectTaskAssigneeService::class)->query((int) $id);
 
         $canDownload = $user && is_object($project) ? $user->canDownloadFromProject($project) : true;
 
@@ -845,6 +860,31 @@ class InvestmentProjectController extends Controller
         if ($roleName === 'investor' && is_object($project)) {
             $project->setRelation('subsoilUsers', collect());
         }
+        if ($project instanceof InvestmentProject) {
+            $project->load([
+                'attractionActivities.responsible:id,full_name,position',
+                'attractionActivities.creator:id,full_name',
+                'attractionActivities.reporter:id,full_name',
+                'attractionActivities.reviewer:id,full_name',
+                'attractionHandoverTo:id,full_name',
+                'attractionHandoverAcceptor:id,full_name',
+            ]);
+            $activityAccess = app(ProjectAttractionService::class);
+            $project->attractionActivities->each(function ($activity) use ($user, $project, $activityAccess) {
+                $activity->setAttribute('can_report', $user && $activityAccess->canReport($user, $project, $activity));
+                $activity->setAttribute('can_review', $user && $activityAccess->canReview($user, $project, $activity));
+                $activity->setAttribute('can_update', $user && $activityAccess->canEdit($user, $project, $activity));
+                $activity->setAttribute('can_delete', $user && $activityAccess->canDelete($user, $project, $activity));
+            });
+            if ($includeOperationalDetails) {
+                app(ProjectAttractionHistoryService::class)->hydrate($project, $user);
+                app(ProjectAttractionReportService::class)->hydrateReports($project, $user);
+            }
+            if ($project->status === 'plan') {
+                $project->setRelation('tasks', collect());
+            }
+        }
+
         $passportSummary = is_object($project)
             ? $this->passportSummary->build(
                 $project,
@@ -857,6 +897,16 @@ class InvestmentProjectController extends Controller
             $project->setRelation('documents', collect());
             $project->setRelation('issues', collect());
             $project->setRelation('tasks', collect());
+            $project->setRelation('attractionActivities', collect());
+            $project->setRelation('attractionHandoverTo', null);
+            $project->setRelation('attractionHandoverAcceptor', null);
+            foreach ([
+                'attraction_handover_to_id', 'attraction_handover_requested_at',
+                'attraction_handover_accepted_at', 'attraction_handover_accepted_by',
+                'attraction_decline_reason', 'attraction_resume_on',
+            ] as $field) {
+                $project->setAttribute($field, null);
+            }
             $project->productionPlans->each(
                 fn ($plan) => $plan->setRelation('facts', collect())
             );
@@ -869,6 +919,13 @@ class InvestmentProjectController extends Controller
             'renderPhotos' => $renderPhotos,
             'users' => $assignableUsersQuery->get(),
             'canDownload' => $canDownload,
+            'canManageProject' => $project instanceof InvestmentProject && $user
+                && ! $project->is_archived && $this->projectAccess->canManage($user, $project),
+            'canRestoreProject' => $project instanceof InvestmentProject && $user
+                && $project->is_archived && $this->projectAccess->canManage($user, $project),
+            'canDeleteProject' => $project instanceof InvestmentProject && $user
+                && ! $project->is_archived && in_array($roleName, ['superadmin', 'invest'], true)
+                && $this->projectAccess->canManage($user, $project),
             'canAccessChat' => $user && is_object($project)
                 ? $project->isChatParticipant($user)
                 : false,
@@ -877,6 +934,16 @@ class InvestmentProjectController extends Controller
                 : false,
             'isInvolved' => $isInvolved,
             'isOwnDistrict' => $isOwnDistrict,
+            'canAcceptAttractionHandover' => $project instanceof InvestmentProject && $user
+                ? app(ProjectAttractionHandoverService::class)->canAccept($user, $project)
+                : false,
+            'canManageAttraction' => $project instanceof InvestmentProject && $user
+                ? app(ProjectAttractionService::class)->canManage($user, $project)
+                : false,
+            'attractionResponsibleUsers' => $project instanceof InvestmentProject && $user
+                && app(ProjectAttractionService::class)->canManage($user, $project)
+                ? app(ProjectAttractionService::class)->responsibleUsers($project, $user)
+                : [],
         ]);
     }
 
@@ -1004,6 +1071,7 @@ class InvestmentProjectController extends Controller
             'investSubRole' => $user?->invest_sub_role,
             'restrictedSectorType' => $restrictedSectorType,
             'companies' => $companies,
+            'attractionHandoverUsers' => app(ProjectAttractionHandoverService::class)->candidates($user, $investmentProject),
         ]);
     }
 
@@ -1203,6 +1271,8 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
+        $isPlanned = $request->input('status') === 'plan';
+
         if ($request->has('infrastructure')) {
             $request->merge([
                 'infrastructure' => ProjectInfrastructureInput::withDefaultUsedCapacity(
@@ -1217,7 +1287,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'company_id' => 'required|integer|exists:companies,id',
             'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
@@ -1231,13 +1300,12 @@ class InvestmentProjectController extends Controller
                     }
                 },
             ],
-            'project_type_ids' => 'required_without:project_type_id|array|min:1',
             'project_type_ids.*' => 'integer|distinct|exists:project_types,id',
             'project_type_id' => 'nullable|integer|exists:project_types,id',
             'sector' => [
-                $restrictedSectorType ? 'required' : 'nullable',
+                $restrictedSectorType && ! $isPlanned ? 'required' : 'nullable',
                 'array',
-                $restrictedSectorType ? 'min:1' : 'nullable',
+                $restrictedSectorType && ! $isPlanned ? 'min:1' : 'nullable',
             ],
             'sector.*' => [
                 'bail',
@@ -1252,17 +1320,19 @@ class InvestmentProjectController extends Controller
                     );
                 },
             ],
-            'total_investment' => 'required|numeric|min:0',
+            ...ProjectPlanningInput::rules($request),
+            ...ProjectAttractionDetailRules::rules(),
             'status' => 'required|in:plan,implementation,launched,suspended',
+            'attraction_stage' => ['nullable', 'string', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'executor_ids' => 'nullable|array',
-            'executor_ids.*' => 'exists:users,id',
+            'executor_ids.*' => ProjectParticipantRules::executor((int) $request->input('region_id'), $investmentProject),
             'geometry' => 'nullable|array',
             ...InfrastructureValidationRules::project(),
             ...ProductionPlanValidationRules::rules(),
             'curator_ids' => 'nullable|array',
-            'curator_ids.*' => 'exists:users,id',
+            'curator_ids.*' => ProjectParticipantRules::curator((int) $request->input('region_id')),
             'return_to' => 'nullable|string',
         ], [
             'sector.required' => 'Сектор таңдау міндетті.',
@@ -1273,6 +1343,13 @@ class InvestmentProjectController extends Controller
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
         ]);
+
+        $validated['attraction_stage'] = $validated['status'] === 'plan'
+            ? ($validated['attraction_stage'] ?? $investmentProject->attraction_stage ?? 'potential')
+            : null;
+
+        $validated = app(ProjectAttractionHandoverService::class)->prepare($validated, $user, $investmentProject);
+        $validated['company_id'] ??= null;
 
         $hasPlannedProduction = array_key_exists(
             'planned_production',
@@ -1313,19 +1390,19 @@ class InvestmentProjectController extends Controller
         $keepsCurrentCompany = (int) $investmentProject->company_id
             === (int) $company?->id;
 
-        if (! $company
+        if ($validated['company_id'] !== null && (! $company
             || (! $keepsCurrentCompany
                 && ($company->status !== 'active'
-                    || ! $company->is_profile_complete))) {
+                    || ! $company->is_profile_complete)))) {
             throw ValidationException::withMessages([
                 'company_id' => 'Тек белсенді және ақпараты толық компанияны таңдаңыз.',
             ]);
         }
 
-        $validated['company_name'] = $company->display_name;
+        $validated['company_name'] = $company?->display_name;
 
         $projectTypeIds = $this->normalizeProjectTypeIds($validated);
-        $validated['project_type_id'] = $projectTypeIds[0];
+        $validated['project_type_id'] = $projectTypeIds[0] ?? null;
         unset($validated['project_type_ids']);
 
         $activityBefore = $this->projectActivitySnapshot(
@@ -1337,11 +1414,19 @@ class InvestmentProjectController extends Controller
         $curatorIds = null;
         if ($isSuperAdmin && array_key_exists('curator_ids', $validated)) {
             $curatorIds = array_values(array_unique(array_map('intval', $validated['curator_ids'] ?? [])));
-            if (! empty($curatorIds)) {
-                $validated['created_by'] = $curatorIds[0];
-            }
         }
         unset($validated['curator_ids']);
+
+        if ($isSuperAdmin && $curatorIds !== null) {
+            if ($validated['attraction_stage'] === 'handover') {
+                $curatorIds[] = (int) $validated['attraction_handover_to_id'];
+            } elseif ($validated['status'] !== 'plan'
+                && $investmentProject->attraction_handover_requested_at
+                && ! $investmentProject->attraction_handover_accepted_at) {
+                $curatorIds[] = (int) $investmentProject->attraction_handover_to_id;
+            }
+            $curatorIds = array_values(array_unique($curatorIds));
+        }
 
         $returnTo = $validated['return_to'] ?? '';
         unset($validated['return_to']);
@@ -1363,7 +1448,7 @@ class InvestmentProjectController extends Controller
             }
         }
 
-        $executorIds = $validated['executor_ids'] ?? [];
+        $executorIds = $validated['executor_ids'] ?? $investmentProject->executors()->pluck('users.id')->all();
         unset($validated['executor_ids'], $validated['sector']);
 
         DB::transaction(function () use (
@@ -1379,6 +1464,12 @@ class InvestmentProjectController extends Controller
             $promZoneIds,
             $activityBefore
         ): void {
+            $lockedProject = InvestmentProject::query()->lockForUpdate()->findOrFail($investmentProject->id);
+            $validated = app(ProjectAttractionHandoverService::class)->prepare($validated, auth()->user(), $lockedProject);
+
+            ProjectParticipantRules::assertActiveAssignmentsRetained(
+                $lockedProject, $curatorIds, $validated['company_id']
+            );
             $investmentProject->update($validated);
 
             if ($plannedProduction !== null) {
@@ -1475,7 +1566,12 @@ class InvestmentProjectController extends Controller
                     : $names)
                 ->all(),
             'total_investment' => $project->total_investment,
+            'attraction_handover_to_id' => $project->attraction_handover_to_id,
+            'attraction_handover_accepted_at' => $project->attraction_handover_accepted_at,
+            'attraction_decline_reason' => $project->attraction_decline_reason,
+            'attraction_resume_on' => $project->attraction_resume_on,
             'status' => $project->status,
+            'attraction_stage' => $project->attraction_stage,
             'start_date' => $project->start_date,
             'end_date' => $project->end_date,
             'geometry' => $project->geometry,
@@ -1518,7 +1614,12 @@ class InvestmentProjectController extends Controller
             'region' => 'Өңір',
             'project_types' => 'Жоба түрлері',
             'total_investment' => 'Инвестиция сомасы',
+            'attraction_handover_to_id' => 'Сүйемелдеуге қабылдаушы',
+            'attraction_handover_accepted_at' => 'Сүйемелдеуге қабылданған уақыты',
+            'attraction_decline_reason' => 'Бас тарту себебі',
+            'attraction_resume_on' => 'Қайта байланысу күні',
             'status' => 'Жоба статусы',
+            'attraction_stage' => 'Инвестор тарту кезеңі',
             'start_date' => 'Басталу күні',
             'end_date' => 'Аяқталу күні',
             'geometry' => 'Картадағы аумақ',
@@ -1592,7 +1693,7 @@ class InvestmentProjectController extends Controller
     private function normalizeProjectTypeIds(array $validated): array
     {
         $ids = $validated['project_type_ids']
-            ?? [$validated['project_type_id']];
+            ?? (isset($validated['project_type_id']) ? [$validated['project_type_id']] : []);
 
         return array_values(array_unique(array_map('intval', $ids)));
     }
@@ -1638,10 +1739,14 @@ class InvestmentProjectController extends Controller
                     $document->name,
                     $document->file_path
                 );
-                $folder = $document->is_completed
-                    ? 'Құжаттар/Тапсырма бойынша орындалған құжаттар'
-                    : 'Құжаттар/Жүктелген құжаттар';
-                $zip->addFile($filePath, $folder.'/'.$docName);
+                $folder = $document->source === 'attraction_activity'
+                    ? 'Құжаттар/Іс-шаралар'
+                    : ($document->is_completed
+                        ? 'Құжаттар/Тапсырма бойынша орындалған құжаттар'
+                        : 'Құжаттар/Жүктелген құжаттар');
+                $archiveFileName = $document->source === 'attraction_activity'
+                    ? $document->id.'_'.$docName : $docName;
+                $zip->addFile($filePath, $folder.'/'.$archiveFileName);
             }
         }
 
@@ -2059,7 +2164,9 @@ class InvestmentProjectController extends Controller
 
         $infoItems = [
             ['Жоба бастамашысы', $project->company_name ?? 'Көрсетілмеген'],
-            ['Құны', $formatCurrency($project->total_investment)],
+            ['Құны', $project->total_investment === null
+                ? '—'
+                : $formatCurrency($project->total_investment)],
             [
                 'Саласы',
                 $project->projectTypes->pluck('name')->join(', ')
@@ -2090,6 +2197,9 @@ class InvestmentProjectController extends Controller
 
         $infoItems[] = ['Орналасуы', $locationStr];
         $infoItems[] = ['Іске асыру мерзімі', ($project->start_date?->format('Y') ?? '—').'-'.($project->end_date?->format('Y') ?? '—').' жж.'];
+        if ($project->status === 'plan') {
+            $infoItems[] = ['Инвестор тарту кезеңі', ProjectAttractionStages::LABELS[$project->attraction_stage] ?? 'Кезең таңдалмаған'];
+        }
 
         $charsPerLine = 55;
         $singleLineH = 18;

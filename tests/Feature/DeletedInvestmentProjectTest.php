@@ -139,7 +139,7 @@ test('only superadmin can view deleted projects and their history', function () 
 
     $this->actingAs($admin)
         ->get(route('investment-projects.edit', $project->id))
-        ->assertOk();
+        ->assertStatus(409);
 
     $this->actingAs($admin)
         ->get(route('investment-projects.logs', $project->id))
@@ -153,9 +153,9 @@ test('only superadmin can view deleted projects and their history', function () 
         ->put(route('investment-projects.update-status', $project->id), [
             'current_status' => 'Өшірілген жобадағы тексеру жаңартуы',
         ])
-        ->assertRedirect();
+        ->assertStatus(409);
 
-    $this->assertDatabaseHas('kpi_logs', [
+    $this->assertDatabaseMissing('kpi_logs', [
         'project_id' => $project->id,
         'user_id' => $admin->id,
         'event' => 'project.status_updated',

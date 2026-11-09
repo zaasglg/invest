@@ -101,7 +101,7 @@ export default function Archived({ projects, filters }: Props) {
     };
 
     const formatInvestment = (value: string | number | null) => {
-        if (!value) return '—';
+        if (value === null || value === '') return '—';
         const num = Number(value);
         if (isNaN(num)) return String(value);
 

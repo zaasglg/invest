@@ -152,6 +152,7 @@ test('prokuror can create a roadmap task but cannot edit or delete it', function
     $region = createProkurorTestRegion();
     $project = createProkurorTestProject($creator, $region);
     $ispolnitel = createProkurorTestUser('ispolnitel');
+    $project->update(['status' => 'implementation']);
 
     $this->actingAs($prokuror)
         ->post("/investment-projects/{$project->id}/tasks", [

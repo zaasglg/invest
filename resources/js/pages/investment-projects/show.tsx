@@ -24,9 +24,14 @@ import {
     ScrollText,
     Edit,
     MessageCircle,
+    ChevronDown,
 } from 'lucide-react';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import DetailSectionNav from '@/components/detail-section-nav';
+import InputError from '@/components/input-error';
+import AttractionActivityCard from '@/components/investment-projects/attraction-activity-card';
+import type { AttractionActivity } from '@/components/investment-projects/attraction-activity-card';
+import AttractionStageDetailsCard from '@/components/investment-projects/attraction-stage-details-card';
 import ProductionMonitoringCard from '@/components/investment-projects/production-monitoring-card';
 import ProjectPassportOverview from '@/components/investment-projects/project-passport-overview';
 import type { ProjectPassportSummary } from '@/components/investment-projects/project-passport-overview';
@@ -55,7 +60,34 @@ import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import type { ProductionPlanInput } from '@/lib/production';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import * as projectRoutes from '@/routes/investment-projects';
+import * as completionFileRoutes from '@/routes/investment-projects/tasks/completions/files';
 import type { SharedData } from '@/types';
+
+function formatProjectDate(
+    value: string | null | undefined,
+    includeTime = false,
+): string {
+    if (!value) return 'Көрсетілмеген';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return 'Көрсетілмеген';
+    const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: 'Asia/Qyzylorda',
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        ...(includeTime
+            ? {
+                  hour: '2-digit' as const,
+                  minute: '2-digit' as const,
+                  hour12: false,
+              }
+            : {}),
+    }).formatToParts(date);
+    const part = (type: string) =>
+        parts.find((item) => item.type === type)?.value;
+    return `${part('day')}.${part('month')}.${part('year')}${includeTime ? `, ${part('hour')}:${part('minute')}` : ''}`;
+}
 
 interface ProjectType {
     id: number;
@@ -115,11 +147,19 @@ interface InvestmentProject {
     industrial_zones?: SectorEntity[];
     prom_zones?: SectorEntity[];
     subsoil_users?: SectorEntity[];
-    total_investment?: number;
+    total_investment?: number | null;
     jobs_count?: number | null;
     production_not_applicable?: boolean;
     production_plans?: ProductionPlanInput[];
     status: 'plan' | 'implementation' | 'launched' | 'suspended';
+    attraction_stage?: string | null;
+    attraction_handover_to?: { id: number; full_name: string } | null;
+    attraction_handover_acceptor?: { full_name: string } | null;
+    attraction_handover_requested_at?: string | null;
+    attraction_handover_accepted_at?: string | null;
+    attraction_decline_reason?: string | null;
+    attraction_resume_on?: string | null;
+    attraction_activities?: AttractionActivity[];
     start_date?: string;
     end_date?: string;
     creator?: User;
@@ -142,6 +182,7 @@ interface InvestmentProject {
     infrastructure?: Record<string, Record<string, unknown>> | null;
     created_at: string;
     updated_at?: string;
+    is_archived?: boolean;
     is_deleted?: boolean;
     deleted_at?: string | null;
 }
@@ -156,6 +197,7 @@ interface CompletionFile {
 interface TaskCompletionItem {
     id: number;
     task_id: number;
+    task_definition_version?: number;
     submitted_by: number;
     comment?: string;
     status: 'pending' | 'approved' | 'rejected';
@@ -170,6 +212,7 @@ interface TaskCompletionItem {
 
 interface ProjectTaskItem {
     id: number;
+    definition_version?: number;
     title: string;
     description?: string;
     assigned_to: number;
@@ -225,11 +268,20 @@ interface Props {
     renderPhotos?: Photo[];
     users?: UserOption[];
     canDownload: boolean;
+    canManageProject?: boolean;
+    canRestoreProject?: boolean;
     canAccessChat?: boolean;
     canReportProduction?: boolean;
     isInvolved?: boolean;
     isOwnDistrict?: boolean;
     passportSummary?: ProjectPassportSummary | null;
+    canManageAttraction?: boolean;
+    canAcceptAttractionHandover?: boolean;
+    attractionResponsibleUsers?: {
+        id: number;
+        full_name: string;
+        position?: string | null;
+    }[];
 }
 
 function DescriptionTabs({
@@ -255,6 +307,7 @@ function DescriptionTabs({
         appendOnlyStatus ? '' : currentStatus || '',
     );
     const [isSaving, setIsSaving] = useState(false);
+    const [statusError, setStatusError] = useState<string>();
     const statusEntries = (currentStatus || '')
         .split(/\n\s*\n/)
         .map((status) => status.trim())
@@ -263,6 +316,7 @@ function DescriptionTabs({
     const handleSaveStatus = () => {
         if (!projectId || (appendOnlyStatus && !editValue.trim())) return;
         setIsSaving(true);
+        setStatusError(undefined);
         router.put(
             `/investment-projects/${projectId}/update-status`,
             { current_status: editValue },
@@ -274,7 +328,8 @@ function DescriptionTabs({
                     }
                     setIsSaving(false);
                 },
-                onError: () => {
+                onError: (errors) => {
+                    setStatusError(errors.current_status);
                     setIsSaving(false);
                 },
             },
@@ -333,6 +388,13 @@ function DescriptionTabs({
                                 </label>
                             )}
                             <textarea
+                                aria-label="Ағымдағы жағдай"
+                                aria-invalid={Boolean(statusError)}
+                                aria-describedby={
+                                    statusError
+                                        ? 'current-status-error'
+                                        : undefined
+                                }
                                 value={editValue}
                                 onChange={(e) => setEditValue(e.target.value)}
                                 placeholder={
@@ -342,6 +404,10 @@ function DescriptionTabs({
                                 }
                                 className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
                                 rows={4}
+                            />
+                            <InputError
+                                id="current-status-error"
+                                message={statusError}
                             />
                             <div className="flex gap-2">
                                 <button
@@ -418,23 +484,56 @@ export default function Show({
     renderPhotos = [],
     users = [],
     canDownload,
+    canManageProject,
+    canRestoreProject = false,
     canAccessChat = false,
     canReportProduction = false,
     isInvolved = true,
     passportSummary,
+    canManageAttraction = false,
+    canAcceptAttractionHandover = false,
+    attractionResponsibleUsers = [],
 }: Props) {
     const canModify = useCanModify();
+    useEffect(() => {
+        const openLinkedSection = () => {
+            const target = document.getElementById(
+                window.location.hash.slice(1),
+            );
+            if (target instanceof HTMLDetailsElement) target.open = true;
+            const details = target?.closest('details');
+            if (details) details.open = true;
+        };
+        const openClickedSection = (event: MouseEvent) => {
+            if (event.defaultPrevented || !(event.target instanceof Element))
+                return;
+            const href = event.target.closest('a')?.getAttribute('href');
+            if (!href?.startsWith('#')) return;
+            const target = document.getElementById(href.slice(1));
+            if (target instanceof HTMLDetailsElement) target.open = true;
+            const details = target?.closest('details');
+            if (details) details.open = true;
+            if (href === window.location.hash)
+                window.dispatchEvent(new HashChangeEvent('hashchange'));
+        };
+        openLinkedSection();
+        window.addEventListener('hashchange', openLinkedSection);
+        document.addEventListener('click', openClickedSection);
+        return () => {
+            window.removeEventListener('hashchange', openLinkedSection);
+            document.removeEventListener('click', openClickedSection);
+        };
+    }, []);
+
     const { auth } = usePage<SharedData>().props;
     const currentUserId = auth.user?.id;
     const currentRoleName = (auth.user?.role_model?.name || '').toLowerCase();
     const isIspolnitel = currentRoleName === 'ispolnitel';
     const isInvestor = currentRoleName === 'investor';
     const isSuperAdmin = currentRoleName === 'superadmin';
-    const isInvest = currentRoleName === 'invest';
-    const isAkim = currentRoleName === 'akim';
     const isModerator = currentRoleName === 'moderator';
     const deletedAtLabel = project.deleted_at
-        ? new Date(project.deleted_at).toLocaleString('kk-KZ')
+        ? formatProjectDate(project.deleted_at, true)
         : null;
     const isProkuror = currentRoleName === 'prokuror';
     const canViewCompanyDetails = [
@@ -443,14 +542,17 @@ export default function Show({
         'akim',
         'zamakim',
     ].includes(currentRoleName);
-    const canApproveTasks = isModerator || isSuperAdmin;
-    const canManageTasks = isSuperAdmin || isInvest || isModerator;
-    const canCreateTasks = canManageTasks || isProkuror;
-    const canEditProject = canModify || isModerator;
+    const projectIsActive = !project.is_archived && !project.is_deleted;
+    const canEditProject =
+        (canManageProject ?? (canModify || isModerator)) && projectIsActive;
+    const canApproveTasks = canEditProject && (isModerator || isSuperAdmin);
+    const canManageTasks = canEditProject;
+    const canCreateTasks = (canManageTasks || isProkuror) && projectIsActive;
     const isExecutorParticipant = isIspolnitel || isInvestor;
     const isRestrictedView = isExecutorParticipant && !isInvolved;
     // Ispolnitel and investor have the same project-interior permissions.
-    const participantCanWrite = isExecutorParticipant && isInvolved;
+    const participantCanWrite =
+        isExecutorParticipant && isInvolved && projectIsActive;
     const photosCount =
         typeof project.photos_count === 'number'
             ? project.photos_count
@@ -534,12 +636,17 @@ export default function Show({
     const [userSearch, setUserSearch] = useState('');
     const [isSubmittingTask, setIsSubmittingTask] = useState(false);
     const [taskFilter, setTaskFilter] = useState('all');
+    const [taskErrors, setTaskErrors] = useState<Record<string, string>>({});
 
-    const tasks = project.tasks || [];
+    const tasks = project.status === 'plan' ? [] : project.tasks || [];
 
     // Dot color based on deadline: green=done, red=overdue, amber=pending
     const isTaskOverdue = (task: ProjectTaskItem): boolean => {
-        if (task.status === 'done') return false;
+        if (
+            task.status === 'done' ||
+            ![null, undefined, 'approved'].includes(task.approval_status)
+        )
+            return false;
         if (!task.due_date) return false;
         const now = new Date();
         now.setHours(0, 0, 0, 0);
@@ -671,7 +778,18 @@ export default function Show({
 
     const handleTaskSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        if (!taskTitle || !taskAssignedTo) return;
+        if (!taskTitle.trim() || !taskAssignedTo) {
+            setTaskErrors({
+                ...(!taskTitle.trim()
+                    ? { title: 'Тапсырма атауын енгізіңіз.' }
+                    : {}),
+                ...(!taskAssignedTo
+                    ? { assigned_to: 'Жауапты адамды таңдаңыз.' }
+                    : {}),
+            });
+            return;
+        }
+        setTaskErrors({});
         setIsSubmittingTask(true);
 
         const payload = {
@@ -694,7 +812,10 @@ export default function Show({
             setShowTaskModal(false);
         };
 
-        const onError = () => setIsSubmittingTask(false);
+        const onError = (errors: Record<string, string>) => {
+            setTaskErrors(errors);
+            setIsSubmittingTask(false);
+        };
 
         if (editingTaskId) {
             router.put(
@@ -711,6 +832,7 @@ export default function Show({
     };
 
     const handleEditTask = (task: ProjectTaskItem) => {
+        setTaskErrors({});
         setEditingTaskId(task.id);
         setTaskTitle(task.title || '');
         setTaskDescription(task.description || '');
@@ -731,7 +853,7 @@ export default function Show({
     };
 
     const handleTaskDelete = (taskId: number) => {
-        if (confirm('Осы кезеңді жоюға сенімдісіз бе?')) {
+        if (confirm('Осы тапсырманы жоюға сенімдісіз бе?')) {
             router.delete(`/investment-projects/${project.id}/tasks/${taskId}`);
         }
     };
@@ -761,6 +883,7 @@ export default function Show({
         useState<TaskCompletionItem | null>(null);
     const [reviewTask, setReviewTask] = useState<ProjectTaskItem | null>(null);
     const [reviewComment, setReviewComment] = useState('');
+    const [reviewError, setReviewError] = useState<string>();
     const [isReviewing, setIsReviewing] = useState(false);
 
     const getReviewFileUrl = (
@@ -785,6 +908,7 @@ export default function Show({
         const task = (project.tasks || []).find((t) => t.id === taskId);
         if (
             task &&
+            projectIsActive &&
             isExecutorParticipant &&
             task.assigned_to === currentUserId &&
             !task.viewed_at &&
@@ -912,6 +1036,11 @@ export default function Show({
 
     const handleReview = (status: 'approved' | 'rejected') => {
         if (!reviewCompletion || !reviewTask) return;
+        if (status === 'rejected' && !reviewComment.trim()) {
+            setReviewError('Нені түзету керегін жазыңыз.');
+            return;
+        }
+        setReviewError(undefined);
         setIsReviewing(true);
         router.put(
             `/investment-projects/${project.id}/tasks/${reviewTask.id}/completions/${reviewCompletion.id}/review`,
@@ -927,7 +1056,10 @@ export default function Show({
                     setReviewComment('');
                     setIsReviewing(false);
                 },
-                onError: () => setIsReviewing(false),
+                onError: (errors) => {
+                    setReviewError(errors.reviewer_comment || errors.status);
+                    setIsReviewing(false);
+                },
             },
         );
     };
@@ -941,6 +1073,7 @@ export default function Show({
         // the task yet, mark it viewed on the server. We do this silently
         // (preserveScroll) so the modal stays open.
         if (
+            projectIsActive &&
             isExecutorParticipant &&
             task.assigned_to === currentUserId &&
             !task.viewed_at &&
@@ -961,12 +1094,14 @@ export default function Show({
         'approved' | 'rejected'
     >('approved');
     const [approvalComment, setApprovalComment] = useState('');
+    const [approvalError, setApprovalError] = useState<string>();
     const [isSubmittingApproval, setIsSubmittingApproval] = useState(false);
 
     const handleOpenApproval = (
         task: ProjectTaskItem,
         decision: 'approved' | 'rejected',
     ) => {
+        setApprovalError(undefined);
         setApprovalModalTask(task);
         setApprovalDecision(decision);
         setApprovalComment('');
@@ -975,6 +1110,7 @@ export default function Show({
     const handleSubmitApproval = (e: React.FormEvent) => {
         e.preventDefault();
         if (!approvalModalTask) return;
+        setApprovalError(undefined);
         setIsSubmittingApproval(true);
         const url =
             approvalDecision === 'approved'
@@ -989,10 +1125,29 @@ export default function Show({
                     setApprovalComment('');
                     setIsSubmittingApproval(false);
                 },
-                onError: () => setIsSubmittingApproval(false),
+                onError: (errors) => {
+                    setApprovalError(
+                        errors.approval_comment ||
+                            errors.status ||
+                            Object.values(errors)[0],
+                    );
+                    setIsSubmittingApproval(false);
+                },
             },
         );
     };
+
+    const productionCard = !isRestrictedView &&
+        (project.status !== 'plan' ||
+            Boolean(project.production_plans?.length)) && (
+            <ProductionMonitoringCard
+                canReport={canReportProduction && projectIsActive}
+                notApplicable={Boolean(project.production_not_applicable)}
+                plans={project.production_plans ?? []}
+                projectId={project.id}
+                projectStatus={project.status}
+            />
+        );
 
     return (
         <AppLayout
@@ -1048,18 +1203,58 @@ export default function Show({
                             'bg-gray-100 text-gray-800',
                         regionName:
                             project.region?.name ?? 'Аймақ көрсетілмеген',
+                        curatorName: (project.curators?.length
+                            ? project.curators
+                            : project.creator
+                              ? [project.creator]
+                              : []
+                        )
+                            .map((person) => person.full_name || person.name)
+                            .filter(Boolean)
+                            .join(', '),
                         projectTypeName: formatProjectTypeNames(
                             project,
                             'Жоба түрі көрсетілмеген',
                         ),
                     }}
                     summary={effectivePassportSummary}
+                    isPlanned={project.status === 'plan'}
+                    isLaunched={project.status === 'launched'}
+                    isArchived={Boolean(project.is_archived)}
+                    onOpenNextAction={() => {
+                        const next = effectivePassportSummary.next_milestone;
+                        if (!next) return;
+                        if (next.kind === 'task' || project.status !== 'plan') {
+                            const task = tasks.find(
+                                (item) => item.id === next.id,
+                            );
+                            if (task) handleOpenTaskInfo(task);
+                        } else {
+                            const hash =
+                                next.kind === 'resume'
+                                    ? '#project-attraction'
+                                    : `#attraction-activity-${next.id}`;
+                            window.history.replaceState(
+                                window.history.state,
+                                '',
+                                hash,
+                            );
+                            window.dispatchEvent(
+                                new HashChangeEvent('hashchange'),
+                            );
+                            requestAnimationFrame(() =>
+                                document
+                                    .getElementById(hash.slice(1))
+                                    ?.scrollIntoView({
+                                        block: 'start',
+                                        behavior: 'smooth',
+                                    }),
+                            );
+                        }
+                    }}
+                    attractionStage={project.attraction_stage}
                     canEdit={canEditProject}
-                    canDownload={
-                        canDownload &&
-                        ((!isRestrictedView && !isExecutorParticipant) ||
-                            isAkim)
-                    }
+                    canDownload={canDownload && !isRestrictedView}
                     canSeeOperationalDetails={!isRestrictedView}
                 />
 
@@ -1076,11 +1271,34 @@ export default function Show({
                             href: '#project-details',
                             icon: FileText,
                         },
+                        ...(!isRestrictedView &&
+                        project.status !== 'plan' &&
+                        project.attraction_activities?.length
+                            ? [
+                                  {
+                                      label: 'Іс-шаралар тарихы',
+                                      href: '#project-attraction',
+                                      icon: ScrollText,
+                                      count: project.attraction_activities
+                                          .length,
+                                  },
+                              ]
+                            : []),
                         {
-                            label: 'Жол картасы',
-                            href: '#project-roadmap',
+                            label:
+                                project.status === 'plan'
+                                    ? 'Іс-шаралар'
+                                    : 'Жол картасы',
+                            href:
+                                project.status === 'plan'
+                                    ? '#project-attraction'
+                                    : '#project-roadmap',
                             icon: Activity,
-                            count: tasks.length,
+                            count:
+                                project.status === 'plan'
+                                    ? (project.attraction_activities?.length ??
+                                      0)
+                                    : tasks.length,
                         },
                         {
                             label: 'Команда',
@@ -1098,497 +1316,536 @@ export default function Show({
                     {/* Main Content */}
                     <div className="min-w-0 space-y-6">
                         {/* Project Banner + Info */}
-                        <Card
+                        <section
                             id="project-details"
-                            className="scroll-mt-24 overflow-hidden py-0 shadow-none"
+                            aria-labelledby="project-details-title"
+                            className="scroll-mt-24 overflow-hidden rounded-xl border border-slate-200 bg-white"
                         >
-                            {/* Banner Header */}
-                            <div className="border-b border-slate-200 bg-white px-6 py-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-[#0f1b3d]">
-                                        <FileText className="h-5 w-5 text-[#c8a44e]" />
-                                        <h2 className="text-lg font-bold">
-                                            Жоба туралы негізгі мәлімет
-                                        </h2>
-                                    </div>
-                                    <span className="text-xs text-slate-500">
-                                        {
-                                            effectivePassportSummary.documents_count
-                                        }{' '}
-                                        құжат ·{' '}
-                                        {effectivePassportSummary.photos_count}{' '}
-                                        фото
-                                    </span>
-                                </div>
-                            </div>
-
-                            {/* Photo + Info Cards */}
-                            <CardContent className="p-6">
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-                                    {/* Photo */}
-                                    <div className="overflow-hidden rounded-lg md:col-span-2">
-                                        {mainGallery.length > 0 &&
-                                            mainGallery[0]?.gallery_date && (
-                                                <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                    <Calendar className="h-3.5 w-3.5" />
-                                                    <span>
-                                                        {new Date(
-                                                            mainGallery[0]
-                                                                .gallery_date,
-                                                        ).toLocaleDateString(
-                                                            'kk-KZ',
-                                                            {
-                                                                day: 'numeric',
-                                                                month: 'long',
-                                                                year: 'numeric',
-                                                            },
-                                                        )}
-                                                    </span>
-                                                </div>
-                                            )}
-                                        <ProjectGallerySlider
-                                            photos={mainGallery}
-                                        />
-                                    </div>
-
-                                    {/* Info Cards */}
-                                    <div className="grid grid-cols-2 gap-3 md:col-span-3">
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <MapPin className="h-3.5 w-3.5" />{' '}
-                                                Аймақ
-                                            </p>
-                                            <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
-                                                {project.region?.name ||
-                                                    'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <FileText className="h-3.5 w-3.5" />{' '}
-                                                Жоба түрі
-                                            </p>
-                                            <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
-                                                {formatProjectTypeNames(
-                                                    project,
-                                                    'Көрсетілмеген',
-                                                )}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Building2 className="h-3.5 w-3.5" />{' '}
-                                                Инвестиция сомасы
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.total_investment
-                                                    ? formatCurrency(
-                                                          project.total_investment,
-                                                      )
-                                                    : 'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Calendar className="h-3.5 w-3.5" />{' '}
-                                                Іске асыру мерзімдері
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.start_date
-                                                    ? new Date(
-                                                          project.start_date,
-                                                      ).getFullYear()
-                                                    : '...'}
-                                                {' — '}
-                                                {project.end_date
-                                                    ? new Date(
-                                                          project.end_date,
-                                                      ).getFullYear()
-                                                    : '...'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Users className="h-3.5 w-3.5" />{' '}
-                                                Жұмыс орындары
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.jobs_count
-                                                    ? `${project.jobs_count} адам`
-                                                    : 'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                        <div className="rounded-lg border border-gray-200 p-4">
-                                            <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                <Factory className="h-3.5 w-3.5" />{' '}
-                                                Жоспарлы өндіріс
-                                            </p>
-                                            <p className="text-sm font-bold text-[#0f1b3d]">
-                                                {project.production_not_applicable
-                                                    ? 'Қолданылмайды'
-                                                    : project.production_plans
-                                                            ?.length
-                                                      ? `${project.production_plans.length} өнім/нәтиже`
-                                                      : 'Көрсетілмеген'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-
-                            {/* Company */}
-                            <div
-                                id="project-description"
-                                className="scroll-mt-6 border-t border-gray-200 px-6 py-5"
+                            <h2
+                                id="project-details-title"
+                                className="flex items-center gap-2 px-5 py-4 font-semibold text-[#0f1b3d]"
                             >
-                                <div className="flex items-start gap-3">
-                                    <div className="rounded-lg bg-[#fff8e7] p-2.5">
-                                        <Building2 className="h-5 w-5 text-[#a9842f]" />
-                                    </div>
-                                    <div className="min-w-0">
-                                        <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                            Жоба бастамашысы
-                                        </p>
-                                        <h2 className="mt-1 min-w-0 text-lg font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
-                                            {project.company?.display_name ||
-                                                project.company_name ||
-                                                'Компания көрсетілмеген'}
-                                        </h2>
-                                        {project.company && (
-                                            <div className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-xs [overflow-wrap:anywhere] break-words text-gray-500">
-                                                {project.company.bin && (
-                                                    <span>
-                                                        БСН/БИН:{' '}
-                                                        {project.company.bin}
-                                                    </span>
-                                                )}
-                                                {project.company.region && (
-                                                    <span>
-                                                        Өңір:{' '}
-                                                        {
-                                                            project.company
-                                                                .region.name
-                                                        }
-                                                    </span>
-                                                )}
-                                                {project.company
-                                                    .activity_type && (
-                                                    <span>
-                                                        Қызметі:{' '}
-                                                        {
-                                                            project.company
-                                                                .activity_type
-                                                        }
-                                                    </span>
-                                                )}
-                                                {project.company
-                                                    .director_full_name && (
-                                                    <span>
-                                                        Басшысы:{' '}
-                                                        {
-                                                            project.company
-                                                                .director_full_name
-                                                        }
-                                                    </span>
-                                                )}
-                                                {project.company.phone && (
-                                                    <span>
-                                                        Телефон:{' '}
-                                                        {project.company.phone}
-                                                    </span>
-                                                )}
+                                <FileText className="size-5 text-[#c8a44e]" />
+                                Жобаның толық паспорты
+                            </h2>
+                            <div className="border-t border-slate-100">
+                                {/* Photo + Info Cards */}
+                                <CardContent className="p-6">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+                                        {/* Photo */}
+                                        {(project.status !== 'plan' ||
+                                            mainGallery.length > 0) && (
+                                            <div className="overflow-hidden rounded-lg md:col-span-2">
+                                                {mainGallery.length > 0 &&
+                                                    mainGallery[0]
+                                                        ?.gallery_date && (
+                                                        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                            <Calendar className="h-3.5 w-3.5" />
+                                                            <span>
+                                                                {formatProjectDate(
+                                                                    mainGallery[0]
+                                                                        .gallery_date,
+                                                                )}
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                <ProjectGallerySlider
+                                                    photos={mainGallery}
+                                                />
                                             </div>
                                         )}
-                                        {project.company &&
-                                            canViewCompanyDetails && (
-                                                <Link
-                                                    href={`/companies/${project.company.id}`}
-                                                    className="mt-3 inline-flex text-sm font-semibold text-[#a9842f] hover:text-[#80631f]"
-                                                >
-                                                    Компанияның толық
-                                                    карточкасын ашу →
-                                                </Link>
+
+                                        {/* Info Cards */}
+                                        <div
+                                            className={`grid grid-cols-2 gap-3 ${project.status === 'plan' && mainGallery.length === 0 ? 'md:col-span-5' : 'md:col-span-3'}`}
+                                        >
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <MapPin className="h-3.5 w-3.5" />{' '}
+                                                    Аймақ
+                                                </p>
+                                                <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                                                    {project.region?.name ||
+                                                        'Көрсетілмеген'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <FileText className="h-3.5 w-3.5" />{' '}
+                                                    Жоба түрі
+                                                </p>
+                                                <p className="min-w-0 text-sm font-bold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                                                    {formatProjectTypeNames(
+                                                        project,
+                                                        'Көрсетілмеген',
+                                                    )}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <Building2 className="h-3.5 w-3.5" />{' '}
+                                                    Инвестиция сомасы
+                                                </p>
+                                                <p className="text-sm font-bold text-[#0f1b3d]">
+                                                    {project.total_investment !=
+                                                    null
+                                                        ? formatCurrency(
+                                                              project.total_investment,
+                                                          )
+                                                        : '—'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <Calendar className="h-3.5 w-3.5" />{' '}
+                                                    Іске асыру мерзімдері
+                                                </p>
+                                                <p className="text-sm font-bold text-[#0f1b3d]">
+                                                    {project.start_date
+                                                        ? new Date(
+                                                              project.start_date,
+                                                          ).getFullYear()
+                                                        : '...'}
+                                                    {' — '}
+                                                    {project.end_date
+                                                        ? new Date(
+                                                              project.end_date,
+                                                          ).getFullYear()
+                                                        : '...'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <Users className="h-3.5 w-3.5" />{' '}
+                                                    Жұмыс орындары
+                                                </p>
+                                                <p className="text-sm font-bold text-[#0f1b3d]">
+                                                    {project.jobs_count !==
+                                                        null &&
+                                                    project.jobs_count !==
+                                                        undefined
+                                                        ? `${project.jobs_count} адам`
+                                                        : 'Көрсетілмеген'}
+                                                </p>
+                                            </div>
+                                            <div className="rounded-lg border border-gray-200 p-4">
+                                                <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                    <Factory className="h-3.5 w-3.5" />{' '}
+                                                    Жоспарлы өндіріс
+                                                </p>
+                                                <p className="text-sm font-bold text-[#0f1b3d]">
+                                                    {project.production_not_applicable
+                                                        ? 'Қолданылмайды'
+                                                        : project
+                                                                .production_plans
+                                                                ?.length
+                                                          ? `${project.production_plans.length} өнім/нәтиже`
+                                                          : 'Көрсетілмеген'}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </CardContent>
+
+                                {/* Company */}
+                                <div
+                                    id="project-description"
+                                    className="scroll-mt-6 border-t border-gray-200 px-6 py-5"
+                                >
+                                    <div className="flex items-start gap-3">
+                                        <div className="rounded-lg bg-[#fff8e7] p-2.5">
+                                            <Building2 className="h-5 w-5 text-[#a9842f]" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                Жоба бастамашысы
+                                            </p>
+                                            <h2 className="mt-1 min-w-0 text-lg font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                                                {project.company
+                                                    ?.display_name ||
+                                                    project.company_name ||
+                                                    'Компания көрсетілмеген'}
+                                            </h2>
+                                            {project.company && (
+                                                <div className="mt-2 flex min-w-0 flex-wrap gap-x-5 gap-y-1 text-xs [overflow-wrap:anywhere] break-words text-gray-500">
+                                                    {project.company.bin && (
+                                                        <span>
+                                                            БСН/БИН:{' '}
+                                                            {
+                                                                project.company
+                                                                    .bin
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {project.company.region && (
+                                                        <span>
+                                                            Өңір:{' '}
+                                                            {
+                                                                project.company
+                                                                    .region.name
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {project.company
+                                                        .activity_type && (
+                                                        <span>
+                                                            Қызметі:{' '}
+                                                            {
+                                                                project.company
+                                                                    .activity_type
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {project.company
+                                                        .director_full_name && (
+                                                        <span>
+                                                            Басшысы:{' '}
+                                                            {
+                                                                project.company
+                                                                    .director_full_name
+                                                            }
+                                                        </span>
+                                                    )}
+                                                    {project.company.phone && (
+                                                        <span>
+                                                            Телефон:{' '}
+                                                            {
+                                                                project.company
+                                                                    .phone
+                                                            }
+                                                        </span>
+                                                    )}
+                                                </div>
                                             )}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {sectorDetails.length > 0 && (
-                                <div className="border-t border-gray-200 px-6 py-5">
-                                    <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-[#0f1b3d]">
-                                        <MapPin className="h-5 w-5 text-[#c8a44e]" />
-                                        Арнайы аумақтар мен салалық байланыс
-                                    </h2>
-                                    <div className="flex flex-wrap gap-2">
-                                        {sectorDetails.map((detail) => (
-                                            <span
-                                                key={detail}
-                                                className="max-w-full rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium [overflow-wrap:anywhere] break-words text-blue-900"
-                                            >
-                                                {detail}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Инфрақұрылымға қажеттілік */}
-                            {PROJECT_INFRASTRUCTURE_FIELDS.some(
-                                ({ key }) => projectInfrastructure[key].needed,
-                            ) && (
-                                <div className="border-t border-gray-200 px-6 py-5">
-                                    <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                        <Building2 className="h-5 w-5 text-gray-500" />
-                                        Инфрақұрылымға қажеттілік
-                                    </h2>
-                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                                        {PROJECT_INFRASTRUCTURE_FIELDS.map(
-                                            (item) => {
-                                                const infra =
-                                                    projectInfrastructure[
-                                                        item.key
-                                                    ];
-                                                if (!infra.needed) return null;
-
-                                                return (
-                                                    <div
-                                                        key={item.key}
-                                                        className="rounded-lg border border-gray-200 p-3"
+                                            {project.company &&
+                                                canViewCompanyDetails && (
+                                                    <Link
+                                                        href={`/companies/${project.company.id}`}
+                                                        className="mt-3 inline-flex text-sm font-semibold text-[#a9842f] hover:text-[#80631f]"
                                                     >
-                                                        <p className="mb-1 text-xs font-medium text-gray-500">
-                                                            {item.label}
-                                                        </p>
-                                                        <div className="mt-2 grid grid-cols-2 gap-3">
-                                                            <div>
-                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
-                                                                    Қажетті
-                                                                </p>
-                                                                <p className="mt-1 text-sm font-bold text-[#0f1b3d]">
-                                                                    {formatInfrastructureValue(
-                                                                        infra.required_capacity,
-                                                                        item.key,
-                                                                    ) || '—'}
-                                                                </p>
-                                                            </div>
-                                                            <div className="border-l border-gray-100 pl-3">
-                                                                <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
-                                                                    Пайдалануда
-                                                                </p>
-                                                                <p className="mt-1 text-sm font-bold text-emerald-700">
-                                                                    {formatInfrastructureValue(
-                                                                        infra.used_capacity,
-                                                                        item.key,
-                                                                    ) || '—'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                );
-                                            },
-                                        )}
+                                                        Компанияның толық
+                                                        карточкасын ашу →
+                                                    </Link>
+                                                )}
+                                        </div>
                                     </div>
                                 </div>
-                            )}
 
-                            {/* Description & Current Status Tabs */}
-                            <div className="border-t border-gray-200 px-6 py-5">
-                                <DescriptionTabs
-                                    description={project.description}
-                                    currentStatus={project.current_status}
-                                    showCurrentStatus={!isRestrictedView}
-                                    canEditStatus={
-                                        (isIspolnitel && isInvolved) ||
-                                        isModerator
-                                    }
-                                    appendOnlyStatus={isIspolnitel}
-                                    projectId={project.id}
-                                />
-                            </div>
+                                {sectorDetails.length > 0 && (
+                                    <div className="border-t border-gray-200 px-6 py-5">
+                                        <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-[#0f1b3d]">
+                                            <MapPin className="h-5 w-5 text-[#c8a44e]" />
+                                            Арнайы аумақтар мен салалық байланыс
+                                        </h2>
+                                        <div className="flex flex-wrap gap-2">
+                                            {sectorDetails.map((detail) => (
+                                                <span
+                                                    key={detail}
+                                                    className="max-w-full rounded-lg border border-blue-100 bg-blue-50 px-3 py-2 text-sm font-medium [overflow-wrap:anywhere] break-words text-blue-900"
+                                                >
+                                                    {detail}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
 
-                            {/* Проблемалық мәселелер */}
-                            {!isRestrictedView &&
-                                project.issues &&
-                                project.issues.length > 0 && (
+                                {/* Инфрақұрылымға қажеттілік */}
+                                {PROJECT_INFRASTRUCTURE_FIELDS.some(
+                                    ({ key }) =>
+                                        projectInfrastructure[key].needed,
+                                ) && (
                                     <div className="border-t border-gray-200 px-6 py-5">
                                         <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
-                                            <AlertTriangle className="h-5 w-5 text-red-500" />
-                                            Проблемалық мәселелер
-                                            <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
-                                                {project.issues.length}
-                                            </span>
+                                            <Building2 className="h-5 w-5 text-gray-500" />
+                                            Инфрақұрылымға қажеттілік
                                         </h2>
-                                        <div className="space-y-3">
-                                            {project.issues
-                                                .slice(0, 3)
-                                                .map((issue) => {
-                                                    const severityStyles: Record<
-                                                        string,
-                                                        string
-                                                    > = {
-                                                        high: 'border-red-200 bg-red-50',
-                                                        medium: 'border-amber-200 bg-amber-50',
-                                                        low: 'border-blue-200 bg-blue-50',
-                                                        critical:
-                                                            'border-red-300 bg-red-100',
-                                                    };
-                                                    const severityLabels: Record<
-                                                        string,
-                                                        string
-                                                    > = {
-                                                        high: 'Жоғары',
-                                                        medium: 'Орта',
-                                                        low: 'Төмен',
-                                                        critical: 'Сыни жағдай',
-                                                    };
-                                                    const severityDot: Record<
-                                                        string,
-                                                        string
-                                                    > = {
-                                                        high: 'bg-red-500',
-                                                        medium: 'bg-amber-500',
-                                                        low: 'bg-blue-500',
-                                                        critical: 'bg-red-600',
-                                                    };
-                                                    const statusLabels: Record<
-                                                        string,
-                                                        string
-                                                    > = {
-                                                        open: 'Ашық',
-                                                        in_progress:
-                                                            'Орындалуда',
-                                                        resolved: 'Шешілді',
-                                                    };
-                                                    const style =
-                                                        severityStyles[
-                                                            issue.severity || ''
-                                                        ] ||
-                                                        'border-gray-200 bg-gray-50';
+                                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                                            {PROJECT_INFRASTRUCTURE_FIELDS.map(
+                                                (item) => {
+                                                    const infra =
+                                                        projectInfrastructure[
+                                                            item.key
+                                                        ];
+                                                    if (!infra.needed)
+                                                        return null;
+
                                                     return (
                                                         <div
-                                                            key={issue.id}
-                                                            className={`rounded-lg border p-4 ${style}`}
+                                                            key={item.key}
+                                                            className="rounded-lg border border-gray-200 p-3"
                                                         >
-                                                            <div className="flex items-start justify-between gap-3">
-                                                                <div className="flex min-w-0 items-start gap-3">
-                                                                    <div
-                                                                        className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
-                                                                    />
-                                                                    <div className="min-w-0">
-                                                                        <p className="min-w-0 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
-                                                                            {
-                                                                                issue.title
-                                                                            }
-                                                                        </p>
-                                                                        {issue.description && (
-                                                                            <p className="mt-1 line-clamp-2 min-w-0 text-sm [overflow-wrap:anywhere] break-words text-gray-600">
-                                                                                {
-                                                                                    issue.description
-                                                                                }
-                                                                            </p>
-                                                                        )}
-                                                                        {issue.creator && (
-                                                                            <p className="mt-1 text-xs text-gray-500">
-                                                                                Қосқан:{' '}
-                                                                                {
-                                                                                    issue
-                                                                                        .creator
-                                                                                        .full_name
-                                                                                }
-                                                                            </p>
-                                                                        )}
-                                                                    </div>
+                                                            <p className="mb-1 text-xs font-medium text-gray-500">
+                                                                {item.label}
+                                                            </p>
+                                                            <div className="mt-2 grid grid-cols-2 gap-3">
+                                                                <div>
+                                                                    <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                        Қажетті
+                                                                    </p>
+                                                                    <p className="mt-1 text-sm font-bold text-[#0f1b3d]">
+                                                                        {formatInfrastructureValue(
+                                                                            infra.required_capacity,
+                                                                            item.key,
+                                                                        ) ||
+                                                                            '—'}
+                                                                    </p>
                                                                 </div>
-                                                                <div className="flex shrink-0 items-center gap-2">
-                                                                    {issue.severity && (
-                                                                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                            {severityLabels[
-                                                                                issue
-                                                                                    .severity
-                                                                            ] ||
-                                                                                issue.severity}
-                                                                        </span>
-                                                                    )}
-                                                                    {issue.status && (
-                                                                        <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
-                                                                            {statusLabels[
-                                                                                issue
-                                                                                    .status
-                                                                            ] ||
-                                                                                issue.status}
-                                                                        </span>
-                                                                    )}
+                                                                <div className="border-l border-gray-100 pl-3">
+                                                                    <p className="text-[10px] font-medium tracking-wide text-gray-400 uppercase">
+                                                                        Пайдалануда
+                                                                    </p>
+                                                                    <p className="mt-1 text-sm font-bold text-emerald-700">
+                                                                        {formatInfrastructureValue(
+                                                                            infra.used_capacity,
+                                                                            item.key,
+                                                                        ) ||
+                                                                            '—'}
+                                                                    </p>
                                                                 </div>
                                                             </div>
                                                         </div>
                                                     );
-                                                })}
-                                        </div>
-                                        <div className="mt-4">
-                                            <Link
-                                                href={`/investment-projects/${project.id}/issues`}
-                                                className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] transition-colors hover:text-[#c8a44e]"
-                                            >
-                                                Барлық проблемалық мәселелер →
-                                            </Link>
-                                        </div>
-                                    </div>
-                                )}
-                            {!isRestrictedView &&
-                                (!project.issues ||
-                                    project.issues.length === 0) && (
-                                    <div className="border-t border-gray-200 px-6 py-5">
-                                        <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                                            <div className="flex items-center gap-3">
-                                                <div className="rounded-lg bg-emerald-100 p-2">
-                                                    <CheckCircle2 className="h-5 w-5 text-emerald-700" />
-                                                </div>
-                                                <div>
-                                                    <p className="font-semibold text-emerald-900">
-                                                        Ашық мәселе жоқ
-                                                    </p>
-                                                    <p className="text-sm text-emerald-700">
-                                                        Жоба бойынша тіркелген
-                                                        белсенді тәуекелдер
-                                                        анықталмады.
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            {(canModify ||
-                                                participantCanWrite ||
-                                                isAkim ||
-                                                isModerator) && (
-                                                <Link
-                                                    href={`/investment-projects/${project.id}/issues`}
-                                                    className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
-                                                >
-                                                    Мәселе қосу
-                                                </Link>
+                                                },
                                             )}
                                         </div>
                                     </div>
                                 )}
-                        </Card>
 
+                                {/* Description & Current Status Tabs */}
+                                <div className="border-t border-gray-200 px-6 py-5">
+                                    <DescriptionTabs
+                                        description={project.description}
+                                        currentStatus={project.current_status}
+                                        showCurrentStatus={!isRestrictedView}
+                                        canEditStatus={
+                                            canEditProject ||
+                                            (isIspolnitel &&
+                                                participantCanWrite)
+                                        }
+                                        appendOnlyStatus={isIspolnitel}
+                                        projectId={project.id}
+                                    />
+                                </div>
+
+                                {/* Проблемалық мәселелер */}
+                                {!isRestrictedView &&
+                                    project.issues &&
+                                    project.issues.length > 0 && (
+                                        <div className="border-t border-gray-200 px-6 py-5">
+                                            <h2 className="mb-4 flex items-center gap-2 text-lg font-semibold text-[#0f1b3d]">
+                                                <AlertTriangle className="h-5 w-5 text-red-500" />
+                                                Проблемалық мәселелер
+                                                <span className="ml-1 inline-flex h-6 min-w-[24px] items-center justify-center rounded-full bg-red-100 px-2 text-xs font-bold text-red-700">
+                                                    {project.issues.length}
+                                                </span>
+                                            </h2>
+                                            <div className="space-y-3">
+                                                {project.issues
+                                                    .slice(0, 3)
+                                                    .map((issue) => {
+                                                        const severityStyles: Record<
+                                                            string,
+                                                            string
+                                                        > = {
+                                                            high: 'border-red-200 bg-red-50',
+                                                            medium: 'border-amber-200 bg-amber-50',
+                                                            low: 'border-blue-200 bg-blue-50',
+                                                            critical:
+                                                                'border-red-300 bg-red-100',
+                                                        };
+                                                        const severityLabels: Record<
+                                                            string,
+                                                            string
+                                                        > = {
+                                                            high: 'Жоғары',
+                                                            medium: 'Орта',
+                                                            low: 'Төмен',
+                                                            critical:
+                                                                'Сыни жағдай',
+                                                        };
+                                                        const severityDot: Record<
+                                                            string,
+                                                            string
+                                                        > = {
+                                                            high: 'bg-red-500',
+                                                            medium: 'bg-amber-500',
+                                                            low: 'bg-blue-500',
+                                                            critical:
+                                                                'bg-red-600',
+                                                        };
+                                                        const statusLabels: Record<
+                                                            string,
+                                                            string
+                                                        > = {
+                                                            open: 'Ашық',
+                                                            in_progress:
+                                                                'Орындалуда',
+                                                            resolved: 'Шешілді',
+                                                        };
+                                                        const style =
+                                                            severityStyles[
+                                                                issue.severity ||
+                                                                    ''
+                                                            ] ||
+                                                            'border-gray-200 bg-gray-50';
+                                                        return (
+                                                            <div
+                                                                key={issue.id}
+                                                                className={`rounded-lg border p-4 ${style}`}
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="flex min-w-0 items-start gap-3">
+                                                                        <div
+                                                                            className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${severityDot[issue.severity || ''] || 'bg-gray-400'}`}
+                                                                        />
+                                                                        <div className="min-w-0">
+                                                                            <p className="min-w-0 font-semibold [overflow-wrap:anywhere] break-words text-[#0f1b3d]">
+                                                                                {
+                                                                                    issue.title
+                                                                                }
+                                                                            </p>
+                                                                            {issue.description && (
+                                                                                <p className="mt-1 line-clamp-2 min-w-0 text-sm [overflow-wrap:anywhere] break-words text-gray-600">
+                                                                                    {
+                                                                                        issue.description
+                                                                                    }
+                                                                                </p>
+                                                                            )}
+                                                                            {issue.creator && (
+                                                                                <p className="mt-1 text-xs text-gray-500">
+                                                                                    Қосқан:{' '}
+                                                                                    {
+                                                                                        issue
+                                                                                            .creator
+                                                                                            .full_name
+                                                                                    }
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex shrink-0 items-center gap-2">
+                                                                        {issue.severity && (
+                                                                            <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                                {severityLabels[
+                                                                                    issue
+                                                                                        .severity
+                                                                                ] ||
+                                                                                    issue.severity}
+                                                                            </span>
+                                                                        )}
+                                                                        {issue.status && (
+                                                                            <span className="rounded-md border border-gray-200 bg-white px-2 py-0.5 text-xs font-medium text-gray-600">
+                                                                                {statusLabels[
+                                                                                    issue
+                                                                                        .status
+                                                                                ] ||
+                                                                                    issue.status}
+                                                                            </span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                            </div>
+                                            <div className="mt-4">
+                                                <Link
+                                                    href={`/investment-projects/${project.id}/issues`}
+                                                    className="inline-flex items-center gap-1 text-sm font-medium text-[#0f1b3d] transition-colors hover:text-[#c8a44e]"
+                                                >
+                                                    Барлық проблемалық мәселелер
+                                                    →
+                                                </Link>
+                                            </div>
+                                        </div>
+                                    )}
+                                {!isRestrictedView &&
+                                    (!project.issues ||
+                                        project.issues.length === 0) && (
+                                        <div className="border-t border-gray-200 px-6 py-5">
+                                            <div className="flex items-center justify-between gap-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="rounded-lg bg-emerald-100 p-2">
+                                                        <CheckCircle2 className="h-5 w-5 text-emerald-700" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="font-semibold text-emerald-900">
+                                                            Ашық мәселе жоқ
+                                                        </p>
+                                                        <p className="text-sm text-emerald-700">
+                                                            Жоба бойынша
+                                                            тіркелген белсенді
+                                                            тәуекелдер
+                                                            анықталмады.
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                {(canEditProject ||
+                                                    participantCanWrite) && (
+                                                    <Link
+                                                        href={`/investment-projects/${project.id}/issues`}
+                                                        className="shrink-0 text-sm font-semibold text-emerald-800 hover:text-emerald-950"
+                                                    >
+                                                        Мәселе қосу
+                                                    </Link>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
+                            </div>
+                        </section>
+
+                        {productionCard}
                         {!isRestrictedView && (
-                            <ProductionMonitoringCard
-                                canReport={canReportProduction}
-                                notApplicable={Boolean(
-                                    project.production_not_applicable,
-                                )}
-                                plans={project.production_plans ?? []}
+                            <AttractionStageDetailsCard
                                 projectId={project.id}
-                                projectStatus={project.status}
-                            />
+                                stage={project.attraction_stage}
+                                handoverTo={project.attraction_handover_to}
+                                requestedAt={
+                                    project.attraction_handover_requested_at
+                                }
+                                acceptedAt={
+                                    project.attraction_handover_accepted_at
+                                }
+                                acceptedBy={
+                                    project.attraction_handover_acceptor
+                                }
+                                declineReason={
+                                    project.attraction_decline_reason
+                                }
+                                resumeOn={project.attraction_resume_on}
+                                canAccept={canAcceptAttractionHandover}
+                                historical={project.status !== 'plan'}
+                                collapsible={
+                                    project.status === 'implementation'
+                                }
+                            >
+                                {(project.status === 'plan' ||
+                                    Boolean(
+                                        project.attraction_activities?.length,
+                                    )) && (
+                                    <AttractionActivityCard
+                                        key={`${project.id}-${project.status}-${project.updated_at}`}
+                                        projectId={project.id}
+                                        activities={
+                                            project.attraction_activities ?? []
+                                        }
+                                        canManage={canManageAttraction}
+                                        historical={project.status !== 'plan'}
+                                        users={attractionResponsibleUsers}
+                                    />
+                                )}
+                            </AttractionStageDetailsCard>
                         )}
-
                         {/* Roadmap / Дорожная карта */}
-                        {!isRestrictedView && (
+                        {!isRestrictedView && project.status !== 'plan' && (
                             <Card
                                 id="project-roadmap"
                                 className="scroll-mt-24 overflow-hidden py-0 shadow-none"
                             >
                                 <div className="bg-[#0f1b3d] px-6 py-4">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                                         <div className="flex items-center gap-2 text-white">
                                             <Flag className="h-5 w-5" />
                                             <h2 className="text-lg font-bold">
@@ -1600,12 +1857,15 @@ export default function Show({
                                                 value={taskFilter}
                                                 onValueChange={setTaskFilter}
                                             >
-                                                <SelectTrigger className="h-9 w-[160px] border-white/30 bg-white/20 text-sm text-white focus:ring-white/50 [&>svg]:text-white">
+                                                <SelectTrigger
+                                                    aria-label="Тапсырмаларды сүзу"
+                                                    className="h-9 w-[160px] border-white/30 bg-white/20 text-sm text-white focus:ring-white/50 [&>svg]:text-white"
+                                                >
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     <SelectItem value="all">
-                                                        Барлық кезеңдер
+                                                        Барлық тапсырмалар
                                                     </SelectItem>
                                                     <SelectItem value="new">
                                                         Жаңа
@@ -1638,8 +1898,11 @@ export default function Show({
                                             {canCreateTasks && (
                                                 <Button
                                                     size="icon"
+                                                    aria-label="Тапсырма қосу"
+                                                    title="Тапсырма қосу"
                                                     className="h-9 w-9 border border-white/30 bg-white/20 text-white hover:bg-white/30"
                                                     onClick={() => {
+                                                        setTaskErrors({});
                                                         setEditingTaskId(null);
                                                         setTaskTitle('');
                                                         setTaskDescription('');
@@ -1660,11 +1923,14 @@ export default function Show({
                                         <div className="py-12 text-center">
                                             <Flag className="mx-auto mb-4 h-12 w-12 text-gray-300" />
                                             <p className="text-gray-500">
-                                                Кезеңдер жоқ
+                                                Тапсырмалар жоқ
                                             </p>
-                                            <p className="mt-1 text-sm text-gray-400">
-                                                Жаңа кезең қосу үшін + басыңыз
-                                            </p>
+                                            {canCreateTasks && (
+                                                <p className="mt-1 text-sm text-gray-400">
+                                                    Жаңа тапсырма қосу үшін +
+                                                    басыңыз
+                                                </p>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className="divide-y divide-gray-100">
@@ -1676,8 +1942,29 @@ export default function Show({
                                                     task.completions?.find(
                                                         (c) =>
                                                             c.status ===
-                                                            'pending',
+                                                                'pending' &&
+                                                            (c.task_definition_version ??
+                                                                1) ===
+                                                                (task.definition_version ??
+                                                                    1),
                                                     );
+                                                const protectedTask =
+                                                    [
+                                                        'pending',
+                                                        'approved',
+                                                    ].includes(
+                                                        task.approval_status ??
+                                                            '',
+                                                    ) ||
+                                                    task.status === 'done' ||
+                                                    Boolean(pendingCompletion);
+                                                const canEditTask =
+                                                    canManageTasks &&
+                                                    (isSuperAdmin ||
+                                                        !protectedTask);
+                                                const canDeleteTask =
+                                                    canEditTask &&
+                                                    !task.completions?.length;
                                                 const latestCompletion = task
                                                     .completions?.length
                                                     ? task.completions[
@@ -1689,7 +1976,8 @@ export default function Show({
                                                 return (
                                                     <div
                                                         key={task.id}
-                                                        className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50"
+                                                        id={`roadmap-task-${task.id}`}
+                                                        className="flex scroll-mt-24 flex-wrap items-center gap-4 px-6 py-4 transition-colors hover:bg-gray-50 sm:flex-nowrap"
                                                     >
                                                         <div
                                                             className={`h-3 w-3 flex-shrink-0 rounded-full ${getTaskDotColor(task)}`}
@@ -1706,29 +1994,15 @@ export default function Show({
                                                             <p className="text-sm text-gray-500">
                                                                 {task.start_date && (
                                                                     <>
-                                                                        {new Date(
+                                                                        {formatProjectDate(
                                                                             task.start_date,
-                                                                        ).toLocaleDateString(
-                                                                            'kk-KZ',
-                                                                            {
-                                                                                day: 'numeric',
-                                                                                month: 'long',
-                                                                                year: 'numeric',
-                                                                            },
                                                                         )}
                                                                         {' — '}
                                                                     </>
                                                                 )}
                                                                 {task.due_date
-                                                                    ? new Date(
+                                                                    ? formatProjectDate(
                                                                           task.due_date,
-                                                                      ).toLocaleDateString(
-                                                                          'kk-KZ',
-                                                                          {
-                                                                              day: 'numeric',
-                                                                              month: 'long',
-                                                                              year: 'numeric',
-                                                                          },
                                                                       )
                                                                     : 'Мерзімі көрсетілмеген'}
                                                             </p>
@@ -1806,6 +2080,17 @@ export default function Show({
                                                             {/* Status badge for completion */}
                                                             {latestCompletion && (
                                                                 <div>
+                                                                    {(latestCompletion.task_definition_version ??
+                                                                        1) !==
+                                                                        (task.definition_version ??
+                                                                            1) && (
+                                                                        <p className="mt-1 text-xs text-slate-500">
+                                                                            Алдыңғы
+                                                                            тапсырма
+                                                                            нұсқасының
+                                                                            есебі
+                                                                        </p>
+                                                                    )}
                                                                     <Badge
                                                                         className={`mt-1 border-0 text-xs ${
                                                                             latestCompletion.status ===
@@ -1840,11 +2125,12 @@ export default function Show({
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div className="flex items-center gap-2">
+                                                        <div className="flex basis-full flex-wrap items-center justify-end gap-2 pl-7 sm:basis-auto sm:pl-0">
                                                             {/* Info: open read-only task details modal */}
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
+                                                                aria-label={`Тапсырма: ${task.title} — толық ақпарат`}
                                                                 className="h-8 w-8 text-gray-400 hover:bg-cyan-50 hover:text-cyan-600"
                                                                 onClick={() =>
                                                                     handleOpenTaskInfo(
@@ -1889,7 +2175,7 @@ export default function Show({
                                                                     </>
                                                                 )}
                                                             {/* Ispolnitel: submit completion (when task is new or rejected) */}
-                                                            {isExecutorParticipant &&
+                                                            {participantCanWrite &&
                                                                 isAssignedToMe &&
                                                                 (task.status ===
                                                                     'new' ||
@@ -1928,9 +2214,10 @@ export default function Show({
                                                                         Тексеру
                                                                     </Button>
                                                                 )}
-                                                            {canManageTasks && (
+                                                            {canEditTask && (
                                                                 <>
                                                                     <Button
+                                                                        title="Тапсырманы өңдеу"
                                                                         variant="ghost"
                                                                         size="icon"
                                                                         className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600"
@@ -1942,18 +2229,21 @@ export default function Show({
                                                                     >
                                                                         <Edit className="h-4 w-4" />
                                                                     </Button>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                                                                        onClick={() =>
-                                                                            handleTaskDelete(
-                                                                                task.id,
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    </Button>
+                                                                    {canDeleteTask && (
+                                                                        <Button
+                                                                            title="Тапсырманы жою"
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                                                                            onClick={() =>
+                                                                                handleTaskDelete(
+                                                                                    task.id,
+                                                                                )
+                                                                            }
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </Button>
+                                                                    )}
                                                                 </>
                                                             )}
                                                         </div>
@@ -1968,7 +2258,7 @@ export default function Show({
                     </div>
 
                     {/* Sidebar Information */}
-                    <div className="space-y-6">
+                    <div className="flex min-w-0 flex-col gap-6">
                         {/* Render Photos Card */}
                         {renderPhotos.length > 0 && (
                             <Card className="overflow-hidden shadow-none">
@@ -1986,17 +2276,145 @@ export default function Show({
                             </Card>
                         )}
 
-                        {/* Executors Card */}
+                        {/* Actions */}
                         <Card
-                            id="project-team"
-                            className="scroll-mt-24 shadow-none"
+                            id="project-actions"
+                            className="scroll-mt-6 shadow-none print:hidden"
                         >
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2 text-lg">
-                                    <Users className="h-5 w-5 text-gray-500" />
-                                    Қатысушылар
+                            <CardHeader className="pb-2">
+                                <CardTitle className="text-base text-[#0f1b3d]">
+                                    Жоба материалдары
                                 </CardTitle>
                             </CardHeader>
+                            <CardContent className="flex flex-col gap-3 p-4">
+                                {!isRestrictedView && (
+                                    <Link
+                                        href={`/investment-projects/${project.id}/documents`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <FileText className="mr-2 h-4 w-4" />
+                                            Құжаттар
+                                            {project.documents &&
+                                                project.documents.length >
+                                                    0 && (
+                                                    <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                        {
+                                                            project.documents
+                                                                .length
+                                                        }
+                                                    </span>
+                                                )}
+                                        </Button>
+                                    </Link>
+                                )}
+                                {!isRestrictedView && (
+                                    <Link
+                                        href={`/investment-projects/${project.id}/gallery`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ImageIcon className="mr-2 h-4 w-4" />
+                                            Галерея
+                                            {photosCount > 0 && (
+                                                <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
+                                                    {photosCount}
+                                                </span>
+                                            )}
+                                        </Button>
+                                    </Link>
+                                )}
+                                {(!isRestrictedView || participantCanWrite) && (
+                                    <Link
+                                        href={`/investment-projects/${project.id}/issues`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <AlertTriangle className="mr-2 h-4 w-4" />
+                                            Проблемалық мәселелер
+                                            {project.issues &&
+                                                project.issues.length > 0 && (
+                                                    <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
+                                                        {project.issues.length}
+                                                    </span>
+                                                )}
+                                        </Button>
+                                    </Link>
+                                )}
+                                {(isSuperAdmin || isProkuror) && (
+                                    <Link
+                                        href={`/investment-projects/${project.id}/logs`}
+                                        className="w-full"
+                                    >
+                                        <Button
+                                            variant="outline"
+                                            className="w-full justify-start"
+                                        >
+                                            <ScrollText className="mr-2 h-4 w-4" />
+                                            Әрекеттер тарихы
+                                        </Button>
+                                    </Link>
+                                )}
+                                {canEditProject && (
+                                    <Button
+                                        variant="outline"
+                                        className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
+                                        onClick={() => {
+                                            if (
+                                                confirm(
+                                                    'Бұл жобаны архивке жіберу керек пе?',
+                                                )
+                                            ) {
+                                                router.post(
+                                                    `/investment-projects/${project.id}/archive`,
+                                                );
+                                            }
+                                        }}
+                                    >
+                                        <Archive className="mr-2 h-4 w-4" />
+                                        Архивке жіберу
+                                    </Button>
+                                )}
+                                {canRestoreProject && (
+                                    <Button
+                                        variant="outline"
+                                        onClick={() =>
+                                            router.post(
+                                                projectRoutes.unarchive.url(
+                                                    project.id,
+                                                ),
+                                            )
+                                        }
+                                    >
+                                        <Archive className="mr-2 size-4" />
+                                        Архивтен шығару
+                                    </Button>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        {/* Executors Card */}
+                        <section
+                            id="project-team"
+                            aria-labelledby="project-team-title"
+                            className="scroll-mt-24 rounded-xl border border-slate-200 bg-white"
+                        >
+                            <h2
+                                id="project-team-title"
+                                className="flex items-center gap-2 p-5 font-semibold text-[#0f1b3d]"
+                            >
+                                <Users className="size-5 text-slate-400" />
+                                Қатысушылар
+                            </h2>
                             <CardContent className="space-y-4">
                                 <div>
                                     <p className="mb-2 text-xs font-semibold tracking-wider text-gray-400 uppercase">
@@ -2192,242 +2610,20 @@ export default function Show({
                                     </div>
                                 )}
                             </CardContent>
-                        </Card>
-
-                        {effectivePassportSummary.completeness.percent <
-                            100 && (
-                            <Card className="border-amber-200 bg-amber-50/60 shadow-none print:hidden">
-                                <CardHeader className="pb-3">
-                                    <CardTitle className="flex items-center gap-2 text-base text-amber-950">
-                                        <AlertTriangle className="h-5 w-5 text-amber-600" />
-                                        Паспортты толықтыру қажет
-                                    </CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <p className="mb-3 text-sm text-amber-800">
-                                        Толтырылуы:{' '}
-                                        <span className="font-bold">
-                                            {
-                                                effectivePassportSummary
-                                                    .completeness.percent
-                                            }
-                                            %
-                                        </span>
-                                    </p>
-                                    <ul className="space-y-2">
-                                        {effectivePassportSummary.completeness.missing
-                                            .slice(0, 5)
-                                            .map((field) => (
-                                                <li
-                                                    key={field}
-                                                    className="flex items-center gap-2 text-sm text-amber-900"
-                                                >
-                                                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-amber-500" />
-                                                    {field}
-                                                </li>
-                                            ))}
-                                    </ul>
-                                    {effectivePassportSummary.completeness
-                                        .missing.length > 5 && (
-                                        <p className="mt-2 text-xs text-amber-700">
-                                            Тағы{' '}
-                                            {effectivePassportSummary
-                                                .completeness.missing.length -
-                                                5}{' '}
-                                            бөлім толтырылмаған
-                                        </p>
-                                    )}
-                                    {canEditProject && (
-                                        <Link
-                                            href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
-                                            className="mt-4 block"
-                                        >
-                                            <Button
-                                                variant="outline"
-                                                className="w-full border-amber-300 bg-white text-amber-900 hover:bg-amber-100"
-                                            >
-                                                <Edit className="mr-2 h-4 w-4" />
-                                                Жетіспейтін деректерді толтыру
-                                            </Button>
-                                        </Link>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        )}
-
-                        {/* Actions */}
-                        <Card
-                            id="project-actions"
-                            className="scroll-mt-6 shadow-none xl:sticky xl:top-6 print:hidden"
-                        >
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-base text-[#0f1b3d]">
-                                    Жылдам әрекеттер
-                                </CardTitle>
-                            </CardHeader>
-                            <CardContent className="flex flex-col gap-3 p-4">
-                                {canEditProject && (
-                                    <Link
-                                        href={`/investment-projects/${project.id}/edit?return_to=${encodeURIComponent(`/investment-projects/${project.id}`)}`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start"
-                                        >
-                                            <Activity className="mr-2 h-4 w-4" />{' '}
-                                            Жобаны өңдеу
-                                        </Button>
-                                    </Link>
-                                )}
-                                {(canModify ||
-                                    participantCanWrite ||
-                                    isAkim ||
-                                    isModerator) && (
-                                    <Link
-                                        href={`/investment-projects/${project.id}/documents`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start"
-                                        >
-                                            <FileText className="mr-2 h-4 w-4" />
-                                            Құжаттар
-                                            {project.documents &&
-                                                project.documents.length >
-                                                    0 && (
-                                                    <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                                                        {
-                                                            project.documents
-                                                                .length
-                                                        }
-                                                    </span>
-                                                )}
-                                        </Button>
-                                    </Link>
-                                )}
-                                {(canModify ||
-                                    participantCanWrite ||
-                                    isAkim ||
-                                    isModerator) && (
-                                    <Link
-                                        href={`/investment-projects/${project.id}/gallery`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start"
-                                        >
-                                            <ImageIcon className="mr-2 h-4 w-4" />
-                                            Галерея
-                                            {photosCount > 0 && (
-                                                <span className="ml-auto rounded bg-gray-100 px-2 py-0.5 text-xs text-gray-600">
-                                                    {photosCount}
-                                                </span>
-                                            )}
-                                        </Button>
-                                    </Link>
-                                )}
-                                {(!isRestrictedView || participantCanWrite) && (
-                                    <Link
-                                        href={`/investment-projects/${project.id}/issues`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start"
-                                        >
-                                            <AlertTriangle className="mr-2 h-4 w-4" />
-                                            Проблемалық мәселелер
-                                            {project.issues &&
-                                                project.issues.length > 0 && (
-                                                    <span className="ml-auto rounded bg-red-100 px-2 py-0.5 text-xs text-red-600">
-                                                        {project.issues.length}
-                                                    </span>
-                                                )}
-                                        </Button>
-                                    </Link>
-                                )}
-                                {(isSuperAdmin || isProkuror) && (
-                                    <Link
-                                        href={`/investment-projects/${project.id}/logs`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            variant="outline"
-                                            className="w-full justify-start"
-                                        >
-                                            <ScrollText className="mr-2 h-4 w-4" />
-                                            Әрекеттер тарихы
-                                        </Button>
-                                    </Link>
-                                )}
-                                {(!isRestrictedView &&
-                                    !isExecutorParticipant) ||
-                                isAkim ? (
-                                    <a
-                                        href={`/investment-projects/${project.id}/passport`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            className="w-full bg-[#c8a44e] shadow-none hover:bg-[#b8943e]"
-                                            disabled={!canDownload}
-                                        >
-                                            <Download className="mr-2 h-4 w-4" />
-                                            Жоба паспортын жүктеу
-                                        </Button>
-                                    </a>
-                                ) : null}
-                                {(!isRestrictedView || isAkim) && (
-                                    <a
-                                        href={`/investment-projects/${project.id}/presentation`}
-                                        className="w-full"
-                                    >
-                                        <Button
-                                            className="w-full bg-[#0f1b3d] text-white shadow-none hover:bg-[#1a2d5a]"
-                                            disabled={!canDownload}
-                                        >
-                                            <Presentation className="mr-2 h-4 w-4" />
-                                            Презентацияны жүктеу
-                                        </Button>
-                                    </a>
-                                )}
-                                {(isSuperAdmin || isInvest || isModerator) && (
-                                    <Button
-                                        variant="outline"
-                                        className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
-                                        onClick={() => {
-                                            if (
-                                                confirm(
-                                                    'Бұл жобаны архивке жіберу керек пе?',
-                                                )
-                                            ) {
-                                                router.post(
-                                                    `/investment-projects/${project.id}/archive`,
-                                                );
-                                            }
-                                        }}
-                                    >
-                                        <Archive className="mr-2 h-4 w-4" />
-                                        Архивке жіберу
-                                    </Button>
-                                )}
-                            </CardContent>
-                        </Card>
+                        </section>
                     </div>
                 </div>
 
                 {/* Task Modal */}
                 {showTaskModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                        <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl">
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Flag className="h-5 w-5" />
                                     {editingTaskId
-                                        ? 'Кезеңді өңдеу'
-                                        : 'Жобаға кезең қосу'}
+                                        ? 'Тапсырманы өңдеу'
+                                        : 'Тапсырма қосу'}
                                 </h3>
                                 <button
                                     type="button"
@@ -2441,9 +2637,31 @@ export default function Show({
                                 onSubmit={handleTaskSubmit}
                                 className="space-y-5 p-6"
                             >
+                                {Object.keys(taskErrors).length > 0 && (
+                                    <div
+                                        role="alert"
+                                        className="space-y-1 rounded-lg border border-red-200 bg-red-50 p-3"
+                                    >
+                                        {Object.entries(taskErrors).map(
+                                            ([field, message]) => (
+                                                <InputError
+                                                    key={field}
+                                                    message={message}
+                                                />
+                                            ),
+                                        )}
+                                    </div>
+                                )}
+                                {editingTaskId && isSuperAdmin && (
+                                    <p className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                                        Тапсырманың мазмұнын, жауаптысын не
+                                        мерзімін өзгерту жұмысты қайта ашады.
+                                        Бұрынғы есептер тарихта сақталады.
+                                    </p>
+                                )}
                                 <div>
                                     <Label className="text-sm font-semibold text-[#0f1b3d]">
-                                        Тақырыптың (модульдің) атауы
+                                        Тапсырма атауы
                                     </Label>
                                     <Input
                                         value={taskTitle}
@@ -2604,7 +2822,7 @@ export default function Show({
                 {/* Completion Submission Modal (for ispolnitel) */}
                 {showCompletionModal && (
                     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-                        <div className="mx-4 w-full max-w-lg rounded-xl bg-white shadow-2xl">
+                        <div className="mx-4 max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl bg-white shadow-2xl">
                             <div className="flex items-center justify-between rounded-t-xl bg-[#0f1b3d] px-6 py-4">
                                 <h3 className="flex items-center gap-2 text-lg font-bold text-white">
                                     <Upload className="h-5 w-5" />
@@ -2726,7 +2944,7 @@ export default function Show({
                                     />
                                 </div>
 
-                                <div className="flex justify-center gap-3 pt-2">
+                                <div className="flex flex-wrap justify-center gap-3 pt-2">
                                     <Button
                                         type="submit"
                                         className="bg-emerald-500 px-8 hover:bg-emerald-600"
@@ -2738,7 +2956,7 @@ export default function Show({
                                     >
                                         {isSubmittingCompletion
                                             ? 'Жіберілуде...'
-                                            : 'Иә'}
+                                            : 'Жіберу'}
                                     </Button>
                                     <Button
                                         type="button"
@@ -2747,7 +2965,7 @@ export default function Show({
                                             setShowCompletionModal(false)
                                         }
                                     >
-                                        Нет
+                                        Болдырмау
                                     </Button>
                                 </div>
                             </form>
@@ -2798,16 +3016,17 @@ export default function Show({
                                 {/* Who submitted */}
                                 <div className="rounded-lg border border-gray-200 p-4">
                                     <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
-                                        Отправил
+                                        Есепті жіберген
                                     </p>
                                     <p className="mt-1 font-medium text-[#0f1b3d]">
                                         {reviewCompletion.submitter
                                             ?.full_name || '—'}
                                     </p>
                                     <p className="text-xs text-gray-500">
-                                        {new Date(
+                                        {formatProjectDate(
                                             reviewCompletion.created_at,
-                                        ).toLocaleString('kk-KZ')}
+                                            true,
+                                        )}
                                     </p>
                                 </div>
 
@@ -2907,6 +3126,8 @@ export default function Show({
                                             Пікір
                                         </label>
                                         <textarea
+                                            aria-invalid={Boolean(reviewError)}
+                                            aria-describedby="roadmap-review-error"
                                             value={reviewComment}
                                             onChange={(e) =>
                                                 setReviewComment(e.target.value)
@@ -2915,8 +3136,12 @@ export default function Show({
                                             className="mt-1.5 w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 focus:outline-none"
                                             rows={3}
                                         />
+                                        <InputError
+                                            id="roadmap-review-error"
+                                            message={reviewError}
+                                        />
                                     </div>
-                                    <div className="flex justify-center gap-3">
+                                    <div className="flex flex-wrap justify-center gap-3">
                                         <Button
                                             onClick={() =>
                                                 handleReview('approved')
@@ -2925,7 +3150,7 @@ export default function Show({
                                             disabled={isReviewing}
                                         >
                                             <CheckCircle2 className="mr-2 h-4 w-4" />
-                                            Иә
+                                            Қабылдау
                                         </Button>
                                         <Button
                                             onClick={() =>
@@ -2935,7 +3160,7 @@ export default function Show({
                                             disabled={isReviewing}
                                         >
                                             <XCircle className="mr-2 h-4 w-4" />
-                                            Жоқ
+                                            Толықтыруға қайтару
                                         </Button>
                                     </div>
                                 </div>
@@ -3000,6 +3225,7 @@ export default function Show({
                                             approvalDecision === 'rejected'
                                         }
                                     />
+                                    <InputError message={approvalError} />
                                 </div>
                                 <div className="flex justify-end gap-3 pt-2">
                                     <Button
@@ -3038,23 +3264,13 @@ export default function Show({
                             if (!v) return null;
                             const d = new Date(v);
                             if (isNaN(d.getTime())) return null;
-                            return d.toLocaleDateString('kk-KZ', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                            });
+                            return formatProjectDate(v);
                         };
                         const fmtDateTime = (v?: string | null) => {
                             if (!v) return null;
                             const d = new Date(v);
                             if (isNaN(d.getTime())) return null;
-                            return d.toLocaleString('kk-KZ', {
-                                day: 'numeric',
-                                month: 'long',
-                                year: 'numeric',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            });
+                            return formatProjectDate(v, true);
                         };
                         const creatorName =
                             t.creator?.full_name || t.creator?.name || '—';
@@ -3083,6 +3299,97 @@ export default function Show({
                                         </button>
                                     </div>
                                     <div className="max-h-[70vh] space-y-4 overflow-y-auto p-6">
+                                        {Boolean(t.completions?.length) && (
+                                            <details className="group rounded-lg border border-slate-200 p-3">
+                                                <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-[#0f1b3d]">
+                                                    Есептер тарихы (
+                                                    {t.completions?.length})
+                                                    <ChevronDown className="size-4 transition-transform group-open:rotate-180" />
+                                                </summary>
+                                                <div className="mt-3 space-y-3">
+                                                    {t.completions?.map(
+                                                        (completion) => (
+                                                            <div
+                                                                key={
+                                                                    completion.id
+                                                                }
+                                                                className="space-y-2 rounded-md bg-slate-50 p-3 text-sm"
+                                                            >
+                                                                <p className="font-medium text-slate-800">
+                                                                    {(completion.task_definition_version ??
+                                                                        1) !==
+                                                                    (t.definition_version ??
+                                                                        1)
+                                                                        ? 'Алдыңғы тапсырма нұсқасының есебі'
+                                                                        : 'Ағымдағы нұсқаның есебі'}
+                                                                </p>
+                                                                <p className="text-xs text-slate-500">
+                                                                    {fmtDateTime(
+                                                                        completion.created_at,
+                                                                    )}{' '}
+                                                                    ·{' '}
+                                                                    {completion
+                                                                        .submitter
+                                                                        ?.full_name ||
+                                                                        'Орындаушы'}{' '}
+                                                                    ·{' '}
+                                                                    {completion.status ===
+                                                                    'approved'
+                                                                        ? 'Қабылданды'
+                                                                        : completion.status ===
+                                                                            'rejected'
+                                                                          ? 'Қайтарылды'
+                                                                          : 'Тексеруде'}
+                                                                </p>
+                                                                {completion.comment && (
+                                                                    <p className="break-words whitespace-pre-wrap">
+                                                                        {
+                                                                            completion.comment
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {completion.reviewer_comment && (
+                                                                    <p className="break-words whitespace-pre-wrap text-slate-600">
+                                                                        Тексеруші:{' '}
+                                                                        {
+                                                                            completion.reviewer_comment
+                                                                        }
+                                                                    </p>
+                                                                )}
+                                                                {canDownload &&
+                                                                    completion.files?.map(
+                                                                        (
+                                                                            file,
+                                                                        ) => (
+                                                                            <a
+                                                                                key={
+                                                                                    file.id
+                                                                                }
+                                                                                className="flex items-center gap-2 text-[#9b782c] underline underline-offset-2"
+                                                                                href={completionFileRoutes.download.url(
+                                                                                    {
+                                                                                        investmentProject:
+                                                                                            project.id,
+                                                                                        task: t.id,
+                                                                                        completion:
+                                                                                            completion.id,
+                                                                                        file: file.id,
+                                                                                    },
+                                                                                )}
+                                                                            >
+                                                                                <Download className="size-3.5 shrink-0" />
+                                                                                {
+                                                                                    file.file_name
+                                                                                }
+                                                                            </a>
+                                                                        ),
+                                                                    )}
+                                                            </div>
+                                                        ),
+                                                    )}
+                                                </div>
+                                            </details>
+                                        )}
                                         <div className="rounded-lg border border-gray-200 p-3">
                                             <p className="text-xs font-semibold tracking-wider text-gray-400 uppercase">
                                                 Тапсырманы берген
@@ -3168,9 +3475,9 @@ export default function Show({
                                                         rejected:
                                                             'Модератор қабылдамады',
                                                         edited: 'Тапсырма өзгертілді',
-                                                        viewed: 'Исполнитель көрді',
+                                                        viewed: 'Орындаушы көрді',
                                                         completion_submitted:
-                                                            'Исполнитель орындап жіберді',
+                                                            'Орындаушы есеп жіберді',
                                                         completion_approved:
                                                             'Invest орындалуды қабылдады',
                                                         completion_rejected:

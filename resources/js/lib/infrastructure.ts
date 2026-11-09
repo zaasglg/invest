@@ -72,6 +72,7 @@ export type InfrastructureData = Partial<
 
 export interface ProjectInfrastructureDetails {
     needed: boolean;
+    use_required_capacity?: boolean;
     required_capacity: string;
     used_capacity: string;
     capacity?: string;
@@ -97,6 +98,7 @@ export function getEmptyProjectInfrastructure(): ProjectInfrastructureData {
             key,
             {
                 needed: false,
+                use_required_capacity: true,
                 required_capacity: '',
                 used_capacity: '',
             },
@@ -114,6 +116,7 @@ export function withDefaultProjectUsedCapacity(
 
         if (
             details.needed &&
+            details.use_required_capacity !== false &&
             details.used_capacity.trim() === '' &&
             details.required_capacity.trim() !== ''
         ) {
@@ -228,6 +231,11 @@ export function normalizeProjectInfrastructure(
 
         empty[key] = {
             needed: Boolean(details.needed),
+            use_required_capacity:
+                typeof details.use_required_capacity === 'boolean'
+                    ? details.use_required_capacity
+                    : details.used_capacity == null ||
+                      details.used_capacity === '',
             required_capacity: normalizeStandardNumber(
                 details.required_capacity ?? details.capacity,
                 key,

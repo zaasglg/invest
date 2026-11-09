@@ -19,6 +19,7 @@ import type { AreaUsage } from '@/components/area-occupancy-card';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import DetailSectionNav from '@/components/detail-section-nav';
 import InfrastructureList from '@/components/infrastructure-list';
+import ProjectInvestmentValue from '@/components/investment-projects/project-investment-value';
 import Pagination from '@/components/pagination';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
@@ -62,7 +63,7 @@ interface InvestmentProject {
     id: number;
     name: string;
     company_name?: string;
-    total_investment?: number;
+    total_investment?: number | string | null;
     status: string;
     region?: Region;
     geometry?: { lat: number; lng: number }[];
@@ -522,13 +523,11 @@ export default function Show({
                                                                 '—'}
                                                         </TableCell>
                                                         <TableCell className="text-gray-600">
-                                                            {project.total_investment
-                                                                ? formatCurrency(
-                                                                      Number(
-                                                                          project.total_investment,
-                                                                      ),
-                                                                  )
-                                                                : '—'}
+                                                            <ProjectInvestmentValue
+                                                                value={
+                                                                    project.total_investment
+                                                                }
+                                                            />
                                                         </TableCell>
                                                         <TableCell>
                                                             <Badge

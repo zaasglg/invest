@@ -64,6 +64,10 @@ import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { persistOrder } from '@/lib/persist-order';
+import {
+    ATTRACTION_STAGES,
+    attractionStageLabel,
+} from '@/lib/project-attraction';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjectsRoutes from '@/routes/investment-projects';
@@ -113,6 +117,9 @@ interface SubsoilUser {
 
 interface InvestmentProject {
     id: number;
+    can_manage?: boolean;
+    can_delete?: boolean;
+    attraction_stage?: string | null;
     name: string;
     company_name: string | null;
     region: Region | null;
@@ -132,6 +139,9 @@ interface InvestmentProject {
 }
 
 interface Filters {
+    attraction_stage: string;
+    work_filter: string;
+    responsible_id: string;
     search: string;
     region_id: string;
     project_type_id: string;
@@ -240,8 +250,14 @@ export default function Index({
     const canCreateProject = canModify || isModerator;
     const canEditProject = canModify || isModerator;
     const canDeleteProject = canModify && !isModerator;
-    const canReorderProjects = isSuperAdmin || isInvest || isModerator;
+    const canReorderProjects =
+        isSuperAdmin ||
+        ((isInvest || isModerator) &&
+            projects.data.every((project) => project.can_manage !== false));
     const { data, setData, get } = useForm<Filters>({
+        attraction_stage: filters.attraction_stage ?? '',
+        work_filter: filters.work_filter ?? '',
+        responsible_id: filters.responsible_id ?? '',
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         project_type_id: filters.project_type_id ?? '',
@@ -258,6 +274,8 @@ export default function Index({
     });
     const [filtersOpen, setFiltersOpen] = useState(
         !!(
+            filters.attraction_stage ||
+            filters.responsible_id ||
             filters.search ||
             filters.region_id ||
             filters.project_type_id ||
@@ -433,6 +451,18 @@ export default function Index({
         });
     };
 
+    const selectWorkFilter = (value: string) => {
+        setData('work_filter', value);
+        router.get(
+            investmentProjectsRoutes.index.url(),
+            { ...data, work_filter: value },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                replace: true,
+            },
+        );
+    };
     const clearFilters = () => {
         router.get(investmentProjectsRoutes.index.url());
     };
@@ -488,7 +518,7 @@ export default function Index({
     };
 
     const formatInvestment = (value: string | number | null) => {
-        if (!value) return '—';
+        if (value === null || value === '') return '—';
         const num = Number(value);
         if (isNaN(num)) return String(value);
 
@@ -607,6 +637,34 @@ export default function Index({
                     </div>
                 </header>
 
+                <div
+                    className="flex flex-wrap gap-2"
+                    aria-label="Жұмыстарды жылдам сүзу"
+                >
+                    {[
+                        { value: '', label: 'Барлық жобалар' },
+                        { value: 'my', label: 'Менің жұмыстарым' },
+                        { value: 'pending_review', label: 'Тексеруді күтуде' },
+                        { value: 'overdue', label: 'Мерзімі өткен' },
+                    ].map((item) => (
+                        <Button
+                            key={item.value}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            aria-pressed={data.work_filter === item.value}
+                            onClick={() => selectWorkFilter(item.value)}
+                            className={
+                                data.work_filter === item.value
+                                    ? 'border-navy bg-navy text-white hover:bg-navy/90 hover:text-white'
+                                    : 'bg-white text-slate-600'
+                            }
+                        >
+                            {item.label}
+                        </Button>
+                    ))}
+                </div>
+
                 <FilterPanel
                     open={filtersOpen}
                     onToggle={() => setFiltersOpen((prev) => !prev)}
@@ -704,6 +762,71 @@ export default function Index({
                                 <SelectItem value="suspended">
                                     Тоқтатылған
                                 </SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="attraction-stage-filter">
+                            Инвестор тарту сатысы
+                        </Label>
+                        <Select
+                            value={data.attraction_stage || 'all'}
+                            onValueChange={(value) =>
+                                setData(
+                                    'attraction_stage',
+                                    value === 'all' ? '' : value,
+                                )
+                            }
+                        >
+                            <SelectTrigger id="attraction-stage-filter">
+                                <SelectValue placeholder="Барлық сатылар" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    Барлық сатылар
+                                </SelectItem>
+                                {ATTRACTION_STAGES.map((stage) => (
+                                    <SelectItem
+                                        key={stage.value}
+                                        value={stage.value}
+                                    >
+                                        {stage.label}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-slate-400">
+                            Жоспарланған жобалар бойынша
+                        </p>
+                    </div>
+                    <div className="space-y-1.5">
+                        <Label htmlFor="responsible-filter">
+                            Жұмысқа жауапты
+                        </Label>
+                        <Select
+                            value={data.responsible_id || 'all'}
+                            onValueChange={(value) =>
+                                setData(
+                                    'responsible_id',
+                                    value === 'all' ? '' : value,
+                                )
+                            }
+                        >
+                            <SelectTrigger id="responsible-filter">
+                                <SelectValue placeholder="Барлық жауаптылар" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">
+                                    Барлық жауаптылар
+                                </SelectItem>
+                                {users.map((user) => (
+                                    <SelectItem
+                                        key={user.id}
+                                        value={String(user.id)}
+                                    >
+                                        {user.full_name}
+                                    </SelectItem>
+                                ))}
                             </SelectContent>
                         </Select>
                     </div>
@@ -993,7 +1116,7 @@ export default function Index({
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
                     >
-                        <Table>
+                        <Table className="[&_td]:px-3 [&_th]:px-3">
                             <TableHeader>
                                 <TableRow>
                                     {canReorderProjects && (
@@ -1032,7 +1155,7 @@ export default function Index({
                                                 id={project.id}
                                                 isEnabled={canReorderProjects}
                                             >
-                                                <TableCell>
+                                                <TableCell className="[overflow-wrap:anywhere]">
                                                     <div className="flex flex-col">
                                                         <Link
                                                             href={investmentProjectsRoutes.show.url(
@@ -1070,7 +1193,7 @@ export default function Index({
                                                         project.total_investment,
                                                     )}
                                                 </TableCell>
-                                                <TableCell>
+                                                <TableCell className="[overflow-wrap:anywhere]">
                                                     {project.executors?.length >
                                                     0
                                                         ? project.executors
@@ -1081,6 +1204,7 @@ export default function Index({
                                                               .join(', ')
                                                         : '—'}
                                                 </TableCell>
+
                                                 <TableCell>
                                                     <Badge
                                                         className={`${getStatusColor(project.status)} border-0 px-3 py-1 text-sm font-medium`}
@@ -1089,6 +1213,14 @@ export default function Index({
                                                             project.status,
                                                         )}
                                                     </Badge>
+                                                    {project.status ===
+                                                        'plan' && (
+                                                        <p className="mt-2 max-w-48 text-xs text-slate-500">
+                                                            {attractionStageLabel(
+                                                                project.attraction_stage,
+                                                            )}
+                                                        </p>
+                                                    )}
                                                 </TableCell>
                                                 <TableCell className="text-right">
                                                     <div className="flex justify-end gap-1">
@@ -1122,38 +1254,42 @@ export default function Index({
                                                                 <Eye className="h-4 w-4" />
                                                             </Link>
                                                         </Button>
-                                                        {canEditProject && (
-                                                            <>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    asChild
-                                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                                    title="Өңдеу"
-                                                                >
-                                                                    <Link
-                                                                        href={`${investmentProjectsRoutes.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}
-                                                                    >
-                                                                        <Pencil className="h-4 w-4" />
-                                                                    </Link>
-                                                                </Button>
-                                                                {canDeleteProject && (
+                                                        {canEditProject &&
+                                                            project.can_manage !==
+                                                                false && (
+                                                                <>
                                                                     <Button
                                                                         variant="ghost"
                                                                         size="icon"
-                                                                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
-                                                                        onClick={() =>
-                                                                            handleDelete(
-                                                                                project.id,
-                                                                            )
-                                                                        }
-                                                                        title="Өшірілген жобаларға жіберу"
+                                                                        asChild
+                                                                        className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                                        title="Өңдеу"
                                                                     >
-                                                                        <Trash2 className="h-4 w-4" />
+                                                                        <Link
+                                                                            href={`${investmentProjectsRoutes.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}
+                                                                        >
+                                                                            <Pencil className="h-4 w-4" />
+                                                                        </Link>
                                                                     </Button>
-                                                                )}
-                                                            </>
-                                                        )}
+                                                                    {canDeleteProject &&
+                                                                        project.can_delete !==
+                                                                            false && (
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-700"
+                                                                                onClick={() =>
+                                                                                    handleDelete(
+                                                                                        project.id,
+                                                                                    )
+                                                                                }
+                                                                                title="Өшірілген жобаларға жіберу"
+                                                                            >
+                                                                                <Trash2 className="h-4 w-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                </>
+                                                            )}
                                                     </div>
                                                 </TableCell>
                                             </SortableProjectRow>

@@ -13,7 +13,12 @@ import type { FormEventHandler } from 'react';
 import { useState, useMemo, useEffect, useRef } from 'react';
 import CompanySelect from '@/components/companies/company-select';
 import type { CompanyOption } from '@/components/companies/company-select';
+import AttractionStageDetailsForm from '@/components/investment-projects/attraction-stage-details-form';
+import AttractionStageSelect from '@/components/investment-projects/attraction-stage-select';
+import InvestmentAmountInput from '@/components/investment-projects/investment-amount-input';
+import OptionalProjectSection from '@/components/investment-projects/optional-project-section';
 import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
+import ProjectStatusSelect from '@/components/investment-projects/project-status-select';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import LocationPicker from '@/components/location-picker';
 import ProjectInfrastructureForm from '@/components/project-infrastructure-form';
@@ -39,6 +44,11 @@ import {
 } from '@/lib/infrastructure';
 import type { ProductionPlanInput } from '@/lib/production';
 import { normalizeProductionPlans } from '@/lib/production';
+import {
+    ATTRACTION_STAGES,
+    attractionStageDetailErrors,
+    attractionStageLabel,
+} from '@/lib/project-attraction';
 import { formatMoneyCompact } from '@/lib/utils';
 import * as investmentProjects from '@/routes/investment-projects';
 import * as documentsRoutes from '@/routes/investment-projects/documents';
@@ -102,6 +112,10 @@ interface InvestmentProject {
     production_plans?: ProductionPlanInput[];
     total_investment: string | null;
     status: string;
+    attraction_stage?: string | null;
+    attraction_handover_to_id?: number | null;
+    attraction_decline_reason?: string | null;
+    attraction_resume_on?: string | null;
     start_date: string | null;
     end_date: string | null;
     executors?: User[];
@@ -138,9 +152,11 @@ interface Props {
     investUsers?: InvestUser[];
     investSubRole?: string | null;
     restrictedSectorType?: 'sez' | 'industrial_zone' | 'prom_zone' | null;
+    attractionHandoverUsers?: { id: number; full_name: string }[];
 }
 
 const PROJECT_FORM_ERROR_FIELDS = [
+    { field: 'status', step: 1 },
     { field: 'name', step: 1 },
     { field: 'company_id', step: 1 },
     { field: 'curator_ids', step: 1 },
@@ -156,7 +172,10 @@ const PROJECT_FORM_ERROR_FIELDS = [
         step: 1,
     },
     { field: 'planned_production', step: 1 },
-    { field: 'status', step: 1 },
+    { field: 'attraction_stage', step: 2 },
+    { field: 'attraction_handover_to_id', step: 2 },
+    { field: 'attraction_decline_reason', step: 2 },
+    { field: 'attraction_resume_on', step: 2 },
     { field: 'description', step: 2 },
     { field: 'current_status', step: 2 },
     { field: 'infrastructure', step: 2 },
@@ -182,41 +201,56 @@ export default function Edit({
     isSuperAdmin,
     investUsers = [],
     restrictedSectorType = null,
+    attractionHandoverUsers = [],
 }: Props) {
     const { url } = usePage();
     const queryParams = new URLSearchParams(url.split('?')[1]);
     const returnUrl = queryParams.get('return_to');
 
-    const { data, setData, put, transform, processing, errors } = useForm({
-        name: project.name || '',
-        company_id: project.company_id?.toString() || '',
-        description: project.description || '',
-        current_status: project.current_status || '',
-        region_id: project.region_id?.toString() || '',
-        project_type_ids:
-            project.project_type_ids?.map((id) => id.toString()) ||
-            (project.project_type_id
-                ? [project.project_type_id.toString()]
-                : []),
-        sector: project.sector
-            ? Array.isArray(project.sector)
-                ? project.sector
-                : [project.sector]
-            : [],
-        jobs_count: project.jobs_count ? project.jobs_count.toString() : '',
-        production_not_applicable: project.production_not_applicable ?? false,
-        planned_production: normalizeProductionPlans(project.production_plans),
-        total_investment: project.total_investment || '',
-        status: project.status || 'plan',
-        start_date: project.start_date || '',
-        end_date: project.end_date || '',
-        executor_ids: project.executors?.map((u) => u.id.toString()) || [],
-        geometry: project.geometry || [],
-        infrastructure: normalizeProjectInfrastructure(project.infrastructure),
-        created_by: project.created_by?.toString() || '',
-        curator_ids: (project.curator_ids || []).map((id) => id.toString()),
-        return_to: returnUrl || '',
-    });
+    const { data, setData, put, transform, processing, errors, clearErrors } =
+        useForm({
+            name: project.name || '',
+            company_id: project.company_id?.toString() || '',
+            description: project.description || '',
+            current_status: project.current_status || '',
+            region_id: project.region_id?.toString() || '',
+            project_type_ids:
+                project.project_type_ids?.map((id) => id.toString()) ||
+                (project.project_type_id
+                    ? [project.project_type_id.toString()]
+                    : []),
+            sector: project.sector
+                ? Array.isArray(project.sector)
+                    ? project.sector
+                    : [project.sector]
+                : [],
+            jobs_count: project.jobs_count?.toString() ?? '',
+            production_not_applicable:
+                project.production_not_applicable ?? false,
+            planned_production: normalizeProductionPlans(
+                project.production_plans,
+            ),
+            total_investment: project.total_investment ?? '',
+            status: project.status || 'plan',
+            attraction_stage: project.attraction_stage || 'potential',
+            attraction_handover_to_id:
+                project.attraction_handover_to_id?.toString() ?? '',
+            attraction_decline_reason: project.attraction_decline_reason ?? '',
+            attraction_resume_on:
+                project.attraction_resume_on?.slice(0, 10) ?? '',
+            start_date: project.start_date || '',
+            end_date: project.end_date || '',
+            executor_ids: project.executors?.map((u) => u.id.toString()) || [],
+            geometry: project.geometry || [],
+            infrastructure: normalizeProjectInfrastructure(
+                project.infrastructure,
+            ),
+            created_by: project.created_by?.toString() || '',
+            curator_ids: (project.curator_ids || []).map((id) => id.toString()),
+            return_to: returnUrl || '',
+        });
+
+    const isPlanned = data.status === 'plan';
 
     const selectedCompany = useMemo(
         () =>
@@ -448,6 +482,12 @@ export default function Edit({
                     );
 
                 if (!target) return;
+                let ancestor = target.parentElement;
+                while (ancestor) {
+                    if (ancestor instanceof HTMLDetailsElement)
+                        ancestor.open = true;
+                    ancestor = ancestor.parentElement;
+                }
 
                 target.scrollIntoView({
                     behavior: 'smooth',
@@ -472,10 +512,16 @@ export default function Edit({
 
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!validateStep1()) {
+            setCurrentStep(1);
+            return;
+        }
         if (!validateStep2()) return;
 
         transform((form) => ({
             ...form,
+            attraction_stage:
+                form.status === 'plan' ? form.attraction_stage : null,
             infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
         }));
         put(investmentProjects.update.url(project.id), {
@@ -492,15 +538,18 @@ export default function Edit({
         if (!data.region_id) {
             errors.region_id = 'Ауданды таңдаңыз';
         }
-        if (data.project_type_ids.length === 0) {
+        if (!isPlanned && data.project_type_ids.length === 0) {
             errors.project_type_ids = 'Кемінде бір жоба түрін таңдаңыз';
         }
-        if (!data.total_investment) {
+        if (!data.total_investment.trim()) {
             errors.total_investment = 'Жалпы инвестицияны енгізіңіз';
-        } else if (isNaN(Number(data.total_investment))) {
-            errors.total_investment = 'Жалпы инвестиция сан болуы керек';
+        } else if (
+            !Number.isFinite(Number(data.total_investment)) ||
+            Number(data.total_investment) < 0
+        ) {
+            errors.total_investment = 'Нөл немесе одан үлкен сан енгізіңіз';
         }
-        if (!data.company_id) {
+        if (!isPlanned && !data.company_id) {
             errors.company_id = 'Компанияны таңдаңыз';
         }
 
@@ -513,6 +562,20 @@ export default function Edit({
             data.infrastructure,
         );
         const errors = getProjectInfrastructureErrors(infrastructure);
+        if (data.status === 'plan')
+            Object.assign(
+                errors,
+                attractionStageDetailErrors(data.attraction_stage, data),
+            );
+
+        if (
+            data.status === 'plan' &&
+            !ATTRACTION_STAGES.some(
+                (stage) => stage.value === data.attraction_stage,
+            )
+        ) {
+            errors.attraction_stage = 'Инвестор тарту кезеңін таңдаңыз';
+        }
 
         setData('infrastructure', infrastructure);
         setValidationErrors(errors);
@@ -595,7 +658,7 @@ export default function Edit({
                                         )}
                                     </div>
                                     <span
-                                        className={`ml-3 text-sm font-medium ${
+                                        className={`ml-3 hidden text-sm font-medium sm:inline ${
                                             currentStep >= step.id
                                                 ? 'text-[#0f1b3d]'
                                                 : 'text-gray-500'
@@ -640,6 +703,20 @@ export default function Edit({
                             </div>
 
                             <div className="space-y-6">
+                                <ProjectStatusSelect
+                                    value={data.status}
+                                    onChange={(value) => {
+                                        setData((previous) => ({
+                                            ...previous,
+                                            status: value,
+                                        }));
+                                        clearErrors();
+                                        setValidationErrors({});
+                                    }}
+                                    error={
+                                        errors.status || validationErrors.status
+                                    }
+                                />
                                 {/* Жоба атауы және Компания - 2 column */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <div className="flex flex-col gap-2">
@@ -668,7 +745,6 @@ export default function Edit({
                                             }}
                                             className={`h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0 ${validationErrors.name ? 'border-red-500' : ''}`}
                                             placeholder="Мысалы: Күн электр станциясы"
-                                            autoFocus
                                         />
                                         {(errors.name ||
                                             validationErrors.name) && (
@@ -680,6 +756,7 @@ export default function Edit({
                                     </div>
 
                                     <CompanySelect
+                                        required={!isPlanned}
                                         companies={companies}
                                         value={data.company_id}
                                         onValueChange={(value) => {
@@ -874,410 +951,379 @@ export default function Edit({
                                 </div>
 
                                 {/* Жоба түрі және Сектор - 2 column */}
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="project_type_ids"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Жобаның түрі{' '}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </Label>
-                                        <ProjectTypeMultiSelect
-                                            id="project_type_ids"
-                                            options={projectTypes}
-                                            value={data.project_type_ids}
-                                            onChange={(value) => {
-                                                setData(
-                                                    'project_type_ids',
-                                                    value,
-                                                );
-                                                if (
-                                                    validationErrors.project_type_ids
-                                                ) {
-                                                    setValidationErrors(
-                                                        (prev) => ({
-                                                            ...prev,
-                                                            project_type_ids:
-                                                                '',
-                                                        }),
-                                                    );
-                                                }
-                                            }}
-                                            hasError={Boolean(
-                                                errors.project_type_ids ||
-                                                validationErrors.project_type_ids,
-                                            )}
-                                        />
-                                        {(errors.project_type_ids ||
-                                            validationErrors.project_type_ids) && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.project_type_ids ||
-                                                    validationErrors.project_type_ids}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="sector"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Сектор{' '}
-                                            <span className="text-xs font-normal text-gray-400 normal-case">
-                                                {restrictedSectorType ? (
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Жоба түрі және орналасатын нысан"
+                                    hasError={Boolean(
+                                        errors.project_type_ids ||
+                                        errors.sector ||
+                                        validationErrors.project_type_ids,
+                                    )}
+                                >
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div className="flex flex-col gap-2">
+                                            <Label
+                                                htmlFor="project_type_ids"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
+                                                Жобаның түрі{' '}
+                                                {!isPlanned && (
                                                     <span className="text-red-500">
-                                                        (міндетті)
-                                                    </span>
-                                                ) : (
-                                                    '(міндетті емес)'
-                                                )}
-                                            </span>
-                                            {Array.isArray(data.sector) &&
-                                                data.sector.length > 0 && (
-                                                    <span className="ml-1 text-xs font-normal text-gray-500 normal-case">
-                                                        ({data.sector.length}{' '}
-                                                        таңдалды)
+                                                        *
                                                     </span>
                                                 )}
-                                        </Label>
-                                        <div className="max-h-40 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-4">
-                                            {!data.region_id ? (
-                                                <p className="py-2 text-center text-sm text-gray-400">
-                                                    Алдымен ауданды таңдаңыз
-                                                </p>
-                                            ) : (
-                                                <>
-                                                    {availableSez.length ===
-                                                        0 &&
-                                                    availableIndustrialZones.length ===
-                                                        0 &&
-                                                    availablePromZones.length ===
-                                                        0 ? (
-                                                        <p className="py-2 text-center text-sm text-gray-400">
-                                                            Бұл ауданда қол
-                                                            жетімді секторлар
-                                                            жоқ
-                                                        </p>
-                                                    ) : (
-                                                        <>
-                                                            {availableSez.length >
-                                                                0 && (
-                                                                <div className="space-y-2">
-                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
-                                                                        АЭА
-                                                                    </p>
-                                                                    {availableSez.map(
-                                                                        (
-                                                                            sez,
-                                                                        ) => {
-                                                                            const value = `sez-${sez.id}`;
-                                                                            const isChecked =
-                                                                                Array.isArray(
-                                                                                    data.sector,
-                                                                                ) &&
-                                                                                data.sector.includes(
-                                                                                    value,
-                                                                                );
-                                                                            return (
-                                                                                <div
-                                                                                    key={
-                                                                                        value
-                                                                                    }
-                                                                                    className="flex items-center space-x-2"
-                                                                                >
-                                                                                    <Checkbox
-                                                                                        id={
-                                                                                            value
-                                                                                        }
-                                                                                        checked={
-                                                                                            isChecked
-                                                                                        }
-                                                                                        onCheckedChange={(
-                                                                                            checked,
-                                                                                        ) =>
-                                                                                            handleSectorChange(
-                                                                                                value,
-                                                                                                checked as boolean,
-                                                                                            )
-                                                                                        }
-                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                                    />
-                                                                                    <Label
-                                                                                        htmlFor={
-                                                                                            value
-                                                                                        }
-                                                                                        className="cursor-pointer font-normal"
-                                                                                    >
-                                                                                        {
-                                                                                            sez.name
-                                                                                        }
-                                                                                    </Label>
-                                                                                </div>
-                                                                            );
-                                                                        },
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            {availableIndustrialZones.length >
-                                                                0 && (
-                                                                <div className="space-y-2">
-                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
-                                                                        Индустриялық
-                                                                        аймақтар
-                                                                    </p>
-                                                                    {availableIndustrialZones.map(
-                                                                        (
-                                                                            iz,
-                                                                        ) => {
-                                                                            const value = `industrial_zone-${iz.id}`;
-                                                                            const isChecked =
-                                                                                Array.isArray(
-                                                                                    data.sector,
-                                                                                ) &&
-                                                                                data.sector.includes(
-                                                                                    value,
-                                                                                );
-                                                                            return (
-                                                                                <div
-                                                                                    key={
-                                                                                        value
-                                                                                    }
-                                                                                    className="flex items-center space-x-2"
-                                                                                >
-                                                                                    <Checkbox
-                                                                                        id={
-                                                                                            value
-                                                                                        }
-                                                                                        checked={
-                                                                                            isChecked
-                                                                                        }
-                                                                                        onCheckedChange={(
-                                                                                            checked,
-                                                                                        ) =>
-                                                                                            handleSectorChange(
-                                                                                                value,
-                                                                                                checked as boolean,
-                                                                                            )
-                                                                                        }
-                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                                    />
-                                                                                    <Label
-                                                                                        htmlFor={
-                                                                                            value
-                                                                                        }
-                                                                                        className="cursor-pointer font-normal"
-                                                                                    >
-                                                                                        {
-                                                                                            iz.name
-                                                                                        }
-                                                                                    </Label>
-                                                                                </div>
-                                                                            );
-                                                                        },
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                            {availablePromZones.length >
-                                                                0 && (
-                                                                <div className="space-y-2">
-                                                                    <p className="text-xs font-medium text-gray-500 uppercase">
-                                                                        Пром
-                                                                        зоналар
-                                                                    </p>
-                                                                    {availablePromZones.map(
-                                                                        (
-                                                                            promZone,
-                                                                        ) => {
-                                                                            const value = `prom_zone-${promZone.id}`;
-                                                                            const isChecked =
-                                                                                Array.isArray(
-                                                                                    data.sector,
-                                                                                ) &&
-                                                                                data.sector.includes(
-                                                                                    value,
-                                                                                );
-                                                                            return (
-                                                                                <div
-                                                                                    key={
-                                                                                        value
-                                                                                    }
-                                                                                    className="flex items-center space-x-2"
-                                                                                >
-                                                                                    <Checkbox
-                                                                                        id={
-                                                                                            value
-                                                                                        }
-                                                                                        checked={
-                                                                                            isChecked
-                                                                                        }
-                                                                                        onCheckedChange={(
-                                                                                            checked,
-                                                                                        ) =>
-                                                                                            handleSectorChange(
-                                                                                                value,
-                                                                                                checked as boolean,
-                                                                                            )
-                                                                                        }
-                                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                                    />
-                                                                                    <Label
-                                                                                        htmlFor={
-                                                                                            value
-                                                                                        }
-                                                                                        className="cursor-pointer font-normal"
-                                                                                    >
-                                                                                        {
-                                                                                            promZone.name
-                                                                                        }
-                                                                                    </Label>
-                                                                                </div>
-                                                                            );
-                                                                        },
-                                                                    )}
-                                                                </div>
-                                                            )}
-                                                        </>
-                                                    )}
-                                                </>
+                                            </Label>
+                                            <ProjectTypeMultiSelect
+                                                id="project_type_ids"
+                                                options={projectTypes}
+                                                value={data.project_type_ids}
+                                                onChange={(value) => {
+                                                    setData(
+                                                        'project_type_ids',
+                                                        value,
+                                                    );
+                                                    if (
+                                                        validationErrors.project_type_ids
+                                                    ) {
+                                                        setValidationErrors(
+                                                            (prev) => ({
+                                                                ...prev,
+                                                                project_type_ids:
+                                                                    '',
+                                                            }),
+                                                        );
+                                                    }
+                                                }}
+                                                hasError={Boolean(
+                                                    errors.project_type_ids ||
+                                                    validationErrors.project_type_ids,
+                                                )}
+                                            />
+                                            {(errors.project_type_ids ||
+                                                validationErrors.project_type_ids) && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.project_type_ids ||
+                                                        validationErrors.project_type_ids}
+                                                </span>
                                             )}
                                         </div>
-                                        {errors.sector && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.sector}
-                                            </span>
-                                        )}
+
+                                        <div className="flex flex-col gap-2">
+                                            <Label
+                                                htmlFor="sector"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
+                                                Сектор{' '}
+                                                <span className="text-xs font-normal text-gray-400 normal-case">
+                                                    {restrictedSectorType &&
+                                                    !isPlanned ? (
+                                                        <span className="text-red-500">
+                                                            (міндетті)
+                                                        </span>
+                                                    ) : (
+                                                        '(міндетті емес)'
+                                                    )}
+                                                </span>
+                                                {Array.isArray(data.sector) &&
+                                                    data.sector.length > 0 && (
+                                                        <span className="ml-1 text-xs font-normal text-gray-500 normal-case">
+                                                            (
+                                                            {data.sector.length}{' '}
+                                                            таңдалды)
+                                                        </span>
+                                                    )}
+                                            </Label>
+                                            <div className="max-h-40 space-y-3 overflow-y-auto rounded-md border border-gray-200 p-4">
+                                                {!data.region_id ? (
+                                                    <p className="py-2 text-center text-sm text-gray-400">
+                                                        Алдымен ауданды таңдаңыз
+                                                    </p>
+                                                ) : (
+                                                    <>
+                                                        {availableSez.length ===
+                                                            0 &&
+                                                        availableIndustrialZones.length ===
+                                                            0 &&
+                                                        availablePromZones.length ===
+                                                            0 ? (
+                                                            <p className="py-2 text-center text-sm text-gray-400">
+                                                                Бұл ауданда қол
+                                                                жетімді
+                                                                секторлар жоқ
+                                                            </p>
+                                                        ) : (
+                                                            <>
+                                                                {availableSez.length >
+                                                                    0 && (
+                                                                    <div className="space-y-2">
+                                                                        <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                            АЭА
+                                                                        </p>
+                                                                        {availableSez.map(
+                                                                            (
+                                                                                sez,
+                                                                            ) => {
+                                                                                const value = `sez-${sez.id}`;
+                                                                                const isChecked =
+                                                                                    Array.isArray(
+                                                                                        data.sector,
+                                                                                    ) &&
+                                                                                    data.sector.includes(
+                                                                                        value,
+                                                                                    );
+                                                                                return (
+                                                                                    <div
+                                                                                        key={
+                                                                                            value
+                                                                                        }
+                                                                                        className="flex items-center space-x-2"
+                                                                                    >
+                                                                                        <Checkbox
+                                                                                            id={
+                                                                                                value
+                                                                                            }
+                                                                                            checked={
+                                                                                                isChecked
+                                                                                            }
+                                                                                            onCheckedChange={(
+                                                                                                checked,
+                                                                                            ) =>
+                                                                                                handleSectorChange(
+                                                                                                    value,
+                                                                                                    checked as boolean,
+                                                                                                )
+                                                                                            }
+                                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                        />
+                                                                                        <Label
+                                                                                            htmlFor={
+                                                                                                value
+                                                                                            }
+                                                                                            className="cursor-pointer font-normal"
+                                                                                        >
+                                                                                            {
+                                                                                                sez.name
+                                                                                            }
+                                                                                        </Label>
+                                                                                    </div>
+                                                                                );
+                                                                            },
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {availableIndustrialZones.length >
+                                                                    0 && (
+                                                                    <div className="space-y-2">
+                                                                        <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                            Индустриялық
+                                                                            аймақтар
+                                                                        </p>
+                                                                        {availableIndustrialZones.map(
+                                                                            (
+                                                                                iz,
+                                                                            ) => {
+                                                                                const value = `industrial_zone-${iz.id}`;
+                                                                                const isChecked =
+                                                                                    Array.isArray(
+                                                                                        data.sector,
+                                                                                    ) &&
+                                                                                    data.sector.includes(
+                                                                                        value,
+                                                                                    );
+                                                                                return (
+                                                                                    <div
+                                                                                        key={
+                                                                                            value
+                                                                                        }
+                                                                                        className="flex items-center space-x-2"
+                                                                                    >
+                                                                                        <Checkbox
+                                                                                            id={
+                                                                                                value
+                                                                                            }
+                                                                                            checked={
+                                                                                                isChecked
+                                                                                            }
+                                                                                            onCheckedChange={(
+                                                                                                checked,
+                                                                                            ) =>
+                                                                                                handleSectorChange(
+                                                                                                    value,
+                                                                                                    checked as boolean,
+                                                                                                )
+                                                                                            }
+                                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                        />
+                                                                                        <Label
+                                                                                            htmlFor={
+                                                                                                value
+                                                                                            }
+                                                                                            className="cursor-pointer font-normal"
+                                                                                        >
+                                                                                            {
+                                                                                                iz.name
+                                                                                            }
+                                                                                        </Label>
+                                                                                    </div>
+                                                                                );
+                                                                            },
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                {availablePromZones.length >
+                                                                    0 && (
+                                                                    <div className="space-y-2">
+                                                                        <p className="text-xs font-medium text-gray-500 uppercase">
+                                                                            Пром
+                                                                            зоналар
+                                                                        </p>
+                                                                        {availablePromZones.map(
+                                                                            (
+                                                                                promZone,
+                                                                            ) => {
+                                                                                const value = `prom_zone-${promZone.id}`;
+                                                                                const isChecked =
+                                                                                    Array.isArray(
+                                                                                        data.sector,
+                                                                                    ) &&
+                                                                                    data.sector.includes(
+                                                                                        value,
+                                                                                    );
+                                                                                return (
+                                                                                    <div
+                                                                                        key={
+                                                                                            value
+                                                                                        }
+                                                                                        className="flex items-center space-x-2"
+                                                                                    >
+                                                                                        <Checkbox
+                                                                                            id={
+                                                                                                value
+                                                                                            }
+                                                                                            checked={
+                                                                                                isChecked
+                                                                                            }
+                                                                                            onCheckedChange={(
+                                                                                                checked,
+                                                                                            ) =>
+                                                                                                handleSectorChange(
+                                                                                                    value,
+                                                                                                    checked as boolean,
+                                                                                                )
+                                                                                            }
+                                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                                        />
+                                                                                        <Label
+                                                                                            htmlFor={
+                                                                                                value
+                                                                                            }
+                                                                                            className="cursor-pointer font-normal"
+                                                                                        >
+                                                                                            {
+                                                                                                promZone.name
+                                                                                            }
+                                                                                        </Label>
+                                                                                    </div>
+                                                                                );
+                                                                            },
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                            {errors.sector && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.sector}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                </OptionalProjectSection>
 
                                 {/* Жұмыс орындары және инвестиция */}
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="jobs_count"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Жұмыс орындары
-                                        </Label>
-                                        <Input
-                                            id="jobs_count"
-                                            type="number"
-                                            min="0"
-                                            value={data.jobs_count}
-                                            onChange={(e) =>
-                                                setData(
-                                                    'jobs_count',
-                                                    e.target.value,
-                                                )
-                                            }
-                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                            placeholder="0"
-                                        />
-                                        {errors.jobs_count && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.jobs_count}
-                                            </span>
-                                        )}
-                                    </div>
-
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="total_investment"
-                                            className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                        >
-                                            Жалпы инвестиция{' '}
-                                            <span className="text-red-500">
-                                                *
-                                            </span>
-                                        </Label>
-                                        <div className="relative">
+                                    <InvestmentAmountInput
+                                        value={data.total_investment}
+                                        onValueChange={(value) =>
+                                            setData('total_investment', value)
+                                        }
+                                        error={
+                                            errors.total_investment ||
+                                            validationErrors.total_investment
+                                        }
+                                    />
+                                    <OptionalProjectSection
+                                        planned={isPlanned}
+                                        title="Жұмыс орындары"
+                                        hasError={Boolean(errors.jobs_count)}
+                                    >
+                                        <div className="flex flex-col gap-2">
+                                            <Label
+                                                htmlFor="jobs_count"
+                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
+                                            >
+                                                Жұмыс орындары
+                                            </Label>
                                             <Input
-                                                id="total_investment"
+                                                id="jobs_count"
                                                 type="number"
-                                                step="0.01"
-                                                value={data.total_investment}
+                                                min="0"
+                                                value={data.jobs_count}
                                                 onChange={(e) =>
                                                     setData(
-                                                        'total_investment',
+                                                        'jobs_count',
                                                         e.target.value,
                                                     )
                                                 }
-                                                className="h-10 border-gray-200 bg-transparent pr-12 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                placeholder="0.00"
+                                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                                placeholder="0"
                                             />
-                                            <span className="absolute top-1/2 right-3 -translate-y-1/2 text-sm text-gray-400">
-                                                KZT
-                                            </span>
+                                            {errors.jobs_count && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.jobs_count}
+                                                </span>
+                                            )}
                                         </div>
-                                        {(errors.total_investment ||
-                                            validationErrors.total_investment) && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.total_investment ||
-                                                    validationErrors.total_investment}
-                                            </span>
-                                        )}
-                                    </div>
+                                    </OptionalProjectSection>
                                 </div>
 
-                                <div data-form-field="planned_production">
-                                    <PlannedProductionForm
-                                        errors={errors}
-                                        notApplicable={
-                                            data.production_not_applicable
-                                        }
-                                        onChange={(plans) =>
-                                            setData('planned_production', plans)
-                                        }
-                                        onNotApplicableChange={(value) =>
-                                            setData(
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Жоспарлы өндіріс"
+                                    hasError={Object.keys(errors).some(
+                                        (field) =>
+                                            field.startsWith(
+                                                'planned_production',
+                                            ) ||
+                                            field ===
                                                 'production_not_applicable',
-                                                value,
-                                            )
-                                        }
-                                        value={data.planned_production}
-                                    />
-                                </div>
-
-                                {/* Мәртебесі - full width */}
-                                <div className="flex flex-col gap-2">
-                                    <Label
-                                        htmlFor="status"
-                                        className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                    >
-                                        Ағымдағы мәртебесі
-                                    </Label>
-                                    <Select
-                                        value={data.status}
-                                        onValueChange={(value) =>
-                                            setData('status', value)
-                                        }
-                                    >
-                                        <SelectTrigger className="h-10 w-full border-gray-200 shadow-none focus:border-[#0f1b3d] focus:ring-0">
-                                            <SelectValue placeholder="Мәртебені таңдаңыз" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="plan">
-                                                Жоспарлау
-                                            </SelectItem>
-                                            <SelectItem value="implementation">
-                                                Іске асыру
-                                            </SelectItem>
-                                            <SelectItem value="launched">
-                                                Іске қосылған
-                                            </SelectItem>
-                                            <SelectItem value="suspended">
-                                                Тоқтатылған
-                                            </SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    {errors.status && (
-                                        <span className="text-sm text-red-500">
-                                            {errors.status}
-                                        </span>
                                     )}
-                                </div>
+                                >
+                                    <div data-form-field="planned_production">
+                                        <PlannedProductionForm
+                                            errors={errors}
+                                            notApplicable={
+                                                data.production_not_applicable
+                                            }
+                                            onChange={(plans) =>
+                                                setData(
+                                                    'planned_production',
+                                                    plans,
+                                                )
+                                            }
+                                            onNotApplicableChange={(value) =>
+                                                setData(
+                                                    'production_not_applicable',
+                                                    value,
+                                                )
+                                            }
+                                            value={data.planned_production}
+                                        />
+                                    </div>
+                                </OptionalProjectSection>
                             </div>
                         </div>
                     )}
@@ -1288,7 +1334,40 @@ export default function Edit({
                             data-form-step="2"
                             className="grid grid-cols-1 gap-6 lg:grid-cols-2"
                         >
+                            {data.status === 'plan' && (
+                                <AttractionStageSelect
+                                    value={data.attraction_stage}
+                                    onChange={(value) => {
+                                        setData('attraction_stage', value);
+                                        clearErrors('attraction_stage');
+                                        setValidationErrors((previous) => ({
+                                            ...previous,
+                                            attraction_stage: '',
+                                        }));
+                                    }}
+                                    error={
+                                        validationErrors.attraction_stage ||
+                                        errors.attraction_stage
+                                    }
+                                />
+                            )}
                             {/* Сол жақ: Сипаттама және Инфрақұрылым */}
+                            {data.status === 'plan' && (
+                                <AttractionStageDetailsForm
+                                    stage={data.attraction_stage}
+                                    value={data}
+                                    onChange={(field, value) => {
+                                        setData(field, value);
+                                        clearErrors(field);
+                                        setValidationErrors((previous) => ({
+                                            ...previous,
+                                            [field]: '',
+                                        }));
+                                    }}
+                                    users={attractionHandoverUsers}
+                                    errors={{ ...errors, ...validationErrors }}
+                                />
+                            )}
                             <div className="space-y-6">
                                 {/* Сипаттама */}
                                 <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -1359,31 +1438,42 @@ export default function Edit({
                                 </div>
 
                                 {/* Инфрақұрылым */}
-                                <div
-                                    data-form-field="infrastructure"
-                                    className="rounded-lg border border-gray-200 bg-white p-6"
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Инфрақұрылым"
+                                    hasError={Object.keys({
+                                        ...errors,
+                                        ...validationErrors,
+                                    }).some((field) =>
+                                        field.startsWith('infrastructure'),
+                                    )}
                                 >
-                                    <div className="mb-4 flex items-center gap-2">
-                                        <Info className="h-5 w-5 text-[#0f1b3d]" />
-                                        <h3 className="font-semibold text-[#0f1b3d]">
-                                            Инфрақұрылымға қажеттілік
-                                        </h3>
-                                    </div>
+                                    <div
+                                        data-form-field="infrastructure"
+                                        className="rounded-lg border border-gray-200 bg-white p-6"
+                                    >
+                                        <div className="mb-4 flex items-center gap-2">
+                                            <Info className="h-5 w-5 text-[#0f1b3d]" />
+                                            <h3 className="font-semibold text-[#0f1b3d]">
+                                                Инфрақұрылымға қажеттілік
+                                            </h3>
+                                        </div>
 
-                                    <ProjectInfrastructureForm
-                                        errors={{
-                                            ...errors,
-                                            ...validationErrors,
-                                        }}
-                                        onChange={(infrastructure) =>
-                                            setData(
-                                                'infrastructure',
-                                                infrastructure,
-                                            )
-                                        }
-                                        value={data.infrastructure}
-                                    />
-                                </div>
+                                        <ProjectInfrastructureForm
+                                            errors={{
+                                                ...errors,
+                                                ...validationErrors,
+                                            }}
+                                            onChange={(infrastructure) =>
+                                                setData(
+                                                    'infrastructure',
+                                                    infrastructure,
+                                                )
+                                            }
+                                            value={data.infrastructure}
+                                        />
+                                    </div>
+                                </OptionalProjectSection>
 
                                 {/* Құжаттар */}
                                 <div className="rounded-lg border border-gray-200 bg-white p-6">
@@ -1438,37 +1528,45 @@ export default function Edit({
                             </div>
 
                             {/* Оң жақ: Карта */}
-                            <div
-                                data-form-field="geometry"
-                                className="rounded-lg border border-gray-200 bg-white p-6"
+                            <OptionalProjectSection
+                                planned={isPlanned}
+                                title="Географиялық орналасу"
+                                hasError={Boolean(errors.geometry)}
                             >
-                                <div className="mb-4 flex items-center justify-between">
-                                    <div className="flex items-center gap-2">
-                                        <MapPin className="h-5 w-5 text-[#0f1b3d]" />
-                                        <div>
-                                            <h3 className="font-semibold text-[#0f1b3d]">
-                                                Географиялық орналасу
-                                            </h3>
-                                            <p className="text-xs text-gray-500">
-                                                Интерактивті полигон таңдау
-                                            </p>
+                                <div
+                                    data-form-field="geometry"
+                                    className="rounded-lg border border-gray-200 bg-white p-6"
+                                >
+                                    <div className="mb-4 flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="h-5 w-5 text-[#0f1b3d]" />
+                                            <div>
+                                                <h3 className="font-semibold text-[#0f1b3d]">
+                                                    Географиялық орналасу
+                                                </h3>
+                                                <p className="text-xs text-gray-500">
+                                                    Интерактивті полигон таңдау
+                                                </p>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
 
-                                <LocationPicker
-                                    value={data.geometry}
-                                    onChange={(val) => setData('geometry', val)}
-                                    className="w-full"
-                                    regionBoundary={regionBoundary}
-                                    overlayEntities={overlayEntities}
-                                />
-                                {errors.geometry && (
-                                    <span className="text-sm text-red-500">
-                                        {errors.geometry}
-                                    </span>
-                                )}
-                            </div>
+                                    <LocationPicker
+                                        value={data.geometry}
+                                        onChange={(val) =>
+                                            setData('geometry', val)
+                                        }
+                                        className="w-full"
+                                        regionBoundary={regionBoundary}
+                                        overlayEntities={overlayEntities}
+                                    />
+                                    {errors.geometry && (
+                                        <span className="text-sm text-red-500">
+                                            {errors.geometry}
+                                        </span>
+                                    )}
+                                </div>
+                            </OptionalProjectSection>
                         </div>
                     )}
 
@@ -1489,6 +1587,19 @@ export default function Edit({
 
                             <div className="space-y-6">
                                 {/* Негізгі ақпарат */}
+                                {data.status === 'plan' && (
+                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">
+                                            Инвестор тарту кезеңі
+                                        </h4>
+                                        <p className="text-sm text-gray-700">
+                                            {attractionStageLabel(
+                                                data.attraction_stage,
+                                            )}
+                                        </p>
+                                    </div>
+                                )}
+
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
                                     <h4 className="mb-3 font-medium text-[#0f1b3d]">
                                         Негізгі ақпарат
@@ -1556,7 +1667,7 @@ export default function Edit({
                                                 Жұмыс орындары:
                                             </span>
                                             <p className="font-medium">
-                                                {data.jobs_count || '0'}
+                                                {data.jobs_count || '—'}
                                             </p>
                                         </div>
                                         <div>
@@ -1576,51 +1687,57 @@ export default function Edit({
                                     </div>
                                 </div>
 
-                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
-                                        Жоспарлы өндіріс
-                                    </h4>
-                                    {data.production_not_applicable ? (
-                                        <p className="text-sm text-gray-500">
-                                            Бұл жобаға қолданылмайды
-                                        </p>
-                                    ) : data.planned_production.length > 0 ? (
-                                        <div className="space-y-2">
-                                            {data.planned_production.map(
-                                                (plan, index) => (
-                                                    <div
-                                                        className="text-sm text-gray-700"
-                                                        key={
-                                                            plan.id ??
-                                                            plan.client_key ??
-                                                            index
-                                                        }
-                                                    >
-                                                        <span className="font-medium">
-                                                            {plan.product_name ||
-                                                                `${index + 1}-нәтиже`}
-                                                        </span>
-                                                        :{' '}
-                                                        {plan.planned_quantity ||
-                                                            '—'}{' '}
-                                                        ·{' '}
-                                                        {plan.planned_amount
-                                                            ? formatMoneyCompact(
-                                                                  Number(
-                                                                      plan.planned_amount,
-                                                                  ),
-                                                              )
-                                                            : '—'}
-                                                    </div>
-                                                ),
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <p className="text-sm text-gray-500">
-                                            Енгізілмеген
-                                        </p>
-                                    )}
-                                </div>
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Өндіріс мәліметтері"
+                                >
+                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                        <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                            Жоспарлы өндіріс
+                                        </h4>
+                                        {data.production_not_applicable ? (
+                                            <p className="text-sm text-gray-500">
+                                                Бұл жобаға қолданылмайды
+                                            </p>
+                                        ) : data.planned_production.length >
+                                          0 ? (
+                                            <div className="space-y-2">
+                                                {data.planned_production.map(
+                                                    (plan, index) => (
+                                                        <div
+                                                            className="text-sm text-gray-700"
+                                                            key={
+                                                                plan.id ??
+                                                                plan.client_key ??
+                                                                index
+                                                            }
+                                                        >
+                                                            <span className="font-medium">
+                                                                {plan.product_name ||
+                                                                    `${index + 1}-нәтиже`}
+                                                            </span>
+                                                            :{' '}
+                                                            {plan.planned_quantity ||
+                                                                '—'}{' '}
+                                                            ·{' '}
+                                                            {plan.planned_amount
+                                                                ? formatMoneyCompact(
+                                                                      Number(
+                                                                          plan.planned_amount,
+                                                                      ),
+                                                                  )
+                                                                : '—'}
+                                                        </div>
+                                                    ),
+                                                )}
+                                            </div>
+                                        ) : (
+                                            <p className="text-sm text-gray-500">
+                                                Енгізілмеген
+                                            </p>
+                                        )}
+                                    </div>
+                                </OptionalProjectSection>
 
                                 {/* Сипаттама */}
                                 {data.description && (
@@ -1635,313 +1752,335 @@ export default function Edit({
                                 )}
 
                                 {/* Инфрақұрылым */}
-                                <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                    <h4 className="mb-3 font-medium text-[#0f1b3d]">
-                                        Инфрақұрылым
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {PROJECT_INFRASTRUCTURE_FIELDS.filter(
-                                            ({ key }) =>
-                                                data.infrastructure[key].needed,
-                                        ).map((field) => (
-                                            <span
-                                                key={field.key}
-                                                className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
-                                            >
-                                                {field.label}
-                                            </span>
-                                        ))}
-                                        {Object.values(
-                                            data.infrastructure,
-                                        ).every((v) => !v.needed) && (
-                                            <span className="text-sm text-gray-400">
-                                                Инфрақұрылым таңдалмаған
-                                            </span>
-                                        )}
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Инфрақұрылым мәліметтері"
+                                >
+                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
+                                        <h4 className="mb-3 font-medium text-[#0f1b3d]">
+                                            Инфрақұрылым
+                                        </h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {PROJECT_INFRASTRUCTURE_FIELDS.filter(
+                                                ({ key }) =>
+                                                    data.infrastructure[key]
+                                                        .needed,
+                                            ).map((field) => (
+                                                <span
+                                                    key={field.key}
+                                                    className="rounded-full bg-[#0f1b3d]/10 px-3 py-1 text-sm text-[#0f1b3d]"
+                                                >
+                                                    {field.label}
+                                                </span>
+                                            ))}
+                                            {Object.values(
+                                                data.infrastructure,
+                                            ).every((v) => !v.needed) && (
+                                                <span className="text-sm text-gray-400">
+                                                    Инфрақұрылым таңдалмаған
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                </OptionalProjectSection>
 
                                 {/* Орындаушылар */}
-                                <div
-                                    data-form-field="executor_ids"
-                                    className="flex flex-col gap-2"
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Орындаушылар"
+                                    hasError={Boolean(errors.executor_ids)}
                                 >
-                                    <Label className="font-normal text-gray-500">
-                                        Орындаушылар
-                                    </Label>
-                                    <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200 p-4">
-                                        <>
-                                            {districtUsers.length > 0 && (
-                                                <div className="mb-3">
-                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                        Аудан исполнителі
-                                                    </p>
-                                                    <div className="space-y-2">
-                                                        {districtUsers.map(
-                                                            (user) => (
-                                                                <div
-                                                                    key={
-                                                                        user.id
-                                                                    }
-                                                                    className="flex items-center space-x-2"
-                                                                >
-                                                                    <Checkbox
-                                                                        id={`user-${user.id}`}
-                                                                        checked={data.executor_ids.includes(
-                                                                            user.id.toString(),
-                                                                        )}
-                                                                        onCheckedChange={(
-                                                                            checked,
-                                                                        ) =>
-                                                                            handleExecutorChange(
-                                                                                user.id.toString(),
-                                                                                checked as boolean,
-                                                                            )
+                                    <div
+                                        data-form-field="executor_ids"
+                                        className="flex flex-col gap-2"
+                                    >
+                                        <Label className="font-normal text-gray-500">
+                                            Орындаушылар
+                                        </Label>
+                                        <div className="max-h-64 overflow-y-auto rounded-md border border-gray-200 p-4">
+                                            <>
+                                                {districtUsers.length > 0 && (
+                                                    <div className="mb-3">
+                                                        <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                            Аудан орындаушысы
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {districtUsers.map(
+                                                                (user) => (
+                                                                    <div
+                                                                        key={
+                                                                            user.id
                                                                         }
-                                                                        disabled={lockedIspolnitelIds.includes(
-                                                                            user.id.toString(),
-                                                                        )}
-                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                    />
-                                                                    <Label
-                                                                        htmlFor={`user-${user.id}`}
-                                                                        className={`font-normal ${lockedIspolnitelIds.includes(user.id.toString()) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                                                        className="flex items-center space-x-2"
                                                                     >
-                                                                        <span>
-                                                                            {
-                                                                                user.full_name
+                                                                        <Checkbox
+                                                                            id={`user-${user.id}`}
+                                                                            checked={data.executor_ids.includes(
+                                                                                user.id.toString(),
+                                                                            )}
+                                                                            onCheckedChange={(
+                                                                                checked,
+                                                                            ) =>
+                                                                                handleExecutorChange(
+                                                                                    user.id.toString(),
+                                                                                    checked as boolean,
+                                                                                )
                                                                             }
-                                                                        </span>
-                                                                        {lockedIspolnitelIds.includes(
-                                                                            user.id.toString(),
-                                                                        ) && (
-                                                                            <span className="ml-1 text-xs text-amber-600">
-                                                                                (авто)
-                                                                            </span>
-                                                                        )}
-                                                                        {user.position && (
-                                                                            <span className="text-gray-400">
-                                                                                {' '}
-                                                                                —{' '}
+                                                                            disabled={lockedIspolnitelIds.includes(
+                                                                                user.id.toString(),
+                                                                            )}
+                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                        />
+                                                                        <Label
+                                                                            htmlFor={`user-${user.id}`}
+                                                                            className={`font-normal ${lockedIspolnitelIds.includes(user.id.toString()) ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                                                        >
+                                                                            <span>
                                                                                 {
-                                                                                    user.position
+                                                                                    user.full_name
                                                                                 }
                                                                             </span>
-                                                                        )}
-                                                                    </Label>
-                                                                </div>
-                                                            ),
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            {oblastUsers.length > 0 && (
-                                                <div
-                                                    className={
-                                                        districtUsers.length > 0
-                                                            ? 'border-t border-gray-200 pt-3'
-                                                            : ''
-                                                    }
-                                                >
-                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                        Басқармалар
-                                                    </p>
-                                                    <div className="space-y-2">
-                                                        {oblastUsers.map(
-                                                            (user) => (
-                                                                <div
-                                                                    key={
-                                                                        user.id
-                                                                    }
-                                                                    className="flex items-center space-x-2"
-                                                                >
-                                                                    <Checkbox
-                                                                        id={`user-${user.id}`}
-                                                                        checked={data.executor_ids.includes(
-                                                                            user.id.toString(),
-                                                                        )}
-                                                                        onCheckedChange={(
-                                                                            checked,
-                                                                        ) =>
-                                                                            handleExecutorChange(
+                                                                            {lockedIspolnitelIds.includes(
                                                                                 user.id.toString(),
-                                                                                checked as boolean,
-                                                                            )
+                                                                            ) && (
+                                                                                <span className="ml-1 text-xs text-amber-600">
+                                                                                    (авто)
+                                                                                </span>
+                                                                            )}
+                                                                            {user.position && (
+                                                                                <span className="text-gray-400">
+                                                                                    {' '}
+                                                                                    —{' '}
+                                                                                    {
+                                                                                        user.position
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        </Label>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {oblastUsers.length > 0 && (
+                                                    <div
+                                                        className={
+                                                            districtUsers.length >
+                                                            0
+                                                                ? 'border-t border-gray-200 pt-3'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                            Басқармалар
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {oblastUsers.map(
+                                                                (user) => (
+                                                                    <div
+                                                                        key={
+                                                                            user.id
                                                                         }
-                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                    />
-                                                                    <Label
-                                                                        htmlFor={`user-${user.id}`}
-                                                                        className="cursor-pointer font-normal"
+                                                                        className="flex items-center space-x-2"
                                                                     >
-                                                                        <span>
-                                                                            {
-                                                                                user.full_name
+                                                                        <Checkbox
+                                                                            id={`user-${user.id}`}
+                                                                            checked={data.executor_ids.includes(
+                                                                                user.id.toString(),
+                                                                            )}
+                                                                            onCheckedChange={(
+                                                                                checked,
+                                                                            ) =>
+                                                                                handleExecutorChange(
+                                                                                    user.id.toString(),
+                                                                                    checked as boolean,
+                                                                                )
                                                                             }
-                                                                        </span>
-                                                                        {user.position && (
-                                                                            <span className="text-gray-400">
-                                                                                {' '}
-                                                                                —{' '}
+                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                        />
+                                                                        <Label
+                                                                            htmlFor={`user-${user.id}`}
+                                                                            className="cursor-pointer font-normal"
+                                                                        >
+                                                                            <span>
                                                                                 {
-                                                                                    user.position
+                                                                                    user.full_name
                                                                                 }
                                                                             </span>
-                                                                        )}
-                                                                    </Label>
-                                                                </div>
-                                                            ),
-                                                        )}
+                                                                            {user.position && (
+                                                                                <span className="text-gray-400">
+                                                                                    {' '}
+                                                                                    —{' '}
+                                                                                    {
+                                                                                        user.position
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        </Label>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                            {additionalUsers.length > 0 && (
-                                                <div
-                                                    className={
-                                                        districtUsers.length >
-                                                            0 ||
-                                                        oblastUsers.length > 0
-                                                            ? 'border-t border-gray-200 pt-3'
-                                                            : ''
-                                                    }
-                                                >
-                                                    <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
-                                                        Қосымша инстанциялар
-                                                    </p>
-                                                    <div className="space-y-2">
-                                                        {additionalUsers.map(
-                                                            (user) => (
-                                                                <div
-                                                                    key={
-                                                                        user.id
-                                                                    }
-                                                                    className="flex items-center space-x-2"
-                                                                >
-                                                                    <Checkbox
-                                                                        id={`user-${user.id}`}
-                                                                        checked={data.executor_ids.includes(
-                                                                            user.id.toString(),
-                                                                        )}
-                                                                        onCheckedChange={(
-                                                                            checked,
-                                                                        ) =>
-                                                                            handleExecutorChange(
-                                                                                user.id.toString(),
-                                                                                checked as boolean,
-                                                                            )
+                                                )}
+                                                {additionalUsers.length > 0 && (
+                                                    <div
+                                                        className={
+                                                            districtUsers.length >
+                                                                0 ||
+                                                            oblastUsers.length >
+                                                                0
+                                                                ? 'border-t border-gray-200 pt-3'
+                                                                : ''
+                                                        }
+                                                    >
+                                                        <p className="mb-2 text-xs font-medium tracking-wide text-gray-500 uppercase">
+                                                            Қосымша инстанциялар
+                                                        </p>
+                                                        <div className="space-y-2">
+                                                            {additionalUsers.map(
+                                                                (user) => (
+                                                                    <div
+                                                                        key={
+                                                                            user.id
                                                                         }
-                                                                        className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
-                                                                    />
-                                                                    <Label
-                                                                        htmlFor={`user-${user.id}`}
-                                                                        className="cursor-pointer font-normal"
+                                                                        className="flex items-center space-x-2"
                                                                     >
-                                                                        <span>
-                                                                            {
-                                                                                user.full_name
+                                                                        <Checkbox
+                                                                            id={`user-${user.id}`}
+                                                                            checked={data.executor_ids.includes(
+                                                                                user.id.toString(),
+                                                                            )}
+                                                                            onCheckedChange={(
+                                                                                checked,
+                                                                            ) =>
+                                                                                handleExecutorChange(
+                                                                                    user.id.toString(),
+                                                                                    checked as boolean,
+                                                                                )
                                                                             }
-                                                                        </span>
-                                                                        {user.position && (
-                                                                            <span className="text-gray-400">
-                                                                                {' '}
-                                                                                —{' '}
+                                                                            className="border-gray-200 data-[state=checked]:border-[#c8a44e] data-[state=checked]:bg-[#c8a44e]"
+                                                                        />
+                                                                        <Label
+                                                                            htmlFor={`user-${user.id}`}
+                                                                            className="cursor-pointer font-normal"
+                                                                        >
+                                                                            <span>
                                                                                 {
-                                                                                    user.position
+                                                                                    user.full_name
                                                                                 }
                                                                             </span>
-                                                                        )}
-                                                                    </Label>
-                                                                </div>
-                                                            ),
-                                                        )}
+                                                                            {user.position && (
+                                                                                <span className="text-gray-400">
+                                                                                    {' '}
+                                                                                    —{' '}
+                                                                                    {
+                                                                                        user.position
+                                                                                    }
+                                                                                </span>
+                                                                            )}
+                                                                        </Label>
+                                                                    </div>
+                                                                ),
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            )}
-                                        </>
+                                                )}
+                                            </>
+                                        </div>
+                                        {errors.executor_ids && (
+                                            <span className="text-sm text-red-500">
+                                                {errors.executor_ids}
+                                            </span>
+                                        )}
                                     </div>
-                                    {errors.executor_ids && (
-                                        <span className="text-sm text-red-500">
-                                            {errors.executor_ids}
-                                        </span>
-                                    )}
-                                </div>
+                                </OptionalProjectSection>
 
                                 {/* Мерзімдер */}
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="start_date"
-                                            className="font-normal text-gray-500"
-                                        >
-                                            Басталу жылы
-                                        </Label>
-                                        <Input
-                                            id="start_date"
-                                            type="number"
-                                            min="1990"
-                                            max="2100"
-                                            value={
-                                                data.start_date
-                                                    ? data.start_date.split(
-                                                          '-',
-                                                      )[0]
-                                                    : ''
-                                            }
-                                            onChange={(e) =>
-                                                setData(
-                                                    'start_date',
-                                                    e.target.value
-                                                        ? `${e.target.value}-01-01`
-                                                        : '',
-                                                )
-                                            }
-                                            placeholder="Мысалы: 2024"
-                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                        />
-                                        {errors.start_date && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.start_date}
-                                            </span>
-                                        )}
-                                    </div>
+                                <OptionalProjectSection
+                                    planned={isPlanned}
+                                    title="Іске асыру мерзімі"
+                                    hasError={Boolean(
+                                        errors.start_date || errors.end_date,
+                                    )}
+                                >
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="flex flex-col gap-2">
+                                            <Label
+                                                htmlFor="start_date"
+                                                className="font-normal text-gray-500"
+                                            >
+                                                Басталу жылы
+                                            </Label>
+                                            <Input
+                                                id="start_date"
+                                                type="number"
+                                                min="1990"
+                                                max="2100"
+                                                value={
+                                                    data.start_date
+                                                        ? data.start_date.split(
+                                                              '-',
+                                                          )[0]
+                                                        : ''
+                                                }
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'start_date',
+                                                        e.target.value
+                                                            ? `${e.target.value}-01-01`
+                                                            : '',
+                                                    )
+                                                }
+                                                placeholder="Мысалы: 2024"
+                                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                            />
+                                            {errors.start_date && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.start_date}
+                                                </span>
+                                            )}
+                                        </div>
 
-                                    <div className="flex flex-col gap-2">
-                                        <Label
-                                            htmlFor="end_date"
-                                            className="font-normal text-gray-500"
-                                        >
-                                            Аяқталу жылы
-                                        </Label>
-                                        <Input
-                                            id="end_date"
-                                            type="number"
-                                            min="1990"
-                                            max="2100"
-                                            value={
-                                                data.end_date
-                                                    ? data.end_date.split(
-                                                          '-',
-                                                      )[0]
-                                                    : ''
-                                            }
-                                            onChange={(e) =>
-                                                setData(
-                                                    'end_date',
-                                                    e.target.value
-                                                        ? `${e.target.value}-12-31`
-                                                        : '',
-                                                )
-                                            }
-                                            placeholder="Мысалы: 2025"
-                                            className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                        />
-                                        {errors.end_date && (
-                                            <span className="text-sm text-red-500">
-                                                {errors.end_date}
-                                            </span>
-                                        )}
+                                        <div className="flex flex-col gap-2">
+                                            <Label
+                                                htmlFor="end_date"
+                                                className="font-normal text-gray-500"
+                                            >
+                                                Аяқталу жылы
+                                            </Label>
+                                            <Input
+                                                id="end_date"
+                                                type="number"
+                                                min="1990"
+                                                max="2100"
+                                                value={
+                                                    data.end_date
+                                                        ? data.end_date.split(
+                                                              '-',
+                                                          )[0]
+                                                        : ''
+                                                }
+                                                onChange={(e) =>
+                                                    setData(
+                                                        'end_date',
+                                                        e.target.value
+                                                            ? `${e.target.value}-12-31`
+                                                            : '',
+                                                    )
+                                                }
+                                                placeholder="Мысалы: 2025"
+                                                className="h-10 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                                            />
+                                            {errors.end_date && (
+                                                <span className="text-sm text-red-500">
+                                                    {errors.end_date}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
+                                </OptionalProjectSection>
 
                                 {/* Галерея */}
                                 <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">

@@ -20,6 +20,7 @@ class ProjectTask extends Model
         'approved_by',
         'approved_at',
         'viewed_at',
+        'definition_version',
     ];
 
     protected function casts(): array
@@ -29,6 +30,7 @@ class ProjectTask extends Model
             'due_date' => 'date',
             'approved_at' => 'datetime',
             'viewed_at' => 'datetime',
+            'definition_version' => 'integer',
         ];
     }
 
@@ -78,5 +80,12 @@ class ProjectTask extends Model
 
         return $this->creator?->roleModel?->name === 'invest'
             && $this->creator?->invest_sub_role === 'turkistan_invest';
+    }
+
+    public function hasProtectedDefinition(): bool
+    {
+        return in_array($this->approval_status, ['pending', 'approved'], true)
+            || $this->status === 'done'
+            || $this->completions()->where('status', 'pending')->exists();
     }
 }

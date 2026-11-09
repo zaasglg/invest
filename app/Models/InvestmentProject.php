@@ -21,7 +21,16 @@ class InvestmentProject extends Model
         'jobs_count',
         'production_not_applicable',
         'total_investment',
+        'investment_amount_type',
+        'attraction_handover_to_id',
+        'attraction_handover_requested_at',
+        'attraction_handover_accepted_at',
+        'attraction_handover_accepted_by',
+        'attraction_decline_reason',
+        'attraction_resume_on',
+        'planning_started_at',
         'status',
+        'attraction_stage',
         'start_date',
         'end_date',
         'created_by',
@@ -38,6 +47,10 @@ class InvestmentProject extends Model
     {
         return [
             'total_investment' => 'decimal:2',
+            'attraction_handover_requested_at' => 'datetime',
+            'attraction_handover_accepted_at' => 'datetime',
+            'attraction_resume_on' => 'date:Y-m-d',
+            'planning_started_at' => 'datetime',
             'start_date' => 'date',
             'end_date' => 'date',
             'geometry' => 'array',
@@ -51,6 +64,16 @@ class InvestmentProject extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (InvestmentProject $project) {
+            if ($project->status === 'plan' && $project->planning_started_at === null) {
+                $project->planning_started_at = now();
+            }
+
+            $project->attraction_stage = $project->status === 'plan'
+                ? ($project->attraction_stage ?? 'potential')
+                : null;
+        });
+
         static::addGlobalScope(
             'not_deleted',
             fn (Builder $query) => $query->where(
@@ -247,12 +270,29 @@ class InvestmentProject extends Model
     // Исполнители (Many to Many)
     public function executors()
     {
-        return $this->belongsToMany(User::class, 'investment_project_user');
+        return $this->belongsToMany(User::class, 'investment_project_user')
+            ->withPivot('assignment_source');
     }
 
     public function tasks()
     {
         return $this->hasMany(ProjectTask::class, 'project_id');
+    }
+
+    public function attractionActivities()
+    {
+        return $this->hasMany(ProjectAttractionActivity::class, 'project_id')
+            ->orderBy('id');
+    }
+
+    public function attractionHandoverTo()
+    {
+        return $this->belongsTo(User::class, 'attraction_handover_to_id');
+    }
+
+    public function attractionHandoverAcceptor()
+    {
+        return $this->belongsTo(User::class, 'attraction_handover_accepted_by');
     }
 
     public function issues()

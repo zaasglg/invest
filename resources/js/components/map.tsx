@@ -1833,21 +1833,21 @@ export default function Map({
                             )}
 
                             {/* Инвестициялар */}
-                            {activePlot.totalInvestment !== undefined &&
-                                activePlot.totalInvestment !== null && (
-                                    <div className="flex items-center justify-between px-5 py-3">
-                                        <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
-                                            Инвестициялар
-                                        </p>
-                                        <p className="text-sm font-bold text-[#c8a44e]">
-                                            {formatInvestment(
-                                                Number(
-                                                    activePlot.totalInvestment,
-                                                ),
-                                            )}
-                                        </p>
-                                    </div>
-                                )}
+                            <div className="flex items-center justify-between gap-3 px-5 py-3">
+                                <p className="text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
+                                    Инвестициялар
+                                </p>
+                                <p className="text-right text-sm font-bold text-[#c8a44e]">
+                                    {activePlot.totalInvestment === null ||
+                                    activePlot.totalInvestment === undefined
+                                        ? '—'
+                                        : formatInvestment(
+                                              Number(
+                                                  activePlot.totalInvestment,
+                                              ),
+                                          )}
+                                </p>
+                            </div>
 
                             {/* Жоба түрі */}
                             {activePlot.projectTypeName && (

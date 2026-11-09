@@ -16,6 +16,7 @@ import type { AreaUsage } from '@/components/area-occupancy-card';
 import DeletedEntityNotice from '@/components/deleted-entity-notice';
 import DetailSectionNav from '@/components/detail-section-nav';
 import InfrastructureList from '@/components/infrastructure-list';
+import ProjectInvestmentValue from '@/components/investment-projects/project-investment-value';
 import ProjectGallerySlider from '@/components/project-gallery-slider';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -54,7 +55,7 @@ interface InvestmentProject {
     id: number;
     name: string;
     company_name?: string;
-    total_investment?: number;
+    total_investment?: number | string | null;
     status: string;
     region?: Region;
     geometry?: unknown;
@@ -279,7 +280,7 @@ export default function Show({
                                             <p className="mb-1 text-[11px] font-bold text-gold uppercase">
                                                 Индустриялық аймақ
                                             </p>
-                                            <h1 className="text-2xl leading-tight font-extrabold text-balance sm:text-3xl text-white">
+                                            <h1 className="text-2xl leading-tight font-extrabold text-balance text-white sm:text-3xl">
                                                 {industrialZone.name}
                                             </h1>
                                             <p className="mt-2 flex items-center gap-1.5 text-sm text-slate-300">
@@ -435,13 +436,11 @@ export default function Show({
                                                             '—'}
                                                     </TableCell>
                                                     <TableCell className="text-gray-600">
-                                                        {project.total_investment
-                                                            ? formatCurrency(
-                                                                  Number(
-                                                                      project.total_investment,
-                                                                  ),
-                                                              )
-                                                            : '—'}
+                                                        <ProjectInvestmentValue
+                                                            value={
+                                                                project.total_investment
+                                                            }
+                                                        />
                                                     </TableCell>
                                                     <TableCell>
                                                         <Badge

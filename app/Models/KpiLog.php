@@ -62,6 +62,28 @@ class KpiLog extends Model
 
         $actor->loadMissing('roleModel:id,name,display_name');
 
+        $normalizedProperties = static::normalizeProperties([
+            ...$properties,
+            'actor_name' => $actor->full_name,
+            'actor_role' => $actor->roleModel?->display_name
+                ?? $actor->roleModel?->name,
+            'ip_address' => request()->ip(),
+            'user_agent' => request()->userAgent(),
+        ]);
+
+        // Preserve validated attraction report snapshots across later resubmissions.
+        // Other audit fields keep the standard normalization limits.
+        if ($subject instanceof ProjectAttractionActivity && in_array($event, [
+            'attraction.report_submitted', 'attraction.report_approved', 'attraction.report_rejected', 'attraction.recorded_completed',
+        ], true)) {
+            foreach (['Орындалу нәтижесі' => 10000, 'Тексерушінің түсіндірмесі' => 5000] as $key => $limit) {
+                $value = $properties['details'][$key] ?? null;
+                if (is_string($value)) {
+                    $normalizedProperties['details'][$key] = Str::substr($value, 0, $limit);
+                }
+            }
+        }
+
         static::create([
             'user_id' => $actor->id,
             'project_id' => $projectId,
@@ -72,14 +94,7 @@ class KpiLog extends Model
                 ? class_basename($subject)
                 : null,
             'subject_id' => $subject?->getKey(),
-            'properties' => static::normalizeProperties([
-                ...$properties,
-                'actor_name' => $actor->full_name,
-                'actor_role' => $actor->roleModel?->display_name
-                    ?? $actor->roleModel?->name,
-                'ip_address' => request()->ip(),
-                'user_agent' => request()->userAgent(),
-            ]),
+            'properties' => $normalizedProperties,
             'score' => $score,
         ]);
     }

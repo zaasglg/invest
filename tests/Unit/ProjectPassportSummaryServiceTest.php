@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\InvestmentProject;
+use App\Models\ProjectAttractionActivity;
 use App\Models\ProjectDocument;
 use App\Models\ProjectIssue;
 use App\Models\ProjectProductionPlan;
@@ -123,7 +124,7 @@ test('passport summary calculates progress timeline risks and next milestone', f
         ])
         ->and($summary['completeness']['percent'])->toBe(100)
         ->and($summary['last_updated_at'])
-        ->toStartWith('2026-07-24T10:00:00');
+        ->toBe(Carbon::parse('2026-07-24 10:00:00')->toISOString());
 });
 
 test('restricted passport summary omits task and issue aggregates', function () {
@@ -173,4 +174,266 @@ test('restricted passport summary omits task and issue aggregates', function () 
         ->and($summary['next_milestone'])->toBeNull()
         ->and($summary['health']['reasons'])
         ->not->toContain('1 жоғары/сыни мәселе ашық');
+});
+
+test('planned passport keeps the earliest outstanding attraction activity and ignores historical roadmap tasks', function () {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+
+    $project = plannedSummaryProject();
+    $project->setRelation('tasks', collect([
+        (new ProjectTask([
+            'title' => 'Ескі жол картасы',
+            'status' => 'in_progress',
+            'approval_status' => 'pending',
+            'due_date' => '2026-01-01',
+        ]))->forceFill(['id' => 99, 'updated_at' => Carbon::parse('2026-11-05 11:00:00')]),
+    ]));
+    $project->setRelation('attractionActivities', collect([
+        (new ProjectAttractionActivity([
+            'next_action' => 'Ескі келіссөз',
+            'next_action_due_date' => '2026-01-01',
+        ]))->forceFill(['id' => 1, 'updated_at' => Carbon::parse('2026-11-01 10:00:00')]),
+        (new ProjectAttractionActivity([
+            'next_action' => 'Жер учаскесін қарау',
+            'next_action_due_date' => '2026-11-10',
+        ]))->forceFill(['id' => 2, 'updated_at' => Carbon::parse('2026-11-04 10:00:00')]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['workflow'])->toBe('attraction')
+        ->and($summary['progress_percent'])->toBe(0)
+        ->and($summary['tasks'])->toBe([
+            'total' => 0,
+            'completed' => 0,
+            'in_progress' => 0,
+            'overdue' => 0,
+            'pending_approval' => 0,
+        ])
+        ->and($summary['next_milestone'])->toMatchArray([
+            'id' => 1,
+            'title' => 'Ескі келіссөз',
+            'due_date' => '2026-01-01',
+            'is_overdue' => true,
+        ])
+        ->and($summary['attraction'])->toBe([
+            'total' => 2, 'open' => 2, 'completed' => 0, 'pending_review' => 0, 'overdue' => 1,
+        ])
+        ->and($summary['last_updated_at'])->toBe(Carbon::parse('2026-11-04 10:00:00')->toISOString())
+        ->and($summary['health']['reasons'])->not->toContain('1 тапсырманың мерзімі өткен');
+});
+
+test('planned passport reports an overdue attraction action without roadmap counts', function () {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+
+    $project = plannedSummaryProject();
+    $project->setRelation('attractionActivities', collect([
+        (new ProjectAttractionActivity([
+            'next_action' => 'Инвестормен кездесу',
+            'next_action_due_date' => '2026-11-04',
+        ]))->forceFill(['id' => 3]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['tasks']['overdue'])->toBe(0)
+        ->and($summary['next_milestone']['is_overdue'])->toBeTrue()
+        ->and($summary['health']['reasons'])
+        ->toContain('Инвестор тарту бойынша келесі іс-шараның мерзімі өткен');
+});
+
+test('restricted planned passport does not expose attraction activity details', function () {
+    $project = plannedSummaryProject();
+    $project->setRelation('attractionActivities', collect([
+        (new ProjectAttractionActivity([
+            'next_action' => 'Жасырын кездесу',
+            'next_action_due_date' => '2026-11-10',
+        ]))->forceFill(['id' => 4, 'updated_at' => Carbon::parse('2026-12-01 10:00:00')]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project, false);
+
+    expect($summary['next_milestone'])->toBeNull()
+        ->and($summary['tasks']['total'])->toBe(0)
+        ->and($summary['attraction'])->toBe([
+            'total' => 0, 'open' => 0, 'completed' => 0, 'pending_review' => 0, 'overdue' => 0,
+        ])
+        ->and($summary['last_updated_at'])->toBe(Carbon::parse('2026-11-01 10:00:00')->toISOString());
+});
+
+test('attraction summary ignores closed actions and includes all outstanding rows', function () {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+    $project = plannedSummaryProject();
+    $project->setRelation('attractionActivities', collect([
+        (new ProjectAttractionActivity([
+            'status' => 'completed', 'next_action' => 'Орындалған кездесу',
+            'next_action_due_date' => '2026-01-01',
+        ]))->forceFill(['id' => 1, 'updated_at' => Carbon::parse('2026-11-05 11:00:00')]),
+        (new ProjectAttractionActivity([
+            'status' => 'cancelled', 'next_action' => 'Бас тартылған іс-шара',
+            'next_action_due_date' => '2026-01-02',
+        ]))->forceFill(['id' => 2]),
+        (new ProjectAttractionActivity([
+            'status' => 'in_progress', 'next_action' => 'Ескі орындалмаған кездесу',
+            'next_action_due_date' => '2026-11-04',
+        ]))->forceFill(['id' => 3]),
+        (new ProjectAttractionActivity([
+            'status' => 'pending_review', 'next_action' => 'Тексеруді күтетін есеп',
+            'next_action_due_date' => '2026-11-03',
+        ]))->forceFill(['id' => 4]),
+        (new ProjectAttractionActivity([
+            'status' => 'planned', 'next_action' => 'Жаңадан жоспарланған кездесу',
+            'next_action_due_date' => '2026-11-10',
+        ]))->forceFill(['id' => 5, 'updated_at' => Carbon::parse('2026-11-04 10:00:00')]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['next_milestone']['id'])->toBe(4)
+        ->and($summary['attraction'])->toBe([
+            'total' => 5, 'open' => 3, 'completed' => 1, 'pending_review' => 1, 'overdue' => 2,
+        ])
+        ->and($summary['last_updated_at'])->toBe(Carbon::parse('2026-11-05 11:00:00')->toISOString());
+});
+
+test('only completed and cancelled attraction activities have no next milestone or overdue risk', function () {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+    $project = plannedSummaryProject();
+    $project->setRelation('attractionActivities', collect([
+        new ProjectAttractionActivity([
+            'status' => 'completed', 'next_action' => 'Орындалған кездесу',
+            'next_action_due_date' => '2026-01-01',
+        ]),
+        new ProjectAttractionActivity([
+            'status' => 'cancelled', 'next_action' => 'Бас тартылған кездесу',
+            'next_action_due_date' => '2026-01-01',
+        ]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['next_milestone'])->toBeNull()
+        ->and($summary['attraction']['open'])->toBe(0)
+        ->and($summary['attraction']['overdue'])->toBe(0)
+        ->and($summary['health']['reasons'])->not->toContain('Инвестор тарту бойынша келесі іс-шараның мерзімі өткен');
+});
+
+test('paused contact date competes with outstanding activity deadlines', function (string $resumeOn, string $title, bool $overdue) {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+    $project = plannedSummaryProject();
+    $project->fill(['attraction_stage' => 'paused', 'attraction_resume_on' => $resumeOn]);
+    $project->setRelation('attractionActivities', collect([
+        (new ProjectAttractionActivity([
+            'status' => 'planned', 'next_action' => 'Келесі келіссөз',
+            'next_action_due_date' => '2026-11-08',
+        ]))->forceFill(['id' => 2]),
+    ]));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['next_milestone']['title'])->toBe($title)
+        ->and($summary['next_milestone']['is_overdue'])->toBe($overdue);
+
+    $restricted = (new ProjectPassportSummaryService)->build($project, false);
+    expect($restricted['next_milestone'])->toBeNull()
+        ->and($restricted['attraction']['total'])->toBe(0);
+})->with([
+    ['2026-11-04', 'Инвестормен қайта байланысу', true],
+    ['2026-11-06', 'Инвестормен қайта байланысу', false],
+    ['2026-11-10', 'Келесі келіссөз', false],
+]);
+
+test('a paused project without activities still exposes its next contact date', function () {
+    Carbon::setTestNow('2026-11-05 12:00:00');
+    $project = plannedSummaryProject();
+    $project->fill(['attraction_stage' => 'paused', 'attraction_resume_on' => '2026-11-04']);
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['next_milestone'])->toMatchArray([
+        'title' => 'Инвестормен қайта байланысу', 'due_date' => '2026-11-04', 'is_overdue' => true,
+    ])
+        ->and($summary['health']['reasons'])->toContain('Инвестор тарту бойынша келесі іс-шараның мерзімі өткен');
+});
+
+test('planned passport completeness requires only the basic planning information', function () {
+    $project = plannedSummaryProject();
+    $project->setRelation('region', new Region(['name' => 'Тест ауданы']));
+    $project->setRelation('creator', new User(['full_name' => 'Куратор']));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+
+    expect($summary['completeness'])->toBe([
+        'percent' => 100, 'completed' => 4, 'total' => 4, 'missing' => [],
+    ]);
+});
+
+test('planned completeness checks the required special stage information', function (string $stage, array $metadata, array $missing) {
+    $project = plannedSummaryProject();
+    $project->fill(['attraction_stage' => $stage]);
+    $project->setRelation('region', new Region(['name' => 'Тест ауданы']));
+    $project->setRelation('creator', new User(['full_name' => 'Куратор']));
+
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['completeness']['missing'])->toBe($missing);
+
+    $project->fill($metadata);
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['completeness']['percent'])->toBe(100);
+})->with([
+    ['handover', ['attraction_handover_to_id' => 1, 'attraction_handover_requested_at' => '2026-11-05 10:00:00'], ['Сүйемелдеуді қабылдайтын жауапты', 'Сүйемелдеуге берілген күні']],
+    ['declined', ['attraction_decline_reason' => 'Инвестор шешімі'], ['Инвестордың бас тарту себебі']],
+    ['paused', ['attraction_resume_on' => '2026-11-10'], ['Инвестормен қайта байланысу күні']],
+]);
+
+function plannedSummaryProject(): InvestmentProject
+{
+    $project = (new InvestmentProject([
+        'name' => 'Жоспарланған жоба',
+        'status' => 'plan',
+        'attraction_stage' => 'negotiation',
+    ]))->forceFill([
+        'id' => 20,
+        'photos_count' => 0,
+        'updated_at' => Carbon::parse('2026-11-01 10:00:00'),
+    ]);
+    $project->setRelation('region', null);
+    $project->setRelation('projectType', null);
+    $project->setRelation('creator', null);
+    $project->setRelation('curators', collect());
+    $project->setRelation('productionPlans', collect());
+    $project->setRelation('documents', collect());
+    $project->setRelation('tasks', collect());
+    $project->setRelation('issues', collect());
+    $project->setRelation('attractionActivities', collect());
+
+    return $project;
+}
+
+test('roadmap progress excludes unapproved work and launched timelines never show negative days left', function () {
+    $project = plannedSummaryProject();
+    $project->fill(['status' => 'launched', 'start_date' => '2020-01-01', 'end_date' => '2020-12-31']);
+    $project->setRelation('tasks', collect([
+        new ProjectTask(['status' => 'done', 'approval_status' => 'approved']),
+        new ProjectTask(['status' => 'new', 'approval_status' => 'pending', 'due_date' => '2020-01-01']),
+        new ProjectTask(['status' => 'new', 'approval_status' => 'rejected', 'due_date' => '2020-01-01']),
+    ]));
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['progress_percent'])->toBe(100)
+        ->and($summary['tasks']['overdue'])->toBe(0)
+        ->and($summary['tasks']['pending_approval'])->toBe(1)
+        ->and($summary['timeline']['days_remaining'])->toBeNull();
+});
+
+test('declined opportunities retain history but have no active workload', function () {
+    $project = plannedSummaryProject();
+    $project->fill(['attraction_stage' => 'declined', 'attraction_decline_reason' => 'Бас тартты']);
+    $project->setRelation('attractionActivities', collect([
+        new ProjectAttractionActivity(['status' => 'planned', 'next_action' => 'Кездесу', 'next_action_due_date' => '2020-01-01']),
+    ]));
+    $summary = (new ProjectPassportSummaryService)->build($project);
+    expect($summary['attraction']['total'])->toBe(1)
+        ->and($summary['attraction']['open'])->toBe(0)
+        ->and($summary['next_milestone'])->toBeNull()
+        ->and($summary['health']['label'])->toBe('Инвестор бас тартқан');
 });

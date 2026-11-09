@@ -207,6 +207,11 @@ return [
         'license_end' => 'Лицензияның аяқталу күні',
         'project_type_id' => 'Жоба түрі',
         'total_investment' => 'Жалпы инвестиция',
+        'attraction_stage' => 'Инвестор тарту кезеңі',
+        'investment_amount_type' => 'Инвестиция сомасының нақтылығы',
+        'attraction_handover_to_id' => 'Сүйемелдеуге қабылдаушы',
+        'attraction_decline_reason' => 'Инвестордың бас тарту себебі',
+        'attraction_resume_on' => 'Қайта байланысу күні',
         'full_name' => 'Толық аты-жөні',
         'email' => 'Электрондық пошта',
         'phone' => 'Телефон',
@@ -254,6 +259,7 @@ return [
         'company_activity_type' => 'Компанияның негізгі қызмет саласы',
         'company_investment_type' => 'Компанияның инвестиция түрі',
         'director_full_name' => 'Директордың толық аты-жөні',
+        'today' => 'Бүгін',
     ],
 
 ];
