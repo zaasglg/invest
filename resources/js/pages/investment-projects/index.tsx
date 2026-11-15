@@ -255,7 +255,8 @@ export default function Index({
         ((isInvest || isModerator) &&
             projects.data.every((project) => project.can_manage !== false));
     const { data, setData, get } = useForm<Filters>({
-        attraction_stage: filters.attraction_stage ?? '',
+        attraction_stage:
+            filters.status === 'plan' ? (filters.attraction_stage ?? '') : '',
         work_filter: filters.work_filter ?? '',
         responsible_id: filters.responsible_id ?? '',
         search: filters.search ?? '',
@@ -274,7 +275,7 @@ export default function Index({
     });
     const [filtersOpen, setFiltersOpen] = useState(
         !!(
-            filters.attraction_stage ||
+            (filters.status === 'plan' && filters.attraction_stage) ||
             filters.responsible_id ||
             filters.search ||
             filters.region_id ||
@@ -746,7 +747,16 @@ export default function Index({
                         <Label>Мәртебесі</Label>
                         <Select
                             value={data.status}
-                            onValueChange={(value) => setData('status', value)}
+                            onValueChange={(value) =>
+                                setData((previous) => ({
+                                    ...previous,
+                                    status: value,
+                                    attraction_stage:
+                                        value === 'plan'
+                                            ? previous.attraction_stage
+                                            : '',
+                                }))
+                            }
                         >
                             <SelectTrigger>
                                 <SelectValue placeholder="Барлық мәртебелер" />
@@ -765,40 +775,42 @@ export default function Index({
                             </SelectContent>
                         </Select>
                     </div>
-                    <div className="space-y-1.5">
-                        <Label htmlFor="attraction-stage-filter">
-                            Инвестор тарту сатысы
-                        </Label>
-                        <Select
-                            value={data.attraction_stage || 'all'}
-                            onValueChange={(value) =>
-                                setData(
-                                    'attraction_stage',
-                                    value === 'all' ? '' : value,
-                                )
-                            }
-                        >
-                            <SelectTrigger id="attraction-stage-filter">
-                                <SelectValue placeholder="Барлық сатылар" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    Барлық сатылар
-                                </SelectItem>
-                                {ATTRACTION_STAGES.map((stage) => (
-                                    <SelectItem
-                                        key={stage.value}
-                                        value={stage.value}
-                                    >
-                                        {stage.label}
+                    {data.status === 'plan' && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="attraction-stage-filter">
+                                Инвестор тарту сатысы
+                            </Label>
+                            <Select
+                                value={data.attraction_stage || 'all'}
+                                onValueChange={(value) =>
+                                    setData(
+                                        'attraction_stage',
+                                        value === 'all' ? '' : value,
+                                    )
+                                }
+                            >
+                                <SelectTrigger id="attraction-stage-filter">
+                                    <SelectValue placeholder="Барлық сатылар" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        Барлық сатылар
                                     </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <p className="text-xs text-slate-400">
-                            Жоспарланған жобалар бойынша
-                        </p>
-                    </div>
+                                    {ATTRACTION_STAGES.map((stage) => (
+                                        <SelectItem
+                                            key={stage.value}
+                                            value={stage.value}
+                                        >
+                                            {stage.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <p className="text-xs text-slate-400">
+                                Жоспарланған жобалар бойынша
+                            </p>
+                        </div>
+                    )}
                     <div className="space-y-1.5">
                         <Label htmlFor="responsible-filter">
                             Жұмысқа жауапты

@@ -95,10 +95,42 @@ test('stage and responsible filters combine without including other lifecycle st
     worklistTask($implementation, $manager);
 
     $this->actingAs($manager)->get(route('investment-projects.index', [
-        'attraction_stage' => 'conditions', 'responsible_id' => $manager->id,
+        'status' => 'plan', 'attraction_stage' => 'conditions', 'responsible_id' => $manager->id,
     ]))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('projects.data', 1)
-        ->where('projects.data.0.id', $matching->id));
+        ->where('projects.data.0.id', $matching->id)
+        ->where('filters.attraction_stage', 'conditions'));
+});
+
+test('attraction stage filters are ignored outside the planned project status', function (?string $status, string $stage) {
+    $manager = worklistUser();
+    $projects = collect([
+        worklistProject($manager, ['attraction_stage' => 'conditions']),
+        worklistProject($manager, ['attraction_stage' => 'negotiation']),
+        worklistProject($manager, ['status' => 'implementation']),
+        worklistProject($manager, ['status' => 'launched']),
+        worklistProject($manager, ['status' => 'suspended']),
+    ]);
+    $filters = ['attraction_stage' => $stage];
+    if ($status !== null) {
+        $filters['status'] = $status;
+    }
+    $expectedIds = $projects->when($status, fn ($rows) => $rows->where('status', $status))
+        ->pluck('id')->sort()->values()->all();
+
+    $this->actingAs($manager)->get(route('investment-projects.index', $filters))
+        ->assertOk()->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all() === $expectedIds)
+            ->missing('filters.attraction_stage'));
+})->with([null, '', 'implementation', 'launched', 'suspended'])->with(['conditions', 'stale-stage']);
+
+test('planned project filters reject unknown attraction stages', function () {
+    $manager = worklistUser();
+
+    $this->actingAs($manager)->get(route('investment-projects.index', [
+        'status' => 'plan', 'attraction_stage' => 'stale-stage',
+    ]))->assertSessionHasErrors('attraction_stage');
 });
 
 test('overdue work excludes closed declined archived and unapproved work', function () {
