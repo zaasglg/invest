@@ -83,10 +83,14 @@ class InvestmentProjectController extends Controller
             'responsible_id',
         ]);
         $request->validate([
-            'attraction_stage' => ['nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
+            'attraction_stage' => ['exclude_unless:status,plan', 'nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
             'responsible_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        if (($filters['status'] ?? null) !== 'plan') {
+            unset($filters['attraction_stage']);
+        }
 
         if ($isInvestor && ($filters['sector_type'] ?? null) === 'subsoil') {
             unset($filters['sector_type'], $filters['sector_id']);
