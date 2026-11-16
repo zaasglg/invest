@@ -80,13 +80,16 @@ class InvestmentProjectController extends Controller
             'end_date_to',
             'attraction_stage',
             'work_filter',
-            'responsible_id',
         ]);
         $request->validate([
             'attraction_stage' => ['exclude_unless:status,plan', 'nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
-            'responsible_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
+
+        // Old links to removed shortcuts now use the complete visible list.
+        if (in_array($filters['work_filter'] ?? null, ['pending_review', 'overdue'], true)) {
+            unset($filters['work_filter']);
+        }
 
         if (($filters['status'] ?? null) !== 'plan') {
             unset($filters['attraction_stage']);

@@ -141,7 +141,6 @@ interface InvestmentProject {
 interface Filters {
     attraction_stage: string;
     work_filter: string;
-    responsible_id: string;
     search: string;
     region_id: string;
     project_type_id: string;
@@ -257,8 +256,7 @@ export default function Index({
     const { data, setData, get } = useForm<Filters>({
         attraction_stage:
             filters.status === 'plan' ? (filters.attraction_stage ?? '') : '',
-        work_filter: filters.work_filter ?? '',
-        responsible_id: filters.responsible_id ?? '',
+        work_filter: filters.work_filter === 'my' ? 'my' : '',
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         project_type_id: filters.project_type_id ?? '',
@@ -276,7 +274,6 @@ export default function Index({
     const [filtersOpen, setFiltersOpen] = useState(
         !!(
             (filters.status === 'plan' && filters.attraction_stage) ||
-            filters.responsible_id ||
             filters.search ||
             filters.region_id ||
             filters.project_type_id ||
@@ -645,8 +642,6 @@ export default function Index({
                     {[
                         { value: '', label: 'Барлық жобалар' },
                         { value: 'my', label: 'Менің жұмыстарым' },
-                        { value: 'pending_review', label: 'Тексеруді күтуде' },
-                        { value: 'overdue', label: 'Мерзімі өткен' },
                     ].map((item) => (
                         <Button
                             key={item.value}
@@ -811,37 +806,6 @@ export default function Index({
                             </p>
                         </div>
                     )}
-                    <div className="space-y-1.5">
-                        <Label htmlFor="responsible-filter">
-                            Жұмысқа жауапты
-                        </Label>
-                        <Select
-                            value={data.responsible_id || 'all'}
-                            onValueChange={(value) =>
-                                setData(
-                                    'responsible_id',
-                                    value === 'all' ? '' : value,
-                                )
-                            }
-                        >
-                            <SelectTrigger id="responsible-filter">
-                                <SelectValue placeholder="Барлық жауаптылар" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    Барлық жауаптылар
-                                </SelectItem>
-                                {users.map((user) => (
-                                    <SelectItem
-                                        key={user.id}
-                                        value={String(user.id)}
-                                    >
-                                        {user.full_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
                     <div className="space-y-1.5">
                         <Label>Орындаушы</Label>
                         <Select
