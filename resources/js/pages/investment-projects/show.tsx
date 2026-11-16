@@ -1333,32 +1333,27 @@ export default function Show({
                                 <CardContent className="p-6">
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
                                         {/* Photo */}
-                                        {(project.status !== 'plan' ||
-                                            mainGallery.length > 0) && (
-                                            <div className="overflow-hidden rounded-lg md:col-span-2">
-                                                {mainGallery.length > 0 &&
-                                                    mainGallery[0]
-                                                        ?.gallery_date && (
-                                                        <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                            <Calendar className="h-3.5 w-3.5" />
-                                                            <span>
-                                                                {formatProjectDate(
-                                                                    mainGallery[0]
-                                                                        .gallery_date,
-                                                                )}
-                                                            </span>
-                                                        </div>
-                                                    )}
-                                                <ProjectGallerySlider
-                                                    photos={mainGallery}
-                                                />
-                                            </div>
-                                        )}
+                                        <div className="overflow-hidden rounded-lg md:col-span-2">
+                                            {mainGallery.length > 0 &&
+                                                mainGallery[0]
+                                                    ?.gallery_date && (
+                                                    <div className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                        <Calendar className="h-3.5 w-3.5" />
+                                                        <span>
+                                                            {formatProjectDate(
+                                                                mainGallery[0]
+                                                                    .gallery_date,
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                )}
+                                            <ProjectGallerySlider
+                                                photos={mainGallery}
+                                            />
+                                        </div>
 
                                         {/* Info Cards */}
-                                        <div
-                                            className={`grid grid-cols-2 gap-3 ${project.status === 'plan' && mainGallery.length === 0 ? 'md:col-span-5' : 'md:col-span-3'}`}
-                                        >
+                                        <div className="grid grid-cols-2 gap-3 md:col-span-3">
                                             <div className="rounded-lg border border-gray-200 p-4">
                                                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                     <MapPin className="h-3.5 w-3.5" />{' '}
