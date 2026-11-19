@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Region;
 use App\Models\Sez;
 use App\Services\InfrastructureUsageService;
+use App\Services\InvestmentProjectAccessService;
 use App\Services\SectorActivityLogService;
 use App\Services\ZoneIndexAnalyticsService;
 use App\Support\InfrastructureValidationRules;
@@ -18,10 +19,8 @@ class SezController extends Controller
         ZoneIndexAnalyticsService $analytics
     ) {
         $user = $request->user();
-        $isModerator = $user->loadMissing('roleModel')
-            ->roleModel?->name === 'moderator';
         $filters = $request->only(['search', 'region_id', 'status']);
-        $data = $analytics->build(Sez::class, $user, $filters, $isModerator);
+        $data = $analytics->build(Sez::class, $user, $filters);
 
         return Inertia::render('sezs/index', [
             'sezs' => $data['zones'],
@@ -94,8 +93,11 @@ class SezController extends Controller
         return redirect()->route('sezs.index')->with('success', 'АЭА құрылды.');
     }
 
-    public function show(Sez $sez, InfrastructureUsageService $usageService)
-    {
+    public function show(
+        Sez $sez,
+        InfrastructureUsageService $usageService,
+        InvestmentProjectAccessService $projectAccess,
+    ) {
         $sez->load([
             'region',
             'deleter:id,full_name',
@@ -111,16 +113,12 @@ class SezController extends Controller
         $renderPhotos = $sez->photos()->renderPhotos()->latest()->get();
 
         $user = auth()->user();
-        $isModerator = $user?->loadMissing('roleModel')
-            ->roleModel?->name === 'moderator';
-
         $projectsQuery = $sez->investmentProjects()
             ->where('is_archived', false)
-            ->when(
-                $isModerator,
-                fn ($query) => $query->curatedByTurkistanInvest()
-            )
             ->with('region');
+        if ($user) {
+            $projectAccess->scopeVisible($projectsQuery, $user);
+        }
         $usageProjects = (clone $projectsQuery)->get();
         $investmentProjects = $projectsQuery
             ->latest()

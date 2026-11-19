@@ -575,7 +575,8 @@ test('turkistan invest and moderator can manage companies but cannot delete them
     $this->assertDatabaseHas('companies', ['id' => $company->id]);
     $this->assertDatabaseHas('users', ['company_id' => $company->id]);
 })->with([
-    'turkistan invest' => ['invest', 'turkistan_invest'],
+    'turkistan invest accompaniment' => ['invest', 'turkistan_invest'],
+    'turkistan invest attraction' => ['invest', 'turkistan_invest_attraction'],
     'moderator' => ['moderator', null],
 ]);
 
@@ -624,10 +625,14 @@ test('existing company readers retain read access without management permissions
 
 test('company project lists and counts expose only the turkistan curator scope', function (
     string $roleName,
-    ?string $investSubRole
+    ?string $investSubRole,
+    string $status
 ) {
     $user = createCompanyManagementUser($roleName, $investSubRole);
-    $peer = createCompanyManagementUser('invest', 'turkistan_invest');
+    $peer = createCompanyManagementUser(
+        'invest',
+        $status === 'plan' ? 'turkistan_invest_attraction' : 'turkistan_invest'
+    );
     $moderator = createCompanyManagementUser('moderator');
     $outsideInvest = createCompanyManagementUser('invest', 'aea');
     $region = createCompanyManagementRegion();
@@ -640,7 +645,7 @@ test('company project lists and counts expose only the turkistan curator scope',
             'company_name' => $company->display_name,
             'region_id' => $region->id,
             'total_investment' => 1000000,
-            'status' => 'plan',
+            'status' => $status,
             'created_by' => $user->id,
             ...$attributes,
         ]);
@@ -686,8 +691,9 @@ test('company project lists and counts expose only the turkistan curator scope',
                 ->pluck('id')->sort()->values()->all() === $visibleIds)
         );
 })->with([
-    'turkistan invest' => ['invest', 'turkistan_invest'],
-    'moderator' => ['moderator', null],
+    'turkistan invest accompaniment' => ['invest', 'turkistan_invest', 'implementation'],
+    'turkistan invest attraction' => ['invest', 'turkistan_invest_attraction', 'plan'],
+    'moderator' => ['moderator', null, 'plan'],
 ]);
 
 test('project creation uses an active complete company without an investor and syncs its name', function () {

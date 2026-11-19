@@ -79,7 +79,8 @@ class ProjectTask extends Model
         $this->loadMissing('creator.roleModel');
 
         return $this->creator?->roleModel?->name === 'invest'
-            && $this->creator?->invest_sub_role === 'turkistan_invest';
+            && $this->creator?->invest_sub_role
+                === User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT;
     }
 
     public function hasProtectedDefinition(): bool

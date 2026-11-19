@@ -113,7 +113,10 @@ class TaskNotification extends Model
             ->whereHas(
                 'creator',
                 fn (Builder $creator) => $creator
-                    ->where('users.invest_sub_role', 'turkistan_invest')
+                    ->where(
+                        'users.invest_sub_role',
+                        User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT
+                    )
                     ->whereHas(
                         'roleModel',
                         fn (Builder $role) => $role->where('name', 'invest')

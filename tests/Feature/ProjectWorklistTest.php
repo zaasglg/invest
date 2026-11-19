@@ -55,15 +55,15 @@ function worklistTask(InvestmentProject $project, User $responsible, array $attr
     ]);
 }
 
-test('my projects include curated projects regardless of their work or lifecycle status', function () {
+test('accompaniment worklist includes only non-planned curated projects', function () {
     $manager = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
     $colleague = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
-    $projects = collect(['plan', 'implementation', 'launched', 'suspended'])
+    $projects = collect(['implementation', 'launched', 'suspended'])
         ->map(fn ($status) => worklistProject($manager, ['status' => $status]));
+    $planned = worklistProject($manager);
     $declined = worklistProject($manager, ['attraction_stage' => 'declined']);
-    $projects->push($declined);
-    worklistActivity($projects[0], $colleague, ['status' => 'completed']);
-    worklistTask($projects[1], $colleague, ['status' => 'done']);
+    worklistActivity($planned, $colleague, ['status' => 'completed']);
+    worklistTask($projects[0], $colleague, ['status' => 'done']);
     $foreign = worklistProject($colleague);
     worklistActivity($foreign, $manager);
 
@@ -71,7 +71,7 @@ test('my projects include curated projects regardless of their work or lifecycle
         ->assertOk()->assertInertia(fn (Assert $page) => $page
         ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all()
             === $projects->pluck('id')->sort()->values()->all())
-        ->where('stats.total_projects', 5)
+        ->where('stats.total_projects', 3)
         ->where('filters.work_filter', 'my')
         ->missing('projects.data.0.next_action'));
 });
@@ -140,9 +140,9 @@ test('creator fallback matches participants only when no curator exists and excl
 
 test('my projects continue to respect existing regional visibility restrictions', function () {
     $manager = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
-    $project = worklistProject($manager);
+    $project = worklistProject($manager, ['status' => 'implementation']);
     $manager->update(['region_id' => $project->region_id]);
-    worklistProject($manager);
+    worklistProject($manager, ['status' => 'implementation']);
 
     $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'my']))
         ->assertOk()->assertInertia(fn (Assert $page) => $page

@@ -23,6 +23,20 @@ abstract class TestCase extends BaseTestCase
             );
         }
 
+        $connection = (string) $app['config']->get('database.default');
+        $database = (string) $app['config']->get(
+            "database.connections.{$connection}.database"
+        );
+        $isIsolatedDatabase = $database === 'invest_testing'
+            || preg_match('/^invest_testing_test_\d+$/', $database) === 1;
+
+        if ($connection !== 'pgsql' || ! $isIsolatedDatabase) {
+            throw new RuntimeException(
+                "Tests were aborted because {$connection}:{$database} is not "
+                .'an isolated PostgreSQL test database.'
+            );
+        }
+
         return $app;
     }
 }

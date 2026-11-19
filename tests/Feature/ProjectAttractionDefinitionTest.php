@@ -21,7 +21,7 @@ function attractionDefinitionFixture(string $managerRole = 'superadmin'): array
     $manager = User::factory()->create([
         'role' => $managerRole === 'superadmin' ? 'admin' : 'district_user',
         'role_id' => Role::firstOrCreate(['name' => $managerRole], ['display_name' => $managerRole])->id,
-        'invest_sub_role' => $managerRole === 'invest' ? 'turkistan_invest' : null,
+        'invest_sub_role' => $managerRole === 'invest' ? 'turkistan_invest_attraction' : null,
     ]);
     $assignee = User::factory()->create([
         'role' => 'district_user',

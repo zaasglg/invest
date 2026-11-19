@@ -54,7 +54,8 @@ class ProjectTaskController extends Controller
             $validated['created_by'] = Auth::id();
 
             $requiresModeratorApproval = $creatorRole === 'invest'
-                && $user?->invest_sub_role === 'turkistan_invest';
+                && $user?->invest_sub_role
+                    === User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT;
 
             // Only tasks issued by Turkistan Invest wait for moderator review.
             // Every other direction sends its task straight to the assignee.

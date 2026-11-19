@@ -796,7 +796,11 @@ class InvestmentApplicationWorkflowService
 
                 return in_array(
                     $user->invest_sub_role,
-                    [$requiredSubRole, 'turkistan_invest', null],
+                    [
+                        $requiredSubRole,
+                        ...User::TURKISTAN_INVEST_SUB_ROLES,
+                        null,
+                    ],
                     true
                 );
             })

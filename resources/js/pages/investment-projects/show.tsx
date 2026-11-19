@@ -56,6 +56,8 @@ import {
     normalizeProjectInfrastructure,
     PROJECT_INFRASTRUCTURE_FIELDS,
 } from '@/lib/infrastructure';
+import { investmentProjectCollectionLabel } from '@/lib/invest-sub-role';
+import { investorCountryLabel } from '@/lib/investor-countries';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import type { ProductionPlanInput } from '@/lib/production';
 import { formatProjectTypeNames } from '@/lib/project-types';
@@ -152,6 +154,7 @@ interface InvestmentProject {
     production_not_applicable?: boolean;
     production_plans?: ProductionPlanInput[];
     status: 'plan' | 'implementation' | 'launched' | 'suspended';
+    investor_country_code?: string | null;
     attraction_stage?: string | null;
     attraction_handover_to?: { id: number; full_name: string } | null;
     attraction_handover_acceptor?: { full_name: string } | null;
@@ -159,6 +162,10 @@ interface InvestmentProject {
     attraction_handover_accepted_at?: string | null;
     attraction_decline_reason?: string | null;
     attraction_resume_on?: string | null;
+    attraction_handover_rejection_reason?: string | null;
+    attraction_handover_rejected_at?: string | null;
+    attraction_handover_rejector?: { full_name: string } | null;
+    attractionHandoverRejector?: { full_name: string } | null;
     attraction_activities?: AttractionActivity[];
     start_date?: string;
     end_date?: string;
@@ -277,6 +284,9 @@ interface Props {
     passportSummary?: ProjectPassportSummary | null;
     canManageAttraction?: boolean;
     canAcceptAttractionHandover?: boolean;
+    handoverDecisionMode?: 'named-attraction' | 'support-reserve' | null;
+    canResubmitAttractionHandover?: boolean;
+    canArchiveProject?: boolean;
     attractionResponsibleUsers?: {
         id: number;
         full_name: string;
@@ -492,6 +502,9 @@ export default function Show({
     passportSummary,
     canManageAttraction = false,
     canAcceptAttractionHandover = false,
+    handoverDecisionMode = null,
+    canResubmitAttractionHandover = false,
+    canArchiveProject,
     attractionResponsibleUsers = [],
 }: Props) {
     const canModify = useCanModify();
@@ -526,6 +539,9 @@ export default function Show({
     }, []);
 
     const { auth } = usePage<SharedData>().props;
+    const projectCollectionTitle = investmentProjectCollectionLabel(
+        auth.user?.invest_sub_role,
+    );
     const currentUserId = auth.user?.id;
     const currentRoleName = (auth.user?.role_model?.name || '').toLowerCase();
     const isIspolnitel = currentRoleName === 'ispolnitel';
@@ -545,6 +561,7 @@ export default function Show({
     const projectIsActive = !project.is_archived && !project.is_deleted;
     const canEditProject =
         (canManageProject ?? (canModify || isModerator)) && projectIsActive;
+    const mayArchiveProject = canArchiveProject ?? canEditProject;
     const canApproveTasks = canEditProject && (isModerator || isSuperAdmin);
     const canManageTasks = canEditProject;
     const canCreateTasks = (canManageTasks || isProkuror) && projectIsActive;
@@ -1153,6 +1170,10 @@ export default function Show({
         <AppLayout
             breadcrumbs={[
                 {
+                    title: projectCollectionTitle,
+                    href: projectRoutes.index.url(),
+                },
+                {
                     title: project.region?.name || 'Аудан',
                     href: `/regions/${project.region_id}`,
                 },
@@ -1257,6 +1278,34 @@ export default function Show({
                     canDownload={canDownload && !isRestrictedView}
                     canSeeOperationalDetails={!isRestrictedView}
                 />
+
+                {project.attraction_handover_rejection_reason && (
+                    <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-5 py-4 text-rose-950">
+                        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-600" />
+                        <div className="min-w-0 space-y-1">
+                            <h2 className="font-semibold">
+                                Жоба сүйемелдеуден кері қайтарылды
+                            </h2>
+                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-rose-900">
+                                {project.attraction_handover_rejection_reason}
+                            </p>
+                            <p className="text-xs text-rose-700">
+                                Қайтарған:{' '}
+                                {project.attraction_handover_rejector
+                                    ?.full_name ??
+                                    project.attractionHandoverRejector
+                                        ?.full_name ??
+                                    'Көрсетілмеген'}
+                                {project.attraction_handover_rejected_at
+                                    ? ` · ${formatProjectDate(
+                                          project.attraction_handover_rejected_at,
+                                          true,
+                                      )}`
+                                    : ''}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 <DetailSectionNav
                     ariaLabel="Жоба бөлімдері"
@@ -1364,6 +1413,19 @@ export default function Show({
                                                         'Көрсетілмеген'}
                                                 </p>
                                             </div>
+                                            {project.status === 'plan' && (
+                                                <div className="rounded-lg border border-gray-200 p-4">
+                                                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                        <Flag className="h-3.5 w-3.5" />{' '}
+                                                        Инвестор елі
+                                                    </p>
+                                                    <p className="text-sm font-bold text-[#0f1b3d]">
+                                                        {investorCountryLabel(
+                                                            project.investor_country_code,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
                                             <div className="rounded-lg border border-gray-200 p-4">
                                                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                     <FileText className="h-3.5 w-3.5" />{' '}
@@ -1810,7 +1872,19 @@ export default function Show({
                                     project.attraction_decline_reason
                                 }
                                 resumeOn={project.attraction_resume_on}
+                                handoverRejectionReason={
+                                    project.attraction_handover_rejection_reason
+                                }
+                                handoverRejectedAt={
+                                    project.attraction_handover_rejected_at
+                                }
+                                handoverRejectedBy={
+                                    project.attraction_handover_rejector ??
+                                    project.attractionHandoverRejector
+                                }
                                 canAccept={canAcceptAttractionHandover}
+                                decisionMode={handoverDecisionMode}
+                                canResubmit={canResubmitAttractionHandover}
                                 historical={project.status !== 'plan'}
                                 collapsible={
                                     project.status === 'implementation'
@@ -2345,7 +2419,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {(isSuperAdmin || isProkuror) && (
+                                {isSuperAdmin && (
                                     <Link
                                         href={`/investment-projects/${project.id}/logs`}
                                         className="w-full"
@@ -2359,7 +2433,7 @@ export default function Show({
                                         </Button>
                                     </Link>
                                 )}
-                                {canEditProject && (
+                                {mayArchiveProject && (
                                     <Button
                                         variant="outline"
                                         className="w-full justify-start border-amber-200 text-amber-700 hover:bg-amber-50"
@@ -2401,7 +2475,7 @@ export default function Show({
                         <section
                             id="project-team"
                             aria-labelledby="project-team-title"
-                            className="scroll-mt-24 rounded-xl border border-slate-200 bg-white"
+                            className="scroll-mt-24 rounded-xl border border-slate-200 bg-white pb-5"
                         >
                             <h2
                                 id="project-team-title"

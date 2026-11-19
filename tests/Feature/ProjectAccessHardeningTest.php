@@ -63,13 +63,15 @@ test('regional deputies can read projects in their oblast but not another oblast
 test('direction colleagues can manage projects and the audit identifies the actual editor', function (string $direction) {
     $owner = hardenedProjectUser('invest', ['invest_sub_role' => $direction]);
     $colleague = hardenedProjectUser('invest', ['invest_sub_role' => $direction]);
-    $project = hardenedProject($owner);
+    $status = $direction === 'turkistan_invest' ? 'implementation' : 'plan';
+    $project = hardenedProject($owner, status: $status);
     $this->actingAs($colleague)->get(route('investment-projects.show', $project))
         ->assertOk()->assertInertia(fn (Assert $page) => $page->where('canManageProject', true));
     $this->get(route('investment-projects.edit', $project))->assertOk();
     $this->put(route('investment-projects.update', $project), [
         'name' => 'Updated by a direction colleague', 'region_id' => $project->region_id,
-        'status' => 'plan', 'attraction_stage' => 'potential', 'total_investment' => 100,
+        'status' => $status, 'attraction_stage' => 'potential', 'total_investment' => 100,
+        'investor_country_code' => $status === 'plan' ? 'TR' : null,
     ])->assertRedirect()->assertSessionHasNoErrors();
 
     $project->refresh();
@@ -88,7 +90,7 @@ test('direction colleagues can manage projects and the audit identifies the actu
     $this->post(route('investment-projects.unarchive', $project))->assertRedirect();
     $this->delete(route('investment-projects.destroy', $project))->assertRedirect();
     expect($project->fresh()->is_deleted)->toBeTrue();
-})->with(['turkistan_invest', 'aea', 'ia', 'prom_zone']);
+})->with(['turkistan_invest', 'turkistan_invest_attraction', 'aea', 'ia', 'prom_zone']);
 
 test('direction colleagues can create attraction work and roadmap tasks with their own authorship', function (string $direction) {
     $owner = hardenedProjectUser('invest', ['invest_sub_role' => $direction]);
@@ -114,12 +116,13 @@ test('direction colleagues can create attraction work and roadmap tasks with the
         expect($log->user_id)->toBe($colleague->id)
             ->and($log->properties['actor_name'])->toBe($colleague->full_name);
     }
-})->with(['turkistan_invest', 'aea', 'ia', 'prom_zone']);
+})->with(['aea', 'ia', 'prom_zone']);
 
 test('shared management does not grant access across Invest directions', function (string $direction) {
     $owner = hardenedProjectUser('invest', ['invest_sub_role' => $direction]);
-    $project = hardenedProject($owner);
-    foreach (array_diff(['turkistan_invest', 'aea', 'ia', 'prom_zone'], [$direction]) as $otherDirection) {
+    $status = $direction === 'turkistan_invest' ? 'implementation' : 'plan';
+    $project = hardenedProject($owner, status: $status);
+    foreach (array_diff(['turkistan_invest', 'turkistan_invest_attraction', 'aea', 'ia', 'prom_zone'], [$direction]) as $otherDirection) {
         $outsider = hardenedProjectUser('invest', ['invest_sub_role' => $otherDirection]);
         expect(app(InvestmentProjectAccessService::class)->canManage($outsider, $project))->toBeFalse();
         $this->actingAs($outsider)->get(route('investment-projects.show', $project))->assertForbidden();
@@ -132,7 +135,7 @@ test('shared management does not grant access across Invest directions', functio
     }
     expect($project->fresh()->name)->toBe('Access test project')
         ->and(KpiLog::where('project_id', $project->id)->where('event', 'project.updated')->exists())->toBeFalse();
-})->with(['turkistan_invest', 'aea', 'ia', 'prom_zone']);
+})->with(['turkistan_invest', 'turkistan_invest_attraction', 'aea', 'ia', 'prom_zone']);
 
 test('Invest users without a direction still require direct curatorship', function () {
     $owner = hardenedProjectUser('invest', ['invest_sub_role' => null]);

@@ -129,9 +129,19 @@ class BaskarmaRatingController extends Controller
 
         $now = now()->startOfDay();
 
-        $tasks = ProjectTask::where('assigned_to', $user->id)
+        $tasksQuery = ProjectTask::where('assigned_to', $user->id)
             ->where('approval_status', 'approved')
-            ->whereHas('project', fn ($project) => $project->active()->where('status', '!=', 'plan'))
+            ->whereHas('project', fn ($project) => $project->active()->where('status', '!=', 'plan'));
+
+        if ($roleName === 'invest') {
+            $tasksQuery->whereHas(
+                'project',
+                fn ($project) => $this->projectAccess
+                    ->scopeVisible($project, $currentUser)
+            );
+        }
+
+        $tasks = $tasksQuery
             ->with(['project:id,name,region_id', 'project.region:id,name', 'latestCompletion'])
             ->get();
         $visibleProjectIds = array_fill_keys(

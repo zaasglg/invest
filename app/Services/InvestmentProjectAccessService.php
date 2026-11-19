@@ -5,11 +5,14 @@ namespace App\Services;
 use App\Models\InvestmentProject;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 
 class InvestmentProjectAccessService
 {
-    public function scopeVisible(Builder $query, User $user): Builder
-    {
+    public function scopeVisible(
+        Builder|Relation $query,
+        User $user
+    ): Builder|Relation {
         $user->loadMissing(['roleModel', 'region']);
         $roleName = $user->roleModel?->name;
 
@@ -48,11 +51,12 @@ class InvestmentProjectAccessService
 
             if (in_array(
                 $subRole,
-                ['turkistan_invest', 'aea', 'ia', 'prom_zone'],
+                User::INVEST_SUB_ROLES,
                 true
             )) {
-                if ($subRole === 'turkistan_invest') {
+                if ($user->isTurkistanInvestDirection()) {
                     $query->curatedByTurkistanInvest();
+                    $this->scopeTurkistanInvestProjectStatus($query, $user);
                 } else {
                     $query->whereHas(
                         'curators',
@@ -79,6 +83,11 @@ class InvestmentProjectAccessService
             return true;
         }
 
+        if ($user->isTurkistanInvestAccompaniment()
+            && $this->canViewPendingReserve($user, $project)) {
+            return true;
+        }
+
         return $this->scopeVisible(
             InvestmentProject::query()->whereKey($project->id),
             $user
@@ -97,8 +106,59 @@ class InvestmentProjectAccessService
         return $user->roleModel?->name !== 'invest'
             // Known Invest directions share management of their visible projects.
             // canView above still enforces the direction and regional boundaries.
-            || in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true)
+            || in_array($user->invest_sub_role, User::INVEST_SUB_ROLES, true)
             || $project->curators()->whereKey($user->id)->exists()
             || (! $project->curators()->exists() && (int) $project->created_by === (int) $user->id);
+    }
+
+    private function scopeTurkistanInvestProjectStatus(
+        Builder|Relation $query,
+        User $user
+    ): void {
+        $model = $query instanceof Relation
+            ? $query->getRelated()
+            : $query->getModel();
+        $statusColumn = $model->qualifyColumn('status');
+
+        if ($user->isTurkistanInvestAttraction()) {
+            $handoverToColumn = $model->qualifyColumn(
+                'attraction_handover_to_id'
+            );
+            $handoverRequesterColumn = $model->qualifyColumn(
+                'attraction_handover_requested_by'
+            );
+            $query
+                ->where($statusColumn, 'plan')
+                ->where(fn (Builder $visible) => $visible
+                    ->withoutPendingAttractionReserve()
+                    ->orWhere($handoverToColumn, $user->id)
+                    ->orWhere($handoverRequesterColumn, $user->id));
+
+            return;
+        }
+
+        $query->where($statusColumn, '!=', 'plan');
+    }
+
+    private function canViewPendingReserve(
+        User $user,
+        InvestmentProject $project
+    ): bool {
+        if ($user->region_id
+            && (int) $project->region_id !== (int) $user->region_id) {
+            return false;
+        }
+
+        return InvestmentProject::query()
+            ->active()
+            ->curatedByTurkistanInvest()
+            ->whereKey($project->id)
+            ->where('status', 'plan')
+            ->where('attraction_stage', 'handover')
+            ->whereNull('attraction_handover_to_id')
+            ->whereNotNull('attraction_handover_requested_at')
+            ->whereNull('attraction_handover_accepted_at')
+            ->whereNull('attraction_handover_rejected_at')
+            ->exists();
     }
 }

@@ -29,7 +29,6 @@ final class ProjectAttractionStages
 
         $missing = match ($stage) {
             'handover' => $project->attraction_stage !== 'handover'
-                || ! $project->attraction_handover_to_id
                 || ! $project->attraction_handover_requested_at,
             'declined' => blank($project->attraction_decline_reason),
             'paused' => ! $project->attraction_resume_on,
@@ -38,7 +37,7 @@ final class ProjectAttractionStages
 
         if ($missing) {
             throw ValidationException::withMessages([
-                'attraction_stage' => 'Осы кезең үшін жоба деректерін өзгерту бөлімінде қабылдаушыны, бас тарту себебін немесе қайта байланысу күнін толтырыңыз.',
+                'attraction_stage' => 'Осы кезең үшін жоба деректерін өзгерту бөлімінде сүйемелдеуге беру сұрауын, бас тарту себебін немесе қайта байланысу күнін толтырыңыз.',
             ]);
         }
     }
@@ -46,7 +45,7 @@ final class ProjectAttractionStages
     public static function canRestore(InvestmentProject $project, string $stage): bool
     {
         return match ($stage) {
-            'handover' => $project->attraction_handover_to_id !== null && $project->attraction_handover_requested_at !== null,
+            'handover' => $project->attraction_handover_requested_at !== null,
             'declined' => filled($project->attraction_decline_reason),
             'paused' => $project->attraction_resume_on !== null,
             default => array_key_exists($stage, self::LABELS),

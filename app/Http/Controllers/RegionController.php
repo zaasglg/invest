@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\InvestmentProject;
 use App\Models\Region;
+use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use App\Services\SortOrderService;
 use Illuminate\Http\Request;
@@ -196,10 +197,14 @@ class RegionController extends Controller
 
         // Determine which entity sections the invest sub-role can access.
         $subRole = ($roleName === 'invest') ? $user->invest_sub_role : null;
-        $canSeeSez = ! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true);
-        $canSeeIz = ! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true);
-        $canSeeProm = ! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true);
-        $canSeeSubsoil = ! $subRole || $subRole === 'turkistan_invest';
+        $canSeeSez = ! $subRole || $subRole === 'aea'
+            || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true);
+        $canSeeIz = ! $subRole || $subRole === 'ia'
+            || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true);
+        $canSeeProm = ! $subRole || $subRole === 'prom_zone'
+            || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true);
+        $canSeeSubsoil = ! $subRole
+            || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true);
 
         // SEZ issues count
         $sezIssuesCount = $canSeeSez && ! $isInvestor

@@ -116,7 +116,7 @@ test('moderator sees the active and archived turkistan invest project scope', fu
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
-        'turkistan_invest'
+        'turkistan_invest_attraction'
     );
     $otherInvest = createModeratorScopeUser('invest', 'aea');
     $dependencies = createModeratorScopeProjectDependencies();
@@ -173,7 +173,7 @@ test('moderator creates a turkistan invest project as its curator', function () 
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
-        'turkistan_invest'
+        'turkistan_invest_attraction'
     );
     $otherInvest = createModeratorScopeUser('invest', 'aea');
     $dependencies = createModeratorScopeProjectDependencies();
@@ -213,7 +213,7 @@ test('moderator can edit scoped projects but cannot mutate other resources', fun
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
-        'turkistan_invest'
+        'turkistan_invest_attraction'
     );
     $otherInvest = createModeratorScopeUser('invest', 'ia');
     $dependencies = createModeratorScopeProjectDependencies();
@@ -276,7 +276,7 @@ test('moderator joins only turkistan invest project chats', function () {
     $moderator = createModeratorScopeUser('moderator');
     $turkistanInvest = createModeratorScopeUser(
         'invest',
-        'turkistan_invest'
+        'turkistan_invest_attraction'
     );
     $otherInvest = createModeratorScopeUser('invest', 'prom_zone');
     $dependencies = createModeratorScopeProjectDependencies();

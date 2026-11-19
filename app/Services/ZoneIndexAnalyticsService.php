@@ -19,7 +19,8 @@ class ZoneIndexAnalyticsService
     ];
 
     public function __construct(
-        private readonly InfrastructureUsageService $usage
+        private readonly InfrastructureUsageService $usage,
+        private readonly InvestmentProjectAccessService $projectAccess,
     ) {}
 
     /**
@@ -30,10 +31,9 @@ class ZoneIndexAnalyticsService
     public function build(
         string $modelClass,
         User $user,
-        array $filters,
-        bool $moderator = false
+        array $filters
     ): array {
-        $query = $this->zoneQuery($modelClass, $user, $moderator);
+        $query = $this->zoneQuery($modelClass, $user);
         $allZones = (clone $query)->get();
 
         if (filled($filters['search'] ?? null)) {
@@ -68,24 +68,17 @@ class ZoneIndexAnalyticsService
     /** @param class-string<Model> $modelClass */
     private function zoneQuery(
         string $modelClass,
-        User $user,
-        bool $moderator
+        User $user
     ): Builder {
         $query = $modelClass::query();
         $this->scopeVisible($query, $user);
 
         return $query->with([
             'region:id,name,parent_id,type',
-            'investmentProjects' => function ($projects) use (
-                $moderator
-            ): void {
+            'investmentProjects' => function ($projects) use ($user): void {
+                $projects->where('is_archived', false);
+                $this->projectAccess->scopeVisible($projects, $user);
                 $projects
-                    ->where('is_archived', false)
-                    ->when(
-                        $moderator,
-                        fn ($query) => $query
-                            ->curatedByTurkistanInvest()
-                    )
                     ->select([
                         'investment_projects.id',
                         'name',

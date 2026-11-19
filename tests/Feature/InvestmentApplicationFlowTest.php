@@ -373,13 +373,13 @@ test('investor zone detail only shows their company projects in that zone', func
             ->missing('sez.issues'));
 });
 
-test('submitted applications do not reserve land and approval reserves it', function () {
+test('submitted applications do not reserve land and approval reserves it', function (string $investSubRole) {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
     $reviewer = applicationUser('invest', [
         'region_id' => $region->id,
-        'invest_sub_role' => 'aea',
+        'invest_sub_role' => $investSubRole,
     ]);
 
     $this->actingAs($applicant)
@@ -421,7 +421,11 @@ test('submitted applications do not reserve land and approval reserves it', func
         ->and($application->reserved_until)->not->toBeNull()
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(75.0);
-});
+})->with([
+    'AEA reviewer' => 'aea',
+    'Turkistan Invest accompaniment reviewer' => 'turkistan_invest',
+    'Turkistan Invest attraction reviewer' => 'turkistan_invest_attraction',
+]);
 
 test('invest reviewer can set schedule for a legacy approved application', function () {
     $region = applicationRegion();

@@ -89,7 +89,7 @@ class UserController extends Controller
             'invest_sub_role' => [
                 $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
                 'nullable',
-                'in:turkistan_invest,aea,ia,prom_zone',
+                Rule::in(User::INVEST_SUB_ROLES),
             ],
         ]);
 
@@ -184,7 +184,7 @@ class UserController extends Controller
             'invest_sub_role' => [
                 $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
                 'nullable',
-                'in:turkistan_invest,aea,ia,prom_zone',
+                Rule::in(User::INVEST_SUB_ROLES),
             ],
         ]);
 

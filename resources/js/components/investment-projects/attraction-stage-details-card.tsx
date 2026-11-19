@@ -1,7 +1,15 @@
 import { useForm } from '@inertiajs/react';
-import { CalendarClock, CheckCircle2, ChevronDown, Users } from 'lucide-react';
+import {
+    AlertTriangle,
+    CalendarClock,
+    CheckCircle2,
+    ChevronDown,
+    RotateCcw,
+    Users,
+    XCircle,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -12,8 +20,21 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '@/components/ui/collapsible';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import * as handoverRoutes from '@/routes/investment-projects/attraction-handover';
+import * as reserveRoutes from '@/routes/project-reserves';
+
+type HandoverDecisionMode = 'named-attraction' | 'support-reserve';
 
 interface Props {
     projectId: number;
@@ -24,7 +45,12 @@ interface Props {
     acceptedBy?: { full_name: string } | null;
     declineReason?: string | null;
     resumeOn?: string | null;
-    canAccept: boolean;
+    handoverRejectionReason?: string | null;
+    handoverRejectedAt?: string | null;
+    handoverRejectedBy?: { full_name: string } | null;
+    canAccept?: boolean;
+    decisionMode?: HandoverDecisionMode | null;
+    canResubmit?: boolean;
     historical?: boolean;
     collapsible?: boolean;
     children?: ReactNode;
@@ -55,21 +81,70 @@ export default function AttractionStageDetailsCard({
     acceptedBy,
     declineReason,
     resumeOn,
-    canAccept,
+    handoverRejectionReason,
+    handoverRejectedAt,
+    handoverRejectedBy,
+    canAccept = false,
+    decisionMode = null,
+    canResubmit = false,
     historical = false,
     collapsible = false,
     children,
 }: Props) {
-    const form = useForm({});
+    const acceptanceForm = useForm({});
+    const rejectionForm = useForm({ rejection_reason: '' });
+    const resubmissionForm = useForm({});
     const [open, setOpen] = useState(false);
+    const [rejectionDialogOpen, setRejectionDialogOpen] = useState(false);
     const expanded = !collapsible || open;
+    const effectiveDecisionMode =
+        decisionMode ?? (canAccept ? 'named-attraction' : null);
     const showHandover =
         stage === 'handover' ||
-        Boolean(handoverTo || requestedAt || acceptedAt);
+        Boolean(requestedAt || acceptedAt || handoverRejectionReason);
     const showDecline =
         stage === 'declined' || (historical && Boolean(declineReason));
     const showPause = stage === 'paused' || (historical && Boolean(resumeOn));
     const hasDetails = showHandover || showDecline || showPause;
+
+    const submitAcceptance = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+
+        const url =
+            effectiveDecisionMode === 'support-reserve'
+                ? reserveRoutes.accept.url(projectId)
+                : handoverRoutes.accept.url(projectId);
+
+        acceptanceForm.post(url, { preserveScroll: true });
+    };
+
+    const submitRejection = (event: FormEvent<HTMLFormElement>) => {
+        event.preventDefault();
+        const reason = rejectionForm.data.rejection_reason.trim();
+
+        if (reason.length < 3) {
+            rejectionForm.setError(
+                'rejection_reason',
+                'Кері қайтару себебін кемінде 3 таңбамен жазыңыз.',
+            );
+            return;
+        }
+
+        rejectionForm.transform(() => ({ rejection_reason: reason }));
+        rejectionForm.post(handoverRoutes.reject.url(projectId), {
+            preserveScroll: true,
+            onSuccess: () => {
+                rejectionForm.reset();
+                setRejectionDialogOpen(false);
+            },
+        });
+    };
+
+    const submitResubmission = () => {
+        resubmissionForm.post(handoverRoutes.resubmit.url(projectId), {
+            preserveScroll: true,
+        });
+    };
 
     useEffect(() => {
         if (!collapsible) return;
@@ -150,25 +225,31 @@ export default function AttractionStageDetailsCard({
                                         <Badge
                                             variant="outline"
                                             className={
-                                                acceptedAt
-                                                    ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                                                    : 'border-amber-200 bg-amber-50 text-amber-800'
+                                                handoverRejectionReason
+                                                    ? 'border-rose-200 bg-rose-50 text-rose-700'
+                                                    : acceptedAt
+                                                      ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                                      : 'border-amber-200 bg-amber-50 text-amber-800'
                                             }
                                         >
-                                            {acceptedAt
-                                                ? 'Қабылданды'
-                                                : historical
-                                                  ? 'Қабылданбаған'
-                                                  : 'Қабылдауды күтуде'}
+                                            {handoverRejectionReason
+                                                ? 'Кері қайтарылған'
+                                                : acceptedAt
+                                                  ? 'Қабылданды'
+                                                  : historical
+                                                    ? 'Қабылданбаған'
+                                                    : 'Қабылдауды күтуде'}
                                         </Badge>
                                     </div>
                                     <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-[180px_1fr]">
                                         <dt className="text-slate-500">
-                                            Қабылдайтын адам
+                                            Қабылдайтын жауапты
                                         </dt>
                                         <dd>
                                             {handoverTo?.full_name ??
-                                                'Белгіленбеген'}
+                                                (requestedAt
+                                                    ? 'Сүйемелдеу резерві'
+                                                    : 'Белгіленбеген')}
                                         </dd>
                                         <dt className="text-slate-500">
                                             Берілген күні
@@ -188,25 +269,20 @@ export default function AttractionStageDetailsCard({
                                             </>
                                         )}
                                     </dl>
-                                    {canAccept && !acceptedAt && (
+                                    {effectiveDecisionMode && !acceptedAt && (
                                         <form
-                                            onSubmit={(event) => {
-                                                event.preventDefault();
-                                                form.post(
-                                                    handoverRoutes.accept.url(
-                                                        projectId,
-                                                    ),
-                                                    { preserveScroll: true },
-                                                );
-                                            }}
+                                            onSubmit={submitAcceptance}
                                             className="space-y-2 border-t border-slate-200 pt-3"
                                         >
                                             <p className="text-xs leading-relaxed text-slate-500">
-                                                Қабылдауды растағаннан кейін
-                                                жоба сізге сүйемелдеуге берілген
-                                                болып белгіленеді.
+                                                {effectiveDecisionMode ===
+                                                'support-reserve'
+                                                    ? 'Қабылданған жоба резервтен негізгі сүйемелдеу жобаларына өтеді.'
+                                                    : 'Қабылданған жоба сүйемелдеу бағытының резервіне жіберіледі.'}
                                             </p>
-                                            {Object.values(form.errors)
+                                            {Object.values(
+                                                acceptanceForm.errors,
+                                            )
                                                 .filter(
                                                     (error): error is string =>
                                                         typeof error ===
@@ -218,17 +294,91 @@ export default function AttractionStageDetailsCard({
                                                         message={error}
                                                     />
                                                 ))}
-                                            <Button
-                                                type="submit"
-                                                disabled={form.processing}
-                                                size="sm"
-                                            >
-                                                <CheckCircle2 className="mr-2 size-4" />
-                                                {form.processing
-                                                    ? 'Расталуда…'
-                                                    : 'Сүйемелдеуге қабылдау'}
-                                            </Button>
+                                            <div className="flex flex-wrap gap-2">
+                                                <Button
+                                                    type="submit"
+                                                    disabled={
+                                                        acceptanceForm.processing ||
+                                                        rejectionForm.processing
+                                                    }
+                                                    size="sm"
+                                                >
+                                                    <CheckCircle2 className="mr-2 size-4" />
+                                                    {acceptanceForm.processing
+                                                        ? 'Қабылдануда…'
+                                                        : 'Қабылдау'}
+                                                </Button>
+                                                <Button
+                                                    type="button"
+                                                    variant="outline"
+                                                    size="sm"
+                                                    className="border-rose-200 text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                                    disabled={
+                                                        acceptanceForm.processing ||
+                                                        rejectionForm.processing
+                                                    }
+                                                    onClick={() =>
+                                                        setRejectionDialogOpen(
+                                                            true,
+                                                        )
+                                                    }
+                                                >
+                                                    <XCircle className="mr-2 size-4" />
+                                                    Кері қайтару
+                                                </Button>
+                                            </div>
                                         </form>
+                                    )}
+                                    {handoverRejectionReason && (
+                                        <div className="flex items-start gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3">
+                                            <AlertTriangle className="mt-0.5 size-4 shrink-0 text-rose-600" />
+                                            <div className="min-w-0 space-y-1">
+                                                <p className="font-semibold text-rose-950">
+                                                    Кері қайтару себебі
+                                                </p>
+                                                <p className="break-words whitespace-pre-wrap text-rose-900">
+                                                    {handoverRejectionReason}
+                                                </p>
+                                                <p className="text-xs text-rose-700">
+                                                    {handoverRejectedBy?.full_name ??
+                                                        'Қайтарған маман көрсетілмеген'}
+                                                    {handoverRejectedAt
+                                                        ? ` · ${dateLabel(handoverRejectedAt)}`
+                                                        : ''}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {canResubmit && handoverRejectionReason && (
+                                        <div className="border-t border-slate-200 pt-3">
+                                            <Button
+                                                type="button"
+                                                size="sm"
+                                                disabled={
+                                                    resubmissionForm.processing
+                                                }
+                                                onClick={submitResubmission}
+                                            >
+                                                <RotateCcw className="mr-2 size-4" />
+                                                {resubmissionForm.processing
+                                                    ? 'Жіберілуде…'
+                                                    : 'Қайта сүйемелдеуге жіберу'}
+                                            </Button>
+                                            {Object.values(
+                                                resubmissionForm.errors,
+                                            )
+                                                .filter(
+                                                    (error): error is string =>
+                                                        typeof error ===
+                                                        'string',
+                                                )
+                                                .map((error) => (
+                                                    <InputError
+                                                        key={error}
+                                                        message={error}
+                                                    />
+                                                ))}
+                                        </div>
                                     )}
                                 </div>
                             )}
@@ -263,6 +413,86 @@ export default function AttractionStageDetailsCard({
                         </div>
                     )}
                 </CollapsibleContent>
+                <Dialog
+                    open={rejectionDialogOpen}
+                    onOpenChange={(nextOpen) => {
+                        setRejectionDialogOpen(nextOpen);
+                        if (!nextOpen) {
+                            rejectionForm.clearErrors();
+                        }
+                    }}
+                >
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Жобаны кері қайтару</DialogTitle>
+                            <DialogDescription>
+                                Жобаны берген маман түзету себебін көруі үшін
+                                нақты түсіндірме жазыңыз.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <form onSubmit={submitRejection} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="handover-rejection-reason">
+                                    Кері қайтару себебі{' '}
+                                    <span className="text-rose-600">*</span>
+                                </Label>
+                                <Textarea
+                                    id="handover-rejection-reason"
+                                    value={rejectionForm.data.rejection_reason}
+                                    minLength={3}
+                                    maxLength={1000}
+                                    required
+                                    className="min-h-28"
+                                    placeholder="Қандай мәліметті түзету керегін жазыңыз"
+                                    onChange={(event) => {
+                                        rejectionForm.setData(
+                                            'rejection_reason',
+                                            event.target.value,
+                                        );
+                                        rejectionForm.clearErrors(
+                                            'rejection_reason',
+                                        );
+                                    }}
+                                />
+                                <div className="flex items-start justify-between gap-3">
+                                    <InputError
+                                        message={
+                                            rejectionForm.errors
+                                                .rejection_reason
+                                        }
+                                    />
+                                    <span className="ml-auto shrink-0 text-xs text-slate-400">
+                                        {
+                                            rejectionForm.data.rejection_reason
+                                                .length
+                                        }
+                                        /1000
+                                    </span>
+                                </div>
+                            </div>
+                            <DialogFooter>
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() =>
+                                        setRejectionDialogOpen(false)
+                                    }
+                                >
+                                    Болдырмау
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    disabled={rejectionForm.processing}
+                                >
+                                    {rejectionForm.processing
+                                        ? 'Қайтарылуда…'
+                                        : 'Кері қайтару'}
+                                </Button>
+                            </DialogFooter>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </Card>
         </Collapsible>
     );

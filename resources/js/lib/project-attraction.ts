@@ -20,14 +20,14 @@ export type AttractionStage = (typeof ATTRACTION_STAGES)[number]['value'];
 export function attractionStageDetailErrors(
     stage: string,
     value: {
-        attraction_handover_to_id: string;
+        attraction_handover_to_id?: string;
         attraction_decline_reason: string;
         attraction_resume_on: string;
     },
 ): Record<string, string> {
     if (stage === 'handover' && !value.attraction_handover_to_id) {
         return {
-            attraction_handover_to_id: 'Қабылдайтын жауапты адамды таңдаңыз',
+            attraction_handover_to_id: 'Қабылдайтын адамды таңдаңыз',
         };
     }
     if (stage === 'declined' && !value.attraction_decline_reason.trim()) {

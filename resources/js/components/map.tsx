@@ -22,6 +22,7 @@ import {
     useMap,
 } from 'react-leaflet';
 import { Button } from '@/components/ui/button';
+import { isTurkistanInvestSubRole } from '@/lib/invest-sub-role';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
@@ -2001,7 +2002,9 @@ export default function Map({
                     const rows: { key: string; label: string; d: SectorRow }[] =
                         [
                             ...(data.all_projects &&
-                            activeUser?.invest_sub_role !== 'turkistan_invest'
+                            !isTurkistanInvestSubRole(
+                                activeUser?.invest_sub_role,
+                            )
                                 ? [
                                       {
                                           key: 'all_projects',
@@ -2011,7 +2014,7 @@ export default function Map({
                                   ]
                                 : []),
                             ...(!activeUser?.invest_sub_role ||
-                            activeUser.invest_sub_role === 'turkistan_invest'
+                            isTurkistanInvestSubRole(activeUser.invest_sub_role)
                                 ? [
                                       {
                                           key: 'invest',

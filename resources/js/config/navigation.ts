@@ -5,6 +5,8 @@ import {
     Building2,
     Factory,
     Folder,
+    Handshake,
+    Inbox,
     LayoutDashboard,
     Layers,
     Map as MapIcon,
@@ -13,14 +15,22 @@ import {
     Tags,
     Users,
 } from 'lucide-react';
+import {
+    investmentProjectCollectionLabel,
+    isTurkistanInvestAttractionSubRole,
+    isTurkistanInvestSubRole,
+    TURKISTAN_INVEST_SUPPORT_SUB_ROLE,
+} from '@/lib/invest-sub-role';
 import { dashboard } from '@/routes';
 import * as akim from '@/routes/akim';
 import * as applicant from '@/routes/applicant';
 import * as applicantApplications from '@/routes/applicant/applications';
+import * as attractionHandovers from '@/routes/attraction-handovers';
 import * as companies from '@/routes/companies';
 import * as industrialZones from '@/routes/industrial-zones';
 import * as investmentApplications from '@/routes/investment-applications';
 import * as investmentProjects from '@/routes/investment-projects';
+import * as projectReserves from '@/routes/project-reserves';
 import * as projectTypes from '@/routes/project-types';
 import * as promZones from '@/routes/prom-zones';
 import * as regions from '@/routes/regions';
@@ -78,6 +88,16 @@ export const projectNavItems: NavItem[] = [
         icon: Briefcase,
     },
     {
+        title: 'Резервтер',
+        href: projectReserves.index.url(),
+        icon: Inbox,
+    },
+    {
+        title: 'Сүйемелдеу',
+        href: attractionHandovers.index.url(),
+        icon: Handshake,
+    },
+    {
         title: 'Компаниялар',
         href: companies.index.url(),
         icon: Building2,
@@ -125,12 +145,27 @@ export const headerNavItems: NavItem[] = [
         icon: Briefcase,
     },
     {
+        title: 'Резервтер',
+        href: projectReserves.index.url(),
+        icon: Inbox,
+    },
+    {
+        title: 'Сүйемелдеу',
+        href: attractionHandovers.index.url(),
+        icon: Handshake,
+    },
+    {
         title: 'Инвестор өтінімдері',
         href: investmentApplications.index.url(),
         icon: ClipboardList,
     },
     ...zoneNavItems,
-    ...projectNavItems.filter((item) => item.title !== 'Инвестициялық жобалар'),
+    ...projectNavItems.filter(
+        (item) =>
+            !['Инвестициялық жобалар', 'Резервтер', 'Сүйемелдеу'].includes(
+                item.title,
+            ),
+    ),
     ...adminNavItems.filter(
         (item) => item.title !== 'Пайдаланушылар' && item.title !== 'Рөлдер',
     ),
@@ -172,7 +207,7 @@ const HIDDEN_NAV_TITLES_BY_INVEST_SUB_ROLE: Record<string, Set<string>> = {
     aea: new Set(['ИА', 'Пром зона', 'Жер қойнауын пайдалану']),
     ia: new Set(['АЭА', 'Пром зона', 'Жер қойнауын пайдалану']),
     prom_zone: new Set(['АЭА', 'ИА', 'Жер қойнауын пайдалану']),
-    // turkistan_invest sees everything — no entry needed
+    // Both Turkistan Invest directions see every sector — no entries needed.
 };
 
 const normalizeRoleKey = (value: string) =>
@@ -265,6 +300,21 @@ export const filterNavItemsByRole = (
         );
     }
 
+    if (
+        roleKey !== 'invest' ||
+        user?.invest_sub_role !== TURKISTAN_INVEST_SUPPORT_SUB_ROLE
+    ) {
+        filteredItems = filteredItems.filter(
+            (item) => item.href !== projectReserves.index.url(),
+        );
+    }
+
+    if (!isTurkistanInvestAttractionSubRole(user?.invest_sub_role)) {
+        filteredItems = filteredItems.filter(
+            (item) => item.href !== attractionHandovers.index.url(),
+        );
+    }
+
     const canViewAllRegions =
         user?.role_model?.name === 'superadmin' ||
         user?.role === 'superadmin' ||
@@ -283,7 +333,10 @@ export const filterNavItemsByRole = (
 
     if (!roleKey) return filteredItems;
 
-    if (roleKey === 'invest' && user?.invest_sub_role !== 'turkistan_invest') {
+    if (
+        roleKey === 'invest' &&
+        !isTurkistanInvestSubRole(user?.invest_sub_role)
+    ) {
         filteredItems = filteredItems.filter(
             (item) => item.href !== companies.index.url(),
         );
@@ -303,6 +356,19 @@ export const filterNavItemsByRole = (
                 (item) => !subRoleHidden.has(item.title),
             );
         }
+    }
+
+    if (isTurkistanInvestAttractionSubRole(user?.invest_sub_role)) {
+        filteredItems = filteredItems.map((item) =>
+            item.href === investmentProjects.index.url()
+                ? {
+                      ...item,
+                      title: investmentProjectCollectionLabel(
+                          user?.invest_sub_role,
+                      ),
+                  }
+                : item,
+        );
     }
 
     if (roleKey === 'investor') {

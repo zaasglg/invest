@@ -158,9 +158,25 @@ Route::post('investment-projects/reorder', [\App\Http\Controllers\InvestmentProj
     ->middleware(['auth', 'role.access'])
     ->name('investment-projects.reorder');
 
+Route::get('investment-projects/handover', \App\Http\Controllers\AttractionHandoverController::class)
+    ->middleware(['auth', 'role.access'])
+    ->name('attraction-handovers.index');
+
 Route::post('investment-projects/{investmentProject}/move-to-page', [\App\Http\Controllers\InvestmentProjectController::class, 'moveToPage'])
     ->middleware(['auth', 'role.access'])
     ->name('investment-projects.moveToPage');
+
+Route::get('investment-projects/reserves', [\App\Http\Controllers\ProjectReserveController::class, 'index'])
+    ->middleware(['auth', 'role.access'])
+    ->name('project-reserves.index');
+
+Route::post('investment-projects/{investmentProject}/reserve/accept', [\App\Http\Controllers\ProjectReserveController::class, 'accept'])
+    ->middleware(['auth', 'role.access'])
+    ->name('project-reserves.accept');
+
+Route::post('investment-projects/{investmentProject}/reserve/reject', [\App\Http\Controllers\ProjectReserveController::class, 'reject'])
+    ->middleware(['auth', 'role.access'])
+    ->name('project-reserves.reject');
 
 Route::resource('investment-projects', \App\Http\Controllers\InvestmentProjectController::class)
     ->middleware(['auth', 'role.access']);
@@ -220,6 +236,8 @@ Route::prefix('investment-projects/{investmentProject}')->middleware(['auth', 'r
     Route::post('tasks', [\App\Http\Controllers\ProjectTaskController::class, 'store'])->name('investment-projects.tasks.store');
     Route::post('attraction-activities', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'store'])->name('investment-projects.attraction-activities.store');
     Route::post('attraction-handover/accept', \App\Http\Controllers\ProjectAttractionHandoverController::class)->name('investment-projects.attraction-handover.accept');
+    Route::post('attraction-handover/reject', \App\Http\Controllers\ProjectAttractionHandoverRejectionController::class)->name('investment-projects.attraction-handover.reject');
+    Route::post('attraction-handover/resubmit', \App\Http\Controllers\ProjectAttractionHandoverResubmissionController::class)->name('investment-projects.attraction-handover.resubmit');
     Route::put('attraction-activities/{activity}', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'update'])->name('investment-projects.attraction-activities.update');
     Route::delete('attraction-activities/{activity}', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'destroy'])->name('investment-projects.attraction-activities.destroy');
     Route::post('attraction-activities/{activity}/report', [\App\Http\Controllers\ProjectAttractionActivityController::class, 'report'])->name('investment-projects.attraction-activities.report');

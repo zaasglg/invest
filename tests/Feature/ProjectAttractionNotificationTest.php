@@ -154,7 +154,7 @@ test('active attraction responsibility preserves access and archived project hid
 });
 
 test('legacy moderator attraction assignments remain visible only while the project is in scope', function () {
-    $manager = attractionNotificationUser('invest', ['invest_sub_role' => 'turkistan_invest']);
+    $manager = attractionNotificationUser('invest', ['invest_sub_role' => 'turkistan_invest_attraction']);
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('moderator');
     $project->curators()->attach($responsible);

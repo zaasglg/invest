@@ -29,7 +29,9 @@ class InvestmentApplicationAccessService
             'aea' => [Sez::class],
             'ia' => [IndustrialZone::class],
             'prom_zone' => [PromZone::class],
-            'turkistan_invest', null => [
+            User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT,
+            User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+            null => [
                 Sez::class,
                 IndustrialZone::class,
                 PromZone::class,

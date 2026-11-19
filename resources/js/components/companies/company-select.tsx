@@ -11,6 +11,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import { getRoleKey } from '@/config/navigation';
+import { isTurkistanInvestSubRole } from '@/lib/invest-sub-role';
 import * as companiesRoutes from '@/routes/companies';
 import type { SharedData } from '@/types';
 
@@ -48,7 +49,7 @@ export default function CompanySelect({
         auth.user?.role === 'superadmin' ||
         roleKey === 'moderator' ||
         (roleKey === 'invest' &&
-            auth.user?.invest_sub_role === 'turkistan_invest');
+            isTurkistanInvestSubRole(auth.user?.invest_sub_role));
     const [search, setSearch] = useState('');
     const searchRef = useRef<HTMLInputElement>(null);
     const selectedCompany = companies.find(

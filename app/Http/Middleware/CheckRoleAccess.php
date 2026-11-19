@@ -690,7 +690,7 @@ class CheckRoleAccess
      * - aea users can only access SEZ sections (not IA / Prom Zone / Subsoil).
      * - ia users can only access Industrial Zones (not AEA / Prom Zone / Subsoil).
      * - prom_zone users can only access Prom Zones (not AEA / IA / Subsoil).
-     * - turkistan_invest users are not restricted here.
+     * - Both Turkistan Invest project directions are not sector-restricted.
      *
      * Invest users share projects curated by colleagues in the same direction.
      * Users without a direction must be direct curators.
@@ -724,7 +724,8 @@ class CheckRoleAccess
         }
 
         // Curator-based access to individual investment projects.
-        // Applies to all invest users (including turkistan_invest).
+        // Applies to every invest user, including both Turkistan Invest
+        // project directions.
         $this->enforceInvestCuratorAccess($request, $user, $routeName);
     }
 
@@ -770,29 +771,12 @@ class CheckRoleAccess
             }
         }
 
-        // If the user has an invest sub-role, allow access to any project
-        // that has at least one curator with the same sub-role (not necessarily
-        // this user specifically). This lets all ia/aea/prom_zone/turkistan_invest
-        // users access projects curated by their peers.
-        $subRole = $user->invest_sub_role;
-        if ($subRole) {
-            $hasSubRoleCurator = $subRole === 'turkistan_invest'
-                ? InvestmentProject::query()
-                    ->whereKey($project->id)
-                    ->curatedByTurkistanInvest()
-                    ->exists()
-                : $project->curators()
-                    ->where('users.invest_sub_role', $subRole)
-                    ->exists();
-            if (! $hasSubRoleCurator) {
-                abort(403, 'Бұл жоба сіздің Invest бағытыңызға кірмейді.');
-            }
-        } else {
-            // No sub-role assigned — must be a direct curator.
-            $isCurator = $project->curators()->where('users.id', $user->id)->exists();
-            if (! $isCurator) {
-                abort(403, 'Сіз бұл жобаның кураторы емессіз.');
-            }
-        }
+        abort_unless(
+            $this->projectAccess->canView($user, $project),
+            403,
+            $user->invest_sub_role
+                ? 'Бұл жоба сіздің Invest бағытыңызға кірмейді.'
+                : 'Сіз бұл жобаның кураторы емессіз.'
+        );
     }
 }
