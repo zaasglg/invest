@@ -97,6 +97,7 @@ class ProjectAttractionService
             $before = [];
             $responsibleChanged = false;
             $definitionChanged = false;
+            $previousResponsible = null;
 
             if ($activity) {
                 abort_unless((int) $activity->project_id === (int) $locked->id, 404);
@@ -106,6 +107,11 @@ class ProjectAttractionService
                 $this->validateResponsible($locked, $actor, $data, $activity);
 
                 $responsibleChanged = (int) $activity->responsible_id !== (int) $data['responsible_id'];
+                if ($responsibleChanged && $activity->responsible_id) {
+                    $previousResponsible = User::query()->find(
+                        $activity->responsible_id
+                    );
+                }
                 $definitionChanged = $responsibleChanged
                     || $activity->next_action !== $data['next_action']
                     || (array_key_exists('description', $data) && $activity->description !== $data['description'])
@@ -149,6 +155,21 @@ class ProjectAttractionService
             }
             if ($responsibleChanged && ($before['responsible_id'] ?? null)) {
                 $this->executors->releaseTaskAssignment($locked, (int) $before['responsible_id']);
+                $this->resolveResponsibilityNotifications(
+                    $activity,
+                    (int) $before['responsible_id']
+                );
+
+                if ($previousResponsible) {
+                    $this->notifyResponsibilityEnded(
+                        $previousResponsible,
+                        $locked,
+                        'attraction_unassigned',
+                        'Сізден инвестор тарту іс-шарасы алынды: "'
+                            .($before['next_action'] ?? $activity->next_action)
+                            .'" (Жоба: '.$locked->name.').'
+                    );
+                }
             }
             if ($alreadyCompleted) {
                 $this->reports->submit($locked, $activity, $actor, $submission, true, $paths);
@@ -228,10 +249,26 @@ class ProjectAttractionService
                 actor: $actor
             );
             $responsibleId = $activity->responsible_id;
+            $responsible = $activity->responsible;
+            $activityName = $activity->next_action;
+            if ($responsibleId) {
+                $this->resolveResponsibilityNotifications(
+                    $activity,
+                    (int) $responsibleId
+                );
+            }
             $paths = $activity->reports()->with('files')->get()->flatMap(fn ($report) => $report->files->pluck('file_path'))->all();
             $activity->delete();
             if ($responsibleId) {
                 $this->executors->releaseTaskAssignment($locked, (int) $responsibleId);
+            }
+            if ($responsible) {
+                $this->notifyResponsibilityEnded(
+                    $responsible,
+                    $locked,
+                    'attraction_cancelled',
+                    "Сізге берілген инвестор тарту іс-шарасы жойылды: \"{$activityName}\" (Жоба: {$locked->name})."
+                );
             }
             DB::afterCommit(function () use ($paths) {
                 foreach ($paths as $path) {
@@ -312,6 +349,7 @@ class ProjectAttractionService
                 'reviewer_comment' => $data['reviewer_comment'] ?? null,
             ]);
             $this->reports->review($locked, $activity, $actor, $data, $paths);
+            $this->resolveReportSubmissionNotifications($activity);
             $locked->touch();
 
             KpiLog::activity(
@@ -348,6 +386,77 @@ class ProjectAttractionService
             'message' => $message,
             'action_url' => route('investment-projects.show', $project, false).'#project-attraction',
             'action_label' => 'Іс-шараны ашу',
+        ]);
+    }
+
+    private function resolveResponsibilityNotifications(
+        ProjectAttractionActivity $activity,
+        int $userId
+    ): void {
+        $notifications = TaskNotification::query()
+            ->where('user_id', $userId)
+            ->where('attraction_activity_id', $activity->id)
+            ->whereIn('type', [
+                'attraction_assigned',
+                'attraction_due_soon',
+                'attraction_overdue',
+            ]);
+
+        (clone $notifications)
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+    }
+
+    private function resolveReportSubmissionNotifications(
+        ProjectAttractionActivity $activity
+    ): void {
+        $notifications = TaskNotification::query()
+            ->where('attraction_activity_id', $activity->id)
+            ->where('type', 'attraction_report_submitted');
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+    }
+
+    private function notifyResponsibilityEnded(
+        User $recipient,
+        InvestmentProject $project,
+        string $type,
+        string $message
+    ): void {
+        $canViewProject = $this->access->canView($recipient, $project);
+
+        TaskNotification::create([
+            'user_id' => $recipient->id,
+            'project_id' => $canViewProject ? $project->id : null,
+            'type' => $type,
+            'message' => $message,
+            'action_url' => $canViewProject
+                ? route(
+                    'investment-projects.show',
+                    $project,
+                    false
+                ).'#project-attraction'
+                : route('notifications.index', absolute: false),
+            'action_label' => $canViewProject
+                ? 'Жобаны ашу'
+                : 'Хабарламаларды ашу',
         ]);
     }
 

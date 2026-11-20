@@ -1,11 +1,11 @@
 <?php
 
+use App\Models\Company;
 use App\Models\InvestmentProject;
 use App\Models\ProjectAttractionActivity;
 use App\Models\ProjectTask;
 use App\Models\Region;
 use App\Models\Role;
-use App\Models\TaskCompletion;
 use App\Models\User;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -55,52 +55,130 @@ function worklistTask(InvestmentProject $project, User $responsible, array $attr
     ]);
 }
 
-test('my work filters projects by active attraction and approved roadmap assignments', function () {
-    $manager = worklistUser();
-    $colleague = worklistUser('invest');
+test('accompaniment worklist includes only non-planned curated projects', function () {
+    $manager = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
+    $colleague = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
+    $projects = collect(['implementation', 'launched', 'suspended'])
+        ->map(fn ($status) => worklistProject($manager, ['status' => $status]));
     $planned = worklistProject($manager);
-    worklistActivity($planned, $colleague, ['next_action_due_date' => today()->subDay()]);
-    worklistActivity($planned, $manager);
-    $implementation = worklistProject($manager, ['status' => 'implementation']);
-    worklistTask($implementation, $manager);
-    $foreign = worklistProject($manager);
-    worklistActivity($foreign, $colleague);
-    $closed = worklistProject($manager);
-    worklistActivity($closed, $manager, ['status' => 'completed']);
-    $pending = worklistProject($manager, ['status' => 'implementation']);
-    worklistTask($pending, $manager, ['approval_status' => 'pending']);
+    $declined = worklistProject($manager, ['attraction_stage' => 'declined']);
+    worklistActivity($planned, $colleague, ['status' => 'completed']);
+    worklistTask($projects[0], $colleague, ['status' => 'done']);
+    $foreign = worklistProject($colleague);
+    worklistActivity($foreign, $manager);
 
     $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'my']))
         ->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('projects.data', 2)
-        ->where('projects.data', function ($rows) use ($planned, $implementation) {
-            $rows = collect($rows);
-
-            return $rows->pluck('id')->sort()->values()->all() === collect([$planned->id, $implementation->id])->sort()->values()->all();
-        })
-        ->missing('projects.data.0.next_action')
-        ->where('filters.work_filter', 'my'));
+        ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all()
+            === $projects->pluck('id')->sort()->values()->all())
+        ->where('stats.total_projects', 3)
+        ->where('filters.work_filter', 'my')
+        ->missing('projects.data.0.next_action'));
 });
 
-test('stage and responsible filters combine without including other lifecycle statuses', function () {
+test('executor projects remain mine after tasks and activities are completed or before work is assigned', function () {
+    $manager = worklistUser();
+    $executor = worklistUser('ispolnitel', ['baskarma_type' => 'additional']);
+    $projects = collect(['plan', 'implementation', 'launched', 'suspended'])
+        ->map(fn ($status) => worklistProject($manager, ['status' => $status]));
+    $projects->each(fn ($project) => $project->executors()->attach($executor));
+    worklistActivity($projects[0], $executor, ['status' => 'completed']);
+    worklistTask($projects[1], $executor, ['status' => 'done']);
+    $unlisted = worklistProject($manager, ['status' => 'implementation']);
+    worklistTask($unlisted, $executor);
+
+    $this->actingAs($executor)->get(route('investment-projects.index', ['work_filter' => 'my']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all()
+            === $projects->pluck('id')->sort()->values()->all()));
+});
+
+test('company investors see their projects without requiring personal assignments', function () {
+    $manager = worklistUser();
+    $company = Company::factory()->create();
+    $investor = worklistUser('investor', ['company_id' => $company->id]);
+    $project = worklistProject($manager, ['company_id' => $company->id]);
+    $other = worklistProject($manager, ['company_id' => Company::factory()->create()->id]);
+    $other->executors()->attach($investor);
+
+    $this->actingAs($investor)->get(route('investment-projects.index', ['work_filter' => 'my']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('projects.data', 1)->where('projects.data.0.id', $project->id));
+});
+
+test('other roles use actual project participation rather than every visible project', function (string $role) {
+    $manager = worklistUser();
+    $user = worklistUser($role);
+    $project = worklistProject($manager);
+    $foreign = worklistProject($manager);
+    if ($role === 'moderator') {
+        $project->curators()->attach($user);
+        $foreign->curators()->attach(worklistUser('moderator'));
+    } else {
+        $project->executors()->attach($user);
+    }
+
+    $this->actingAs($user)->get(route('investment-projects.index', ['work_filter' => 'my']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('projects.data', 1)->where('projects.data.0.id', $project->id));
+})->with(['superadmin', 'moderator', 'prokuror', 'akim', 'zamakim']);
+
+test('creator fallback matches participants only when no curator exists and excludes archived or deleted projects', function () {
     $manager = worklistUser();
     $colleague = worklistUser('invest');
+    $project = worklistProject($manager);
+    $project->curators()->detach();
+    $reassigned = worklistProject($manager);
+    $reassigned->curators()->sync([$colleague->id]);
+    worklistProject($manager, ['is_archived' => true]);
+    worklistProject($manager, ['is_deleted' => true]);
+
+    $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'my']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('projects.data', 1)->where('projects.data.0.id', $project->id));
+});
+
+test('my projects continue to respect existing regional visibility restrictions', function () {
+    $manager = worklistUser('invest', ['invest_sub_role' => 'turkistan_invest']);
+    $project = worklistProject($manager, ['status' => 'implementation']);
+    $manager->update(['region_id' => $project->region_id]);
+    worklistProject($manager, ['status' => 'implementation']);
+
+    $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'my']))
+        ->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->has('projects.data', 1)->where('projects.data.0.id', $project->id));
+});
+
+test('attraction stage and my projects filters combine without requiring assigned work', function () {
+    $manager = worklistUser();
+    $colleague = worklistUser();
     $matching = worklistProject($manager, ['attraction_stage' => 'conditions']);
-    worklistActivity($matching, $manager);
-    $differentStage = worklistProject($manager);
-    worklistActivity($differentStage, $manager);
-    $differentResponsible = worklistProject($manager, ['attraction_stage' => 'conditions']);
-    worklistActivity($differentResponsible, $colleague);
-    $implementation = worklistProject($manager, ['status' => 'implementation']);
-    worklistTask($implementation, $manager);
+    worklistProject($manager);
+    worklistProject($colleague, ['attraction_stage' => 'conditions']);
+    worklistProject($manager, ['status' => 'implementation']);
 
     $this->actingAs($manager)->get(route('investment-projects.index', [
-        'status' => 'plan', 'attraction_stage' => 'conditions', 'responsible_id' => $manager->id,
+        'status' => 'plan', 'attraction_stage' => 'conditions', 'work_filter' => 'my',
     ]))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->has('projects.data', 1)
         ->where('projects.data.0.id', $matching->id)
         ->where('filters.attraction_stage', 'conditions'));
 });
+
+test('removed responsible filters in old urls do not restrict or invalidate project results', function (string $workFilter) {
+    $manager = worklistUser();
+    $project = worklistProject($manager);
+    $foreign = worklistProject(worklistUser());
+    $expected = $workFilter === 'my' ? [$project->id] : [$project->id, $foreign->id];
+    sort($expected);
+
+    $this->actingAs($manager)->get(route('investment-projects.index', [
+        'work_filter' => $workFilter, 'responsible_id' => 'removed-user',
+    ]))->assertOk()->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all() === $expected)
+            ->missing('filters.responsible_id'));
+})->with(['', 'my']);
 
 test('attraction stage filters are ignored outside the planned project status', function (?string $status, string $stage) {
     $manager = worklistUser();
@@ -133,48 +211,32 @@ test('planned project filters reject unknown attraction stages', function () {
     ]))->assertSessionHasErrors('attraction_stage');
 });
 
-test('overdue work excludes closed declined archived and unapproved work', function () {
+test('removed work shortcuts in old urls show all visible projects', function (string $workFilter, string $role) {
     $manager = worklistUser();
+    $viewer = $role === 'superadmin' ? $manager : worklistUser($role, ['baskarma_type' => 'additional']);
     $planned = worklistProject($manager);
-    worklistActivity($planned, $manager, ['next_action_due_date' => today()->subDay()]);
+    worklistActivity($planned, $manager, ['status' => 'pending_review', 'next_action_due_date' => today()->subDay()]);
+    $completed = worklistProject($manager);
+    worklistActivity($completed, $manager, ['status' => 'completed']);
     $implementation = worklistProject($manager, ['status' => 'implementation']);
-    worklistTask($implementation, $manager, ['due_date' => today()->subDay()]);
-    foreach ([['status' => 'completed'], ['status' => 'cancelled'], ['next_action_due_date' => today()->addWeek()]] as $activity) {
-        worklistActivity(worklistProject($manager), $manager, ['next_action_due_date' => today()->subDay(), ...$activity]);
-    }
-    worklistActivity(worklistProject($manager, ['attraction_stage' => 'declined']), $manager, ['next_action_due_date' => today()->subDay()]);
-    worklistActivity(worklistProject($manager, ['is_archived' => true]), $manager, ['next_action_due_date' => today()->subDay()]);
-    worklistTask(worklistProject($manager, ['status' => 'implementation']), $manager, ['due_date' => today()->subDay(), 'approval_status' => 'pending']);
+    worklistTask($implementation, $manager, ['status' => 'done']);
+    $unassigned = worklistProject($manager, ['status' => 'launched']);
+    worklistProject($manager, ['is_archived' => true]);
+    worklistProject($manager, ['is_deleted' => true]);
+    $expectedIds = collect([$planned, $completed, $implementation, $unassigned])->pluck('id')->sort()->values()->all();
 
-    $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'overdue']))
-        ->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('projects.data', 2)
-        ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all()
-            === collect([$planned->id, $implementation->id])->sort()->values()->all()));
+    $this->actingAs($viewer)->get(route('investment-projects.index', ['work_filter' => $workFilter]))
+        ->assertOk()->assertSessionHasNoErrors()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all() === $expectedIds)
+            ->where('stats.total_projects', 4)
+            ->missing('filters.work_filter'));
+})->with(['pending_review', 'overdue'])->with(['superadmin', 'ispolnitel']);
+
+test('unknown work shortcuts remain invalid', function () {
+    $this->actingAs(worklistUser())->get(route('investment-projects.index', ['work_filter' => 'unknown-shortcut']))
+        ->assertSessionHasErrors('work_filter');
 });
-
-test('pending review work includes current reports and excludes reports for old task definitions', function () {
-    $manager = worklistUser();
-    $planned = worklistProject($manager);
-    worklistActivity($planned, $manager, ['status' => 'pending_review']);
-    $current = worklistProject($manager, ['status' => 'implementation']);
-    $currentTask = worklistTask($current, $manager, ['definition_version' => 2]);
-    $old = worklistProject($manager, ['status' => 'implementation']);
-    $oldTask = worklistTask($old, $manager, ['definition_version' => 2]);
-    foreach ([[$currentTask, 2], [$oldTask, 1]] as [$task, $version]) {
-        TaskCompletion::create([
-            'task_id' => $task->id, 'submitted_by' => $manager->id,
-            'status' => 'pending', 'task_definition_version' => $version,
-        ]);
-    }
-
-    $this->actingAs($manager)->get(route('investment-projects.index', ['work_filter' => 'pending_review']))
-        ->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->has('projects.data', 2)
-        ->where('projects.data', fn ($rows) => collect($rows)->pluck('id')->sort()->values()->all()
-            === collect([$planned->id, $current->id])->sort()->values()->all()));
-});
-
 test('unrelated executors see no operational next action in the project list', function () {
     $manager = worklistUser();
     $executor = worklistUser('ispolnitel', ['baskarma_type' => 'additional']);

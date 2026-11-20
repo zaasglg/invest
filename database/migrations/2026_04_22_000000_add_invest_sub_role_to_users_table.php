@@ -11,6 +11,7 @@ return new class extends Migration
         Schema::table('users', function (Blueprint $table) {
             $table->enum('invest_sub_role', [
                 'turkistan_invest',
+                'turkistan_invest_attraction',
                 'aea',
                 'ia',
                 'prom_zone',

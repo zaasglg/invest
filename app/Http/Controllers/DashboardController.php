@@ -14,6 +14,7 @@ use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
 use App\Models\SubsoilUser;
 use App\Models\User;
+use App\Support\InvestorCountries;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -39,7 +40,7 @@ class DashboardController extends Controller
             return redirect()->route('applicant.portal');
         }
         $investSubRole = ($roleName === 'invest'
-            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
+            && in_array($user->invest_sub_role, User::INVEST_SUB_ROLES, true))
             ? $user->invest_sub_role
             : null;
         $investorId = $roleName === 'investor' ? $user->id : null;
@@ -209,7 +210,101 @@ class DashboardController extends Controller
                 $investSubRole,
                 $investorId
             ),
+            'attractionCountries' => $user?->isTurkistanInvestAttraction()
+                ? $this->buildAttractionCountries()
+                : [],
         ]);
+    }
+
+    /**
+     * Countries represented by the planned projects visible to the attraction
+     * direction. Coordinates stay nullable for small territories so the
+     * frontend can fall back to the world-atlas centroid.
+     *
+     * @return list<array<string, mixed>>
+     */
+    private function buildAttractionCountries(): array
+    {
+        $currentYear = (int) now()->year;
+        $years = range($currentYear - 4, $currentYear);
+
+        return $this->projects(
+            User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION
+        )
+            ->whereNotNull('investor_country_code')
+            ->select([
+                'investment_projects.id',
+                'investment_projects.name',
+                'investment_projects.investor_country_code',
+                'investment_projects.total_investment',
+                'investment_projects.jobs_count',
+                'investment_projects.attraction_stage',
+                'investment_projects.planning_started_at',
+                'investment_projects.created_at',
+            ])
+            ->withCount('issues')
+            ->orderByDesc('investment_projects.created_at')
+            ->orderByDesc('investment_projects.id')
+            ->get()
+            ->groupBy(fn (InvestmentProject $project): string => strtoupper(
+                (string) $project->investor_country_code
+            ))
+            ->map(function ($projects, string $countryCode) use ($years): array {
+                $coordinates = InvestorCountries::coordinates($countryCode);
+                $yearly = collect($years)->mapWithKeys(fn (int $year) => [
+                    $year => [
+                        'year' => $year,
+                        'investment' => 0.0,
+                        'projects' => 0,
+                        'jobs' => 0,
+                        'issues' => 0,
+                    ],
+                ]);
+
+                foreach ($projects as $project) {
+                    $effectiveDate = $project->planning_started_at
+                        ?? $project->created_at;
+                    $year = $effectiveDate ? (int) $effectiveDate->year : null;
+
+                    if ($year === null || ! $yearly->has($year)) {
+                        continue;
+                    }
+
+                    $row = $yearly->get($year);
+                    $row['investment'] += (float) $project->total_investment;
+                    $row['projects']++;
+                    $row['jobs'] += (int) $project->jobs_count;
+                    $row['issues'] += (int) $project->issues_count;
+                    $yearly->put($year, $row);
+                }
+
+                return [
+                    'country_code' => $countryCode,
+                    'country_name' => InvestorCountries::name($countryCode),
+                    'latitude' => $coordinates['latitude'] ?? null,
+                    'longitude' => $coordinates['longitude'] ?? null,
+                    'project_count' => $projects->count(),
+                    'total_investment' => (float) $projects->sum(
+                        fn (InvestmentProject $project) => (float) $project->total_investment
+                    ),
+                    'jobs_count' => (int) $projects->sum('jobs_count'),
+                    'issues_count' => (int) $projects->sum('issues_count'),
+                    'yearly' => $yearly->values()->all(),
+                    'projects' => $projects->map(
+                        fn (InvestmentProject $project): array => [
+                            'id' => $project->id,
+                            'name' => $project->name,
+                            'total_investment' => $project->total_investment,
+                            'jobs_count' => (int) $project->jobs_count,
+                            'attraction_stage' => $project->attraction_stage,
+                            'created_at' => $project->created_at?->toISOString(),
+                        ]
+                    )->values()->all(),
+                ];
+            })
+            ->sortBy('country_name', SORT_NATURAL | SORT_FLAG_CASE)
+            ->values()
+            ->all();
     }
 
     /**
@@ -234,8 +329,19 @@ class DashboardController extends Controller
             ->when(
                 $subRole,
                 function ($query) use ($subRole) {
-                    if ($subRole === 'turkistan_invest') {
+                    if (in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true)) {
                         $query->curatedByTurkistanInvest();
+                        $query->where(
+                            'investment_projects.status',
+                            $subRole === User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION
+                                ? '='
+                                : '!=',
+                            'plan'
+                        );
+
+                        if ($subRole === User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION) {
+                            $query->withoutPendingAttractionReserve();
+                        }
 
                         return;
                     }
@@ -509,15 +615,19 @@ class DashboardController extends Controller
         $investInvestment = (float) $pti()->sum('total_investment');
 
         // Entity issue counts — only for sections the sub-role can access.
-        // aea → SEZ only | ia → IZ only | prom_zone → prom only | turkistan_invest/null → all.
+        // aea → SEZ only | ia → IZ only | prom_zone → prom only |
+        // either Turkistan Invest direction/null → all.
         $canSeeSez = ! $investorId
-            && (! $subRole || in_array($subRole, ['aea', 'turkistan_invest'], true));
+            && (! $subRole || $subRole === 'aea'
+                || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
         $canSeeIz = ! $investorId
-            && (! $subRole || in_array($subRole, ['ia', 'turkistan_invest'], true));
+            && (! $subRole || $subRole === 'ia'
+                || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
         $canSeeProm = ! $investorId
-            && (! $subRole || in_array($subRole, ['prom_zone', 'turkistan_invest'], true));
+            && (! $subRole || $subRole === 'prom_zone'
+                || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
         $canSeeSubsoil = ! $investorId
-            && (! $subRole || $subRole === 'turkistan_invest');
+            && (! $subRole || in_array($subRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
 
         $sezIds = ($investorId || $this->hasRegionScope())
             ? Sez::query()

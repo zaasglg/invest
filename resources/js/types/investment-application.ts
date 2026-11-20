@@ -84,6 +84,23 @@ export type InvestmentApplication = {
         phone?: string | null;
     } | null;
     reviewer?: { id: number; full_name: string } | null;
+    assigned_to?: number | null;
+    assigned_at?: string | null;
+    assigned_manager?: { id: number; full_name: string } | null;
+    sector_review_status?:
+        | 'not_requested'
+        | 'pending'
+        | 'approved'
+        | 'rejected';
+    sector_review_status_label?: string;
+    sector_review_requested_at?: string | null;
+    sector_review_requested_by?: number | null;
+    sector_review_requester?: { id: number; full_name: string } | null;
+    sector_reviewed_by?: number | null;
+    sector_reviewed_at?: string | null;
+    sector_review_comment?: string | null;
+    sector_approved_area?: string | number | null;
+    sector_reviewer?: { id: number; full_name: string } | null;
     company_region?: { id: number; name: string } | null;
     investment_project?: { id: number; name: string } | null;
     source_investment_project?: {

@@ -327,6 +327,7 @@ class CompletionWorkflowService
                     $lockedTask->update(['status' => 'rejected']);
                 }
 
+                $this->resolveSubmissionNotifications($lockedCompletion);
                 $this->notifyReview(
                     $lockedTask,
                     $lockedCompletion,
@@ -421,6 +422,7 @@ class CompletionWorkflowService
                     $lockedTask->update(['status' => 'rejected']);
                 }
 
+                $this->resolveSubmissionNotifications($lockedCompletion);
                 $this->notifyReview(
                     $lockedTask,
                     $lockedCompletion,
@@ -580,6 +582,35 @@ class CompletionWorkflowService
                 : "{$reviewerName} тапсырманы қабылдамады: "
                     ."\"{$task->title}\". Қайта орындаңыз.{$reason}",
         ]);
+    }
+
+    private function resolveSubmissionNotifications(
+        TaskCompletion|SubsoilTaskCompletion $completion
+    ): void {
+        $notifications = TaskNotification::query()
+            ->where('type', 'completion_submitted')
+            ->when(
+                $completion instanceof TaskCompletion,
+                fn ($query) => $query->where(
+                    'completion_id',
+                    $completion->id
+                ),
+                fn ($query) => $query->where(
+                    'subsoil_completion_id',
+                    $completion->id
+                )
+            );
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
     }
 
     /**

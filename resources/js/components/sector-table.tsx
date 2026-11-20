@@ -1,5 +1,6 @@
 import { usePage } from '@inertiajs/react';
 import { CheckCircle2 } from 'lucide-react';
+import { isTurkistanInvestSubRole } from '@/lib/invest-sub-role';
 import { formatMoneyCompact } from '@/lib/utils';
 import type { SharedData } from '@/types';
 
@@ -44,7 +45,7 @@ export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
             : sectorSummary.total;
 
     const rows: { key: string; label: string; d: SectorRow }[] = [
-        ...(data.all_projects && investSubRole !== 'turkistan_invest'
+        ...(data.all_projects && !isTurkistanInvestSubRole(investSubRole)
             ? [
                   {
                       key: 'all_projects',
@@ -53,7 +54,7 @@ export default function SectorTable({ sectorSummary, activeRegionId }: Props) {
                   },
               ]
             : []),
-        ...(!investSubRole || investSubRole === 'turkistan_invest'
+        ...(!investSubRole || isTurkistanInvestSubRole(investSubRole)
             ? [{ key: 'invest', label: 'Turkistan Invest', d: data.invest }]
             : []),
         { key: 'sez', label: 'АЭА', d: data.sez },

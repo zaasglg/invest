@@ -12,6 +12,7 @@ use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\ProjectAttractionHandoverService;
 use App\Services\ProjectAttractionService;
+use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -83,6 +84,19 @@ test('administrative edits reopen completed tasks while preserving versioned evi
         'submitted_by' => $first->id, 'status' => 'approved',
         'comment' => 'Бастапқы жұмыс орындалды', 'reviewed_by' => $admin->id,
     ]);
+    $staleAssignment = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $first->id,
+            'task_id' => $task->id,
+            'type' => 'task_assigned',
+            'message' => 'Бұрынғы тапсырма',
+        ])
+    );
+    $staleAssignment->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now(),
+        'telegram_last_error' => 'retry',
+    ])->saveQuietly();
 
     $this->actingAs($admin)->put(route('investment-projects.tasks.update', [$project, $task]), [
         'title' => 'Жаңа жұмыс мазмұны', 'assigned_to' => $next->id,
@@ -93,6 +107,11 @@ test('administrative edits reopen completed tasks while preserving versioned evi
         ->and($report->fresh()->status)->toBe('approved')
         ->and($report->fresh()->task_definition_version)->toBe(1)
         ->and(TaskNotification::where('task_id', $task->id)->where('user_id', $next->id)->where('type', 'task_assigned')->count())->toBe(1)
+        ->and($staleAssignment->fresh()->is_read)->toBeTrue()
+        ->and($staleAssignment->fresh()->telegram_status)->toBe('skipped')
+        ->and($staleAssignment->fresh()->telegram_next_attempt_at)->toBeNull()
+        ->and(TaskNotification::where('user_id', $first->id)
+            ->where('type', 'task_assignment_removed')->count())->toBe(1)
         ->and(KpiLog::where('event', 'task.reopened')->sole()->properties['before']['title'])->toBe('Бастапқы тапсырма');
     $this->delete(route('investment-projects.tasks.destroy', [$project, $task]))->assertStatus(409);
 });
@@ -108,6 +127,20 @@ test('revising a moderated task cancels stale pending review and requires new mo
         'task_id' => $task->id, 'submitted_by' => $executor->id,
         'task_definition_version' => 1, 'status' => 'pending',
     ]);
+    $staleReview = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $creator->id,
+            'task_id' => $task->id,
+            'completion_id' => $report->id,
+            'type' => 'completion_submitted',
+            'message' => 'Ескі нұсқаны тексеру қажет',
+        ])
+    );
+    $staleReview->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now(),
+        'telegram_last_error' => 'retry',
+    ])->saveQuietly();
 
     $this->actingAs($admin)->put(route('investment-projects.tasks.update', [$project, $task]), ['description' => 'Жаңа талап'])
         ->assertSessionHasNoErrors()->assertRedirect();
@@ -115,11 +148,27 @@ test('revising a moderated task cancels stale pending review and requires new mo
         ->and($task->fresh()->approved_by)->toBeNull()
         ->and($report->fresh()->status)->toBe('rejected')
         ->and(TaskNotification::where('task_id', $task->id)->where('user_id', $executor->id)->count())->toBe(0)
-        ->and(TaskNotification::where('task_id', $task->id)->where('user_id', $moderator->id)->where('type', 'task_pending_approval')->count())->toBe(1);
+        ->and(TaskNotification::where('task_id', $task->id)->where('user_id', $moderator->id)->where('type', 'task_pending_approval')->count())->toBe(1)
+        ->and($staleReview->fresh()->is_read)->toBeTrue()
+        ->and($staleReview->fresh()->telegram_status)->toBe('skipped')
+        ->and(TaskNotification::where('user_id', $executor->id)
+            ->where('type', 'completion_rejected')->count())->toBe(1);
+    $pendingApproval = TaskNotification::where('task_id', $task->id)
+        ->where('user_id', $moderator->id)
+        ->where('type', 'task_pending_approval')
+        ->sole();
+    $pendingApproval->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now(),
+        'telegram_last_error' => 'retry',
+    ])->saveQuietly();
     $this->put(route('investment-projects.tasks.completions.review', [$project, $task, $report]), ['status' => 'approved'])
         ->assertStatus(409);
     $this->actingAs($moderator)->post(route('investment-projects.tasks.approve', [$project, $task]))->assertRedirect();
-    expect(TaskNotification::where('task_id', $task->id)->where('user_id', $executor->id)->where('type', 'task_assigned')->count())->toBe(1);
+    expect(TaskNotification::where('task_id', $task->id)->where('user_id', $executor->id)->where('type', 'task_assigned')->count())->toBe(1)
+        ->and($pendingApproval->fresh()->is_read)->toBeTrue()
+        ->and($pendingApproval->fresh()->telegram_status)->toBe('skipped')
+        ->and($pendingApproval->fresh()->telegram_next_attempt_at)->toBeNull();
 });
 
 test('roadmap rejection requires actionable feedback', function () {
@@ -128,10 +177,50 @@ test('roadmap rejection requires actionable feedback', function () {
     $project = hardenedWorkflowProject($admin);
     $task = hardenedWorkflowTask($project, $executor, ['status' => 'in_progress']);
     $report = TaskCompletion::create(['task_id' => $task->id, 'submitted_by' => $executor->id, 'status' => 'pending']);
+    $pendingReview = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $admin->id,
+            'task_id' => $task->id,
+            'completion_id' => $report->id,
+            'type' => 'completion_submitted',
+            'message' => 'Тексеру қажет',
+        ])
+    );
+    $pendingReview->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now(),
+        'telegram_last_error' => 'retry',
+    ])->saveQuietly();
 
     $this->actingAs($admin)->put(route('investment-projects.tasks.completions.review', [$project, $task, $report]), ['status' => 'rejected'])
         ->assertSessionHasErrors('reviewer_comment');
-    expect($report->fresh()->status)->toBe('pending');
+    expect($report->fresh()->status)->toBe('pending')
+        ->and($pendingReview->fresh()->is_read)->toBeFalse();
+
+    $this->put(route('investment-projects.tasks.completions.review', [$project, $task, $report]), [
+        'status' => 'rejected',
+        'reviewer_comment' => 'Құжатты түзетіңіз.',
+    ])->assertRedirect();
+    expect($pendingReview->fresh()->is_read)->toBeTrue()
+        ->and($pendingReview->fresh()->telegram_status)->toBe('skipped')
+        ->and($pendingReview->fresh()->telegram_next_attempt_at)->toBeNull();
+});
+
+test('deleting an unreported roadmap task notifies its assignee', function () {
+    $admin = hardenedWorkflowUser('superadmin');
+    $executor = hardenedWorkflowUser('ispolnitel');
+    $project = hardenedWorkflowProject($admin);
+    $task = hardenedWorkflowTask($project, $executor);
+
+    $this->actingAs($admin)
+        ->delete(route('investment-projects.tasks.destroy', [$project, $task]))
+        ->assertRedirect();
+
+    expect(ProjectTask::query()->whereKey($task->id)->exists())->toBeFalse()
+        ->and(TaskNotification::query()
+            ->where('user_id', $executor->id)
+            ->where('type', 'task_cancelled')
+            ->count())->toBe(1);
 });
 
 test('planning status transitions still count outstanding work but do not require a handover', function () {
@@ -230,6 +319,149 @@ test('attraction reports notify eligible reviewers and review results notify the
         'decision' => 'rejected', 'reviewer_comment' => 'Құжат нөмірін қосыңыз',
     ]);
     expect(TaskNotification::where('type', 'attraction_report_rejected')->where('user_id', $executor->id)->sole()->message)->toContain('Құжат нөмірін');
+});
+
+test('changing attraction responsibility resolves the old assignment and notifies both assignees', function () {
+    config()->set('services.telegram.bot_token', 'workflow-test-token');
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+
+    $manager = hardenedWorkflowUser('superadmin');
+    $previous = hardenedWorkflowUser('ispolnitel', [
+        'telegram_chat_id' => '10001',
+    ]);
+    $next = hardenedWorkflowUser('ispolnitel', [
+        'telegram_chat_id' => '10002',
+    ]);
+    $project = hardenedWorkflowProject($manager, 'plan');
+    $project->executors()->attach([$previous->id, $next->id]);
+    $activity = $project->attractionActivities()->create([
+        'attraction_stage' => 'potential',
+        'next_action' => 'Алғашқы кездесу',
+        'next_action_due_date' => today()->addWeek(),
+        'responsible_id' => $previous->id,
+        'created_by' => $manager->id,
+        'status' => 'planned',
+    ]);
+    $staleAssignment = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $previous->id,
+            'project_id' => $project->id,
+            'attraction_activity_id' => $activity->id,
+            'type' => 'attraction_assigned',
+            'message' => 'Бұрынғы тапсырма',
+        ])
+    );
+    $staleAssignment->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_attempts' => 1,
+        'telegram_next_attempt_at' => now()->addMinute(),
+    ])->saveQuietly();
+
+    app(ProjectAttractionService::class)->save(
+        $manager,
+        $project,
+        [
+            'next_action' => 'Жаңа кездесу',
+            'next_action_due_date' => today()->addDays(10)->toDateString(),
+            'responsible_id' => $next->id,
+        ],
+        $activity
+    );
+
+    $removed = TaskNotification::query()
+        ->where('type', 'attraction_unassigned')
+        ->where('user_id', $previous->id)
+        ->sole();
+    $assigned = TaskNotification::query()
+        ->where('type', 'attraction_assigned')
+        ->where('user_id', $next->id)
+        ->sole();
+    $destination = route(
+        'investment-projects.show',
+        $project,
+        false
+    ).'#project-attraction';
+
+    expect($staleAssignment->fresh()->is_read)->toBeTrue()
+        ->and($staleAssignment->fresh()->telegram_status)->toBe('skipped')
+        ->and($staleAssignment->fresh()->telegram_next_attempt_at)->toBeNull()
+        ->and($removed->destination_url)->toBe($destination)
+        ->and($removed->attraction_activity_id)->toBeNull()
+        ->and($assigned->destination_url)->toBe($destination)
+        ->and(TaskNotification::visibleTo($previous)
+            ->whereKey($removed->id)
+            ->exists())->toBeTrue();
+    Http::assertSentCount(2);
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === '10001'
+        && str_contains($request['text'], 'іс-шарасы алынды')
+        && str_contains($request['text'], url($destination))
+    );
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === '10002'
+        && str_contains($request['text'], 'Жаңа кездесу')
+        && str_contains($request['text'], url($destination))
+    );
+});
+
+test('deleting attraction work resolves its assignment and notifies the responsible user', function () {
+    config()->set('services.telegram.bot_token', 'workflow-test-token');
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+
+    $manager = hardenedWorkflowUser('superadmin');
+    $responsible = hardenedWorkflowUser('ispolnitel', [
+        'telegram_chat_id' => '20001',
+    ]);
+    $project = hardenedWorkflowProject($manager, 'plan');
+    $project->executors()->attach($responsible);
+    $activity = $project->attractionActivities()->create([
+        'attraction_stage' => 'potential',
+        'next_action' => 'Жойылатын кездесу',
+        'next_action_due_date' => today()->addWeek(),
+        'responsible_id' => $responsible->id,
+        'created_by' => $manager->id,
+        'status' => 'planned',
+    ]);
+    $staleAssignment = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $responsible->id,
+            'project_id' => $project->id,
+            'attraction_activity_id' => $activity->id,
+            'type' => 'attraction_assigned',
+            'message' => 'Бұрынғы тапсырма',
+        ])
+    );
+
+    app(ProjectAttractionService::class)->delete(
+        $manager,
+        $project,
+        $activity
+    );
+
+    $cancelled = TaskNotification::query()
+        ->where('type', 'attraction_cancelled')
+        ->where('user_id', $responsible->id)
+        ->sole();
+    $destination = route(
+        'investment-projects.show',
+        $project,
+        false
+    ).'#project-attraction';
+
+    expect(TaskNotification::query()->whereKey($staleAssignment->id)->exists())
+        ->toBeFalse()
+        ->and($cancelled->attraction_activity_id)->toBeNull()
+        ->and($cancelled->destination_url)->toBe($destination)
+        ->and(TaskNotification::visibleTo($responsible)
+            ->whereKey($cancelled->id)
+            ->exists())->toBeTrue();
+    Http::assertSentCount(1);
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === '20001'
+        && str_contains($request['text'], 'іс-шарасы жойылды')
+        && str_contains($request['text'], url($destination))
+    );
 });
 
 test('attraction responsibility excludes stale curators who cannot access the project', function () {

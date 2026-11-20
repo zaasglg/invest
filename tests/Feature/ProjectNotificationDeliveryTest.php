@@ -53,7 +53,31 @@ test('retry stops after access is removed or the project is archived', function 
     $project->update(['is_archived' => true]);
     $this->travel(3)->minutes();
     $this->artisan('notifications:retry-telegram')->assertSuccessful();
-    expect($notification->fresh()->telegram_status)->toBe('skipped');
+    expect($notification->fresh()->telegram_status)->toBe('skipped')
+        ->and(TaskNotification::count())->toBe(1);
+    Http::assertSentCount(1);
+});
+
+test('retry stops after the site notification is read', function () {
+    [$user, $project] = deliveryFixture();
+    Http::fake(['api.telegram.org/*' => Http::response([], 500)]);
+    $notification = TaskNotification::create([
+        'user_id' => $user->id, 'project_id' => $project->id,
+        'type' => 'attraction_handover_requested', 'message' => 'Жоба',
+    ])->fresh();
+
+    expect($notification->telegram_status)->toBe('retry')
+        ->and($notification->telegram_attempts)->toBe(1);
+
+    $notification->update(['is_read' => true]);
+    $this->travel(3)->minutes();
+    $this->artisan('notifications:retry-telegram')->assertSuccessful();
+
+    $notification->refresh();
+    expect($notification->telegram_status)->toBe('skipped')
+        ->and($notification->telegram_attempts)->toBe(1)
+        ->and($notification->telegram_next_attempt_at)->toBeNull()
+        ->and($notification->telegram_last_error)->toBeNull();
     Http::assertSentCount(1);
 });
 

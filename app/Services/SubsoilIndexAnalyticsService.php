@@ -6,11 +6,16 @@ use App\Models\Region;
 use App\Models\SubsoilUser;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 
 class SubsoilIndexAnalyticsService
 {
+    public function __construct(
+        private readonly InvestmentProjectAccessService $projectAccess,
+    ) {}
+
     /**
      * @param  array<string, mixed>  $filters
      * @return array{subsoilUsers: LengthAwarePaginator, summary: array<string, int>, regions: Collection<int, Region>, mineralTypes: Collection<int, string>}
@@ -95,7 +100,9 @@ class SubsoilIndexAnalyticsService
                     ->whereDate('due_date', '<', today()),
                 'photos',
                 'documents',
-                'investmentProjects',
+                'investmentProjects' => fn (Builder|Relation $projects) => $this
+                    ->projectAccess
+                    ->scopeVisible($projects, $user),
             ]);
 
         $this->scopeVisible($query, $user);

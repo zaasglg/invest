@@ -345,7 +345,11 @@ export default function Edit({ user, regions, roles }: Props) {
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="turkistan_invest">
-                                            Түркістан инвест
+                                            Түркістан инвест — жобаларды
+                                            сүйемелдеу
+                                        </SelectItem>
+                                        <SelectItem value="turkistan_invest_attraction">
+                                            Түркістан инвест — инвестор тарту
                                         </SelectItem>
                                         <SelectItem value="aea">АЭА</SelectItem>
                                         <SelectItem value="ia">ИА</SelectItem>

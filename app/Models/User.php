@@ -17,6 +17,22 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public const BASKARMA_TYPES = ['oblast', 'district', 'additional'];
 
+    public const INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT = 'turkistan_invest';
+
+    public const INVEST_SUB_ROLE_TURKISTAN_ATTRACTION = 'turkistan_invest_attraction';
+
+    public const TURKISTAN_INVEST_SUB_ROLES = [
+        self::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT,
+        self::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ];
+
+    public const INVEST_SUB_ROLES = [
+        ...self::TURKISTAN_INVEST_SUB_ROLES,
+        'aea',
+        'ia',
+        'prom_zone',
+    ];
+
     public const SUPPORTED_ROLES = [
         'superadmin',
         'invest',
@@ -114,6 +130,33 @@ class User extends Authenticatable implements MustVerifyEmail
         );
     }
 
+    public function isTurkistanInvestAccompaniment(): bool
+    {
+        return $this->roleModel?->name === 'invest'
+            && $this->invest_sub_role === self::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT;
+    }
+
+    public function isTurkistanInvestAttraction(): bool
+    {
+        return $this->roleModel?->name === 'invest'
+            && $this->invest_sub_role === self::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION;
+    }
+
+    public function isTurkistanInvestDirection(): bool
+    {
+        return $this->roleModel?->name === 'invest'
+            && in_array($this->invest_sub_role, self::TURKISTAN_INVEST_SUB_ROLES, true);
+    }
+
+    public function canAccessTurkistanProjectStatus(string $status): bool
+    {
+        return match ($this->invest_sub_role) {
+            self::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT => $status !== 'plan',
+            self::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION => $status === 'plan',
+            default => true,
+        };
+    }
+
     // Проекты, в которых пользователь является исполнителем
     public function executedProjects()
     {
@@ -152,7 +195,8 @@ class User extends Authenticatable implements MustVerifyEmail
 
     /**
      * Get the restricted sector type for an invest sub-role.
-     * Returns null if the user has no invest sub-role or is turkistan_invest.
+     * Returns null if the user has no invest sub-role or belongs to either
+     * Turkistan Invest project direction.
      */
     public function restrictedSectorType(): ?string
     {

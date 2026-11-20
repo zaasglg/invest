@@ -22,7 +22,11 @@ class CompanyAccessService
 
         return in_array($roleName, ['superadmin', 'moderator'], true)
             || ($roleName === 'invest'
-                && $user->invest_sub_role === 'turkistan_invest');
+                && in_array(
+                    $user->invest_sub_role,
+                    User::TURKISTAN_INVEST_SUB_ROLES,
+                    true
+                ));
     }
 
     public function canDelete(?User $user): bool

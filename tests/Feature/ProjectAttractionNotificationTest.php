@@ -104,8 +104,20 @@ test('editing does not duplicate an assignment but changing responsible notifies
     expect(TaskNotification::count())->toBe(1);
     $service->save($manager, $project, attractionNotificationPayload($second), $activity);
 
-    expect(TaskNotification::count())->toBe(2)
-        ->and(TaskNotification::visibleTo($first)->count())->toBe(0)
+    $removed = TaskNotification::query()
+        ->where('type', 'attraction_unassigned')
+        ->where('user_id', $first->id)
+        ->sole();
+
+    expect(TaskNotification::count())->toBe(3)
+        ->and(TaskNotification::query()
+            ->where('type', 'attraction_assigned')
+            ->where('user_id', $first->id)
+            ->sole()->is_read)->toBeTrue()
+        ->and(TaskNotification::visibleTo($first)
+            ->whereKey($removed->id)
+            ->exists())->toBeTrue()
+        ->and($removed->message)->toContain('іс-шарасы алынды')
         ->and(TaskNotification::visibleTo($second)->sole()->user_id)->toBe($second->id);
     Http::assertNothingSent();
 });
@@ -154,7 +166,7 @@ test('active attraction responsibility preserves access and archived project hid
 });
 
 test('legacy moderator attraction assignments remain visible only while the project is in scope', function () {
-    $manager = attractionNotificationUser('invest', ['invest_sub_role' => 'turkistan_invest']);
+    $manager = attractionNotificationUser('invest', ['invest_sub_role' => 'turkistan_invest_attraction']);
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('moderator');
     $project->curators()->attach($responsible);
@@ -194,7 +206,7 @@ test('rolled back activity creation sends neither site nor telegram notification
     Http::assertNothingSent();
 });
 
-test('deleting an attraction activity removes its obsolete notifications', function () {
+test('deleting an attraction activity replaces obsolete assignments with cancellation', function () {
     $manager = attractionNotificationUser('superadmin');
     $project = attractionNotificationProject($manager);
     $responsible = attractionNotificationUser('ispolnitel', ['region_id' => $project->region_id]);
@@ -204,5 +216,68 @@ test('deleting an attraction activity removes its obsolete notifications', funct
 
     $service->delete($manager, $project, $project->attractionActivities()->sole());
 
-    expect(TaskNotification::count())->toBe(0);
+    $cancelled = TaskNotification::query()->sole();
+
+    expect($cancelled->type)->toBe('attraction_cancelled')
+        ->and($cancelled->user_id)->toBe($responsible->id)
+        ->and($cancelled->attraction_activity_id)->toBeNull()
+        ->and($cancelled->message)->toContain('іс-шарасы жойылды')
+        ->and(TaskNotification::visibleTo($responsible)
+            ->whereKey($cancelled->id)
+            ->exists())->toBeTrue();
+});
+
+test('reviewing an attraction report resolves every pending reviewer notification', function () {
+    $reviewer = attractionNotificationUser('superadmin');
+    $secondReviewer = attractionNotificationUser('superadmin');
+    $project = attractionNotificationProject($reviewer);
+    $responsible = attractionNotificationUser('ispolnitel', [
+        'region_id' => $project->region_id,
+    ]);
+    $project->executors()->attach($responsible);
+    $activity = $project->attractionActivities()->create([
+        ...attractionNotificationPayload($responsible),
+        'created_by' => $reviewer->id,
+        'reported_by' => $responsible->id,
+        'reported_at' => now(),
+        'report_result' => 'Кездесу өткізілді.',
+        'status' => 'pending_review',
+    ]);
+
+    $notifications = collect([$reviewer, $secondReviewer])->map(
+        function (User $recipient) use ($activity, $project) {
+            $notification = TaskNotification::withoutEvents(
+                fn () => TaskNotification::create([
+                    'user_id' => $recipient->id,
+                    'project_id' => $project->id,
+                    'attraction_activity_id' => $activity->id,
+                    'type' => 'attraction_report_submitted',
+                    'message' => 'Іс-шара есебі тексеруді күтуде.',
+                ])
+            );
+            $notification->forceFill([
+                'telegram_status' => 'retry',
+                'telegram_next_attempt_at' => now()->addMinute(),
+                'telegram_last_error' => 'Уақытша қате',
+            ])->saveQuietly();
+
+            return $notification;
+        }
+    );
+
+    app(ProjectAttractionService::class)->review(
+        $reviewer,
+        $project,
+        $activity,
+        ['decision' => 'approved']
+    );
+
+    $notifications->each(function (TaskNotification $notification): void {
+        $notification->refresh();
+
+        expect($notification->is_read)->toBeTrue()
+            ->and($notification->telegram_status)->toBe('skipped')
+            ->and($notification->telegram_next_attempt_at)->toBeNull()
+            ->and($notification->telegram_last_error)->toBeNull();
+    });
 });

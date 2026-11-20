@@ -1,3 +1,10 @@
+export type InvestSubRole =
+    | 'turkistan_invest'
+    | 'turkistan_invest_attraction'
+    | 'aea'
+    | 'ia'
+    | 'prom_zone';
+
 export type User = {
     id: number;
     full_name: string;
@@ -19,7 +26,7 @@ export type User = {
         name?: string | null;
         display_name?: string | null;
     } | null;
-    invest_sub_role?: string | null;
+    invest_sub_role?: InvestSubRole | null;
     created_at: string;
     updated_at: string;
     [key: string]: unknown;

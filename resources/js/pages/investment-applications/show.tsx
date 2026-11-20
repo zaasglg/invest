@@ -1,29 +1,38 @@
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowLeft,
+    Building2,
     CheckCircle2,
+    CircleDollarSign,
     ClipboardCheck,
     Clock3,
+    FileText,
     FolderPlus,
+    LandPlot,
     MessageSquareWarning,
     SearchCheck,
-    ShieldCheck,
+    Send,
+    Sprout,
+    UserCheck,
     XCircle,
 } from 'lucide-react';
-import type { FormEvent } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import type { FormEvent, ReactNode } from 'react';
 
-import {
-    ApplicantHero,
-    ApplicantSectionCard,
-} from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import InvestmentApplicationDetails from '@/components/investment-application-details';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageContainer } from '@/components/ui/page';
+import { PageHeader } from '@/components/ui/page';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import ZoneAreaSummary from '@/components/zone-area-summary';
 import AppLayout from '@/layouts/app-layout';
 import * as routes from '@/routes/investment-applications';
 import type { InvestmentApplication, ZoneArea } from '@/types';
@@ -38,13 +47,71 @@ type Props = {
         can_reject: boolean;
         can_set_schedule: boolean;
         can_convert: boolean;
+        can_assign: boolean;
+        can_request_sector_review: boolean;
+        can_sector_approve: boolean;
+        can_sector_reject: boolean;
     };
+    attractionManagers?: {
+        id: number;
+        full_name: string;
+        region_id?: number;
+    }[];
+    currentUserRole?: string | null;
+    currentInvestSubRole?: string | null;
 };
+
+const sectorReviewLabels: Record<string, string> = {
+    not_requested: 'Техникалық тексеруге жіберілмеген',
+    pending: 'Техникалық қорытынды күтілуде',
+    approved: 'Техникалық келісім берілді',
+    rejected: 'Техникалық тексеруден қайтарылды',
+};
+
+function ReviewSectionCard({
+    title,
+    description,
+    icon: Icon,
+    action,
+    children,
+}: {
+    title: string;
+    description?: string;
+    icon: LucideIcon;
+    action?: ReactNode;
+    children: ReactNode;
+}) {
+    return (
+        <section className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+            <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-gold/20 bg-sand-light text-gold-dark">
+                        <Icon className="size-4" />
+                    </span>
+                    <div className="min-w-0">
+                        <h2 className="font-semibold text-navy">{title}</h2>
+                        {description && (
+                            <p className="mt-0.5 text-sm leading-5 text-slate-500">
+                                {description}
+                            </p>
+                        )}
+                    </div>
+                </div>
+                {action && <div className="shrink-0">{action}</div>}
+            </div>
+            <div className="border-t border-slate-100 p-5 sm:p-6">
+                {children}
+            </div>
+        </section>
+    );
+}
 
 export default function ReviewShow({
     application,
     zoneCapacity,
     actions,
+    attractionManagers = [],
+    currentUserRole,
 }: Props) {
     const currentYear = new Date().getFullYear();
     const sourceStartYear = Number(
@@ -66,6 +133,23 @@ export default function ReviewShow({
         ),
         comment: '',
     });
+    const assignment = useForm({
+        manager_id: '',
+    });
+    const sectorDecision = useForm({
+        approved_area: String(
+            application.sector_approved_area ??
+                application.requested_area ??
+                '',
+        ),
+        comment: '',
+    });
+    const sectorReviewStatus =
+        application.sector_review_status ?? 'not_requested';
+    const isSuperadmin = currentUserRole === 'superadmin';
+    const isUnassigned =
+        application.assigned_to === null ||
+        application.assigned_to === undefined;
 
     const postDecision = (
         event: FormEvent,
@@ -123,6 +207,61 @@ export default function ReviewShow({
         decision.post(url, { preserveScroll: true });
     };
 
+    const assignApplication = () => {
+        if (isSuperadmin && !assignment.data.manager_id) {
+            assignment.setError('manager_id', 'Жауапты менеджерді таңдаңыз.');
+
+            return;
+        }
+
+        assignment.clearErrors();
+        assignment.post(routes.assignToMe.url(application.id), {
+            preserveScroll: true,
+        });
+    };
+
+    const postSectorDecision = (
+        event: FormEvent,
+        action: 'approve' | 'reject',
+    ) => {
+        event.preventDefault();
+
+        if (
+            action === 'approve' &&
+            (!sectorDecision.data.approved_area ||
+                Number(sectorDecision.data.approved_area) <= 0)
+        ) {
+            sectorDecision.setError(
+                'approved_area',
+                'Келісілген жер көлемін енгізіңіз.',
+            );
+            document.getElementById('sector-approved-area')?.focus();
+
+            return;
+        }
+
+        if (
+            action === 'reject' &&
+            sectorDecision.data.comment.trim().length === 0
+        ) {
+            sectorDecision.setError(
+                'comment',
+                'Техникалық тексеруден қайтару себебін жазыңыз.',
+            );
+            document.getElementById('sector-review-comment')?.focus();
+
+            return;
+        }
+
+        sectorDecision.clearErrors();
+        sectorDecision.post(
+            action === 'approve'
+                ? routes.sectorApprove.url(application.id)
+                : routes.sectorReject.url(application.id),
+            { preserveScroll: true },
+        );
+    };
+
     return (
         <AppLayout
             breadcrumbs={[
@@ -138,14 +277,14 @@ export default function ReviewShow({
         >
             <Head title={application.application_number} />
 
-            <PageContainer width="wide">
-                <ApplicantHero
+            <div className="page-surface flex min-w-0 flex-col gap-5 sm:gap-6">
+                <PageHeader
                     eyebrow={application.application_number}
                     title={
                         application.project_name || 'Атауы енгізілмеген жоба'
                     }
                     subtitle={`${application.zone_type_label} · ${application.zoneable?.name ?? 'Аймақ'} · ${application.application_kind_label}`}
-                    icon={ShieldCheck}
+                    icon={<FileText className="size-5" />}
                     badge={
                         <ApplicationStatusBadge
                             status={application.status}
@@ -153,16 +292,28 @@ export default function ReviewShow({
                         />
                     }
                     action={
-                        <>
+                        <div className="flex flex-wrap gap-2 sm:justify-end">
                             <Link href={routes.index.url()}>
-                                <Button className="border border-white/15 bg-white/10 text-white shadow-none backdrop-blur-sm hover:bg-white/20 hover:text-white">
+                                <Button variant="outline">
                                     <ArrowLeft /> Тізімге
                                 </Button>
                             </Link>
 
+                            {actions.can_assign &&
+                                !isSuperadmin &&
+                                isUnassigned && (
+                                    <Button
+                                        disabled={assignment.processing}
+                                        className="bg-navy text-white hover:bg-navy-light"
+                                        onClick={assignApplication}
+                                    >
+                                        <UserCheck /> Өзіме қабылдау
+                                    </Button>
+                                )}
+
                             {actions.can_start_review && (
                                 <Button
-                                    className="bg-gold text-white shadow-[0_12px_28px_-14px_rgba(200,164,78,0.8)] hover:bg-gold-dark"
+                                    className="bg-gold text-white shadow-[0_10px_24px_-12px_rgba(154,125,53,0.9)] hover:bg-gold-dark"
                                     onClick={() =>
                                         router.post(
                                             routes.startReview.url(
@@ -177,7 +328,7 @@ export default function ReviewShow({
 
                             {actions.can_convert && (
                                 <Button
-                                    className="bg-emerald-600 text-white shadow-[0_12px_28px_-14px_rgba(5,150,105,0.8)] hover:bg-emerald-700"
+                                    className="bg-emerald-600 text-white hover:bg-emerald-700"
                                     onClick={() =>
                                         confirm(
                                             application.application_kind ===
@@ -197,18 +348,402 @@ export default function ReviewShow({
                                         : 'Жобаға айналдыру'}
                                 </Button>
                             )}
-                        </>
+                        </div>
                     }
                 />
 
-                <ZoneAreaSummary area={zoneCapacity} />
+                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    {[
+                        {
+                            label: 'Жалпы аумақ',
+                            value: zoneCapacity.total,
+                            icon: LandPlot,
+                            valueClass: 'text-navy',
+                            iconClass: 'bg-navy text-white',
+                        },
+                        {
+                            label: 'Бос аумақ',
+                            value: zoneCapacity.available,
+                            icon: Sprout,
+                            valueClass: 'text-emerald-700',
+                            iconClass:
+                                'border border-emerald-200 bg-emerald-50 text-emerald-700',
+                        },
+                        {
+                            label: 'Резервте',
+                            value: zoneCapacity.reserved,
+                            icon: Clock3,
+                            valueClass: 'text-amber-700',
+                            iconClass:
+                                'border border-amber-200 bg-amber-50 text-amber-700',
+                        },
+                        {
+                            label: 'Бос емес',
+                            value: zoneCapacity.occupied,
+                            icon: Building2,
+                            valueClass: 'text-slate-700',
+                            iconClass: 'bg-slate-700 text-white',
+                        },
+                    ].map((metric) => (
+                        <div
+                            key={metric.label}
+                            className="metric-panel flex min-w-0 items-center justify-between gap-4 p-5 sm:p-6"
+                        >
+                            <div className="min-w-0">
+                                <h2 className="text-xs font-bold text-slate-400 uppercase">
+                                    {metric.label}
+                                </h2>
+                                <p
+                                    className={`mt-2 text-2xl font-extrabold tabular-nums ${metric.valueClass}`}
+                                >
+                                    {new Intl.NumberFormat('kk-KZ', {
+                                        maximumFractionDigits: 2,
+                                    }).format(metric.value)}{' '}
+                                    га
+                                </p>
+                            </div>
+                            <span
+                                className={`flex size-11 shrink-0 items-center justify-center rounded-md ${metric.iconClass}`}
+                            >
+                                <metric.icon className="size-5" />
+                            </span>
+                        </div>
+                    ))}
+                </section>
+
+                <ReviewSectionCard
+                    title="Өтінім паспорты"
+                    description="Жоба бойынша негізгі көрсеткіштер"
+                    icon={ClipboardCheck}
+                >
+                    <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-lg border border-slate-200 p-4">
+                            <dt className="text-xs font-medium text-slate-500">
+                                Компания
+                            </dt>
+                            <dd className="mt-2 font-bold break-words text-navy">
+                                {application.company_name || 'Көрсетілмеген'}
+                            </dd>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 p-4">
+                            <dt className="text-xs font-medium text-slate-500">
+                                Аймақ
+                            </dt>
+                            <dd className="mt-2 font-bold break-words text-navy">
+                                {application.zone_type_label} ·{' '}
+                                {application.zoneable?.name ?? 'Көрсетілмеген'}
+                            </dd>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 p-4">
+                            <dt className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                <LandPlot className="size-3.5" /> Сұралған аумақ
+                            </dt>
+                            <dd className="mt-2 font-bold text-navy tabular-nums">
+                                {application.requested_area ?? '—'} га
+                            </dd>
+                        </div>
+                        <div className="rounded-lg border border-slate-200 p-4">
+                            <dt className="flex items-center gap-1.5 text-xs font-medium text-slate-500">
+                                <CircleDollarSign className="size-3.5" />
+                                Инвестиция
+                            </dt>
+                            <dd className="mt-2 font-bold text-navy tabular-nums">
+                                {application.investment_amount !== null &&
+                                application.investment_amount !== undefined
+                                    ? `${new Intl.NumberFormat('kk-KZ', {
+                                          maximumFractionDigits: 2,
+                                      }).format(
+                                          Number(application.investment_amount),
+                                      )} ₸`
+                                    : '—'}
+                            </dd>
+                        </div>
+                    </dl>
+                </ReviewSectionCard>
+
+                {(application.assigned_manager ||
+                    sectorReviewStatus !== 'not_requested' ||
+                    actions.can_assign ||
+                    actions.can_request_sector_review ||
+                    actions.can_sector_approve ||
+                    actions.can_sector_reject) && (
+                    <ReviewSectionCard
+                        title="Өтінімді бөлу және техникалық келісім"
+                        description="Жауапты менеджер мен салалық бөлімнің техникалық қорытындысы осы жерде көрсетіледі."
+                        icon={UserCheck}
+                        action={
+                            actions.can_request_sector_review ? (
+                                <Button
+                                    className="bg-sky-600 text-white hover:bg-sky-700"
+                                    onClick={() =>
+                                        confirm(
+                                            'Өтінімді салалық бөлімнің техникалық тексеруіне жібересіз бе?',
+                                        ) &&
+                                        router.post(
+                                            routes.requestSectorReview.url(
+                                                application.id,
+                                            ),
+                                            {},
+                                            { preserveScroll: true },
+                                        )
+                                    }
+                                >
+                                    <Send /> Техникалық тексеруге жіберу
+                                </Button>
+                            ) : undefined
+                        }
+                    >
+                        {actions.can_assign && isSuperadmin && (
+                            <div className="mb-5 rounded-lg border border-sky-200 bg-sky-50/60 p-4">
+                                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                                    <div className="min-w-0 flex-1 space-y-1.5">
+                                        <Label htmlFor="assignment-manager">
+                                            Жауапты менеджер
+                                        </Label>
+                                        <Select
+                                            value={assignment.data.manager_id}
+                                            onValueChange={(value) =>
+                                                assignment.setData(
+                                                    'manager_id',
+                                                    value,
+                                                )
+                                            }
+                                        >
+                                            <SelectTrigger
+                                                id="assignment-manager"
+                                                className="h-11 bg-white"
+                                            >
+                                                <SelectValue placeholder="Менеджерді таңдаңыз" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                {attractionManagers.map(
+                                                    (manager) => (
+                                                        <SelectItem
+                                                            key={manager.id}
+                                                            value={String(
+                                                                manager.id,
+                                                            )}
+                                                        >
+                                                            {manager.full_name}
+                                                        </SelectItem>
+                                                    ),
+                                                )}
+                                            </SelectContent>
+                                        </Select>
+                                        {assignment.errors.manager_id && (
+                                            <p className="text-sm text-rose-600">
+                                                {assignment.errors.manager_id}
+                                            </p>
+                                        )}
+                                    </div>
+                                    <Button
+                                        disabled={assignment.processing}
+                                        className="bg-sky-600 text-white hover:bg-sky-700"
+                                        onClick={assignApplication}
+                                    >
+                                        <UserCheck /> Менеджерге бекіту
+                                    </Button>
+                                </div>
+                            </div>
+                        )}
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+                                <p className="text-xs font-bold tracking-wide text-slate-400 uppercase">
+                                    Жауапты менеджер
+                                </p>
+                                <p className="mt-2 font-bold text-navy">
+                                    {application.assigned_manager?.full_name ??
+                                        'Әлі бекітілмеген'}
+                                </p>
+                                {application.assigned_at && (
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        {new Date(
+                                            application.assigned_at,
+                                        ).toLocaleString('kk-KZ')}
+                                    </p>
+                                )}
+                            </div>
+
+                            <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-4">
+                                <p className="text-xs font-bold tracking-wide text-slate-400 uppercase">
+                                    Техникалық келісім
+                                </p>
+                                <ApplicationStatusBadge
+                                    status={sectorReviewStatus}
+                                    label={
+                                        application.sector_review_status_label ??
+                                        sectorReviewLabels[
+                                            sectorReviewStatus
+                                        ] ??
+                                        sectorReviewStatus
+                                    }
+                                    className="mt-2"
+                                />
+                                {application.sector_review_requester && (
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Жіберген:{' '}
+                                        {
+                                            application.sector_review_requester
+                                                .full_name
+                                        }
+                                    </p>
+                                )}
+                                {application.sector_reviewer && (
+                                    <p className="mt-2 text-xs text-slate-500">
+                                        Сарапшы:{' '}
+                                        {application.sector_reviewer.full_name}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        {(application.sector_approved_area ||
+                            application.sector_review_comment) && (
+                            <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                {application.sector_approved_area && (
+                                    <div className="rounded-xl border border-emerald-200 bg-emerald-50/60 p-4">
+                                        <p className="text-xs font-semibold text-emerald-700">
+                                            Техникалық келісілген аумақ
+                                        </p>
+                                        <p className="mt-1 text-lg font-extrabold text-emerald-950">
+                                            {application.sector_approved_area}{' '}
+                                            га
+                                        </p>
+                                    </div>
+                                )}
+                                {application.sector_review_comment && (
+                                    <div className="rounded-xl border border-slate-200 bg-white p-4">
+                                        <p className="text-xs font-semibold text-slate-500">
+                                            Салалық бөлімнің түсініктемесі
+                                        </p>
+                                        <p className="mt-1 text-sm leading-6 text-navy">
+                                            {application.sector_review_comment}
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {(actions.can_sector_approve ||
+                            actions.can_sector_reject) && (
+                            <form className="mt-5 grid gap-4 border-t border-slate-100 pt-5 lg:grid-cols-3">
+                                {actions.can_sector_approve && (
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor="sector-approved-area">
+                                            Келісілетін аумақ (га)
+                                        </Label>
+                                        <Input
+                                            id="sector-approved-area"
+                                            className="h-11 bg-slate-50/70"
+                                            type="number"
+                                            min="0.01"
+                                            step="0.01"
+                                            max={
+                                                application.requested_area ??
+                                                undefined
+                                            }
+                                            value={
+                                                sectorDecision.data
+                                                    .approved_area
+                                            }
+                                            onChange={(event) =>
+                                                sectorDecision.setData(
+                                                    'approved_area',
+                                                    event.target.value,
+                                                )
+                                            }
+                                        />
+                                        {sectorDecision.errors
+                                            .approved_area && (
+                                            <p className="text-sm text-rose-600">
+                                                {
+                                                    sectorDecision.errors
+                                                        .approved_area
+                                                }
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
+
+                                <div
+                                    className={
+                                        actions.can_sector_approve
+                                            ? 'space-y-1.5 lg:col-span-2'
+                                            : 'space-y-1.5 lg:col-span-3'
+                                    }
+                                >
+                                    <Label htmlFor="sector-review-comment">
+                                        Техникалық қорытынды
+                                        {actions.can_sector_reject && (
+                                            <span className="font-normal text-slate-400">
+                                                {' '}
+                                                (қайтару кезінде міндетті)
+                                            </span>
+                                        )}
+                                    </Label>
+                                    <Textarea
+                                        id="sector-review-comment"
+                                        className="min-h-24 resize-y bg-slate-50/70"
+                                        value={sectorDecision.data.comment}
+                                        onChange={(event) =>
+                                            sectorDecision.setData(
+                                                'comment',
+                                                event.target.value,
+                                            )
+                                        }
+                                        placeholder="Техникалық қорытындыны немесе қайтару себебін жазыңыз"
+                                    />
+                                    {sectorDecision.errors.comment && (
+                                        <p className="text-sm text-rose-600">
+                                            {sectorDecision.errors.comment}
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div className="flex flex-wrap gap-2 lg:col-span-3">
+                                    {actions.can_sector_approve && (
+                                        <Button
+                                            type="button"
+                                            disabled={sectorDecision.processing}
+                                            className="bg-emerald-600 text-white hover:bg-emerald-700"
+                                            onClick={(event) =>
+                                                postSectorDecision(
+                                                    event,
+                                                    'approve',
+                                                )
+                                            }
+                                        >
+                                            <CheckCircle2 /> Техникалық келісім
+                                            беру
+                                        </Button>
+                                    )}
+                                    {actions.can_sector_reject && (
+                                        <Button
+                                            type="button"
+                                            variant="destructive"
+                                            disabled={sectorDecision.processing}
+                                            onClick={(event) =>
+                                                postSectorDecision(
+                                                    event,
+                                                    'reject',
+                                                )
+                                            }
+                                        >
+                                            <XCircle /> Қайтару
+                                        </Button>
+                                    )}
+                                </div>
+                            </form>
+                        )}
+                    </ReviewSectionCard>
+                )}
 
                 {application.status === 'approved' &&
                     application.reserved_until && (
-                        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-emerald-50/40 p-5 shadow-[0_18px_45px_-40px_rgba(5,150,105,0.65)]">
-                            <div className="pointer-events-none absolute -right-8 -bottom-12 size-32 rounded-full bg-emerald-500/10" />
-                            <div className="relative flex items-start gap-4">
-                                <span className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/20">
+                        <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-5">
+                            <div className="flex items-start gap-4">
+                                <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
                                     <Clock3 className="size-5" />
                                 </span>
                                 <div>
@@ -231,7 +766,7 @@ export default function ReviewShow({
                     actions.can_set_schedule ||
                     actions.can_request_clarification ||
                     actions.can_reject) && (
-                    <ApplicantSectionCard
+                    <ReviewSectionCard
                         title="Сарапшы шешімі"
                         description={
                             actions.can_set_schedule
@@ -239,12 +774,11 @@ export default function ReviewShow({
                                 : 'Мақұлданған гектар резервке қойылады. Толықтыру немесе бас тарту кезінде түсініктеме міндетті.'
                         }
                         icon={ClipboardCheck}
-                        tone="amber"
                     >
                         <form className="grid gap-5 lg:grid-cols-3">
                             {(actions.can_approve ||
                                 actions.can_set_schedule) && (
-                                <div className="space-y-4 rounded-2xl border border-amber-200/80 bg-amber-50/60 p-4 lg:row-span-2">
+                                <div className="space-y-4 rounded-lg border border-amber-200/80 bg-amber-50/60 p-4 lg:row-span-2">
                                     <div className="flex items-center gap-3">
                                         <span className="flex size-9 items-center justify-center rounded-xl bg-amber-500 text-white">
                                             <CheckCircle2 className="size-4" />
@@ -527,15 +1061,14 @@ export default function ReviewShow({
                                 )}
                             </div>
                         </form>
-                    </ApplicantSectionCard>
+                    </ReviewSectionCard>
                 )}
 
                 <InvestmentApplicationDetails
                     application={application}
                     showApplicant
-                    applicantStyle
                 />
-            </PageContainer>
+            </div>
         </AppLayout>
     );
 }

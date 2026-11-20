@@ -15,6 +15,10 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import {
+    investmentProjectCollectionLabel,
+    isTurkistanInvestAttractionSubRole,
+} from '@/lib/invest-sub-role';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
 
@@ -57,6 +61,15 @@ interface Props {
 export default function Archived({ projects, filters }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
+    const isAttractionDirection = isTurkistanInvestAttractionSubRole(
+        auth.user?.invest_sub_role,
+    );
+    const projectCollectionTitle = investmentProjectCollectionLabel(
+        auth.user?.invest_sub_role,
+    );
+    const archivedPageTitle = isAttractionDirection
+        ? 'Архивтелген тартылатын жобалар'
+        : 'Архивтелген жобалар';
     const canUnarchive =
         canModify || auth.user?.role_model?.name === 'moderator';
     const { data, setData, get } = useForm({
@@ -112,22 +125,24 @@ export default function Archived({ projects, filters }: Props) {
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Инвестициялық жобалар',
+                    title: projectCollectionTitle,
                     href: '/investment-projects',
                 },
                 { title: 'Архив', href: '' },
             ]}
         >
-            <Head title="Архивтелген жобалар" />
+            <Head title={archivedPageTitle} />
 
             <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
                 <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
-                            Жобалар портфелі
+                            {isAttractionDirection
+                                ? 'Инвестор тарту портфелі'
+                                : 'Жобалар портфелі'}
                         </p>
                         <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
-                            Архивтелген жобалар
+                            {archivedPageTitle}
                         </h1>
                         <p className="mt-1.5 text-sm text-slate-500">
                             Жұмысы аяқталған немесе белсенді тізімнен шығарылған
@@ -139,7 +154,9 @@ export default function Archived({ projects, filters }: Props) {
                             variant="outline"
                             className="border-[#0f1b3d]/20 text-[#0f1b3d]"
                         >
-                            Белсенді жобаларға оралу
+                            {isAttractionDirection
+                                ? 'Тартылатын жобаларға оралу'
+                                : 'Белсенді жобаларға оралу'}
                         </Button>
                     </Link>
                 </header>

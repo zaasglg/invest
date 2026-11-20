@@ -26,6 +26,7 @@ use App\Services\ProjectTaskAssigneeService;
 use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
 use App\Support\InfrastructureValidationRules;
+use App\Support\InvestorCountries;
 use App\Support\ProductionPlanValidationRules;
 use App\Support\ProjectAttractionDetailRules;
 use App\Support\ProjectAttractionStages;
@@ -64,6 +65,16 @@ class InvestmentProjectController extends Controller
     {
         $user = $request->user()->loadMissing('roleModel');
         $isInvestor = $user->roleModel?->name === 'investor';
+        $isAttraction = $user->isTurkistanInvestAttraction();
+
+        if ($isAttraction && is_string($request->input('investor_country_code'))) {
+            $request->merge([
+                'investor_country_code' => strtoupper(trim(
+                    $request->input('investor_country_code')
+                )),
+            ]);
+        }
+
         $filters = $request->only([
             'search',
             'region_id',
@@ -80,13 +91,28 @@ class InvestmentProjectController extends Controller
             'end_date_to',
             'attraction_stage',
             'work_filter',
-            'responsible_id',
+            'investor_country_code',
         ]);
         $request->validate([
             'attraction_stage' => ['exclude_unless:status,plan', 'nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
-            'responsible_id' => ['nullable', 'integer', 'exists:users,id'],
+            'investor_country_code' => [
+                Rule::excludeIf(! $isAttraction),
+                'nullable',
+                'string',
+                'size:2',
+                Rule::in(InvestorCountries::codes()),
+            ],
         ]);
+
+        if (! $isAttraction) {
+            unset($filters['investor_country_code']);
+        }
+
+        // Old links to removed shortcuts now use the complete visible list.
+        if (in_array($filters['work_filter'] ?? null, ['pending_review', 'overdue'], true)) {
+            unset($filters['work_filter']);
+        }
 
         if (($filters['status'] ?? null) !== 'plan') {
             unset($filters['attraction_stage']);
@@ -108,6 +134,7 @@ class InvestmentProjectController extends Controller
             'sezs',
             'industrialZones',
             'promZones',
+            'attractionHandoverRejector:id,full_name',
         ];
         if (! $isInvestor) {
             $projectRelations[] = 'subsoilUsers';
@@ -115,6 +142,23 @@ class InvestmentProjectController extends Controller
 
         $projectsQuery = InvestmentProject::active()->with($projectRelations);
         $this->projectAccess->scopeVisible($projectsQuery, $user);
+        if ($isAttraction) {
+            $projectsQuery->where('attraction_stage', '!=', 'handover');
+        }
+        $investorCountries = $isAttraction
+            ? (clone $projectsQuery)
+                ->whereNotNull('investor_country_code')
+                ->select('investor_country_code')
+                ->distinct()
+                ->pluck('investor_country_code')
+                ->map(fn ($code): array => [
+                    'code' => strtoupper((string) $code),
+                    'name' => InvestorCountries::name((string) $code),
+                ])
+                ->sortBy('name', SORT_NATURAL | SORT_FLAG_CASE)
+                ->values()
+                ->all()
+            : [];
         $worklist = app(\App\Services\ProjectWorklistService::class);
         $worklist->filter($projectsQuery, $user, $filters);
 
@@ -146,6 +190,13 @@ class InvestmentProjectController extends Controller
                         fn ($typeQuery) => $typeQuery->whereKey($projectTypeId)
                     );
             });
+        }
+
+        if (! empty($filters['investor_country_code'])) {
+            $projectsQuery->where(
+                'investor_country_code',
+                $filters['investor_country_code']
+            );
         }
 
         if (! empty($filters['status'])) {
@@ -255,7 +306,9 @@ class InvestmentProjectController extends Controller
             if ($user->roleModel?->name === 'ispolnitel' && ! $user->isInvolvedInProject($project)) {
                 $project->makeHidden(['current_status', 'attraction_decline_reason', 'attraction_resume_on',
                     'attraction_handover_to_id', 'attraction_handover_requested_at',
-                    'attraction_handover_accepted_at', 'attraction_handover_accepted_by']);
+                    'attraction_handover_requested_by', 'attraction_handover_accepted_at',
+                    'attraction_handover_accepted_by', 'attraction_handover_rejection_reason',
+                    'attraction_handover_rejected_at', 'attraction_handover_rejected_by']);
             }
         });
 
@@ -274,6 +327,7 @@ class InvestmentProjectController extends Controller
                 : SubsoilUser::select('id', 'name', 'region_id')
                     ->orderBy('name')
                     ->get(),
+            'investorCountries' => $investorCountries,
             'filters' => $filters,
         ]);
     }
@@ -475,7 +529,8 @@ class InvestmentProjectController extends Controller
             'promZones' => $promZones,
             'isSuperAdmin' => $isSuperAdmin,
             'canSelectCurators' => $canSelectCurators,
-            'canCreateOperationalProject' => $isSuperAdmin,
+            'canCreateOperationalProject' => $isSuperAdmin
+                || $user?->isTurkistanInvestAccompaniment(),
             'requiresCuratorSelection' => false,
             'attractionHandoverUsers' => app(ProjectAttractionHandoverService::class)->candidates($user),
             'investUsers' => $investUsers,
@@ -491,6 +546,14 @@ class InvestmentProjectController extends Controller
 
     public function store(Request $request)
     {
+        if (is_string($request->input('investor_country_code'))) {
+            $request->merge([
+                'investor_country_code' => strtoupper(trim(
+                    $request->input('investor_country_code')
+                )),
+            ]);
+        }
+
         $isPlanned = $request->input('status') === 'plan';
         if ($request->has('infrastructure')) {
             $request->merge([
@@ -545,6 +608,15 @@ class InvestmentProjectController extends Controller
             ],
             ...ProjectPlanningInput::rules($request),
             ...ProjectAttractionDetailRules::rules(),
+            'investor_country_code' => [
+                Rule::requiredIf(
+                    $isPlanned && $user?->isTurkistanInvestAttraction()
+                ),
+                'nullable',
+                'string',
+                'size:2',
+                Rule::in(InvestorCountries::codes()),
+            ],
             'status' => 'required|in:plan,implementation,launched,suspended',
             'attraction_stage' => ['nullable', 'string', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'start_date' => 'nullable|date',
@@ -564,6 +636,8 @@ class InvestmentProjectController extends Controller
             'project_type_ids.required_without' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
+            'investor_country_code.required' => 'Инвестор елін таңдаңыз.',
+            'investor_country_code.in' => 'Таңдалған инвестор елі жарамсыз.',
         ]);
 
         $validated['attraction_stage'] = $validated['status'] === 'plan'
@@ -872,6 +946,7 @@ class InvestmentProjectController extends Controller
                 'attractionActivities.reviewer:id,full_name',
                 'attractionHandoverTo:id,full_name',
                 'attractionHandoverAcceptor:id,full_name',
+                'attractionHandoverRejector:id,full_name',
             ]);
             $activityAccess = app(ProjectAttractionService::class);
             $project->attractionActivities->each(function ($activity) use ($user, $project, $activityAccess) {
@@ -904,9 +979,14 @@ class InvestmentProjectController extends Controller
             $project->setRelation('attractionActivities', collect());
             $project->setRelation('attractionHandoverTo', null);
             $project->setRelation('attractionHandoverAcceptor', null);
+            $project->setRelation('attractionHandoverRejector', null);
             foreach ([
                 'attraction_handover_to_id', 'attraction_handover_requested_at',
-                'attraction_handover_accepted_at', 'attraction_handover_accepted_by',
+                'attraction_handover_requested_by', 'attraction_handover_accepted_at',
+                'attraction_handover_accepted_by',
+                'attraction_handover_rejection_reason',
+                'attraction_handover_rejected_at',
+                'attraction_handover_rejected_by',
                 'attraction_decline_reason', 'attraction_resume_on',
             ] as $field) {
                 $project->setAttribute($field, null);
@@ -915,6 +995,10 @@ class InvestmentProjectController extends Controller
                 fn ($plan) => $plan->setRelation('facts', collect())
             );
         }
+
+        $handoverService = app(ProjectAttractionHandoverService::class);
+        $isPendingReserve = $project instanceof InvestmentProject
+            && $handoverService->isPendingReserveProject($project);
 
         return Inertia::render('investment-projects/show', [
             'project' => $project,
@@ -927,8 +1011,13 @@ class InvestmentProjectController extends Controller
                 && ! $project->is_archived && $this->projectAccess->canManage($user, $project),
             'canRestoreProject' => $project instanceof InvestmentProject && $user
                 && $project->is_archived && $this->projectAccess->canManage($user, $project),
+            'canArchiveProject' => $project instanceof InvestmentProject && $user
+                && ! $project->is_archived && ! $isPendingReserve
+                && in_array($roleName, ['superadmin', 'invest', 'moderator'], true)
+                && $this->projectAccess->canManage($user, $project),
             'canDeleteProject' => $project instanceof InvestmentProject && $user
-                && ! $project->is_archived && in_array($roleName, ['superadmin', 'invest'], true)
+                && ! $project->is_archived && ! $isPendingReserve
+                && in_array($roleName, ['superadmin', 'invest'], true)
                 && $this->projectAccess->canManage($user, $project),
             'canAccessChat' => $user && is_object($project)
                 ? $project->isChatParticipant($user)
@@ -939,7 +1028,13 @@ class InvestmentProjectController extends Controller
             'isInvolved' => $isInvolved,
             'isOwnDistrict' => $isOwnDistrict,
             'canAcceptAttractionHandover' => $project instanceof InvestmentProject && $user
-                ? app(ProjectAttractionHandoverService::class)->canAccept($user, $project)
+                ? $handoverService->canAccept($user, $project)
+                : false,
+            'handoverDecisionMode' => $project instanceof InvestmentProject && $user
+                ? $handoverService->decisionMode($user, $project)
+                : null,
+            'canResubmitAttractionHandover' => $project instanceof InvestmentProject && $user
+                ? $handoverService->canResubmitReturned($user, $project)
                 : false,
             'canManageAttraction' => $project instanceof InvestmentProject && $user
                 ? app(ProjectAttractionService::class)->canManage($user, $project)
@@ -966,6 +1061,7 @@ class InvestmentProjectController extends Controller
             'curators',
             'projectTypes',
             'productionPlans' => fn ($query) => $query->withCount('facts'),
+            'attractionHandoverRejector:id,full_name',
         ]);
 
         $regionsQuery = Region::query();
@@ -1076,6 +1172,8 @@ class InvestmentProjectController extends Controller
             'restrictedSectorType' => $restrictedSectorType,
             'companies' => $companies,
             'attractionHandoverUsers' => app(ProjectAttractionHandoverService::class)->candidates($user, $investmentProject),
+            'isReserveProject' => app(ProjectAttractionHandoverService::class)
+                ->isPendingReserveProject($investmentProject),
         ]);
     }
 
@@ -1151,7 +1249,7 @@ class InvestmentProjectController extends Controller
     ) {
         $user = request()->user();
 
-        if (! in_array($user?->roleModel?->name, ['superadmin', 'prokuror'], true)) {
+        if ($user?->roleModel?->name !== 'superadmin') {
             abort(403);
         }
 
@@ -1275,6 +1373,14 @@ class InvestmentProjectController extends Controller
     {
         $this->authorizeDistrictAccess($investmentProject);
 
+        if (is_string($request->input('investor_country_code'))) {
+            $request->merge([
+                'investor_country_code' => strtoupper(trim(
+                    $request->input('investor_country_code')
+                )),
+            ]);
+        }
+
         $isPlanned = $request->input('status') === 'plan';
 
         if ($request->has('infrastructure')) {
@@ -1326,6 +1432,15 @@ class InvestmentProjectController extends Controller
             ],
             ...ProjectPlanningInput::rules($request),
             ...ProjectAttractionDetailRules::rules(),
+            'investor_country_code' => [
+                Rule::requiredIf(
+                    $isPlanned && $user?->isTurkistanInvestAttraction()
+                ),
+                'nullable',
+                'string',
+                'size:2',
+                Rule::in(InvestorCountries::codes()),
+            ],
             'status' => 'required|in:plan,implementation,launched,suspended',
             'attraction_stage' => ['nullable', 'string', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'start_date' => 'nullable|date',
@@ -1346,6 +1461,8 @@ class InvestmentProjectController extends Controller
             'project_type_ids.required_without' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.min' => 'Кемінде бір жоба түрін таңдаңыз.',
             'project_type_ids.*.exists' => 'Таңдалған жоба түрі табылмады.',
+            'investor_country_code.required' => 'Инвестор елін таңдаңыз.',
+            'investor_country_code.in' => 'Таңдалған инвестор елі жарамсыз.',
         ]);
 
         $validated['attraction_stage'] = $validated['status'] === 'plan'
@@ -1471,6 +1588,14 @@ class InvestmentProjectController extends Controller
             $lockedProject = InvestmentProject::query()->lockForUpdate()->findOrFail($investmentProject->id);
             $validated = app(ProjectAttractionHandoverService::class)->prepare($validated, auth()->user(), $lockedProject);
 
+            if (($lockedProject->status !== 'plan' || $validated['status'] !== 'plan')
+                && array_key_exists('investor_country_code', $validated)
+                && $validated['investor_country_code'] !== $lockedProject->investor_country_code) {
+                throw ValidationException::withMessages([
+                    'investor_country_code' => 'Инвестор елін тек жоспарлау мәртебесіндегі жобада өзгертуге болады.',
+                ]);
+            }
+
             ProjectParticipantRules::assertActiveAssignmentsRetained(
                 $lockedProject, $curatorIds, $validated['company_id']
             );
@@ -1539,6 +1664,14 @@ class InvestmentProjectController extends Controller
                 ]
             );
         });
+
+        if ($user?->isTurkistanInvestAttraction()
+            && $investmentProject->isPendingAttractionReserve()) {
+            return redirect()->route('investment-projects.index')->with(
+                'success',
+                'Жоба сүйемелдеу резервіне жіберілді.'
+            );
+        }
 
         if (! empty($returnTo) && $this->isValidReturnUrl($returnTo)) {
             return redirect($returnTo)->with('success', 'Жоба жаңартылды.');
@@ -1875,6 +2008,13 @@ class InvestmentProjectController extends Controller
         );
 
         abort_if($investmentProject->is_deleted, 404);
+
+        abort_if(
+            app(ProjectAttractionHandoverService::class)
+                ->isPendingReserveProject($investmentProject),
+            409,
+            'Резервтегі жобаны өшіруге болмайды.'
+        );
 
         $this->authorizeDistrictAccess($investmentProject);
 
@@ -2428,6 +2568,11 @@ class InvestmentProjectController extends Controller
         }
 
         $user->loadMissing('roleModel');
+        if ($user->isTurkistanInvestDirection()
+            && ! $this->projectAccess->canView($user, $project)) {
+            abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
+        }
+
         if ($user->roleModel?->name === 'moderator'
             && ! $this->projectAccess->canView($user, $project)) {
             abort(
@@ -2502,6 +2647,13 @@ class InvestmentProjectController extends Controller
         )) {
             abort(403);
         }
+
+        abort_if(
+            app(ProjectAttractionHandoverService::class)
+                ->isPendingReserveProject($investmentProject),
+            409,
+            'Резервтегі жобаны архивке жіберуге болмайды.'
+        );
 
         $this->authorizeDistrictAccess($investmentProject);
 

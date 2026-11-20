@@ -27,6 +27,9 @@ class ProjectTaskRevisionService
             $locked = $lockedProject->tasks()->lockForUpdate()->findOrFail($task->id);
             $protected = $locked->hasProtectedDefinition();
             $before = $locked->only($locked->getFillable());
+            $pendingCompletions = $locked->completions()
+                ->where('status', 'pending')
+                ->get(['id', 'submitted_by']);
             $previousReports = $locked->completions()->get()->map->only([
                 'id', 'task_definition_version', 'status', 'submitted_by', 'reviewed_by', 'reviewed_at',
             ])->all();
@@ -53,6 +56,7 @@ class ProjectTaskRevisionService
                 'approved_by' => $requiresReview ? null : $actor->id,
                 'approved_at' => $requiresReview ? null : now(),
             ])->save();
+            $this->resolveActionableNotifications($locked);
 
             $locked->completions()->where('status', 'pending')->update([
                 'status' => 'rejected',
@@ -60,6 +64,19 @@ class ProjectTaskRevisionService
                 'reviewed_at' => now(),
                 'reviewer_comment' => 'Тапсырманың мазмұны өзгеріп, жаңа нұсқасы ашылды. Бұл есеп алдыңғы нұсқаның тарихында сақталды.',
             ]);
+            $pendingCompletions
+                ->reject(fn ($completion) => (int) $completion->submitted_by
+                    === (int) $actor->id)
+                ->each(fn ($completion) => TaskNotification::create([
+                    'user_id' => $completion->submitted_by,
+                    'type' => 'completion_rejected',
+                    'message' => "Тапсырма өзгергендіктен, жіберілген есеп алдыңғы нұсқаның тарихына көшірілді: \"{$locked->title}\".",
+                    'action_url' => route(
+                        'notifications.index',
+                        absolute: false
+                    ),
+                    'action_label' => 'Хабарламаларды ашу',
+                ]));
 
             if ((int) $oldAssignee !== (int) $locked->assigned_to) {
                 if ($oldAssignee) {
@@ -67,6 +84,19 @@ class ProjectTaskRevisionService
                 }
                 if ($locked->assignee?->roleModel?->name !== 'investor') {
                     $this->executors->assignTaskExecutor($lockedProject, (int) $locked->assigned_to);
+                }
+                if ($oldAssignee
+                    && (int) $oldAssignee !== (int) $actor->id) {
+                    TaskNotification::create([
+                        'user_id' => $oldAssignee,
+                        'type' => 'task_assignment_removed',
+                        'message' => "Сізден тапсырма алынып, басқа орындаушыға берілді: \"{$locked->title}\" (Жоба: {$lockedProject->name}).",
+                        'action_url' => route(
+                            'notifications.index',
+                            absolute: false
+                        ),
+                        'action_label' => 'Хабарламаларды ашу',
+                    ]);
                 }
             }
 
@@ -111,5 +141,27 @@ class ProjectTaskRevisionService
 
             return $requiresReview ? 'Тапсырманың жаңа нұсқасы растауға жіберілді.' : 'Тапсырманың жаңа нұсқасы орындауға жіберілді.';
         });
+    }
+
+    private function resolveActionableNotifications(ProjectTask $task): void
+    {
+        $notifications = TaskNotification::query()
+            ->where('task_id', $task->id)
+            ->whereIn('type', [
+                'task_assigned',
+                'task_pending_approval',
+                'completion_submitted',
+            ]);
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
     }
 }

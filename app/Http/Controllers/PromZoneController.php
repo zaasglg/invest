@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PromZone;
 use App\Models\Region;
 use App\Services\InfrastructureUsageService;
+use App\Services\InvestmentProjectAccessService;
 use App\Services\SectorActivityLogService;
 use App\Services\ZoneIndexAnalyticsService;
 use App\Support\InfrastructureValidationRules;
@@ -18,14 +19,11 @@ class PromZoneController extends Controller
         ZoneIndexAnalyticsService $analytics
     ) {
         $user = $request->user();
-        $isModerator = $user->loadMissing('roleModel')
-            ->roleModel?->name === 'moderator';
         $filters = $request->only(['search', 'region_id', 'status']);
         $data = $analytics->build(
             PromZone::class,
             $user,
-            $filters,
-            $isModerator
+            $filters
         );
 
         return Inertia::render('prom-zones/index', [
@@ -102,18 +100,15 @@ class PromZoneController extends Controller
     public function show(
         PromZone $promZone,
         InfrastructureUsageService $usageService,
+        InvestmentProjectAccessService $projectAccess,
     ) {
         $user = auth()->user();
-        $isModerator = $user?->loadMissing('roleModel')
-            ->roleModel?->name === 'moderator';
 
-        $promZone->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($isModerator) {
-            $q->where('is_archived', false)
-                ->when(
-                    $isModerator,
-                    fn ($query) => $query->curatedByTurkistanInvest()
-                )
-                ->with('region');
+        $promZone->load(['region', 'deleter:id,full_name', 'issues', 'issues.creator:id,full_name', 'investmentProjects' => function ($q) use ($projectAccess, $user) {
+            $q->where('is_archived', false)->with('region');
+            if ($user) {
+                $projectAccess->scopeVisible($q, $user);
+            }
         }])->loadCount('photos');
 
         $mainGalleryPhotos = $promZone->photos()

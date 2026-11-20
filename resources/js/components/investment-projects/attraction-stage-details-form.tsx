@@ -20,7 +20,7 @@ interface Props {
     stage: string;
     value: AttractionStageDetailsValue;
     onChange: (field: keyof AttractionStageDetailsValue, value: string) => void;
-    users: { id: number; full_name: string }[];
+    users?: { id: number; full_name: string }[];
     errors?: Partial<Record<string, string>>;
 }
 
@@ -28,7 +28,7 @@ export default function AttractionStageDetailsForm({
     stage,
     value,
     onChange,
-    users,
+    users = [],
     errors = {},
 }: Props) {
     if (!['handover', 'declined', 'paused'].includes(stage)) return null;
@@ -48,7 +48,7 @@ export default function AttractionStageDetailsForm({
                     className="space-y-2"
                 >
                     <Label htmlFor="attraction_handover_to_id">
-                        Қабылдайтын жауапты адам{' '}
+                        Қабылдайтын инвестор тарту маманы{' '}
                         <span className="text-red-500">*</span>
                     </Label>
                     <Select
@@ -86,15 +86,17 @@ export default function AttractionStageDetailsForm({
                         id="attraction-handover-error"
                         message={errors.attraction_handover_to_id}
                     />
-                    <p className="text-xs leading-relaxed text-gray-500">
-                        Таңдалған адам жобаның бетінде қабылдауды растайды. Жоба
-                        қабылданғанға дейін «Сүйемелдеуге берілді» деп
-                        есептелмейді.
-                    </p>
+                    {users.length > 0 && (
+                        <p className="text-xs leading-relaxed text-gray-500">
+                            Таңдалған маманға қабылдау туралы хабарлама
+                            жіберіледі. Ол қабылдағаннан кейін жоба сүйемелдеу
+                            бағытына өтеді.
+                        </p>
+                    )}
                     {users.length === 0 && (
                         <p className="text-xs text-amber-700">
-                            Қабылдайтын адам табылмады. Алдымен жобаға куратор
-                            бекітіңіз.
+                            Инвестор тарту бағытында қабылдайтын маман
+                            табылмады.
                         </p>
                     )}
                 </div>

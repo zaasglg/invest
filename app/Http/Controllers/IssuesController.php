@@ -8,6 +8,7 @@ use App\Models\PromZoneIssue;
 use App\Models\Region;
 use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
+use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
@@ -25,23 +26,33 @@ class IssuesController extends Controller
         $user = $request->user();
         $roleName = $user?->load('roleModel')->roleModel?->name;
         $investSubRole = ($roleName === 'invest'
-            && in_array($user->invest_sub_role, ['turkistan_invest', 'aea', 'ia', 'prom_zone'], true))
+            && in_array($user->invest_sub_role, User::INVEST_SUB_ROLES, true))
             ? $user->invest_sub_role
             : null;
         $isModerator = $roleName === 'moderator';
         $isInvestor = $roleName === 'investor';
+        $isAttraction = $user?->isTurkistanInvestAttraction() ?? false;
 
         // Determine which sections are accessible for this user.
-        $canSeeSez = ! $isInvestor
-            && (! $investSubRole || in_array($investSubRole, ['aea', 'turkistan_invest'], true));
-        $canSeeIz = ! $isInvestor
-            && (! $investSubRole || in_array($investSubRole, ['ia', 'turkistan_invest'], true));
-        $canSeeProm = ! $isInvestor
-            && (! $investSubRole || in_array($investSubRole, ['prom_zone', 'turkistan_invest'], true));
-        $canSeeSubsoil = ! $isInvestor
-            && (! $investSubRole || $investSubRole === 'turkistan_invest');
+        $canSeeSez = ! $isInvestor && ! $isAttraction
+            && (! $investSubRole || $investSubRole === 'aea'
+                || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
+        $canSeeIz = ! $isInvestor && ! $isAttraction
+            && (! $investSubRole || $investSubRole === 'ia'
+                || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
+        $canSeeProm = ! $isInvestor && ! $isAttraction
+            && (! $investSubRole || $investSubRole === 'prom_zone'
+                || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
+        $canSeeSubsoil = ! $isInvestor && ! $isAttraction
+            && (! $investSubRole
+                || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
 
-        $sector = $request->get('sector');
+        // Attraction accounts work only with planned projects. Keep the global
+        // issues page inside that same stream even if another sector is passed
+        // manually in the URL.
+        $sector = $isAttraction
+            ? 'all_projects'
+            : $request->get('sector');
         $regionId = $request->get('region_id');
 
         if ($isInvestor && $sector === 'invest') {
@@ -96,34 +107,29 @@ class IssuesController extends Controller
                     $q->where('region_id', $regionId);
                 });
             }
-            // Scope to only the invest sub-role's projects (via curators pivot).
-            if ($sector === 'invest') {
+            // Apply the same project visibility boundary used by project
+            // routes, including the plan/non-plan Turkistan Invest split.
+            if ($roleName === 'invest') {
                 $query->whereHas(
                     'project',
-                    fn ($project) => $project
+                    fn (Builder $project) => $this->projectAccess
+                        ->scopeVisible($project->active(), $user)
+                );
+            } elseif ($sector === 'invest') {
+                $query->whereHas(
+                    'project',
+                    fn (Builder $project) => $project
                         ->curatedByTurkistanInvest()
                 );
-            } elseif ($investSubRole) {
-                $query->whereHas('project', function ($q) use ($investSubRole) {
-                    if ($investSubRole === 'turkistan_invest') {
-                        $q->curatedByTurkistanInvest();
-
-                        return;
-                    }
-
-                    $q->whereHas(
-                        'curators',
-                        fn ($curators) => $curators
-                            ->where('users.invest_sub_role', $investSubRole)
-                    );
-                });
             }
             $this->accumulateIssueStats($issueStats, $query);
-            $projectIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) use ($sector) {
+            $projectIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) use ($sector, $isAttraction) {
                 return [
                     'id' => $issue->id,
                     'type' => $sector === 'invest' ? 'invest' : 'all_projects',
-                    'type_label' => $sector === 'invest' ? 'Turkistan Invest' : 'Барлық жобалар',
+                    'type_label' => $isAttraction
+                        ? 'Тартылатын жобалар'
+                        : ($sector === 'invest' ? 'Turkistan Invest' : 'Барлық жобалар'),
                     'title' => $issue->title,
                     'description' => $issue->description,
                     'category' => $issue->category,
@@ -298,9 +304,11 @@ class IssuesController extends Controller
 
         // Get sector labels — only for accessible sections.
         $sectorLabels = [
-            'all_projects' => 'Барлық жобалар',
+            'all_projects' => $isAttraction
+                ? 'Тартылатын жобалар'
+                : 'Барлық жобалар',
         ];
-        if (! $isInvestor) {
+        if (! $isInvestor && ! $isAttraction) {
             $sectorLabels['invest'] = 'Turkistan Invest';
         }
         if ($canSeeSez) {

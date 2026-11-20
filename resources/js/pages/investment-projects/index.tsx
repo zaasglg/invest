@@ -17,6 +17,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
     Archive,
     BriefcaseBusiness,
     Calendar,
@@ -62,6 +63,12 @@ import {
 } from '@/components/ui/table';
 import { useCanModify } from '@/hooks/use-can-modify';
 import AppLayout from '@/layouts/app-layout';
+import {
+    investmentProjectCollectionLabel,
+    isTurkistanInvestAttractionSubRole,
+    TURKISTAN_INVEST_SUPPORT_SUB_ROLE,
+} from '@/lib/invest-sub-role';
+import { investorCountryLabel } from '@/lib/investor-countries';
 import { getIspolnitelTypeLabel } from '@/lib/ispolnitel-types';
 import { persistOrder } from '@/lib/persist-order';
 import {
@@ -115,11 +122,21 @@ interface SubsoilUser {
     region_id: number;
 }
 
+interface InvestorCountryOption {
+    code: string;
+    name: string;
+}
+
 interface InvestmentProject {
     id: number;
     can_manage?: boolean;
     can_delete?: boolean;
     attraction_stage?: string | null;
+    investor_country_code?: string | null;
+    attraction_handover_rejection_reason?: string | null;
+    attraction_handover_rejected_at?: string | null;
+    attraction_handover_rejector?: { full_name: string } | null;
+    attractionHandoverRejector?: { full_name: string } | null;
     name: string;
     company_name: string | null;
     region: Region | null;
@@ -141,7 +158,6 @@ interface InvestmentProject {
 interface Filters {
     attraction_stage: string;
     work_filter: string;
-    responsible_id: string;
     search: string;
     region_id: string;
     project_type_id: string;
@@ -155,6 +171,7 @@ interface Filters {
     start_date_to: string;
     end_date_from: string;
     end_date_to: string;
+    investor_country_code: string;
 }
 
 interface Stats {
@@ -179,6 +196,7 @@ interface Props {
     industrialZones: IndustrialZone[];
     promZones: PromZone[];
     subsoilUsers: SubsoilUser[];
+    investorCountries: InvestorCountryOption[];
     filters: Partial<Filters>;
 }
 
@@ -239,10 +257,12 @@ export default function Index({
     industrialZones,
     promZones,
     subsoilUsers,
+    investorCountries,
     filters,
 }: Props) {
     const canModify = useCanModify();
     const { auth } = usePage<SharedData>().props;
+    const investSubRole = auth.user?.invest_sub_role;
     const isSuperAdmin = auth.user?.role_model?.name === 'superadmin';
     const isInvest = auth.user?.role_model?.name === 'invest';
     const isModerator = auth.user?.role_model?.name === 'moderator';
@@ -250,19 +270,29 @@ export default function Index({
     const canCreateProject = canModify || isModerator;
     const canEditProject = canModify || isModerator;
     const canDeleteProject = canModify && !isModerator;
+    const isAttractionDirection =
+        isInvest && isTurkistanInvestAttractionSubRole(investSubRole);
+    const isAccompanimentDirection =
+        isInvest && investSubRole === TURKISTAN_INVEST_SUPPORT_SUB_ROLE;
+    const projectCollectionTitle =
+        investmentProjectCollectionLabel(investSubRole);
+    const initialStatus = isAttractionDirection
+        ? 'plan'
+        : isAccompanimentDirection && filters.status === 'plan'
+          ? ''
+          : (filters.status ?? '');
     const canReorderProjects =
         isSuperAdmin ||
         ((isInvest || isModerator) &&
             projects.data.every((project) => project.can_manage !== false));
     const { data, setData, get } = useForm<Filters>({
         attraction_stage:
-            filters.status === 'plan' ? (filters.attraction_stage ?? '') : '',
-        work_filter: filters.work_filter ?? '',
-        responsible_id: filters.responsible_id ?? '',
+            initialStatus === 'plan' ? (filters.attraction_stage ?? '') : '',
+        work_filter: filters.work_filter === 'my' ? 'my' : '',
         search: filters.search ?? '',
         region_id: filters.region_id ?? '',
         project_type_id: filters.project_type_id ?? '',
-        status: filters.status ?? '',
+        status: initialStatus,
         executor_id: filters.executor_id ?? '',
         sector_type: filters.sector_type ?? '',
         sector_id: filters.sector_id ?? '',
@@ -272,15 +302,15 @@ export default function Index({
         start_date_to: filters.start_date_to ?? '',
         end_date_from: filters.end_date_from ?? '',
         end_date_to: filters.end_date_to ?? '',
+        investor_country_code: filters.investor_country_code ?? '',
     });
     const [filtersOpen, setFiltersOpen] = useState(
         !!(
-            (filters.status === 'plan' && filters.attraction_stage) ||
-            filters.responsible_id ||
+            (initialStatus === 'plan' && filters.attraction_stage) ||
             filters.search ||
             filters.region_id ||
             filters.project_type_id ||
-            filters.status ||
+            (!isAttractionDirection && initialStatus) ||
             filters.executor_id ||
             filters.sector_type ||
             filters.sector_id ||
@@ -292,6 +322,10 @@ export default function Index({
             filters.end_date_to
         ),
     );
+    const activeFilterCount = Object.entries(data).filter(
+        ([key, value]) =>
+            Boolean(value) && !(isAttractionDirection && key === 'status'),
+    ).length;
 
     const [orderedProjects, setOrderedProjects] = useState<InvestmentProject[]>(
         projects.data,
@@ -543,25 +577,28 @@ export default function Index({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Инвестициялық жобалар',
+                    title: projectCollectionTitle,
                     href: investmentProjectsRoutes.index.url(),
                 },
             ]}
         >
-            <Head title="Инвестициялық жобалар" />
+            <Head title={projectCollectionTitle} />
 
             <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
                 <header className="flex flex-col gap-4 border-b border-slate-200/80 pb-5 sm:flex-row sm:items-end sm:justify-between">
                     <div>
                         <p className="mb-2 text-xs font-bold text-gold-dark uppercase">
-                            Жобалар портфелі
+                            {isAttractionDirection
+                                ? 'Инвестор тарту портфелі'
+                                : 'Жобалар портфелі'}
                         </p>
                         <h1 className="text-2xl font-extrabold text-navy sm:text-3xl">
-                            Инвестициялық жобалар
+                            {projectCollectionTitle}
                         </h1>
                         <p className="mt-1.5 max-w-xl text-sm leading-6 text-slate-500">
-                            Аймақтағы жобалардың орындалуы, инвестиция көлемі
-                            және жауапты орындаушылар.
+                            {isAttractionDirection
+                                ? 'Инвестормен келіссөз және тарту кезеңіндегі жоспарланған жобалар.'
+                                : 'Аймақтағы жобалардың орындалуы, инвестиция көлемі және жауапты орындаушылар.'}
                         </p>
                     </div>
                     <div className="flex flex-wrap items-center gap-2 sm:justify-end">
@@ -571,9 +608,9 @@ export default function Index({
                         >
                             <SlidersHorizontal data-icon="inline-start" />
                             Сүзгі
-                            {Object.values(data).filter(Boolean).length > 0 && (
+                            {activeFilterCount > 0 && (
                                 <span className="flex size-5 items-center justify-center rounded-md bg-navy text-[11px] font-bold text-white">
-                                    {Object.values(data).filter(Boolean).length}
+                                    {activeFilterCount}
                                 </span>
                             )}
                         </Button>
@@ -631,7 +668,9 @@ export default function Index({
                             <Link href={investmentProjectsRoutes.create.url()}>
                                 <Button className="bg-gold text-white shadow-[0_10px_24px_-12px_rgba(154,125,53,0.9)] hover:bg-gold-dark">
                                     <Plus className="h-4 w-4" />
-                                    Жоба құру
+                                    {isAttractionDirection
+                                        ? 'Тартылатын жоба құру'
+                                        : 'Жоба құру'}
                                 </Button>
                             </Link>
                         )}
@@ -643,10 +682,13 @@ export default function Index({
                     aria-label="Жұмыстарды жылдам сүзу"
                 >
                     {[
-                        { value: '', label: 'Барлық жобалар' },
+                        {
+                            value: '',
+                            label: isAttractionDirection
+                                ? 'Барлық тартылатын жобалар'
+                                : 'Барлық жобалар',
+                        },
                         { value: 'my', label: 'Менің жұмыстарым' },
-                        { value: 'pending_review', label: 'Тексеруді күтуде' },
-                        { value: 'overdue', label: 'Мерзімі өткен' },
                     ].map((item) => (
                         <Button
                             key={item.value}
@@ -671,7 +713,7 @@ export default function Index({
                     onToggle={() => setFiltersOpen((prev) => !prev)}
                     onSubmit={submitFilters}
                     onClear={clearFilters}
-                    activeCount={Object.values(data).filter(Boolean).length}
+                    activeCount={activeFilterCount}
                     showTrigger={false}
                 >
                     <div className="space-y-1.5">
@@ -720,6 +762,39 @@ export default function Index({
                             </SelectContent>
                         </Select>
                     </div>
+                    {isAttractionDirection && (
+                        <div className="space-y-1.5">
+                            <Label htmlFor="investor-country-filter">
+                                Елдер
+                            </Label>
+                            <Select
+                                value={data.investor_country_code || 'all'}
+                                onValueChange={(value) =>
+                                    setData(
+                                        'investor_country_code',
+                                        value === 'all' ? '' : value,
+                                    )
+                                }
+                            >
+                                <SelectTrigger id="investor-country-filter">
+                                    <SelectValue placeholder="Барлық елдер" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">
+                                        Барлық елдер
+                                    </SelectItem>
+                                    {investorCountries.map((country) => (
+                                        <SelectItem
+                                            key={country.code}
+                                            value={country.code}
+                                        >
+                                            {country.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     <div className="space-y-1.5">
                         <Label>Жоба түрі</Label>
                         <Select
@@ -745,37 +820,45 @@ export default function Index({
                     </div>
                     <div className="space-y-1.5">
                         <Label>Мәртебесі</Label>
-                        <Select
-                            value={data.status}
-                            onValueChange={(value) =>
-                                setData((previous) => ({
-                                    ...previous,
-                                    status: value,
-                                    attraction_stage:
-                                        value === 'plan'
-                                            ? previous.attraction_stage
-                                            : '',
-                                }))
-                            }
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Барлық мәртебелер" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="plan">Жоспарлау</SelectItem>
-                                <SelectItem value="implementation">
-                                    Іске асыру
-                                </SelectItem>
-                                <SelectItem value="launched">
-                                    Іске қосылған
-                                </SelectItem>
-                                <SelectItem value="suspended">
-                                    Тоқтатылған
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
+                        {isAttractionDirection ? (
+                            <Input value="Жоспарлау" disabled />
+                        ) : (
+                            <Select
+                                value={data.status}
+                                onValueChange={(value) =>
+                                    setData((previous) => ({
+                                        ...previous,
+                                        status: value,
+                                        attraction_stage:
+                                            value === 'plan'
+                                                ? previous.attraction_stage
+                                                : '',
+                                    }))
+                                }
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Барлық мәртебелер" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {!isAccompanimentDirection && (
+                                        <SelectItem value="plan">
+                                            Жоспарлау
+                                        </SelectItem>
+                                    )}
+                                    <SelectItem value="implementation">
+                                        Іске асыру
+                                    </SelectItem>
+                                    <SelectItem value="launched">
+                                        Іске қосылған
+                                    </SelectItem>
+                                    <SelectItem value="suspended">
+                                        Тоқтатылған
+                                    </SelectItem>
+                                </SelectContent>
+                            </Select>
+                        )}
                     </div>
-                    {data.status === 'plan' && (
+                    {(isAttractionDirection || data.status === 'plan') && (
                         <div className="space-y-1.5">
                             <Label htmlFor="attraction-stage-filter">
                                 Инвестор тарту сатысы
@@ -811,37 +894,6 @@ export default function Index({
                             </p>
                         </div>
                     )}
-                    <div className="space-y-1.5">
-                        <Label htmlFor="responsible-filter">
-                            Жұмысқа жауапты
-                        </Label>
-                        <Select
-                            value={data.responsible_id || 'all'}
-                            onValueChange={(value) =>
-                                setData(
-                                    'responsible_id',
-                                    value === 'all' ? '' : value,
-                                )
-                            }
-                        >
-                            <SelectTrigger id="responsible-filter">
-                                <SelectValue placeholder="Барлық жауаптылар" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">
-                                    Барлық жауаптылар
-                                </SelectItem>
-                                {users.map((user) => (
-                                    <SelectItem
-                                        key={user.id}
-                                        value={String(user.id)}
-                                    >
-                                        {user.full_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
                     <div className="space-y-1.5">
                         <Label>Орындаушы</Label>
                         <Select
@@ -1065,7 +1117,9 @@ export default function Index({
                     <div className="metric-panel flex items-center justify-between gap-4 p-5 sm:p-6">
                         <div>
                             <h3 className="text-xs font-bold text-slate-400 uppercase">
-                                Жобалар саны
+                                {isAttractionDirection
+                                    ? 'Тартылатын жобалар саны'
+                                    : 'Жобалар саны'}
                             </h3>
                             <p className="mt-2 text-3xl font-extrabold text-navy tabular-nums">
                                 {stats.total_projects}
@@ -1096,23 +1150,31 @@ export default function Index({
                             <Waypoints className="size-5 text-slate-300" />
                         </div>
                         <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm font-semibold text-navy">
-                            <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 shrink-0 rounded-sm bg-blue-500" />{' '}
-                                Жоспарлау: {stats.status_counts.plan}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 shrink-0 rounded-sm bg-emerald-500" />{' '}
-                                Іске қосылған: {stats.status_counts.launched}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 shrink-0 rounded-sm bg-amber-500" />{' '}
-                                Іске асырылуда:{' '}
-                                {stats.status_counts.implementation}
-                            </span>
-                            <span className="flex items-center gap-1.5">
-                                <span className="h-2 w-2 shrink-0 rounded-sm bg-red-500" />{' '}
-                                Тоқтатылған: {stats.status_counts.suspended}
-                            </span>
+                            {!isAccompanimentDirection && (
+                                <span className="flex items-center gap-1.5">
+                                    <span className="h-2 w-2 shrink-0 rounded-sm bg-blue-500" />{' '}
+                                    Жоспарлау: {stats.status_counts.plan}
+                                </span>
+                            )}
+                            {!isAttractionDirection && (
+                                <>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 shrink-0 rounded-sm bg-emerald-500" />{' '}
+                                        Іске қосылған:{' '}
+                                        {stats.status_counts.launched}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 shrink-0 rounded-sm bg-amber-500" />{' '}
+                                        Іске асырылуда:{' '}
+                                        {stats.status_counts.implementation}
+                                    </span>
+                                    <span className="flex items-center gap-1.5">
+                                        <span className="h-2 w-2 shrink-0 rounded-sm bg-red-500" />{' '}
+                                        Тоқтатылған:{' '}
+                                        {stats.status_counts.suspended}
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </section>
@@ -1134,6 +1196,9 @@ export default function Index({
                                     {canReorderProjects && (
                                         <TableHead className="w-12"></TableHead>
                                     )}
+                                    <TableHead className="w-12 text-center">
+                                        №
+                                    </TableHead>
                                     <TableHead>Атауы / Компания</TableHead>
                                     <TableHead>Аймақ</TableHead>
                                     <TableHead>Жоба түрі</TableHead>
@@ -1150,7 +1215,9 @@ export default function Index({
                                 {orderedProjects.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={canReorderProjects ? 9 : 8}
+                                            colSpan={
+                                                canReorderProjects ? 10 : 9
+                                            }
                                             className="py-12 text-center text-gray-400"
                                         >
                                             Деректер жоқ
@@ -1161,12 +1228,19 @@ export default function Index({
                                         items={orderedProjects.map((p) => p.id)}
                                         strategy={verticalListSortingStrategy}
                                     >
-                                        {orderedProjects.map((project) => (
+                                        {orderedProjects.map((project, row) => (
                                             <SortableProjectRow
                                                 key={project.id}
                                                 id={project.id}
                                                 isEnabled={canReorderProjects}
                                             >
+                                                <TableCell className="w-12 text-center font-medium text-slate-500 tabular-nums">
+                                                    {(projects.current_page -
+                                                        1) *
+                                                        projects.per_page +
+                                                        row +
+                                                        1}
+                                                </TableCell>
                                                 <TableCell className="[overflow-wrap:anywhere]">
                                                     <div className="flex flex-col">
                                                         <Link
@@ -1185,6 +1259,44 @@ export default function Index({
                                                                     project.company_name,
                                                                 )}
                                                             </span>
+                                                        )}
+                                                        {project.attraction_handover_rejection_reason && (
+                                                            <div className="mt-2 max-w-sm rounded-md border border-rose-200 bg-rose-50 px-2.5 py-2 text-left">
+                                                                <p className="flex items-center gap-1.5 text-xs font-semibold text-rose-800">
+                                                                    <AlertTriangle className="size-3.5 shrink-0" />
+                                                                    Сүйемелдеуден
+                                                                    кері
+                                                                    қайтарылды
+                                                                </p>
+                                                                <p className="mt-1 line-clamp-2 text-xs text-rose-700">
+                                                                    {
+                                                                        project.attraction_handover_rejection_reason
+                                                                    }
+                                                                </p>
+                                                                <p className="mt-1 text-[11px] text-rose-600">
+                                                                    {project
+                                                                        .attraction_handover_rejector
+                                                                        ?.full_name ??
+                                                                        project
+                                                                            .attractionHandoverRejector
+                                                                            ?.full_name ??
+                                                                        'Қайтарған маман көрсетілмеген'}
+                                                                    {project.attraction_handover_rejected_at
+                                                                        ? ` · ${new Intl.DateTimeFormat(
+                                                                              'kk-KZ',
+                                                                              {
+                                                                                  day: '2-digit',
+                                                                                  month: '2-digit',
+                                                                                  year: 'numeric',
+                                                                              },
+                                                                          ).format(
+                                                                              new Date(
+                                                                                  project.attraction_handover_rejected_at,
+                                                                              ),
+                                                                          )}`
+                                                                        : ''}
+                                                                </p>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 </TableCell>
@@ -1225,13 +1337,25 @@ export default function Index({
                                                             project.status,
                                                         )}
                                                     </Badge>
-                                                    {project.status ===
-                                                        'plan' && (
-                                                        <p className="mt-2 max-w-48 text-xs text-slate-500">
-                                                            {attractionStageLabel(
-                                                                project.attraction_stage,
+                                                    {(project.status ===
+                                                        'plan' ||
+                                                        project.investor_country_code) && (
+                                                        <div className="mt-2 max-w-48 space-y-1 text-xs text-slate-500">
+                                                            {project.status ===
+                                                                'plan' && (
+                                                                <p>
+                                                                    {attractionStageLabel(
+                                                                        project.attraction_stage,
+                                                                    )}
+                                                                </p>
                                                             )}
-                                                        </p>
+                                                            <p>
+                                                                Инвестор елі:{' '}
+                                                                {investorCountryLabel(
+                                                                    project.investor_country_code,
+                                                                )}
+                                                            </p>
+                                                        </div>
                                                     )}
                                                 </TableCell>
                                                 <TableCell className="text-right">

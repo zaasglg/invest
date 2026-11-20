@@ -194,18 +194,21 @@ export default function IssuesIndex({
     issueStats,
     sectorLabels,
 }: Props) {
+    const isAttractionIssues =
+        sectorLabels.all_projects === 'Тартылатын жобалар';
     const selectedRegion = filters.region_id
         ? regions.find((region) => region.id === filters.region_id)
         : null;
-    const backUrl = selectedRegion
-        ? regionShow(selectedRegion.id).url
-        : dashboard().url;
+    const backUrl =
+        selectedRegion && !isAttractionIssues
+            ? regionShow(selectedRegion.id).url
+            : dashboard().url;
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Басқару тақтасы',
             href: dashboard().url,
         },
-        ...(selectedRegion
+        ...(selectedRegion && !isAttractionIssues
             ? [
                   {
                       title: selectedRegion.name,
@@ -232,7 +235,9 @@ export default function IssuesIndex({
         },
         {},
     );
-    const hasActiveFilters = Boolean(filters.sector || filters.region_id);
+    const hasActiveFilters = Boolean(
+        filters.region_id || (!isAttractionIssues && filters.sector),
+    );
 
     const handleFilterChange = (key: string, value: string | null) => {
         const params: Record<string, string | null> = {
@@ -259,9 +264,11 @@ export default function IssuesIndex({
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head
                 title={
-                    selectedRegion
-                        ? `${selectedRegion.name} — проблемалық мәселелер`
-                        : 'Түркістан облысы — проблемалық мәселелер'
+                    isAttractionIssues
+                        ? 'Тартылатын жобалардың мәселелері'
+                        : selectedRegion
+                          ? `${selectedRegion.name} — проблемалық мәселелер`
+                          : 'Түркістан облысы — проблемалық мәселелер'
                 }
             />
 
@@ -283,19 +290,25 @@ export default function IssuesIndex({
                                     Бақылау орталығы
                                 </p>
                                 <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
-                                    Проблемалық мәселелер
+                                    {isAttractionIssues
+                                        ? 'Тартылатын жобалардың мәселелері'
+                                        : 'Проблемалық мәселелер'}
                                 </h1>
                                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
-                                    {selectedRegion
-                                        ? `${selectedRegion.name} бойынша жобалар мен секторлардағы мәселелер`
-                                        : 'Түркістан облысының барлық аудандары, жобалары және секторлары бойынша жиынтық тізім'}
+                                    {isAttractionIssues
+                                        ? 'Жоспарлаудағы тартылатын жобалар бойынша тіркелген мәселелер'
+                                        : selectedRegion
+                                          ? `${selectedRegion.name} бойынша жобалар мен секторлардағы мәселелер`
+                                          : 'Түркістан облысының барлық аудандары, жобалары және секторлары бойынша жиынтық тізім'}
                                 </p>
                             </div>
                         </div>
 
                         <div className="inline-flex w-fit items-center gap-2 rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-semibold text-slate-100">
                             <MapPin className="size-4 text-[#e4c973]" />
-                            {selectedRegion?.name || 'Түркістан облысы'}
+                            {isAttractionIssues
+                                ? selectedRegion?.name || 'Тартылатын жобалар'
+                                : selectedRegion?.name || 'Түркістан облысы'}
                         </div>
                     </div>
                 </section>
@@ -358,7 +371,9 @@ export default function IssuesIndex({
                                 Мәселелерді нақтылау
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                                Аудан/қала немесе сектор бойынша сүзуге болады
+                                {isAttractionIssues
+                                    ? 'Аудан немесе қала бойынша сүзуге болады'
+                                    : 'Аудан/қала немесе сектор бойынша сүзуге болады'}
                             </p>
                         </div>
 
@@ -397,39 +412,41 @@ export default function IssuesIndex({
                                 </Select>
                             </div>
 
-                            <div className="space-y-1.5 xl:w-60">
-                                <label className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
-                                    Сектор
-                                </label>
-                                <Select
-                                    value={filters.sector ?? 'all'}
-                                    onValueChange={(value) =>
-                                        handleFilterChange(
-                                            'sector',
-                                            value === 'all' ? null : value,
-                                        )
-                                    }
-                                >
-                                    <SelectTrigger className="w-full bg-white">
-                                        <SelectValue placeholder="Секторды таңдаңыз" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">
-                                            Барлық секторлар
-                                        </SelectItem>
-                                        {Object.entries(sectorLabels).map(
-                                            ([key, label]) => (
-                                                <SelectItem
-                                                    key={key}
-                                                    value={key}
-                                                >
-                                                    {label}
-                                                </SelectItem>
-                                            ),
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                            </div>
+                            {!isAttractionIssues && (
+                                <div className="space-y-1.5 xl:w-60">
+                                    <label className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
+                                        Сектор
+                                    </label>
+                                    <Select
+                                        value={filters.sector ?? 'all'}
+                                        onValueChange={(value) =>
+                                            handleFilterChange(
+                                                'sector',
+                                                value === 'all' ? null : value,
+                                            )
+                                        }
+                                    >
+                                        <SelectTrigger className="w-full bg-white">
+                                            <SelectValue placeholder="Секторды таңдаңыз" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">
+                                                Барлық секторлар
+                                            </SelectItem>
+                                            {Object.entries(sectorLabels).map(
+                                                ([key, label]) => (
+                                                    <SelectItem
+                                                        key={key}
+                                                        value={key}
+                                                    >
+                                                        {label}
+                                                    </SelectItem>
+                                                ),
+                                            )}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
 
                             {hasActiveFilters && (
                                 <Button
@@ -453,8 +470,9 @@ export default function IssuesIndex({
                                 Мәселелер тізімі
                             </h2>
                             <p className="mt-1 text-sm text-slate-500">
-                                Әр мәселенің аймағы, секторы және нақты
-                                объектісі көрсетілген
+                                {isAttractionIssues
+                                    ? 'Әр мәселенің аймағы және тиісті жобасы көрсетілген'
+                                    : 'Әр мәселенің аймағы, секторы және нақты объектісі көрсетілген'}
                             </p>
                         </div>
                         <Badge

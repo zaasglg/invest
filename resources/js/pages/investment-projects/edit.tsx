@@ -2,6 +2,7 @@ import { Head, useForm, Link, usePage } from '@inertiajs/react';
 import {
     ArrowLeft,
     ArrowRight,
+    AlertTriangle,
     Check,
     FileText,
     ExternalLink,
@@ -16,6 +17,7 @@ import type { CompanyOption } from '@/components/companies/company-select';
 import AttractionStageDetailsForm from '@/components/investment-projects/attraction-stage-details-form';
 import AttractionStageSelect from '@/components/investment-projects/attraction-stage-select';
 import InvestmentAmountInput from '@/components/investment-projects/investment-amount-input';
+import InvestorCountrySelect from '@/components/investment-projects/investor-country-select';
 import OptionalProjectSection from '@/components/investment-projects/optional-project-section';
 import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
 import ProjectStatusSelect from '@/components/investment-projects/project-status-select';
@@ -42,6 +44,12 @@ import {
     PROJECT_INFRASTRUCTURE_FIELDS,
     withDefaultProjectUsedCapacity,
 } from '@/lib/infrastructure';
+import {
+    investmentProjectCollectionLabel,
+    isTurkistanInvestAttractionSubRole,
+    TURKISTAN_INVEST_SUPPORT_SUB_ROLE,
+} from '@/lib/invest-sub-role';
+import { investorCountryLabel } from '@/lib/investor-countries';
 import type { ProductionPlanInput } from '@/lib/production';
 import { normalizeProductionPlans } from '@/lib/production';
 import {
@@ -112,10 +120,15 @@ interface InvestmentProject {
     production_plans?: ProductionPlanInput[];
     total_investment: string | null;
     status: string;
+    investor_country_code?: string | null;
     attraction_stage?: string | null;
     attraction_handover_to_id?: number | null;
     attraction_decline_reason?: string | null;
     attraction_resume_on?: string | null;
+    attraction_handover_rejection_reason?: string | null;
+    attraction_handover_rejected_at?: string | null;
+    attraction_handover_rejector?: { full_name: string } | null;
+    attractionHandoverRejector?: { full_name: string } | null;
     start_date: string | null;
     end_date: string | null;
     executors?: User[];
@@ -150,9 +163,10 @@ interface Props {
     promZones: PromZone[];
     isSuperAdmin?: boolean;
     investUsers?: InvestUser[];
+    attractionHandoverUsers?: { id: number; full_name: string }[];
     investSubRole?: string | null;
     restrictedSectorType?: 'sez' | 'industrial_zone' | 'prom_zone' | null;
-    attractionHandoverUsers?: { id: number; full_name: string }[];
+    isReserveProject?: boolean;
 }
 
 const PROJECT_FORM_ERROR_FIELDS = [
@@ -172,6 +186,7 @@ const PROJECT_FORM_ERROR_FIELDS = [
         step: 1,
     },
     { field: 'planned_production', step: 1 },
+    { field: 'investor_country_code', step: 1 },
     { field: 'attraction_stage', step: 2 },
     { field: 'attraction_handover_to_id', step: 2 },
     { field: 'attraction_decline_reason', step: 2 },
@@ -200,9 +215,20 @@ export default function Edit({
     promZones,
     isSuperAdmin,
     investUsers = [],
-    restrictedSectorType = null,
     attractionHandoverUsers = [],
+    investSubRole = null,
+    restrictedSectorType = null,
+    isReserveProject = false,
 }: Props) {
+    const isAttractionDirection =
+        isTurkistanInvestAttractionSubRole(investSubRole);
+    const isAccompanimentDirection =
+        investSubRole === TURKISTAN_INVEST_SUPPORT_SUB_ROLE;
+    const projectCollectionTitle =
+        investmentProjectCollectionLabel(investSubRole);
+    const editPageTitle = isAttractionDirection
+        ? 'Тартылатын жобаны өңдеу'
+        : 'Жобаны өңдеу';
     const { url } = usePage();
     const queryParams = new URLSearchParams(url.split('?')[1]);
     const returnUrl = queryParams.get('return_to');
@@ -232,6 +258,7 @@ export default function Edit({
             ),
             total_investment: project.total_investment ?? '',
             status: project.status || 'plan',
+            investor_country_code: project.investor_country_code ?? '',
             attraction_stage: project.attraction_stage || 'potential',
             attraction_handover_to_id:
                 project.attraction_handover_to_id?.toString() ?? '',
@@ -251,6 +278,10 @@ export default function Edit({
         });
 
     const isPlanned = data.status === 'plan';
+    const canEditInvestorCountry = project.status === 'plan' && isPlanned;
+    const investorCountryCode = canEditInvestorCountry
+        ? data.investor_country_code
+        : (project.investor_country_code ?? '');
 
     const selectedCompany = useMemo(
         () =>
@@ -520,6 +551,9 @@ export default function Edit({
 
         transform((form) => ({
             ...form,
+            investor_country_code: canEditInvestorCountry
+                ? form.investor_country_code || null
+                : (project.investor_country_code ?? null),
             attraction_stage:
                 form.status === 'plan' ? form.attraction_stage : null,
             infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
@@ -537,6 +571,9 @@ export default function Edit({
         }
         if (!data.region_id) {
             errors.region_id = 'Ауданды таңдаңыз';
+        }
+        if (canEditInvestorCountry && !data.investor_country_code) {
+            errors.investor_country_code = 'Инвестор елін таңдаңыз';
         }
         if (!isPlanned && data.project_type_ids.length === 0) {
             errors.project_type_ids = 'Кемінде бір жоба түрін таңдаңыз';
@@ -562,7 +599,7 @@ export default function Edit({
             data.infrastructure,
         );
         const errors = getProjectInfrastructureErrors(infrastructure);
-        if (data.status === 'plan')
+        if (data.status === 'plan' && !isReserveProject)
             Object.assign(
                 errors,
                 attractionStageDetailErrors(data.attraction_stage, data),
@@ -570,6 +607,7 @@ export default function Edit({
 
         if (
             data.status === 'plan' &&
+            !isReserveProject &&
             !ATTRACTION_STAGES.some(
                 (stage) => stage.value === data.attraction_stage,
             )
@@ -618,20 +656,59 @@ export default function Edit({
         <AppLayout
             breadcrumbs={[
                 {
-                    title: 'Инвестициялық жобалар',
+                    title: projectCollectionTitle,
                     href: investmentProjects.index.url(),
                 },
                 { title: 'Өңдеу', href: '#' },
             ]}
         >
-            <Head title="Жобаны өңдеу" />
+            <Head title={editPageTitle} />
 
             <PageContainer width="wide">
                 <PageHeader
-                    eyebrow="Инвестициялық жобалар"
-                    title="Жобаны өңдеу"
-                    subtitle="Жоба деректерін, компанияны, инвестицияны немесе іске асыру көрсеткіштерін жаңартыңыз."
+                    eyebrow={projectCollectionTitle}
+                    title={editPageTitle}
+                    subtitle={
+                        isAttractionDirection
+                            ? 'Инвестормен жұмыс кезеңдерін және тартылатын жобаның деректерін жаңартыңыз.'
+                            : 'Жоба деректерін, компанияны, инвестицияны немесе іске асыру көрсеткіштерін жаңартыңыз.'
+                    }
                 />
+
+                {project.attraction_handover_rejection_reason && (
+                    <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-rose-950">
+                        <AlertTriangle className="mt-0.5 size-5 shrink-0 text-rose-600" />
+                        <div className="min-w-0 space-y-1">
+                            <h2 className="font-semibold">
+                                Жоба сүйемелдеуден кері қайтарылды
+                            </h2>
+                            <p className="text-sm leading-relaxed break-words whitespace-pre-wrap text-rose-900">
+                                {project.attraction_handover_rejection_reason}
+                            </p>
+                            <p className="text-xs text-rose-700">
+                                Қайтарған:{' '}
+                                {project.attraction_handover_rejector
+                                    ?.full_name ??
+                                    project.attractionHandoverRejector
+                                        ?.full_name ??
+                                    'Көрсетілмеген'}
+                                {project.attraction_handover_rejected_at
+                                    ? ` · ${new Intl.DateTimeFormat('kk-KZ', {
+                                          day: '2-digit',
+                                          month: '2-digit',
+                                          year: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit',
+                                      }).format(
+                                          new Date(
+                                              project.attraction_handover_rejected_at,
+                                          ),
+                                      )}`
+                                    : ''}
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Step Indicator */}
                 <div className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm sm:p-5">
@@ -705,6 +782,18 @@ export default function Edit({
                             <div className="space-y-6">
                                 <ProjectStatusSelect
                                     value={data.status}
+                                    disabled={
+                                        isAttractionDirection ||
+                                        isReserveProject
+                                    }
+                                    plannedOnly={
+                                        isAttractionDirection ||
+                                        isReserveProject
+                                    }
+                                    operationalOnly={
+                                        isAccompanimentDirection &&
+                                        !isReserveProject
+                                    }
                                     onChange={(value) => {
                                         setData((previous) => ({
                                             ...previous,
@@ -949,6 +1038,31 @@ export default function Edit({
                                         )}
                                     </div>
                                 </div>
+
+                                {(isPlanned || investorCountryCode) && (
+                                    <InvestorCountrySelect
+                                        value={investorCountryCode}
+                                        disabled={!canEditInvestorCountry}
+                                        onChange={(value) => {
+                                            setData(
+                                                'investor_country_code',
+                                                value,
+                                            );
+                                            clearErrors(
+                                                'investor_country_code',
+                                            );
+                                            setValidationErrors((previous) => ({
+                                                ...previous,
+                                                investor_country_code: '',
+                                            }));
+                                        }}
+                                        required={canEditInvestorCountry}
+                                        error={
+                                            errors.investor_country_code ||
+                                            validationErrors.investor_country_code
+                                        }
+                                    />
+                                )}
 
                                 {/* Жоба түрі және Сектор - 2 column */}
                                 <OptionalProjectSection
@@ -1334,7 +1448,7 @@ export default function Edit({
                             data-form-step="2"
                             className="grid grid-cols-1 gap-6 lg:grid-cols-2"
                         >
-                            {data.status === 'plan' && (
+                            {data.status === 'plan' && !isReserveProject && (
                                 <AttractionStageSelect
                                     value={data.attraction_stage}
                                     onChange={(value) => {
@@ -1352,10 +1466,11 @@ export default function Edit({
                                 />
                             )}
                             {/* Сол жақ: Сипаттама және Инфрақұрылым */}
-                            {data.status === 'plan' && (
+                            {data.status === 'plan' && !isReserveProject && (
                                 <AttractionStageDetailsForm
                                     stage={data.attraction_stage}
                                     value={data}
+                                    users={attractionHandoverUsers}
                                     onChange={(field, value) => {
                                         setData(field, value);
                                         clearErrors(field);
@@ -1364,7 +1479,6 @@ export default function Edit({
                                             [field]: '',
                                         }));
                                     }}
-                                    users={attractionHandoverUsers}
                                     errors={{ ...errors, ...validationErrors }}
                                 />
                             )}
@@ -1605,6 +1719,18 @@ export default function Edit({
                                         Негізгі ақпарат
                                     </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
+                                        {(isPlanned || investorCountryCode) && (
+                                            <div>
+                                                <span className="text-gray-500">
+                                                    Инвестор елі:
+                                                </span>
+                                                <p className="font-medium">
+                                                    {investorCountryLabel(
+                                                        investorCountryCode,
+                                                    )}
+                                                </p>
+                                            </div>
+                                        )}
                                         <div>
                                             <span className="text-gray-500">
                                                 Жоба атауы:

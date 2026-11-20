@@ -24,6 +24,15 @@ class TelegramNotificationDeliveryService
                 || $notification->telegram_next_attempt_at?->isFuture()) {
                 return null;
             }
+            if ($notification->is_read) {
+                $notification->forceFill([
+                    'telegram_status' => 'skipped',
+                    'telegram_next_attempt_at' => null,
+                    'telegram_last_error' => null,
+                ])->saveQuietly();
+
+                return null;
+            }
             $user = $notification->user;
             if (! $user || ! $user->telegram_chat_id
                 || ! TaskNotification::visibleTo($user)->whereKey($id)->exists()) {

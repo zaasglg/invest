@@ -142,6 +142,7 @@ test('managers cannot mutate attraction activities outside their project scope',
 })->with([
     'direct curator' => ['invest', null],
     'Turkistan Invest curator' => ['invest', 'turkistan_invest'],
+    'Turkistan Invest attraction outsider' => ['invest', 'turkistan_invest_attraction'],
     'sector curator' => ['invest', 'aea'],
     'moderator' => ['moderator', null],
 ]);

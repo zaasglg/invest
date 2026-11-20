@@ -10,8 +10,11 @@ use App\Models\PromZone;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\Sez;
+use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\ZoneCapacityService;
+use Illuminate\Http\Client\Request as ClientRequest;
+use Illuminate\Support\Facades\Http;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function applicationRole(string $name): Role
@@ -140,6 +143,41 @@ function applicationCompany(Region $region, array $attributes = []): Company
         'status' => 'active',
         ...$attributes,
     ]);
+}
+
+function approveApplicationThroughSector(
+    $testCase,
+    InvestmentApplication $application,
+    User $manager,
+    User $sectorReviewer,
+    float $approvedArea,
+    array $approvalOverrides = []
+): void {
+    $testCase->actingAs($manager)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertRedirect();
+
+    $testCase->post(
+        route('investment-applications.request-sector-review', $application)
+    )->assertRedirect();
+
+    $testCase->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-approve', $application), [
+            'approved_area' => $approvedArea,
+            'comment' => 'Аумақ пен инфрақұрылым техникалық тұрғыдан мақұлданды.',
+        ])
+        ->assertRedirect();
+
+    $testCase->actingAs($manager)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload(
+                $application,
+                $approvedArea,
+                $approvalOverrides
+            )
+        )
+        ->assertRedirect();
 }
 
 test('applicant can save an incomplete draft but cannot submit it', function () {
@@ -373,61 +411,304 @@ test('investor zone detail only shows their company projects in that zone', func
             ->missing('sez.issues'));
 });
 
-test('submitted applications do not reserve land and approval reserves it', function () {
+test('submitted applications are routed only to attraction and become sector-visible on request', function () {
     $region = applicationRegion();
+    $otherRegion = Region::create([
+        'name' => 'Басқа тест ауданы',
+        'type' => 'district',
+    ]);
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
-    $reviewer = applicationUser('invest', [
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $otherManager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $accompaniment = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
         'region_id' => $region->id,
         'invest_sub_role' => 'aea',
     ]);
+    $wrongSectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'ia',
+    ]);
+    $otherRegionSectorReviewer = applicationUser('invest', [
+        'region_id' => $otherRegion->id,
+        'invest_sub_role' => 'aea',
+    ]);
+    $superadmin = applicationUser('superadmin');
 
     $this->actingAs($applicant)
         ->post(
-            route('applicant.applications.store', ['zoneType' => 'sez', 'zone' => $zone]),
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
             validApplicationPayload($region)
         )
         ->assertRedirect();
 
     $application = InvestmentApplication::query()->firstOrFail();
+    $submittedRecipients = TaskNotification::query()
+        ->where('type', 'investment_application_submitted')
+        ->orderBy('user_id')
+        ->pluck('user_id')
+        ->all();
+    $expectedSubmittedRecipients = collect([
+        $manager->id,
+        $otherManager->id,
+        $superadmin->id,
+    ])->sort()->values()->all();
+    $managerSubmittedNotification = TaskNotification::query()
+        ->where('type', 'investment_application_submitted')
+        ->where('user_id', $manager->id)
+        ->sole();
+    $managerSubmittedNotification->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now()->addMinute(),
+        'telegram_last_error' => 'Уақытша қате',
+    ])->saveQuietly();
+
     expect($application->status)->toBe('submitted')
-        ->and($application->projectTypes()->pluck('project_types.name')->all())
-        ->toBe(['Өңдеу өнеркәсібі'])
+        ->and($submittedRecipients)->toBe($expectedSubmittedRecipients)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_submitted')
+            ->where('action_url', route(
+                'investment-applications.show',
+                $application,
+                false
+            ))
+            ->count())->toBe(3)
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(100.0);
 
-    $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 25, [
-            'planned_end_year' => now()->year + 3,
-        ]))
-        ->assertSessionHasErrors('comment');
+    $this->actingAs($accompaniment)
+        ->get(route('investment-applications.index'))
+        ->assertForbidden();
+    $this->actingAs($accompaniment)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertForbidden();
 
-    expect($application->fresh()->status)->toBe('submitted')
-        ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
-        ->toBe(100.0);
+    foreach ([$sectorReviewer, $wrongSectorReviewer, $otherRegionSectorReviewer] as $reviewer) {
+        $this->actingAs($reviewer)
+            ->get(route('investment-applications.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('applications.data', 0));
+    }
 
-    $this->actingAs($reviewer)
-        ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 25, [
-            'planned_end_year' => now()->year + 3,
-            'comment' => 'Құжаттар талапқа сай.',
-        ]))
+    $this->actingAs($manager)
+        ->post(route('investment-applications.assign-to-me', $application))
         ->assertRedirect();
 
+    expect($application->fresh()->assigned_to)->toBe($manager->id)
+        ->and($application->fresh()->assigned_at)->not->toBeNull()
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_submitted')
+            ->where('is_read', false)
+            ->exists())->toBeFalse()
+        ->and($managerSubmittedNotification->fresh()->telegram_status)
+        ->toBe('skipped')
+        ->and($managerSubmittedNotification->fresh()->telegram_next_attempt_at)
+        ->toBeNull();
+
+    $this->actingAs($otherManager)
+        ->post(route('investment-applications.start-review', $application))
+        ->assertForbidden();
+    $this->post(
+        route('investment-applications.set-schedule', $application),
+        [
+            'planned_start_year' => now()->year,
+            'planned_end_year' => now()->year + 2,
+            'comment' => 'Мерзімді өзгерту.',
+        ]
+    )->assertForbidden();
+    $this->post(route('investment-applications.request-clarification', $application), [
+        'comment' => 'Қосымша құжат керек.',
+    ])
+        ->assertForbidden();
+    $this->post(route('investment-applications.request-sector-review', $application))
+        ->assertForbidden();
+    $this->post(
+        route('investment-applications.approve', $application),
+        validApprovalPayload($application, 25)
+    )->assertForbidden();
+    $this->post(route('investment-applications.reject', $application), [
+        'comment' => 'Қабылданбайды.',
+    ])->assertForbidden();
+    $this->post(route('investment-applications.convert', $application))
+        ->assertForbidden();
+
+    $this->actingAs($manager)
+        ->post(route('investment-applications.request-sector-review', $application))
+        ->assertRedirect();
+    $this->post(route('investment-applications.sector-approve', $application), [
+        'approved_area' => 25,
+    ])->assertForbidden();
+
     $application->refresh();
-    expect($application->status)->toBe('approved')
-        ->and((float) $application->approved_area)->toBe(25.0)
-        ->and($application->planned_start_year)->toBe(now()->year)
-        ->and($application->planned_end_year)->toBe(now()->year + 3)
-        ->and($application->reserved_until)->not->toBeNull()
-        ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
-        ->toBe(75.0);
+    expect($application->sector_review_status)->toBe('pending')
+        ->and($application->sector_review_requested_by)->toBe($manager->id)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_sector_review_requested')
+            ->where('user_id', $sectorReviewer->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_sector_review_requested')
+            ->whereIn('user_id', [
+                $accompaniment->id,
+                $wrongSectorReviewer->id,
+                $otherRegionSectorReviewer->id,
+            ])
+            ->count())->toBe(0);
+
+    $sectorRequestNotification = TaskNotification::query()
+        ->where('type', 'investment_application_sector_review_requested')
+        ->where('user_id', $sectorReviewer->id)
+        ->sole();
+    $sectorRequestNotification->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now()->addMinute(),
+        'telegram_last_error' => 'Уақытша қате',
+    ])->saveQuietly();
+
+    $this->actingAs($sectorReviewer)
+        ->get(route('investment-applications.index'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('applications.data', 1)
+            ->where('applications.data.0.id', $application->id));
+    $this->actingAs($wrongSectorReviewer)
+        ->get(route('investment-applications.show', $application))
+        ->assertForbidden();
+    $this->actingAs($otherRegionSectorReviewer)
+        ->get(route('investment-applications.show', $application))
+        ->assertForbidden();
+
+    $this->actingAs($sectorReviewer)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 25)
+        )
+        ->assertForbidden();
+    $this->post(route('investment-applications.reject', $application), [
+        'comment' => 'Соңғы шешім.',
+    ])->assertForbidden();
+    $this->post(route('investment-applications.convert', $application))
+        ->assertForbidden();
+
+    $this->actingAs($applicant)
+        ->post(route('applicant.applications.withdraw', $application))
+        ->assertRedirect();
+    $this->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-approve', $application), [
+            'approved_area' => 25,
+        ])
+        ->assertForbidden();
+
+    $withdrawnRecipients = TaskNotification::query()
+        ->where('type', 'investment_application_withdrawn_internal')
+        ->orderBy('user_id')
+        ->pluck('user_id')
+        ->all();
+
+    expect($application->fresh()->status)->toBe('withdrawn')
+        ->and($withdrawnRecipients)->toBe(collect([
+            $manager->id,
+            $sectorReviewer->id,
+            $superadmin->id,
+        ])->sort()->values()->all())
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_withdrawn_internal')
+            ->where('user_id', $applicant->id)
+            ->exists())->toBeFalse()
+        ->and($sectorRequestNotification->fresh()->is_read)->toBeTrue()
+        ->and($sectorRequestNotification->fresh()->telegram_status)
+        ->toBe('skipped')
+        ->and($sectorRequestNotification->fresh()->telegram_next_attempt_at)
+        ->toBeNull();
 });
 
-test('invest reviewer can set schedule for a legacy approved application', function () {
+test('superadmin reassignment notifies both managers without unsafe or self links', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
-    $reviewer = applicationUser('invest', [
+    $firstManager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $secondManager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $superadmin = applicationUser('superadmin');
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region)
+        )
+        ->assertRedirect();
+    $application = InvestmentApplication::query()->firstOrFail();
+
+    $this->actingAs($superadmin)
+        ->post(route('investment-applications.assign-to-me', $application), [
+            'manager_id' => $firstManager->id,
+        ])
+        ->assertRedirect();
+    $this->post(route('investment-applications.assign-to-me', $application), [
+        'manager_id' => $secondManager->id,
+    ])->assertRedirect();
+    $this->post(route('investment-applications.start-review', $application))
+        ->assertRedirect();
+
+    $removed = TaskNotification::query()
+        ->where('type', 'investment_application_assignment_removed')
+        ->where('user_id', $firstManager->id)
+        ->sole();
+    $assigned = TaskNotification::query()
+        ->where('type', 'investment_application_assigned')
+        ->where('user_id', $secondManager->id)
+        ->sole();
+
+    expect($application->fresh()->assigned_to)->toBe($secondManager->id)
+        ->and($removed->action_url)
+        ->toBe(route('notifications.index', absolute: false))
+        ->and($assigned->action_url)
+        ->toBe(route('investment-applications.show', $application, false))
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_under_review_internal')
+            ->where('user_id', $secondManager->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->whereIn('type', [
+                'investment_application_assigned',
+                'investment_application_assignment_removed',
+                'investment_application_under_review_internal',
+            ])
+            ->where('user_id', $superadmin->id)
+            ->exists())->toBeFalse();
+});
+
+test('technical approval enables assigned attraction manager to reserve land', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
         'region_id' => $region->id,
         'invest_sub_role' => 'aea',
     ]);
@@ -443,12 +724,187 @@ test('invest reviewer can set schedule for a legacy approved application', funct
         ->assertRedirect();
 
     $application = InvestmentApplication::query()->firstOrFail();
-    $this->actingAs($reviewer)
+    $this->actingAs($manager)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertRedirect();
+    $this->post(route('investment-applications.request-sector-review', $application))
+        ->assertRedirect();
+    $sectorRequestNotification = TaskNotification::query()
+        ->where('type', 'investment_application_sector_review_requested')
+        ->where('user_id', $sectorReviewer->id)
+        ->sole();
+    $sectorRequestNotification->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now()->addMinute(),
+        'telegram_last_error' => 'Уақытша қате',
+    ])->saveQuietly();
+    $this->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-approve', $application), [
+            'approved_area' => 25,
+            'comment' => 'Техникалық мақұлдау.',
+        ])
+        ->assertRedirect();
+
+    expect($sectorRequestNotification->fresh()->is_read)->toBeTrue()
+        ->and($sectorRequestNotification->fresh()->telegram_status)
+        ->toBe('skipped')
+        ->and($sectorRequestNotification->fresh()->telegram_next_attempt_at)
+        ->toBeNull();
+
+    $this->actingAs($manager)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 25, [
+                'planned_end_year' => now()->year + 3,
+            ])
+        )
+        ->assertSessionHasErrors('comment');
+
+    expect($application->fresh()->status)->toBe('submitted')
+        ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
+        ->toBe(100.0);
+
+    $staleSubmittedNotification = TaskNotification::withoutEvents(
+        fn () => TaskNotification::create([
+            'user_id' => $manager->id,
+            'type' => 'investment_application_submitted',
+            'message' => 'Ескі әрекет хабарламасы',
+            'action_url' => route(
+                'investment-applications.show',
+                $application,
+                false
+            ),
+            'action_label' => 'Өтінімді қарау',
+        ])
+    );
+    $staleSubmittedNotification->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now()->addMinute(),
+        'telegram_last_error' => 'Уақытша қате',
+    ])->saveQuietly();
+
+    $this->actingAs($manager)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 25, [
+                'planned_end_year' => now()->year + 3,
+                'comment' => 'Құжаттар талапқа сай.',
+            ])
+        )
+        ->assertRedirect();
+
+    $application->refresh();
+    expect($application->status)->toBe('approved')
+        ->and((float) $application->approved_area)->toBe(25.0)
+        ->and($application->planned_start_year)->toBe(now()->year)
+        ->and($application->planned_end_year)->toBe(now()->year + 3)
+        ->and($application->reserved_until)->not->toBeNull()
+        ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
+        ->toBe(75.0)
+        ->and($staleSubmittedNotification->fresh()->is_read)->toBeTrue()
+        ->and($staleSubmittedNotification->fresh()->telegram_status)
+        ->toBe('skipped')
+        ->and($staleSubmittedNotification->fresh()->telegram_next_attempt_at)
+        ->toBeNull();
+});
+
+test('sector rejection records a reason and blocks final approval', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $otherManager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region)
+        )
+        ->assertRedirect();
+    $application = InvestmentApplication::query()->firstOrFail();
+
+    $this->actingAs($manager)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertRedirect();
+    $this->post(route('investment-applications.request-sector-review', $application))
+        ->assertRedirect();
+
+    $this->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-reject', $application))
+        ->assertSessionHasErrors('comment');
+    $this->post(route('investment-applications.sector-reject', $application), [
+        'comment' => 'Бос аумақ жеткіліксіз.',
+    ])->assertRedirect();
+
+    $application->refresh();
+    expect($application->status)->toBe('submitted')
+        ->and($application->sector_review_status)->toBe('rejected')
+        ->and($application->sector_review_comment)
+        ->toBe('Бос аумақ жеткіліксіз.')
+        ->and($application->sector_reviewed_by)->toBe($sectorReviewer->id)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_sector_rejected')
+            ->where('user_id', $manager->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_sector_rejected')
+            ->where('user_id', $otherManager->id)
+            ->count())->toBe(0);
+
+    $this->actingAs($manager)
         ->post(
             route('investment-applications.approve', $application),
             validApprovalPayload($application, 25)
         )
+        ->assertSessionHasErrors('sector_review');
+    expect($application->fresh()->status)->toBe('submitted');
+});
+
+test('invest reviewer can set schedule for a legacy approved application', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
+    $superadmin = applicationUser('superadmin');
+
+    $this->actingAs($applicant)
+        ->post(
+            route('applicant.applications.store', [
+                'zoneType' => 'sez',
+                'zone' => $zone,
+            ]),
+            validApplicationPayload($region)
+        )
         ->assertRedirect();
+
+    $application = InvestmentApplication::query()->firstOrFail();
+    approveApplicationThroughSector(
+        $this,
+        $application,
+        $reviewer,
+        $sectorReviewer,
+        25
+    );
 
     $application->refresh();
     $reservedUntil = $application->reserved_until?->toDateTimeString();
@@ -471,7 +927,7 @@ test('invest reviewer can set schedule for a legacy approved application', funct
         ])
         ->assertSessionHasErrors('comment');
 
-    $this->actingAs($reviewer)
+    $this->actingAs($superadmin)
         ->post(route('investment-applications.set-schedule', $application), [
             'planned_start_year' => now()->year,
             'planned_end_year' => now()->year + 4,
@@ -485,7 +941,19 @@ test('invest reviewer can set schedule for a legacy approved application', funct
         ->and($application->planned_end_year)->toBe(now()->year + 4)
         ->and($application->reserved_until?->toDateTimeString())
         ->toBe($reservedUntil)
-        ->and((float) $application->approved_area)->toBe(25.0);
+        ->and((float) $application->approved_area)->toBe(25.0)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_schedule_set')
+            ->where('user_id', $applicant->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_schedule_set_internal')
+            ->where('user_id', $reviewer->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_schedule_set_internal')
+            ->where('user_id', $superadmin->id)
+            ->exists())->toBeFalse();
 
     $this->actingAs($reviewer)
         ->get(route('investment-applications.show', $application))
@@ -501,7 +969,7 @@ test('invest reviewer rejects an application with a required reason', function (
     $applicant = applicationUser('applicant');
     $reviewer = applicationUser('invest', [
         'region_id' => $region->id,
-        'invest_sub_role' => 'aea',
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
     ]);
 
     $this->actingAs($applicant)
@@ -515,6 +983,10 @@ test('invest reviewer rejects an application with a required reason', function (
         ->assertRedirect();
 
     $application = InvestmentApplication::query()->firstOrFail();
+
+    $this->actingAs($reviewer)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertRedirect();
 
     $this->actingAs($reviewer)
         ->post(route('investment-applications.reject', $application))
@@ -542,7 +1014,19 @@ test('approved application converts into company investor and internal project',
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
-    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
+    $accompaniment = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ACCOMPANIMENT,
+    ]);
+    $superadmin = applicationUser('superadmin', ['region_id' => $region->id]);
     $payload = validApplicationPayload($region);
     $application = InvestmentApplication::create([
         ...$payload,
@@ -550,12 +1034,8 @@ test('approved application converts into company investor and internal project',
         'user_id' => $applicant->id,
         'zoneable_type' => Sez::class,
         'zoneable_id' => $zone->id,
-        'status' => 'approved',
-        'approved_area' => 25,
-        'reviewed_by' => $reviewer->id,
+        'status' => 'submitted',
         'submitted_at' => now(),
-        'reviewed_at' => now(),
-        'reserved_until' => now()->addDays(30),
     ]);
     $application->projectTypes()->sync($payload['project_type_ids']);
     $application->documents()->create([
@@ -566,8 +1046,37 @@ test('approved application converts into company investor and internal project',
         'uploaded_by' => $applicant->id,
     ]);
 
-    $this->actingAs($reviewer)
-        ->post(route('investment-applications.convert', $application))
+    $this->actingAs($superadmin)
+        ->post(route('investment-applications.assign-to-me', $application), [
+            'manager_id' => $manager->id,
+        ])
+        ->assertRedirect();
+    $this->post(
+        route('investment-applications.request-sector-review', $application)
+    )->assertRedirect();
+    $this->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-approve', $application), [
+            'approved_area' => 25,
+            'comment' => 'Техникалық мақұлдау.',
+        ])
+        ->assertRedirect();
+    $this->actingAs($superadmin)
+        ->post(
+            route('investment-applications.approve', $application),
+            validApprovalPayload($application, 25)
+        )
+        ->assertRedirect();
+    expect(TaskNotification::query()
+        ->where('type', 'investment_application_approved_internal')
+        ->where('user_id', $manager->id)
+        ->count())->toBe(1);
+
+    $manager->update(['telegram_chat_id' => '99887766']);
+    config()->set('services.telegram.bot_token', 'application-test-token');
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+    $this->post(route('investment-applications.convert', $application))
         ->assertRedirect();
 
     $application->refresh();
@@ -579,6 +1088,17 @@ test('approved application converts into company investor and internal project',
         ->and($applicant->roleModel?->name)->toBe('investor')
         ->and($applicant->company_id)->not->toBeNull()
         ->and($project->company_id)->toBe($applicant->company_id)
+        ->and($project->status)->toBe('plan')
+        ->and($project->attraction_stage)->toBe('potential')
+        ->and($project->created_by)->toBe($manager->id)
+        ->and($project->curators()->pluck('users.id')->all())
+        ->toBe([$manager->id])
+        ->and($project->curators()->whereKey($superadmin->id)->exists())
+        ->toBeFalse()
+        ->and($project->curators()->whereKey($sectorReviewer->id)->exists())
+        ->toBeFalse()
+        ->and($project->curators()->whereKey($accompaniment->id)->exists())
+        ->toBeFalse()
         ->and($project->project_type_id)->toBe($payload['project_type_ids'][0])
         ->and($project->projectTypes()->pluck('project_types.id')->all())
         ->toBe($payload['project_type_ids'])
@@ -606,6 +1126,19 @@ test('approved application converts into company investor and internal project',
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
         ->toBe(75.0);
 
+    $managerNotification = TaskNotification::query()
+        ->where('type', 'investment_application_converted_internal')
+        ->where('user_id', $manager->id)
+        ->sole();
+    $projectUrl = route('investment-projects.show', $project, false);
+    expect($managerNotification->action_url)->toBe($projectUrl)
+        ->and($managerNotification->destination_url)->toBe($projectUrl);
+    Http::assertSentCount(1);
+    Http::assertSent(
+        fn (ClientRequest $request) => $request['chat_id'] === '99887766'
+            && str_contains($request['text'], url($projectUrl))
+    );
+
     $this->actingAs($applicant)
         ->get(route('applicant.applications.show', $application))
         ->assertOk()
@@ -622,10 +1155,68 @@ test('approved application converts into company investor and internal project',
     expect($application->fresh()->status)->toBe('converted_to_project');
 });
 
+test('legacy conversion assigns and notifies the attraction manager', function () {
+    $region = applicationRegion();
+    $zone = applicationZone($region);
+    $applicant = applicationUser('applicant');
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $superadmin = applicationUser('superadmin');
+    $payload = validApplicationPayload($region);
+    $application = InvestmentApplication::create([
+        ...$payload,
+        'application_number' => 'INV-2026-LEGACY-NOTIFY',
+        'user_id' => $applicant->id,
+        'zoneable_type' => Sez::class,
+        'zoneable_id' => $zone->id,
+        'status' => 'approved',
+        'approved_area' => 20,
+        'sector_review_status' => 'approved',
+        'sector_approved_area' => 20,
+        'reviewed_by' => $superadmin->id,
+        'submitted_at' => now()->subDay(),
+        'reviewed_at' => now(),
+        'reserved_until' => now()->addDays(30),
+    ]);
+    $application->projectTypes()->sync($payload['project_type_ids']);
+
+    $this->actingAs($superadmin)
+        ->post(route('investment-applications.convert', $application))
+        ->assertRedirect();
+
+    $application->refresh();
+    $project = $application->investmentProject()->firstOrFail();
+    expect($application->assigned_to)->toBe($manager->id)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_assigned')
+            ->where('user_id', $manager->id)
+            ->where('action_url', route(
+                'investment-applications.show',
+                $application,
+                false
+            ))
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_converted_internal')
+            ->where('user_id', $manager->id)
+            ->where('action_url', route(
+                'investment-projects.show',
+                $project,
+                false
+            ))
+            ->count())->toBe(1);
+});
+
 test('application without planned production creates a project without plans', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
     $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
     $payload = validApplicationPayload($region, [
         'production_not_applicable' => true,
@@ -639,7 +1230,11 @@ test('application without planned production creates a project without plans', f
         'zoneable_id' => $zone->id,
         'status' => 'approved',
         'approved_area' => 25,
-        'reviewed_by' => $reviewer->id,
+        'assigned_to' => $manager->id,
+        'assigned_at' => now(),
+        'sector_review_status' => 'approved',
+        'sector_approved_area' => 25,
+        'reviewed_by' => $manager->id,
         'submitted_at' => now(),
         'reviewed_at' => now(),
         'reserved_until' => now()->addDays(30),
@@ -709,7 +1304,14 @@ test('existing unclaimed company is normalized and reused for applicant', functi
     $zone = applicationZone($region);
     $company = applicationCompany($region);
     $applicant = applicationUser('applicant');
-    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
 
     $this->actingAs($applicant)
         ->getJson(route('applicant.company-lookup', ['bin' => $company->bin]))
@@ -739,12 +1341,13 @@ test('existing unclaimed company is normalized and reused for applicant', functi
         ->and($application->company_activity_type)->toBe($company->activity_type)
         ->and($application->director_full_name)->toBe($company->director_full_name);
 
-    $this->actingAs($reviewer)
-        ->post(
-            route('investment-applications.approve', $application),
-            validApprovalPayload($application, 20)
-        )
-        ->assertRedirect();
+    approveApplicationThroughSector(
+        $this,
+        $application,
+        $reviewer,
+        $sectorReviewer,
+        20
+    );
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
         ->assertRedirect();
@@ -785,7 +1388,14 @@ test('investor submits a new project application for the linked company', functi
     $zone = applicationZone($region);
     $company = applicationCompany($region);
     $investor = applicationUser('investor', ['company_id' => $company->id]);
-    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
 
     $this->actingAs($investor)
         ->get(route('applicant.portal'))
@@ -823,12 +1433,13 @@ test('investor submits a new project application for the linked company', functi
         ->and($application->company_name)->toBe($company->name)
         ->and($application->company_activity_type)->toBe($company->activity_type);
 
-    $this->actingAs($reviewer)
-        ->post(
-            route('investment-applications.approve', $application),
-            validApprovalPayload($application, 10)
-        )
-        ->assertRedirect();
+    approveApplicationThroughSector(
+        $this,
+        $application,
+        $reviewer,
+        $sectorReviewer,
+        10
+    );
     $this->actingAs($reviewer)
         ->post(route('investment-applications.convert', $application))
         ->assertRedirect();
@@ -844,7 +1455,15 @@ test('investor expansion application updates the existing project without duplic
     $zone = applicationZone($region);
     $company = applicationCompany($region);
     $investor = applicationUser('investor', ['company_id' => $company->id]);
-    $reviewer = applicationUser('superadmin', ['region_id' => $region->id]);
+    $superadmin = applicationUser('superadmin');
+    $reviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $sectorReviewer = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => 'aea',
+    ]);
     $projectType = applicationProjectType();
     $project = InvestmentProject::create([
         'name' => 'Қолданыстағы зауыт',
@@ -904,6 +1523,19 @@ test('investor expansion application updates the existing project without duplic
         ->and($application->planned_end_year)->toBe(now()->year + 2);
 
     $this->actingAs($reviewer)
+        ->post(route('investment-applications.assign-to-me', $application))
+        ->assertRedirect();
+    $this->post(
+        route('investment-applications.request-sector-review', $application)
+    )->assertRedirect();
+    $this->actingAs($sectorReviewer)
+        ->post(route('investment-applications.sector-approve', $application), [
+            'approved_area' => 3,
+            'comment' => 'Кеңейту аумағы мақұлданды.',
+        ])
+        ->assertRedirect();
+
+    $this->actingAs($reviewer)
         ->post(route('investment-applications.approve', $application), validApprovalPayload($application, 3, [
             'planned_end_year' => now()->year,
             'comment' => 'Мерзімді қысқарту әрекеті.',
@@ -918,7 +1550,12 @@ test('investor expansion application updates the existing project without duplic
             'comment' => 'Кеңейту мерзімі келісілді.',
         ]))
         ->assertRedirect();
-    $this->actingAs($reviewer)
+    $reviewer->update(['telegram_chat_id' => '55667788']);
+    config()->set('services.telegram.bot_token', 'expansion-test-token');
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+    $this->actingAs($superadmin)
         ->post(route('investment-applications.convert', $application))
         ->assertRedirect();
 
@@ -948,6 +1585,25 @@ test('investor expansion application updates the existing project without duplic
             ->where('project_id', $project->id)
             ->where('event', 'project.expanded_from_application')
             ->exists())->toBeTrue();
+
+    $managerNotification = TaskNotification::query()
+        ->where('type', 'investment_application_converted_internal')
+        ->where('user_id', $reviewer->id)
+        ->sole();
+    $applicationUrl = route(
+        'investment-applications.show',
+        $application,
+        false
+    );
+    expect($managerNotification->destination_url)->toBe($applicationUrl)
+        ->and($managerNotification->action_label)->toBe('Өтінімді қарау');
+    $this->actingAs($reviewer)->get($applicationUrl)->assertOk();
+    $this->get(route('investment-projects.show', $project))->assertForbidden();
+    Http::assertSentCount(1);
+    Http::assertSent(
+        fn (ClientRequest $request) => $request['chat_id'] === '55667788'
+            && str_contains($request['text'], url($applicationUrl))
+    );
 });
 
 test('investor cannot expand another company project', function () {
@@ -1088,6 +1744,11 @@ test('expired reservation is released by the scheduled command', function () {
     $region = applicationRegion();
     $zone = applicationZone($region);
     $applicant = applicationUser('applicant');
+    $manager = applicationUser('invest', [
+        'region_id' => $region->id,
+        'invest_sub_role' => User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION,
+    ]);
+    $superadmin = applicationUser('superadmin');
     $application = InvestmentApplication::create([
         ...validApplicationPayload($region),
         'application_number' => 'INV-2026-EXPIRED1',
@@ -1096,6 +1757,8 @@ test('expired reservation is released by the scheduled command', function () {
         'zoneable_id' => $zone->id,
         'status' => 'approved',
         'approved_area' => 40,
+        'assigned_to' => $manager->id,
+        'assigned_at' => now()->subDays(31),
         'submitted_at' => now()->subDays(40),
         'reviewed_at' => now()->subDays(31),
         'reserved_until' => now()->subMinute(),
@@ -1107,5 +1770,13 @@ test('expired reservation is released by the scheduled command', function () {
 
     expect($application->fresh()->status)->toBe('expired')
         ->and(app(ZoneCapacityService::class)->summarize($zone)['available'])
-        ->toBe(100.0);
+        ->toBe(100.0)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_expired')
+            ->where('user_id', $applicant->id)
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('type', 'investment_application_expired_internal')
+            ->whereIn('user_id', [$manager->id, $superadmin->id])
+            ->count())->toBe(2);
 });

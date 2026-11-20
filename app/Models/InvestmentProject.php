@@ -22,10 +22,15 @@ class InvestmentProject extends Model
         'production_not_applicable',
         'total_investment',
         'investment_amount_type',
+        'investor_country_code',
         'attraction_handover_to_id',
         'attraction_handover_requested_at',
+        'attraction_handover_requested_by',
         'attraction_handover_accepted_at',
         'attraction_handover_accepted_by',
+        'attraction_handover_rejection_reason',
+        'attraction_handover_rejected_at',
+        'attraction_handover_rejected_by',
         'attraction_decline_reason',
         'attraction_resume_on',
         'planning_started_at',
@@ -49,6 +54,7 @@ class InvestmentProject extends Model
             'total_investment' => 'decimal:2',
             'attraction_handover_requested_at' => 'datetime',
             'attraction_handover_accepted_at' => 'datetime',
+            'attraction_handover_rejected_at' => 'datetime',
             'attraction_resume_on' => 'date:Y-m-d',
             'planning_started_at' => 'datetime',
             'start_date' => 'date',
@@ -93,6 +99,47 @@ class InvestmentProject extends Model
         return $query->where('is_archived', true);
     }
 
+    /**
+     * Hide projects while the accompaniment direction is deciding whether to
+     * accept them. A rejected project becomes visible to attraction again
+     * because its request timestamp is cleared by the reserve workflow.
+     */
+    public function scopeWithoutPendingAttractionReserve(
+        Builder $query
+    ): Builder {
+        $model = $query->getModel();
+
+        return $query->where(function (Builder $visible) use ($model): void {
+            $visible
+                ->where($model->qualifyColumn('status'), '!=', 'plan')
+                ->orWhere(
+                    $model->qualifyColumn('attraction_stage'),
+                    '!=',
+                    'handover'
+                )
+                ->orWhereNull(
+                    $model->qualifyColumn('attraction_handover_requested_at')
+                )
+                ->orWhereNotNull(
+                    $model->qualifyColumn('attraction_handover_accepted_at')
+                )
+                ->orWhereNotNull(
+                    $model->qualifyColumn('attraction_handover_rejected_at')
+                );
+        });
+    }
+
+    public function isPendingAttractionReserve(): bool
+    {
+        return $this->status === 'plan'
+            && $this->attraction_stage === 'handover'
+            && $this->attraction_handover_requested_at !== null
+            && $this->attraction_handover_accepted_at === null
+            && $this->attraction_handover_rejected_at === null
+            && ! $this->is_archived
+            && ! $this->is_deleted;
+    }
+
     public function scopeOnlyDeleted(Builder $query): Builder
     {
         return $query
@@ -124,7 +171,10 @@ class InvestmentProject extends Model
                 $turkistanInvest
                     ->where(function (Builder $invest) {
                         $invest
-                            ->where('users.invest_sub_role', 'turkistan_invest')
+                            ->whereIn(
+                                'users.invest_sub_role',
+                                User::TURKISTAN_INVEST_SUB_ROLES
+                            )
                             ->whereHas(
                                 'roleModel',
                                 fn (Builder $role) => $role->where('name', 'invest')
@@ -148,6 +198,22 @@ class InvestmentProject extends Model
 
         if ($user->roleModel?->name === 'moderator') {
             return $query->curatedByTurkistanInvest();
+        }
+
+        if ($user->isTurkistanInvestDirection()) {
+            if ($user->isTurkistanInvestAttraction()) {
+                $query
+                    ->where('status', 'plan')
+                    ->where(fn (Builder $visible) => $visible
+                        ->withoutPendingAttractionReserve()
+                        ->orWhere('attraction_handover_to_id', $user->id)
+                        ->orWhere(
+                            'attraction_handover_requested_by',
+                            $user->id
+                        ));
+            } else {
+                $query->where('status', '!=', 'plan');
+            }
         }
 
         return $query->where(function (Builder $participantQuery) use ($user) {
@@ -295,6 +361,16 @@ class InvestmentProject extends Model
         return $this->belongsTo(User::class, 'attraction_handover_accepted_by');
     }
 
+    public function attractionHandoverRequester()
+    {
+        return $this->belongsTo(User::class, 'attraction_handover_requested_by');
+    }
+
+    public function attractionHandoverRejector()
+    {
+        return $this->belongsTo(User::class, 'attraction_handover_rejected_by');
+    }
+
     public function issues()
     {
         return $this->hasMany(ProjectIssue::class, 'project_id');
@@ -363,6 +439,16 @@ class InvestmentProject extends Model
         $user->loadMissing('roleModel');
 
         if ($this->is_archived) {
+            return false;
+        }
+
+        if ($user->isTurkistanInvestDirection()
+            && ! $user->canAccessTurkistanProjectStatus($this->status)) {
+            return false;
+        }
+
+        if ($user->isTurkistanInvestAttraction()
+            && $this->isPendingAttractionReserve()) {
             return false;
         }
 
