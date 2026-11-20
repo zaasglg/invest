@@ -107,7 +107,11 @@ export default function InvestorCountrySelect({
                             setQuery(selectedCountry?.label ?? '');
                         }
                     }}
-                    placeholder="Ел атауын немесе кодын жазыңыз"
+                    placeholder={
+                        disabled
+                            ? 'Ел көрсетілмеген'
+                            : 'Ел атауын немесе кодын жазыңыз'
+                    }
                     className={cn(
                         'h-10 pr-16 pl-9 shadow-none',
                         error && 'border-red-500',
@@ -180,7 +184,9 @@ export default function InvestorCountrySelect({
             )}
 
             <p className="text-xs leading-relaxed text-slate-500">
-                Жобаға инвестиция тартылатын негізгі елді таңдаңыз.
+                {disabled
+                    ? 'Инвестор елін тек жоспарлау мәртебесінде өзгертуге болады.'
+                    : 'Жобаға инвестиция тартылатын негізгі елді таңдаңыз.'}
             </p>
             <InputError id="investor-country-error" message={error} />
         </div>

@@ -1196,11 +1196,10 @@ export default function Index({
                                     {canReorderProjects && (
                                         <TableHead className="w-12"></TableHead>
                                     )}
-                                    <TableHead>
-                                        {isAttractionDirection
-                                            ? 'Атауы / Ел / Компания'
-                                            : 'Атауы / Компания'}
+                                    <TableHead className="w-12 text-center">
+                                        №
                                     </TableHead>
+                                    <TableHead>Атауы / Компания</TableHead>
                                     <TableHead>Аймақ</TableHead>
                                     <TableHead>Жоба түрі</TableHead>
                                     <TableHead>Сектор</TableHead>
@@ -1216,7 +1215,9 @@ export default function Index({
                                 {orderedProjects.length === 0 ? (
                                     <TableRow>
                                         <TableCell
-                                            colSpan={canReorderProjects ? 9 : 8}
+                                            colSpan={
+                                                canReorderProjects ? 10 : 9
+                                            }
                                             className="py-12 text-center text-gray-400"
                                         >
                                             Деректер жоқ
@@ -1227,12 +1228,19 @@ export default function Index({
                                         items={orderedProjects.map((p) => p.id)}
                                         strategy={verticalListSortingStrategy}
                                     >
-                                        {orderedProjects.map((project) => (
+                                        {orderedProjects.map((project, row) => (
                                             <SortableProjectRow
                                                 key={project.id}
                                                 id={project.id}
                                                 isEnabled={canReorderProjects}
                                             >
+                                                <TableCell className="w-12 text-center font-medium text-slate-500 tabular-nums">
+                                                    {(projects.current_page -
+                                                        1) *
+                                                        projects.per_page +
+                                                        row +
+                                                        1}
+                                                </TableCell>
                                                 <TableCell className="[overflow-wrap:anywhere]">
                                                     <div className="flex flex-col">
                                                         <Link
@@ -1245,14 +1253,6 @@ export default function Index({
                                                                 project.name,
                                                             )}
                                                         </Link>
-                                                        {isAttractionDirection && (
-                                                            <span className="mt-0.5 text-xs font-medium text-cyan-700">
-                                                                Ел:{' '}
-                                                                {investorCountryLabel(
-                                                                    project.investor_country_code,
-                                                                )}
-                                                            </span>
-                                                        )}
                                                         {project.company_name && (
                                                             <span className="mt-0.5 text-xs text-gray-400">
                                                                 {toNormalCase(
@@ -1337,23 +1337,24 @@ export default function Index({
                                                             project.status,
                                                         )}
                                                     </Badge>
-                                                    {project.status ===
-                                                        'plan' && (
+                                                    {(project.status ===
+                                                        'plan' ||
+                                                        project.investor_country_code) && (
                                                         <div className="mt-2 max-w-48 space-y-1 text-xs text-slate-500">
-                                                            <p>
-                                                                {attractionStageLabel(
-                                                                    project.attraction_stage,
-                                                                )}
-                                                            </p>
-                                                            {!isAttractionDirection && (
+                                                            {project.status ===
+                                                                'plan' && (
                                                                 <p>
-                                                                    Инвестор
-                                                                    елі:{' '}
-                                                                    {investorCountryLabel(
-                                                                        project.investor_country_code,
+                                                                    {attractionStageLabel(
+                                                                        project.attraction_stage,
                                                                     )}
                                                                 </p>
                                                             )}
+                                                            <p>
+                                                                Инвестор елі:{' '}
+                                                                {investorCountryLabel(
+                                                                    project.investor_country_code,
+                                                                )}
+                                                            </p>
                                                         </div>
                                                     )}
                                                 </TableCell>

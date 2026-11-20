@@ -26,6 +26,13 @@ class InvestmentApplication extends Model
 
     public const EDITABLE_STATUSES = ['draft', 'needs_clarification'];
 
+    public const SECTOR_REVIEW_STATUSES = [
+        'not_requested' => 'Техникалық қорытынды сұралмады',
+        'pending' => 'Техникалық қорытынды күтілуде',
+        'approved' => 'Техникалық қорытынды мақұлданды',
+        'rejected' => 'Техникалық қорытынды қабылданбады',
+    ];
+
     public const WITHDRAWABLE_STATUSES = [
         'submitted',
         'under_review',
@@ -65,6 +72,15 @@ class InvestmentApplication extends Model
         'contact_email',
         'legal_address',
         'reviewed_by',
+        'assigned_to',
+        'assigned_at',
+        'sector_review_status',
+        'sector_review_requested_at',
+        'sector_review_requested_by',
+        'sector_reviewed_at',
+        'sector_reviewed_by',
+        'sector_review_comment',
+        'sector_approved_area',
         'reviewer_comment',
         'submitted_at',
         'reviewed_at',
@@ -80,6 +96,7 @@ class InvestmentApplication extends Model
         'zone_type_label',
         'is_editable',
         'is_withdrawable',
+        'sector_review_status_label',
     ];
 
     protected function casts(): array
@@ -87,6 +104,7 @@ class InvestmentApplication extends Model
         return [
             'requested_area' => 'decimal:2',
             'approved_area' => 'decimal:2',
+            'sector_approved_area' => 'decimal:2',
             'investment_amount' => 'decimal:2',
             'jobs_count' => 'integer',
             'planned_start_year' => 'integer',
@@ -97,6 +115,9 @@ class InvestmentApplication extends Model
             'company_registration_date' => 'date',
             'submitted_at' => 'datetime',
             'reviewed_at' => 'datetime',
+            'assigned_at' => 'datetime',
+            'sector_review_requested_at' => 'datetime',
+            'sector_reviewed_at' => 'datetime',
             'reserved_until' => 'datetime',
             'converted_at' => 'datetime',
         ];
@@ -115,6 +136,21 @@ class InvestmentApplication extends Model
     public function reviewer()
     {
         return $this->belongsTo(User::class, 'reviewed_by');
+    }
+
+    public function assignedManager()
+    {
+        return $this->belongsTo(User::class, 'assigned_to');
+    }
+
+    public function sectorReviewRequester()
+    {
+        return $this->belongsTo(User::class, 'sector_review_requested_by');
+    }
+
+    public function sectorReviewer()
+    {
+        return $this->belongsTo(User::class, 'sector_reviewed_by');
     }
 
     public function companyRegion()
@@ -201,5 +237,11 @@ class InvestmentApplication extends Model
     public function getIsWithdrawableAttribute(): bool
     {
         return in_array($this->status, self::WITHDRAWABLE_STATUSES, true);
+    }
+
+    public function getSectorReviewStatusLabelAttribute(): string
+    {
+        return self::SECTOR_REVIEW_STATUSES[$this->sector_review_status]
+            ?? $this->sector_review_status;
     }
 }

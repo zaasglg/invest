@@ -27,7 +27,7 @@ class ProjectReserveController extends Controller
 
         $projects = $query
             ->with([
-                'company:id,legal_form,name',
+                'company:id,legal_form,name,status',
                 'region:id,name',
                 'projectType:id,name',
                 'projectTypes:id,name',

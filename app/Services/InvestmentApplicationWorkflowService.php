@@ -22,7 +22,9 @@ class InvestmentApplicationWorkflowService
 {
     public function __construct(
         private readonly ZoneCapacityService $capacity,
-        private readonly ProjectProductionService $production
+        private readonly ProjectProductionService $production,
+        private readonly InvestmentApplicationAccessService $access,
+        private readonly InvestmentProjectAccessService $projectAccess
     ) {}
 
     public function recordCreated(
@@ -67,6 +69,13 @@ class InvestmentApplicationWorkflowService
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'reserved_until' => null,
+                'sector_review_status' => 'not_requested',
+                'sector_review_requested_at' => null,
+                'sector_review_requested_by' => null,
+                'sector_reviewed_at' => null,
+                'sector_reviewed_by' => null,
+                'sector_review_comment' => null,
+                'sector_approved_area' => null,
             ]);
             $this->history($locked, $from, 'submitted', $actor);
 
@@ -75,6 +84,199 @@ class InvestmentApplicationWorkflowService
 
             return $submitted;
         });
+    }
+
+    public function assignToAttractionManager(
+        InvestmentApplication $application,
+        User $actor,
+        User $manager
+    ): InvestmentApplication {
+        return DB::transaction(function () use ($application, $actor, $manager) {
+            $locked = InvestmentApplication::query()
+                ->with('zoneable')
+                ->lockForUpdate()
+                ->findOrFail($application->id);
+
+            abort_unless(
+                in_array(
+                    $locked->status,
+                    ['submitted', 'under_review', 'needs_clarification', 'approved'],
+                    true
+                ),
+                422,
+                'Бұл өтінімге жауапты менеджер бекіту мүмкін емес.'
+            );
+            abort_unless(
+                $this->access->isSuperadmin($actor)
+                    || (int) $actor->id === (int) $manager->id,
+                403
+            );
+            abort_unless(
+                $this->access->isSuperadmin($actor)
+                    || $locked->assigned_to === null
+                    || (int) $locked->assigned_to === (int) $actor->id,
+                403
+            );
+
+            if (! $this->access->isEligibleAttractionManager(
+                $manager,
+                $locked
+            )) {
+                throw ValidationException::withMessages([
+                    'manager_id' => 'Таңдалған қызметкер тарту бағытына немесе өтінім аймағына сәйкес келмейді.',
+                ]);
+            }
+
+            $previousManagerId = $locked->assigned_to;
+            $locked->update([
+                'assigned_to' => $manager->id,
+                'assigned_at' => now(),
+            ]);
+
+            if ((int) $previousManagerId !== (int) $manager->id) {
+                $this->resolveApplicationNotifications(
+                    $locked,
+                    [
+                        'investment_application_submitted',
+                        'investment_application_assigned',
+                    ]
+                );
+            }
+            $this->history(
+                $locked,
+                $locked->status,
+                $locked->status,
+                $actor,
+                'Өтінімге жауапты тарту менеджері бекітілді.',
+                [
+                    'workflow_event' => 'assigned',
+                    'assigned_to' => $manager->id,
+                ]
+            );
+
+            if ((int) $previousManagerId !== (int) $manager->id) {
+                if ($previousManagerId !== null) {
+                    $previousManager = User::query()->find($previousManagerId);
+
+                    if ($previousManager) {
+                        $this->notifyUsersAt(
+                            collect([$previousManager]),
+                            'investment_application_assignment_removed',
+                            "{$locked->application_number}: өтінім бойынша жауапкершілік басқа менеджерге берілді.",
+                            route('notifications.index', absolute: false),
+                            'Хабарламаларды ашу',
+                            $actor->id
+                        );
+                    }
+                }
+
+                $this->notifyUsers(
+                    collect([$manager]),
+                    $locked,
+                    'investment_application_assigned',
+                    "{$locked->application_number}: өтінім сізге бекітілді.",
+                    $actor->id
+                );
+            }
+
+            return $locked->fresh(['assignedManager', 'zoneable.region']);
+        });
+    }
+
+    public function requestSectorReview(
+        InvestmentApplication $application,
+        User $actor
+    ): InvestmentApplication {
+        return DB::transaction(function () use ($application, $actor) {
+            $locked = InvestmentApplication::query()
+                ->with('zoneable')
+                ->lockForUpdate()
+                ->findOrFail($application->id);
+
+            abort_unless(
+                in_array($locked->status, ['submitted', 'under_review'], true)
+                    && $locked->assigned_to !== null
+                    && in_array(
+                        $locked->sector_review_status,
+                        ['not_requested', 'rejected'],
+                        true
+                    ),
+                422,
+                'Техникалық қорытынды сұрауын жіберу мүмкін емес.'
+            );
+            abort_unless(
+                $this->access->isSuperadmin($actor)
+                    || (int) $locked->assigned_to === (int) $actor->id,
+                403
+            );
+
+            $reviewers = $this->sectorReviewers($locked);
+
+            if ($reviewers->isEmpty()) {
+                throw ValidationException::withMessages([
+                    'sector_review' => 'Осы аймақ бойынша техникалық қорытынды беретін қызметкер табылмады.',
+                ]);
+            }
+
+            $locked->update([
+                'sector_review_status' => 'pending',
+                'sector_review_requested_at' => now(),
+                'sector_review_requested_by' => $actor->id,
+                'sector_reviewed_at' => null,
+                'sector_reviewed_by' => null,
+                'sector_review_comment' => null,
+                'sector_approved_area' => null,
+            ]);
+            $this->history(
+                $locked,
+                $locked->status,
+                $locked->status,
+                $actor,
+                'Техникалық қорытынды сұралды.',
+                ['workflow_event' => 'sector_review_requested']
+            );
+            $this->notifyUsers(
+                $reviewers->merge($this->superadmins()),
+                $locked,
+                'investment_application_sector_review_requested',
+                "{$locked->application_number}: техникалық қорытынды қажет."
+            );
+
+            return $locked->fresh([
+                'assignedManager',
+                'sectorReviewRequester',
+                'zoneable.region',
+            ]);
+        });
+    }
+
+    public function approveSectorReview(
+        InvestmentApplication $application,
+        User $reviewer,
+        float $approvedArea,
+        ?string $comment
+    ): InvestmentApplication {
+        return $this->sectorReviewTransition(
+            $application,
+            $reviewer,
+            'approved',
+            $approvedArea,
+            $comment
+        );
+    }
+
+    public function rejectSectorReview(
+        InvestmentApplication $application,
+        User $reviewer,
+        string $comment
+    ): InvestmentApplication {
+        return $this->sectorReviewTransition(
+            $application,
+            $reviewer,
+            'rejected',
+            null,
+            $comment
+        );
     }
 
     public function beginReview(
@@ -147,10 +349,38 @@ class InvestmentApplicationWorkflowService
                 'Бұл өтінімді қабылдау мүмкін емес.'
             );
 
-            if ($approvedArea <= 0
-                || $approvedArea > (float) $locked->requested_area) {
+            if ($locked->assigned_to === null) {
                 throw ValidationException::withMessages([
-                    'approved_area' => 'Мақұлданған аумақ сұралған аумақтан аспауы және 0-ден үлкен болуы керек.',
+                    'manager_id' => 'Өтінімді қабылдамас бұрын тарту бағытының жауапты менеджерін бекітіңіз.',
+                ]);
+            }
+
+            if ($locked->sector_review_status !== 'approved'
+                || $locked->sector_approved_area === null) {
+                throw ValidationException::withMessages([
+                    'sector_review' => 'Өтінімді қабылдау үшін аймақтың мақұлданған техникалық қорытындысы қажет.',
+                ]);
+            }
+
+            $manager = User::query()
+                ->with('roleModel')
+                ->find($locked->assigned_to);
+
+            if (! $manager
+                || ! $this->access->isEligibleAttractionManager(
+                    $manager,
+                    $locked
+                )) {
+                throw ValidationException::withMessages([
+                    'manager_id' => 'Бекітілген жауапты менеджер тарту бағытына немесе өтінім аймағына сәйкес келмейді.',
+                ]);
+            }
+
+            if ($approvedArea <= 0
+                || $approvedArea > (float) $locked->requested_area
+                || $approvedArea > (float) $locked->sector_approved_area) {
+                throw ValidationException::withMessages([
+                    'approved_area' => 'Мақұлданған аумақ техникалық қорытындыдағы және сұралған аумақтан аспауы, әрі 0-ден үлкен болуы керек.',
                 ]);
             }
 
@@ -228,10 +458,23 @@ class InvestmentApplicationWorkflowService
             );
 
             $approved = $locked->fresh(['zoneable.region', 'applicant']);
+            $this->resolveApplicationNotifications(
+                $approved,
+                [
+                    'investment_application_submitted',
+                    'investment_application_sector_review_requested',
+                ]
+            );
             $this->notifyApplicant(
                 $approved,
                 'investment_application_approved',
                 "Өтінім қабылданды. {$approved->approved_area} га аумақ {$approved->reserved_until?->format('d.m.Y')} дейін резервке қойылды."
+            );
+            $this->notifyAssignedManager(
+                $approved,
+                'investment_application_approved_internal',
+                "{$approved->application_number}: өтінім қабылданып, жер резервке қойылды.",
+                $reviewer->id
             );
 
             return $approved;
@@ -263,6 +506,38 @@ class InvestmentApplicationWorkflowService
                 'reserved_until' => null,
             ]);
             $this->history($locked, $from, 'withdrawn', $actor);
+            $this->resolveApplicationNotifications(
+                $locked,
+                [
+                    'investment_application_submitted',
+                    'investment_application_assigned',
+                    'investment_application_sector_review_requested',
+                ]
+            );
+
+            $recipients = $this->superadmins();
+
+            if ($locked->assigned_to !== null) {
+                $manager = User::query()->find($locked->assigned_to);
+
+                if ($manager) {
+                    $recipients->push($manager);
+                }
+            }
+
+            if ($locked->sector_review_status === 'pending') {
+                $recipients = $recipients->merge(
+                    $this->sectorReviewers($locked)
+                );
+            }
+
+            $this->notifyUsers(
+                $recipients,
+                $locked,
+                'investment_application_withdrawn_internal',
+                "{$locked->application_number}: өтінім беруші өтінімді кері қайтарып алды.",
+                $actor->id
+            );
 
             return $locked->fresh();
         });
@@ -346,7 +621,20 @@ class InvestmentApplicationWorkflowService
                 ]
             );
 
-            return $locked->fresh();
+            $scheduled = $locked->fresh(['applicant']);
+            $this->notifyApplicant(
+                $scheduled,
+                'investment_application_schedule_set',
+                "Жобаның жоспарлы мерзімі {$plannedStartYear}–{$plannedEndYear} жылдарға бекітілді."
+            );
+            $this->notifyAssignedManager(
+                $scheduled,
+                'investment_application_schedule_set_internal',
+                "{$scheduled->application_number}: жобаның жоспарлы мерзімі {$plannedStartYear}–{$plannedEndYear} жылдарға бекітілді.",
+                $reviewer->id
+            );
+
+            return $scheduled;
         });
     }
 
@@ -374,10 +662,34 @@ class InvestmentApplicationWorkflowService
             );
 
             $expired = $locked->fresh(['applicant']);
+            $this->resolveApplicationNotifications(
+                $expired,
+                [
+                    'investment_application_submitted',
+                    'investment_application_assigned',
+                    'investment_application_sector_review_requested',
+                ]
+            );
             $this->notifyApplicant(
                 $expired,
                 'investment_application_expired',
                 'Өтінім бойынша жер резервінің мерзімі аяқталды.'
+            );
+            $recipients = $this->superadmins();
+
+            if ($expired->assigned_to !== null) {
+                $manager = User::query()->find($expired->assigned_to);
+
+                if ($manager) {
+                    $recipients->push($manager);
+                }
+            }
+
+            $this->notifyUsers(
+                $recipients,
+                $expired,
+                'investment_application_expired_internal',
+                "{$expired->application_number}: жер резервінің мерзімі аяқталды."
             );
 
             return $expired;
@@ -415,6 +727,10 @@ class InvestmentApplicationWorkflowService
             }
 
             $zone = $locked->zoneable()->lockForUpdate()->firstOrFail();
+            $attractionManager = $this->resolveAttractionManagerForConversion(
+                $locked,
+                $reviewer
+            );
             $projectTypes = $locked->projectTypes()
                 ->get(['project_types.id', 'project_types.name']);
             $primaryTypeId = $projectTypes
@@ -449,7 +765,7 @@ class InvestmentApplicationWorkflowService
                     'email' => $locked->contact_email,
                     'legal_address' => $locked->legal_address,
                     'status' => 'active',
-                    'created_by' => $reviewer->id,
+                    'created_by' => $attractionManager->id,
                 ]);
             }
 
@@ -526,7 +842,9 @@ class InvestmentApplicationWorkflowService
                     ),
                 ]);
                 $project->projectTypes()->syncWithoutDetaching($projectTypeIds);
-                $project->curators()->syncWithoutDetaching([$reviewer->id]);
+                $project->curators()->syncWithoutDetaching([
+                    $attractionManager->id,
+                ]);
 
                 if (($locked->planned_production ?? []) !== []) {
                     $project->update(['production_not_applicable' => false]);
@@ -551,11 +869,12 @@ class InvestmentApplicationWorkflowService
                         ->production_not_applicable,
                     'total_investment' => $locked->investment_amount,
                     'status' => 'plan',
-                    'created_by' => $reviewer->id,
+                    'attraction_stage' => 'potential',
+                    'created_by' => $attractionManager->id,
                     'infrastructure' => $this->projectInfrastructure($locked),
                 ]);
                 $project->projectTypes()->sync($projectTypeIds);
-                $project->curators()->sync([$reviewer->id]);
+                $project->curators()->sync([$attractionManager->id]);
                 $this->production->syncPlans(
                     $project,
                     $locked->planned_production ?? []
@@ -584,7 +903,10 @@ class InvestmentApplicationWorkflowService
                 $locked->application_kind === 'expansion'
                     ? 'Өтінім бойынша бар инвестициялық жоба кеңейтілді.'
                     : 'Өтінімнен инвестициялық жоба құрылды.',
-                ['investment_project_id' => $project->id]
+                [
+                    'investment_project_id' => $project->id,
+                    'assigned_to' => $attractionManager->id,
+                ]
             );
             KpiLog::activity(
                 projectId: $project->id,
@@ -608,6 +930,14 @@ class InvestmentApplicationWorkflowService
             );
 
             $converted = $locked->fresh(['applicant']);
+            $this->resolveApplicationNotifications(
+                $converted,
+                [
+                    'investment_application_submitted',
+                    'investment_application_assigned',
+                    'investment_application_sector_review_requested',
+                ]
+            );
             TaskNotification::create([
                 'user_id' => $converted->user_id,
                 'type' => 'investment_application_converted',
@@ -622,6 +952,22 @@ class InvestmentApplicationWorkflowService
                 'action_label' => 'Жобаны ашу',
                 'is_read' => false,
             ]);
+            $managerCanViewProject = $this->projectAccess->canView(
+                $attractionManager,
+                $project
+            );
+            $this->notifyUsersAt(
+                collect([$attractionManager]),
+                'investment_application_converted_internal',
+                $converted->application_kind === 'expansion'
+                    ? "{$converted->application_number}: өтінім қабылданып, бар инвестициялық жоба кеңейтілді."
+                    : "{$converted->application_number}: өтінімнен инвестициялық жоба құрылды.",
+                $managerCanViewProject
+                    ? route('investment-projects.show', $project, false)
+                    : route('investment-applications.show', $converted, false),
+                $managerCanViewProject ? 'Жобаны ашу' : 'Өтінімді қарау',
+                $reviewer->id
+            );
 
             return [$converted, $project];
         });
@@ -757,19 +1103,259 @@ class InvestmentApplicationWorkflowService
                 'zoneable.region',
                 'applicant',
             ]);
+            $resolvedTypes = ['investment_application_submitted'];
+            if (in_array(
+                $toStatus,
+                ['needs_clarification', 'rejected'],
+                true
+            )) {
+                $resolvedTypes[] =
+                    'investment_application_sector_review_requested';
+            }
+            if ($toStatus === 'rejected') {
+                $resolvedTypes[] = 'investment_application_assigned';
+            }
+            $this->resolveApplicationNotifications(
+                $transitioned,
+                $resolvedTypes
+            );
             $this->notifyApplicant(
                 $transitioned,
                 'investment_application_'.$toStatus,
                 $notificationMessage
+            );
+            $this->notifyAssignedManager(
+                $transitioned,
+                'investment_application_'.$toStatus.'_internal',
+                "{$transitioned->application_number}: {$notificationMessage}",
+                $reviewer->id
             );
 
             return $transitioned;
         });
     }
 
+    private function sectorReviewTransition(
+        InvestmentApplication $application,
+        User $reviewer,
+        string $decision,
+        ?float $approvedArea,
+        ?string $comment
+    ): InvestmentApplication {
+        return DB::transaction(function () use (
+            $application,
+            $reviewer,
+            $decision,
+            $approvedArea,
+            $comment
+        ) {
+            $locked = InvestmentApplication::query()
+                ->with('zoneable')
+                ->lockForUpdate()
+                ->findOrFail($application->id);
+
+            abort_unless(
+                $this->access->canSectorReview($reviewer, $locked),
+                403
+            );
+
+            if ($decision === 'approved'
+                && ($approvedArea === null
+                    || $approvedArea <= 0
+                    || $approvedArea > (float) $locked->requested_area)) {
+                throw ValidationException::withMessages([
+                    'approved_area' => 'Техникалық мақұлданған аумақ сұралған аумақтан аспауы және 0-ден үлкен болуы керек.',
+                ]);
+            }
+
+            if ($decision === 'approved') {
+                $zone = $locked->zoneable()->lockForUpdate()->firstOrFail();
+                $available = $this->capacity->summarize($zone)['available'];
+
+                if ($approvedArea > $available) {
+                    throw ValidationException::withMessages([
+                        'approved_area' => "Қазіргі бос аумақ {$available} га. Техникалық келісілетін гектарды азайтыңыз.",
+                    ]);
+                }
+            }
+
+            if ($decision === 'rejected' && blank($comment)) {
+                throw ValidationException::withMessages([
+                    'comment' => 'Техникалық қорытындыны қабылдамау себебін жазыңыз.',
+                ]);
+            }
+
+            $locked->update([
+                'sector_review_status' => $decision,
+                'sector_reviewed_at' => now(),
+                'sector_reviewed_by' => $reviewer->id,
+                'sector_review_comment' => $comment,
+                'sector_approved_area' => $decision === 'approved'
+                    ? $approvedArea
+                    : null,
+            ]);
+            $this->history(
+                $locked,
+                $locked->status,
+                $locked->status,
+                $reviewer,
+                $comment,
+                [
+                    'workflow_event' => 'sector_review_'.$decision,
+                    'sector_approved_area' => $decision === 'approved'
+                        ? $approvedArea
+                        : null,
+                ]
+            );
+
+            $this->resolveApplicationNotifications(
+                $locked,
+                ['investment_application_sector_review_requested']
+            );
+
+            $recipients = $this->superadmins();
+
+            if ($locked->assigned_to !== null) {
+                $manager = User::query()->find($locked->assigned_to);
+
+                if ($manager) {
+                    $recipients->push($manager);
+                }
+            }
+
+            $isApproved = $decision === 'approved';
+            $this->notifyUsers(
+                $recipients,
+                $locked,
+                $isApproved
+                    ? 'investment_application_sector_approved'
+                    : 'investment_application_sector_rejected',
+                "{$locked->application_number}: техникалық қорытынды "
+                    .($isApproved ? 'мақұлданды.' : 'қабылданбады.')
+            );
+
+            return $locked->fresh([
+                'assignedManager',
+                'sectorReviewer',
+                'zoneable.region',
+            ]);
+        });
+    }
+
+    private function resolveAttractionManagerForConversion(
+        InvestmentApplication $application,
+        User $actor
+    ): User {
+        $candidateIds = collect([
+            $application->assigned_to,
+            $application->reviewed_by,
+        ])->filter()->unique();
+
+        foreach ($candidateIds as $candidateId) {
+            $candidate = User::query()
+                ->with('roleModel')
+                ->lockForUpdate()
+                ->find($candidateId);
+
+            if ($candidate
+                && $this->access->isEligibleAttractionManager(
+                    $candidate,
+                    $application
+                )) {
+                if ((int) $application->assigned_to !== (int) $candidate->id) {
+                    $application->update([
+                        'assigned_to' => $candidate->id,
+                        'assigned_at' => now(),
+                    ]);
+                    $this->notifyUsers(
+                        collect([$candidate]),
+                        $application,
+                        'investment_application_assigned',
+                        "{$application->application_number}: өтінім сізге бекітілді.",
+                        $actor->id
+                    );
+                }
+
+                return $candidate;
+            }
+        }
+
+        $regionId = $application->zoneable?->region_id;
+        $candidate = $this->access->scopeAttractionManagers(
+            User::query()->with('roleModel')->lockForUpdate(),
+            $application
+        )
+            ->get()
+            ->sortBy(fn (User $user) => sprintf(
+                '%d-%020d',
+                $user->region_id !== null
+                    && (int) $user->region_id === (int) $regionId ? 0 : 1,
+                $user->id
+            ))
+            ->first();
+
+        if (! $candidate) {
+            throw ValidationException::withMessages([
+                'manager_id' => 'Жобаға айналдыру үшін осы аймаққа жауапты тарту бағытының менеджерін бекітіңіз.',
+            ]);
+        }
+
+        $application->update([
+            'assigned_to' => $candidate->id,
+            'assigned_at' => now(),
+        ]);
+        $this->history(
+            $application,
+            $application->status,
+            $application->status,
+            $actor,
+            'Бұрын қабылданған өтінімге тарту бағытының менеджері бекітілді.',
+            [
+                'workflow_event' => 'legacy_manager_resolved',
+                'assigned_to' => $candidate->id,
+            ]
+        );
+        $this->notifyUsers(
+            collect([$candidate]),
+            $application,
+            'investment_application_assigned',
+            "{$application->application_number}: өтінім сізге бекітілді.",
+            $actor->id
+        );
+
+        return $candidate;
+    }
+
     private function notifyReviewers(InvestmentApplication $application): void
     {
         $application->loadMissing(['zoneable', 'applicant']);
+        $reviewers = $this->superadmins();
+
+        if ($application->assigned_to !== null) {
+            $manager = User::query()->find($application->assigned_to);
+
+            if ($manager) {
+                $reviewers->push($manager);
+            }
+        } else {
+            $reviewers = $reviewers->merge(
+                $this->access->scopeAttractionManagers(
+                    User::query(),
+                    $application
+                )->get()
+            );
+        }
+
+        $this->notifyUsers(
+            $reviewers,
+            $application,
+            'investment_application_submitted',
+            "{$application->application_number}: жаңа жер өтінімі жіберілді."
+        );
+    }
+
+    private function sectorReviewers(InvestmentApplication $application)
+    {
         $requiredSubRole = match ($application->zoneable_type) {
             Sez::class => 'aea',
             IndustrialZone::class => 'ia',
@@ -777,47 +1363,149 @@ class InvestmentApplicationWorkflowService
             default => null,
         };
 
-        User::query()
-            ->with('roleModel')
+        if ($requiredSubRole === null) {
+            return collect();
+        }
+
+        $application->loadMissing('zoneable');
+        $regionId = $application->zoneable?->region_id;
+
+        return User::query()
+            ->where('invest_sub_role', $requiredSubRole)
             ->whereHas(
                 'roleModel',
-                fn ($role) => $role->whereIn('name', ['superadmin', 'invest'])
+                fn ($role) => $role->where('name', 'invest')
             )
-            ->get()
-            ->filter(function (User $user) use ($application, $requiredSubRole) {
-                if ($user->roleModel?->name === 'superadmin') {
-                    return true;
-                }
+            ->when(
+                $regionId !== null,
+                fn ($users) => $users->where(
+                    fn ($region) => $region
+                        ->whereNull('region_id')
+                        ->orWhere('region_id', $regionId)
+                )
+            )
+            ->get();
+    }
 
-                if ($user->region_id
-                    && (int) $user->region_id !== (int) $application->zoneable?->region_id) {
-                    return false;
-                }
+    private function superadmins()
+    {
+        return User::query()
+            ->whereHas(
+                'roleModel',
+                fn ($role) => $role->where('name', 'superadmin')
+            )
+            ->get();
+    }
 
-                return in_array(
-                    $user->invest_sub_role,
-                    [
-                        $requiredSubRole,
-                        ...User::TURKISTAN_INVEST_SUB_ROLES,
-                        null,
-                    ],
-                    true
-                );
-            })
-            ->each(function (User $reviewer) use ($application): void {
+    /** @param array<int, string> $types */
+    private function resolveApplicationNotifications(
+        InvestmentApplication $application,
+        array $types
+    ): void {
+        if ($types === []) {
+            return;
+        }
+
+        $notifications = TaskNotification::query()
+            ->whereIn('type', $types)
+            ->where(
+                'action_url',
+                route(
+                    'investment-applications.show',
+                    $application,
+                    false
+                )
+            );
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
+    }
+
+    private function notifyUsers(
+        $users,
+        InvestmentApplication $application,
+        string $type,
+        string $message,
+        ?int $excludeUserId = null
+    ): void {
+        $this->notifyUsersAt(
+            $users,
+            $type,
+            $message,
+            route(
+                'investment-applications.show',
+                $application,
+                false
+            ),
+            'Өтінімді қарау',
+            $excludeUserId
+        );
+    }
+
+    private function notifyUsersAt(
+        $users,
+        string $type,
+        string $message,
+        string $actionUrl,
+        string $actionLabel,
+        ?int $excludeUserId = null
+    ): void {
+        collect($users)
+            ->filter()
+            ->reject(
+                fn (User $user) => $excludeUserId !== null
+                    && (int) $user->id === (int) $excludeUserId
+            )
+            ->unique('id')
+            ->each(function (User $user) use (
+                $type,
+                $message,
+                $actionUrl,
+                $actionLabel
+            ): void {
                 TaskNotification::create([
-                    'user_id' => $reviewer->id,
-                    'type' => 'investment_application_submitted',
-                    'message' => "{$application->application_number}: жаңа жер өтінімі жіберілді.",
-                    'action_url' => route(
-                        'investment-applications.show',
-                        $application,
-                        false
-                    ),
-                    'action_label' => 'Өтінімді қарау',
+                    'user_id' => $user->id,
+                    'type' => $type,
+                    'message' => $message,
+                    'action_url' => $actionUrl,
+                    'action_label' => $actionLabel,
                     'is_read' => false,
                 ]);
             });
+    }
+
+    private function notifyAssignedManager(
+        InvestmentApplication $application,
+        string $type,
+        string $message,
+        ?int $excludeUserId = null
+    ): void {
+        if ($application->assigned_to === null) {
+            return;
+        }
+
+        $manager = User::query()->find($application->assigned_to);
+
+        if (! $manager) {
+            return;
+        }
+
+        $this->notifyUsers(
+            collect([$manager]),
+            $application,
+            $type,
+            $message,
+            $excludeUserId
+        );
     }
 
     private function notifyApplicant(

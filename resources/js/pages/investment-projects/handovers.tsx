@@ -24,9 +24,10 @@ import { investorCountryLabel } from '@/lib/investor-countries';
 import { attractionStageLabel } from '@/lib/project-attraction';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
+import type { PaginatedData } from '@/types';
+
 import * as attractionHandovers from '@/routes/attraction-handovers';
 import * as investmentProjects from '@/routes/investment-projects';
-import type { PaginatedData } from '@/types';
 
 interface NamedEntity {
     id: number;
@@ -39,6 +40,8 @@ interface HandoverProject {
     status: string;
     attraction_stage?: string | null;
     can_manage?: boolean;
+    can_view?: boolean;
+    handover_receipt?: boolean;
     company_name?: string | null;
     company?: { display_name?: string | null } | null;
     region?: NamedEntity | null;
@@ -48,6 +51,7 @@ interface HandoverProject {
     investor_country_code?: string | null;
     attraction_handover_to_id?: number | null;
     attraction_handover_requested_at?: string | null;
+    attraction_handover_accepted_at?: string | null;
     attraction_handover_rejected_at?: string | null;
     attraction_handover_rejection_reason?: string | null;
     sezs?: NamedEntity[];
@@ -58,6 +62,7 @@ interface HandoverProject {
 
 interface Props {
     projects: PaginatedData<HandoverProject>;
+    receiptMode?: boolean;
     stats: {
         total_projects: number;
         total_investment: number;
@@ -99,6 +104,7 @@ function projectNumber(
 }
 
 function HandoverStatus({ project }: { project: HandoverProject }) {
+    const isAccepted = Boolean(project.attraction_handover_accepted_at);
     const isRejected =
         project.attraction_handover_rejected_at ||
         project.attraction_handover_rejection_reason;
@@ -109,12 +115,27 @@ function HandoverStatus({ project }: { project: HandoverProject }) {
     return (
         <div className="flex flex-col items-start gap-1">
             <Badge className="border-0 bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                {project.status === 'plan' ? 'Жоспарлау' : project.status}
+                {project.status === 'plan'
+                    ? 'Жоспарлау'
+                    : project.status === 'implementation'
+                      ? 'Іске асырылуда'
+                      : project.status === 'launched'
+                        ? 'Іске қосылған'
+                        : project.status === 'suspended'
+                          ? 'Тоқтатылған'
+                          : project.status}
             </Badge>
             <span className="text-xs font-medium text-slate-500">
                 {attractionStageLabel(project.attraction_stage)}
             </span>
-            {isRejected ? (
+            {isAccepted ? (
+                <Badge
+                    variant="outline"
+                    className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                >
+                    Сүйемелдеуге қабылданды
+                </Badge>
+            ) : isRejected ? (
                 <Badge
                     variant="outline"
                     className="border-red-200 bg-red-50 text-red-700"
@@ -140,7 +161,7 @@ function HandoverStatus({ project }: { project: HandoverProject }) {
     );
 }
 
-export default function Handovers({ projects, stats }: Props) {
+export default function Handovers({ projects, stats, receiptMode }: Props) {
     const { url } = usePage();
 
     return (
@@ -157,8 +178,12 @@ export default function Handovers({ projects, stats }: Props) {
             <PageContainer width="wide">
                 <PageHeader
                     eyebrow="Turkistan Invest · Инвестор тарту"
-                    title="Сүйемелдеу"
-                    subtitle="Сүйемелдеуге жіберілген, резервке түскен және кері қайтарылған жобаларды осы жерден бақылаңыз."
+                    title={receiptMode ? 'Қабылдау нәтижесі' : 'Сүйемелдеу'}
+                    subtitle={
+                        receiptMode
+                            ? 'Хабарламаға қатысты жобаның қауіпсіз қысқаша түбіртегі. Бұл бет жобаға толық қолжетімділік бермейді.'
+                            : 'Сүйемелдеуге жіберілген, резервке түскен және кері қайтарылған жобаларды осы жерден бақылаңыз.'
+                    }
                     icon={<Handshake className="size-5" />}
                 />
 
@@ -242,14 +267,20 @@ export default function Handovers({ projects, stats }: Props) {
                                         </TableCell>
                                         <TableCell className="[overflow-wrap:anywhere]">
                                             <div className="flex flex-col">
-                                                <Link
-                                                    href={investmentProjects.show.url(
-                                                        project.id,
-                                                    )}
-                                                    className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
-                                                >
-                                                    {project.name}
-                                                </Link>
+                                                {project.can_view === false ? (
+                                                    <span className="font-semibold text-[#0f1b3d]">
+                                                        {project.name}
+                                                    </span>
+                                                ) : (
+                                                    <Link
+                                                        href={investmentProjects.show.url(
+                                                            project.id,
+                                                        )}
+                                                        className="font-semibold text-[#0f1b3d] hover:text-[#c8a44e] hover:underline"
+                                                    >
+                                                        {project.name}
+                                                    </Link>
+                                                )}
                                                 <span className="mt-0.5 text-xs font-medium text-cyan-700">
                                                     Ел:{' '}
                                                     {investorCountryLabel(
@@ -282,39 +313,48 @@ export default function Handovers({ projects, stats }: Props) {
                                             <HandoverStatus project={project} />
                                         </TableCell>
                                         <TableCell className="text-right">
-                                            <div className="flex justify-end gap-1">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    asChild
-                                                    className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                    title="Қарау"
+                                            {project.can_view === false ? (
+                                                <Badge
+                                                    variant="outline"
+                                                    className="border-slate-200 bg-slate-50 text-slate-600"
                                                 >
-                                                    <Link
-                                                        href={investmentProjects.show.url(
-                                                            project.id,
-                                                        )}
-                                                    >
-                                                        <Eye className="size-4" />
-                                                    </Link>
-                                                </Button>
-                                                {project.can_manage !==
-                                                    false && (
+                                                    Қауіпсіз түбіртек
+                                                </Badge>
+                                            ) : (
+                                                <div className="flex justify-end gap-1">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         asChild
                                                         className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
-                                                        title="Өңдеу"
+                                                        title="Қарау"
                                                     >
                                                         <Link
-                                                            href={`${investmentProjects.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}
+                                                            href={investmentProjects.show.url(
+                                                                project.id,
+                                                            )}
                                                         >
-                                                            <Pencil className="size-4" />
+                                                            <Eye className="size-4" />
                                                         </Link>
                                                     </Button>
-                                                )}
-                                            </div>
+                                                    {project.can_manage !==
+                                                        false && (
+                                                        <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            asChild
+                                                            className="h-8 w-8 hover:bg-[#0f1b3d]/5 hover:text-[#0f1b3d]"
+                                                            title="Өңдеу"
+                                                        >
+                                                            <Link
+                                                                href={`${investmentProjects.edit.url(project.id)}?return_to=${encodeURIComponent(url)}`}
+                                                            >
+                                                                <Pencil className="size-4" />
+                                                            </Link>
+                                                        </Button>
+                                                    )}
+                                                </div>
+                                            )}
                                         </TableCell>
                                     </TableRow>
                                 ))

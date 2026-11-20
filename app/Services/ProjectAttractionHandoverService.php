@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
 class ProjectAttractionHandoverService
@@ -258,7 +259,8 @@ class ProjectAttractionHandoverService
             ->with('roleModel:id,name')
             ->find($project->attraction_handover_rejected_by);
 
-        return $rejector?->isTurkistanInvestAccompaniment() === true
+        return ($rejector?->isTurkistanInvestAccompaniment() === true
+                || $rejector?->isTurkistanInvestAttraction() === true)
             && $this->access->canView($user, $project);
     }
 
@@ -285,6 +287,8 @@ class ProjectAttractionHandoverService
             $this->assertCanDecideReserve($user, $locked);
             $this->ensureWorkClosed($locked, 'reserve');
             $submitterId = (int) $locked->attraction_handover_requested_by;
+            $requestedAt = $locked->attraction_handover_requested_at
+                ?->toDateTimeString();
             $acceptedAt = now();
 
             $locked->update([
@@ -296,6 +300,10 @@ class ProjectAttractionHandoverService
                 'attraction_handover_rejected_by' => null,
             ]);
             $locked->curators()->syncWithoutDetaching([$user->id]);
+            $this->resolvePendingDecisionNotifications(
+                $locked,
+                $requestedAt
+            );
 
             KpiLog::activity(
                 projectId: $locked->id,
@@ -326,11 +334,11 @@ class ProjectAttractionHandoverService
                         'project_id' => null,
                         'type' => 'attraction_handover_accepted',
                         'message' => "{$user->full_name} «{$locked->name}» жобасын сүйемелдеуге сәтті қабылдады.",
-                        'action_url' => route(
-                            'attraction-handovers.index',
-                            absolute: false
+                        'action_url' => $this->receiptUrl(
+                            $locked,
+                            $submitterId
                         ),
-                        'action_label' => 'Сүйемелдеуді ашу',
+                        'action_label' => 'Қабылдау нәтижесін ашу',
                     ]);
                 }
             });
@@ -348,6 +356,8 @@ class ProjectAttractionHandoverService
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             $this->assertCanDecideReserve($user, $locked);
             $submitterId = (int) $locked->attraction_handover_requested_by;
+            $requestedAt = $locked->attraction_handover_requested_at
+                ?->toDateTimeString();
             $rejectedAt = now();
             $reason = trim($reason);
 
@@ -360,6 +370,10 @@ class ProjectAttractionHandoverService
                 'attraction_handover_rejected_at' => $rejectedAt,
                 'attraction_handover_rejected_by' => $user->id,
             ]);
+            $this->resolvePendingDecisionNotifications(
+                $locked,
+                $requestedAt
+            );
 
             KpiLog::activity(
                 projectId: $locked->id,
@@ -437,10 +451,25 @@ class ProjectAttractionHandoverService
                 ->findOrFail($project->id);
             abort_unless($this->canResubmitReturned($user, $locked), 403);
             $this->ensureWorkClosed($locked, 'attraction_stage');
-            $submittedAt = now();
+            $submittedAt = now()->startOfSecond();
+            if ($locked->attraction_handover_rejected_at
+                && ! $submittedAt->gt(
+                    $locked->attraction_handover_rejected_at
+                )) {
+                $submittedAt = $locked->attraction_handover_rejected_at
+                    ->copy()
+                    ->addSecond();
+            }
+            $previousRejector = User::query()
+                ->with('roleModel:id,name')
+                ->find($locked->attraction_handover_rejected_by);
+            $namedReceiverId = $previousRejector
+                ?->isTurkistanInvestAttraction()
+                ? $previousRejector->id
+                : null;
 
             $locked->update([
-                'attraction_handover_to_id' => null,
+                'attraction_handover_to_id' => $namedReceiverId,
                 'attraction_handover_requested_at' => $submittedAt,
                 'attraction_handover_requested_by' => $user->id,
                 'attraction_handover_accepted_at' => null,
@@ -460,6 +489,7 @@ class ProjectAttractionHandoverService
                 properties: [
                     'project_name' => $locked->name,
                     'submitted_at' => $submittedAt->toISOString(),
+                    'receiver_id' => $namedReceiverId,
                 ]
             );
 
@@ -486,11 +516,17 @@ class ProjectAttractionHandoverService
         DB::transaction(function () use ($user, $project) {
             $locked = InvestmentProject::query()->lockForUpdate()->findOrFail($project->id);
             abort_unless($this->canAccept($user, $locked), 403);
+            $requestedAt = $locked->attraction_handover_requested_at
+                ?->toDateTimeString();
             $locked->update([
                 'attraction_handover_accepted_at' => now(),
                 'attraction_handover_accepted_by' => $user->id,
             ]);
             $locked->curators()->syncWithoutDetaching([$user->id]);
+            $this->resolvePendingDecisionNotifications(
+                $locked,
+                $requestedAt
+            );
             KpiLog::activity(
                 projectId: $locked->id,
                 event: 'attraction.handover_accepted',
@@ -545,12 +581,16 @@ class ProjectAttractionHandoverService
 
     public function notifyRequested(InvestmentProject $project): void
     {
+        $wasJustCreated = $project->wasRecentlyCreated
+            && $project->getRawOriginal($project->getKeyName()) === null;
+
         if (! $project->wasChanged([
             'attraction_handover_requested_at',
             'attraction_handover_to_id',
-        ]) && ! $project->wasRecentlyCreated) {
+        ]) && ! $wasJustCreated) {
             return;
         }
+        $this->notifyPreviousNamedReceiver($project);
         if (! $project->attraction_handover_requested_at) {
             return;
         }
@@ -589,7 +629,7 @@ class ProjectAttractionHandoverService
             );
 
             if ($namedReceiver
-                && $this->canAcceptNamedAttraction($namedReceiver, $saved)) {
+                && $this->isPendingNamedAttractionApproval($saved)) {
                 TaskNotification::firstOrCreate([
                     'dedupe_key' => "handover-request:{$saved->id}:{$requestedAt}:{$namedReceiver->id}",
                 ], [
@@ -667,6 +707,8 @@ class ProjectAttractionHandoverService
 
             $originalRequesterId = (int) $locked
                 ->attraction_handover_requested_by;
+            $requestedAt = $locked->attraction_handover_requested_at
+                ?->toDateTimeString();
             $submittedAt = now();
             $locked->update([
                 'attraction_handover_to_id' => null,
@@ -678,6 +720,10 @@ class ProjectAttractionHandoverService
                 'attraction_handover_rejected_at' => null,
                 'attraction_handover_rejected_by' => null,
             ]);
+            $this->resolvePendingDecisionNotifications(
+                $locked,
+                $requestedAt
+            );
 
             KpiLog::activity(
                 projectId: $locked->id,
@@ -709,11 +755,11 @@ class ProjectAttractionHandoverService
                         'project_id' => null,
                         'type' => 'attraction_handover_accepted',
                         'message' => "{$user->full_name} «{$locked->name}» жобасын сәтті қабылдап, сүйемелдеу резервіне жіберді.",
-                        'action_url' => route(
-                            'attraction-handovers.index',
-                            absolute: false
+                        'action_url' => $this->receiptUrl(
+                            $locked,
+                            $originalRequesterId
                         ),
-                        'action_label' => 'Сүйемелдеуді ашу',
+                        'action_label' => 'Қабылдау нәтижесін ашу',
                     ]);
                 }
             });
@@ -742,8 +788,11 @@ class ProjectAttractionHandoverService
             }
 
             $requesterId = (int) $locked->attraction_handover_requested_by;
+            $requestedAt = $locked->attraction_handover_requested_at
+                ?->toDateTimeString();
             $rejectedAt = now();
             $locked->update([
+                'attraction_handover_to_id' => $requesterId ?: null,
                 'attraction_handover_requested_at' => null,
                 'attraction_handover_accepted_at' => null,
                 'attraction_handover_accepted_by' => null,
@@ -751,6 +800,10 @@ class ProjectAttractionHandoverService
                 'attraction_handover_rejected_at' => $rejectedAt,
                 'attraction_handover_rejected_by' => $user->id,
             ]);
+            $this->resolvePendingDecisionNotifications(
+                $locked,
+                $requestedAt
+            );
 
             KpiLog::activity(
                 projectId: $locked->id,
@@ -833,6 +886,119 @@ class ProjectAttractionHandoverService
             ->find($project->attraction_handover_to_id);
 
         return $receiver?->isTurkistanInvestAttraction() ? $receiver : null;
+    }
+
+    private function notifyPreviousNamedReceiver(
+        InvestmentProject $project
+    ): void {
+        $newReceiverId = (int) $project->attraction_handover_to_id;
+        $wasReassigned = $project->attraction_handover_requested_at
+            && $newReceiverId > 0;
+        $wasCancelled = ! $project->attraction_handover_requested_at
+            && ! $project->attraction_handover_rejected_at;
+
+        if (! $wasReassigned && ! $wasCancelled) {
+            return;
+        }
+
+        $projectId = (int) $project->id;
+        $projectName = $project->name;
+        DB::afterCommit(function () use (
+            $newReceiverId,
+            $projectId,
+            $projectName,
+            $wasReassigned
+        ): void {
+            $pendingRequests = TaskNotification::query()
+                ->where('project_id', $projectId)
+                ->where('type', 'attraction_handover_requested')
+                ->where('is_read', false)
+                ->when(
+                    $wasReassigned,
+                    fn (Builder $query) => $query->where(
+                        'user_id',
+                        '!=',
+                        $newReceiverId
+                    )
+                )
+                ->get();
+
+            if ($pendingRequests->isEmpty()) {
+                return;
+            }
+
+            foreach ($pendingRequests as $pendingRequest) {
+                if (in_array(
+                    $pendingRequest->telegram_status,
+                    ['pending', 'retry'],
+                    true
+                )) {
+                    $pendingRequest->forceFill([
+                        'telegram_status' => 'skipped',
+                        'telegram_next_attempt_at' => null,
+                    ]);
+                }
+                $pendingRequest->is_read = true;
+                $pendingRequest->saveQuietly();
+
+                TaskNotification::firstOrCreate([
+                    'dedupe_key' => "handover-cancelled:{$projectId}:{$pendingRequest->id}:{$pendingRequest->user_id}",
+                ], [
+                    'user_id' => $pendingRequest->user_id,
+                    'project_id' => null,
+                    'type' => 'attraction_handover_cancelled',
+                    'message' => $wasReassigned
+                        ? "«{$projectName}» жобасын қабылдау сұрауы басқа маманға берілді."
+                        : "«{$projectName}» жобасын қабылдау сұрауы тоқтатылды.",
+                    'action_url' => route(
+                        'attraction-handovers.index',
+                        absolute: false
+                    ),
+                    'action_label' => 'Сүйемелдеуді ашу',
+                ]);
+            }
+        });
+    }
+
+    private function resolvePendingDecisionNotifications(
+        InvestmentProject $project,
+        ?string $requestedAt
+    ): void {
+        $notifications = TaskNotification::query()
+            ->where('type', 'attraction_handover_requested')
+            ->where(function (Builder $query) use ($project, $requestedAt) {
+                $query->where('project_id', $project->id);
+                if ($requestedAt) {
+                    $query->orWhere(
+                        'dedupe_key',
+                        'like',
+                        "reserve-request:{$project->id}:{$requestedAt}:%"
+                    );
+                }
+            });
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+            ]);
+        $notifications->where('is_read', false)->update(['is_read' => true]);
+    }
+
+    private function receiptUrl(
+        InvestmentProject $project,
+        int $recipientId
+    ): string {
+        return URL::signedRoute(
+            'attraction-handovers.index',
+            [
+                'project' => $project->id,
+                'recipient' => $recipientId,
+            ],
+            null,
+            false
+        );
     }
 
     private function attractionUsers(

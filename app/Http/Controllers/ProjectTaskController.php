@@ -191,6 +191,7 @@ class ProjectTaskController extends Controller
                 'approved_by' => Auth::id(),
                 'approved_at' => now(),
             ]);
+            $this->resolvePendingApprovalNotifications($task);
 
             ProjectTaskEvent::create([
                 'task_id' => $task->id,
@@ -343,8 +344,23 @@ class ProjectTaskController extends Controller
             abort_if($task->hasProtectedDefinition() && Auth::user()?->roleModel?->name !== 'superadmin', 403, 'Бекітілген немесе тексерудегі тапсырманы жоюға болмайды.');
 
             $assignedTo = $task->assigned_to;
+            $taskTitle = $task->title;
 
             $task->delete();
+
+            if ($assignedTo
+                && (int) $assignedTo !== (int) Auth::id()) {
+                TaskNotification::create([
+                    'user_id' => $assignedTo,
+                    'type' => 'task_cancelled',
+                    'message' => "Сізге берілген тапсырма жойылды: \"{$taskTitle}\" (Жоба: {$investmentProject->name}).",
+                    'action_url' => route(
+                        'notifications.index',
+                        absolute: false
+                    ),
+                    'action_label' => 'Хабарламаларды ашу',
+                ]);
+            }
 
             KpiLog::activity(
                 projectId: $investmentProject->id,
@@ -442,5 +458,24 @@ class ProjectTaskController extends Controller
             && $project->region_id !== $user->region_id) {
             abort(403, 'Сіздің бұл жобаға қол жеткізуіңіз жоқ.');
         }
+    }
+
+    private function resolvePendingApprovalNotifications(
+        ProjectTask $task
+    ): void {
+        $notifications = TaskNotification::query()
+            ->where('task_id', $task->id)
+            ->where('type', 'task_pending_approval');
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
     }
 }

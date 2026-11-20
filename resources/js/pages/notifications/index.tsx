@@ -19,12 +19,12 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/app-layout';
 import { cn } from '@/lib/utils';
+import type { PaginatedData } from '@/types/pagination';
 import {
     index as notificationsIndex,
     open as openNotification,
     readAll as readAllNotifications,
 } from '@/routes/notifications';
-import type { PaginatedData } from '@/types/pagination';
 
 type RelatedTask = {
     id: number;
@@ -109,10 +109,30 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
         icon: ListChecks,
         iconClassName: 'bg-sky-100 text-sky-700',
     },
+    task_assignment_removed: {
+        label: 'Тапсырма қайта тағайындалды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    task_cancelled: {
+        label: 'Тапсырма жойылды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
     attraction_assigned: {
         label: 'Жаңа іс-шара',
         icon: ListChecks,
         iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    attraction_unassigned: {
+        label: 'Іс-шара қайта тағайындалды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    attraction_cancelled: {
+        label: 'Іс-шара жойылды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
     },
     attraction_report_submitted: {
         label: 'Іс-шара есебі тексеруде',
@@ -139,6 +159,16 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
         icon: CheckCircle2,
         iconClassName: 'bg-emerald-100 text-emerald-700',
     },
+    attraction_handover_rejected: {
+        label: 'Жоба сүйемелдеуден қайтарылды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    attraction_handover_cancelled: {
+        label: 'Сүйемелдеуге беру тоқтатылды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
     attraction_due_soon: {
         label: 'Іс-шара мерзімі жақындады',
         icon: CalendarClock,
@@ -153,6 +183,111 @@ const TYPE_CONFIG: Record<string, TypeConfig> = {
         label: 'Инвестормен қайта байланысу',
         icon: CalendarClock,
         iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    investment_application_submitted: {
+        label: 'Жаңа инвестор өтінімі',
+        icon: Inbox,
+        iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    investment_application_assigned: {
+        label: 'Өтінім сізге тағайындалды',
+        icon: ListChecks,
+        iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    investment_application_assignment_removed: {
+        label: 'Өтінім қайта тағайындалды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_under_review: {
+        label: 'Өтінім қарауға алынды',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    investment_application_under_review_internal: {
+        label: 'Өтінім қаралуда',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    investment_application_needs_clarification: {
+        label: 'Өтінімді толықтыру қажет',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    investment_application_needs_clarification_internal: {
+        label: 'Өтінім толықтыруға қайтарылды',
+        icon: Clock3,
+        iconClassName: 'bg-amber-100 text-amber-700',
+    },
+    investment_application_rejected: {
+        label: 'Өтінім қабылданбады',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_rejected_internal: {
+        label: 'Өтінім қабылданбады',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_sector_review_requested: {
+        label: 'Техникалық қорытынды қажет',
+        icon: ListChecks,
+        iconClassName: 'bg-sky-100 text-sky-700',
+    },
+    investment_application_sector_approved: {
+        label: 'Техникалық қорытынды мақұлданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_sector_rejected: {
+        label: 'Техникалық қорытынды қабылданбады',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_approved: {
+        label: 'Өтінім мақұлданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_approved_internal: {
+        label: 'Өтінім мақұлданды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_withdrawn_internal: {
+        label: 'Өтінім кері алынды',
+        icon: XCircle,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_schedule_set: {
+        label: 'Жоба мерзімі бекітілді',
+        icon: CalendarClock,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_schedule_set_internal: {
+        label: 'Жоба мерзімі бекітілді',
+        icon: CalendarClock,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_expired: {
+        label: 'Резерв мерзімі аяқталды',
+        icon: CalendarClock,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_expired_internal: {
+        label: 'Резерв мерзімі аяқталды',
+        icon: CalendarClock,
+        iconClassName: 'bg-rose-100 text-rose-700',
+    },
+    investment_application_converted: {
+        label: 'Өтінімнен жоба құрылды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
+    },
+    investment_application_converted_internal: {
+        label: 'Өтінім жобаға айналды',
+        icon: CheckCircle2,
+        iconClassName: 'bg-emerald-100 text-emerald-700',
     },
     completion_submitted: {
         label: 'Орындау жіберілді',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\InvestmentApplication;
+use App\Models\User;
 use App\Services\InvestmentApplicationAccessService;
 use App\Services\InvestmentApplicationWorkflowService;
 use App\Services\ZoneCapacityService;
@@ -66,6 +67,7 @@ class InvestmentApplicationReviewController extends Controller
         $applications = $query
             ->with([
                 'applicant:id,full_name,email,phone',
+                'assignedManager:id,full_name',
                 'zoneable:id,name,region_id',
                 'zoneable.region:id,name',
             ])
@@ -101,11 +103,14 @@ class InvestmentApplicationReviewController extends Controller
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureVisible($request, $investmentApplication);
         $investmentApplication->load([
             'applicant:id,full_name,email,phone',
+            'assignedManager:id,full_name,region_id',
             'zoneable.region:id,name',
             'reviewer:id,full_name',
+            'sectorReviewRequester:id,full_name',
+            'sectorReviewer:id,full_name',
             'companyRegion:id,name',
             'projectTypes:id,name',
             'documents:id,investment_application_id,name,type,size,created_at',
@@ -114,33 +119,66 @@ class InvestmentApplicationReviewController extends Controller
             'sourceInvestmentProject:id,name,start_date,end_date',
         ]);
 
+        $user = $request->user()->loadMissing('roleModel');
+        $canManage = $this->access->canManage(
+            $user,
+            $investmentApplication
+        );
+        $canSectorReview = $this->access->canSectorReview(
+            $user,
+            $investmentApplication
+        );
+        $attractionManagers = $this->access->isSuperadmin($user)
+            ? $this->access->scopeAttractionManagers(
+                User::query(),
+                $investmentApplication
+            )->orderBy('full_name')->get(['id', 'full_name', 'region_id'])
+            : collect();
+
         return Inertia::render('investment-applications/show', [
             'application' => $investmentApplication,
+            'attractionManagers' => $attractionManagers,
+            'currentUserRole' => $user->roleModel?->name ?? $user->role,
+            'currentInvestSubRole' => $user->invest_sub_role,
             'zoneCapacity' => $this->capacity->summarize(
                 $investmentApplication->zoneable
             ),
             'actions' => [
-                'can_start_review' => $investmentApplication->status === 'submitted',
-                'can_request_clarification' => in_array(
+                'can_assign' => $this->access->canAssign(
+                    $user,
+                    $investmentApplication
+                ),
+                'can_start_review' => $canManage
+                    && $investmentApplication->status === 'submitted',
+                'can_request_sector_review' => $this->access
+                    ->canRequestSectorReview($user, $investmentApplication),
+                'can_sector_approve' => $canSectorReview,
+                'can_sector_reject' => $canSectorReview,
+                'can_request_clarification' => $canManage && in_array(
                     $investmentApplication->status,
                     ['submitted', 'under_review'],
                     true
                 ),
-                'can_approve' => in_array(
+                'can_approve' => $canManage
+                    && $investmentApplication->assigned_to !== null
+                    && $investmentApplication->sector_review_status === 'approved'
+                    && in_array(
+                        $investmentApplication->status,
+                        ['submitted', 'under_review'],
+                        true
+                    ),
+                'can_reject' => $canManage && in_array(
                     $investmentApplication->status,
                     ['submitted', 'under_review'],
                     true
                 ),
-                'can_reject' => in_array(
-                    $investmentApplication->status,
-                    ['submitted', 'under_review'],
-                    true
-                ),
-                'can_set_schedule' => $investmentApplication->status === 'approved'
+                'can_set_schedule' => $canManage
+                    && $investmentApplication->status === 'approved'
                     && $investmentApplication->reserved_until?->isFuture()
                     && ($investmentApplication->planned_start_year === null
                         || $investmentApplication->planned_end_year === null),
-                'can_convert' => $investmentApplication->status === 'approved'
+                'can_convert' => $canManage
+                    && $investmentApplication->status === 'approved'
                     && $investmentApplication->reserved_until?->isFuture()
                     && $investmentApplication->planned_start_year !== null
                     && $investmentApplication->planned_end_year !== null,
@@ -148,21 +186,122 @@ class InvestmentApplicationReviewController extends Controller
         ]);
     }
 
+    public function assignToMe(
+        Request $request,
+        InvestmentApplication $investmentApplication
+    ) {
+        abort_unless(
+            $this->access->canAssign(
+                $request->user(),
+                $investmentApplication
+            ),
+            403
+        );
+        $isSuperadmin = $this->access->isSuperadmin($request->user());
+        $validated = $request->validate([
+            'manager_id' => [
+                Rule::requiredIf($isSuperadmin),
+                'nullable',
+                'integer',
+                'exists:users,id',
+            ],
+        ]);
+        $manager = $isSuperadmin
+            ? User::query()->findOrFail($validated['manager_id'])
+            : $request->user();
+
+        if (! $this->access->isEligibleAttractionManager(
+            $manager,
+            $investmentApplication
+        )) {
+            abort(422, 'Таңдалған қызметкер тарту бағытына немесе өтінім аймағына сәйкес келмейді.');
+        }
+
+        $this->workflow->assignToAttractionManager(
+            $investmentApplication,
+            $request->user(),
+            $manager
+        );
+
+        return redirect()->back()->with('success', 'Өтінімнің жауапты менеджері бекітілді.');
+    }
+
     public function startReview(
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $this->workflow->beginReview($investmentApplication, $request->user());
 
         return redirect()->back()->with('success', 'Өтінім қарауға алынды.');
+    }
+
+    public function requestSectorReview(
+        Request $request,
+        InvestmentApplication $investmentApplication
+    ) {
+        abort_unless(
+            $this->access->canRequestSectorReview(
+                $request->user(),
+                $investmentApplication
+            ),
+            403
+        );
+        $this->workflow->requestSectorReview(
+            $investmentApplication,
+            $request->user()
+        );
+
+        return redirect()->back()->with('success', 'Техникалық қорытынды сұрауы жіберілді.');
+    }
+
+    public function sectorApprove(
+        Request $request,
+        InvestmentApplication $investmentApplication
+    ) {
+        $this->ensureSectorReviewer($request, $investmentApplication);
+        $validated = $request->validate([
+            'approved_area' => [
+                'required',
+                'numeric',
+                'gt:0',
+                'max:2000000000',
+                'lte:'.$investmentApplication->requested_area,
+            ],
+            'comment' => ['nullable', 'string', 'max:5000'],
+        ]);
+        $this->workflow->approveSectorReview(
+            $investmentApplication,
+            $request->user(),
+            (float) $validated['approved_area'],
+            $validated['comment'] ?? null
+        );
+
+        return redirect()->back()->with('success', 'Техникалық қорытынды мақұлданды.');
+    }
+
+    public function sectorReject(
+        Request $request,
+        InvestmentApplication $investmentApplication
+    ) {
+        $this->ensureSectorReviewer($request, $investmentApplication);
+        $validated = $request->validate([
+            'comment' => ['required', 'string', 'max:5000'],
+        ]);
+        $this->workflow->rejectSectorReview(
+            $investmentApplication,
+            $request->user(),
+            $validated['comment']
+        );
+
+        return redirect()->back()->with('success', 'Техникалық қорытынды қабылданбады.');
     }
 
     public function requestClarification(
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $validated = $request->validate([
             'comment' => 'required|string|max:5000',
         ]);
@@ -179,7 +318,7 @@ class InvestmentApplicationReviewController extends Controller
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $minimumStartYear = min(
             now()->year,
             $investmentApplication->planned_start_year ?? now()->year
@@ -200,6 +339,9 @@ class InvestmentApplicationReviewController extends Controller
                 'gt:0',
                 'max:2000000000',
                 'lte:'.$investmentApplication->requested_area,
+                ...($investmentApplication->sector_approved_area !== null
+                    ? ['lte:'.$investmentApplication->sector_approved_area]
+                    : []),
             ],
             'planned_start_year' => [
                 'required',
@@ -242,7 +384,7 @@ class InvestmentApplicationReviewController extends Controller
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $minimumStartYear = $investmentApplication->sourceInvestmentProject
             ?->start_date?->year ?? now()->year;
         $validated = $request->validate([
@@ -281,7 +423,7 @@ class InvestmentApplicationReviewController extends Controller
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $validated = $request->validate([
             'comment' => 'required|string|max:5000',
         ]);
@@ -298,7 +440,7 @@ class InvestmentApplicationReviewController extends Controller
         Request $request,
         InvestmentApplication $investmentApplication
     ) {
-        $this->ensureReviewable($request, $investmentApplication);
+        $this->ensureManage($request, $investmentApplication);
         $project = $this->workflow->convertToProject(
             $investmentApplication,
             $request->user()
@@ -314,12 +456,32 @@ class InvestmentApplicationReviewController extends Controller
             );
     }
 
-    private function ensureReviewable(
+    private function ensureVisible(
         Request $request,
         InvestmentApplication $application
     ): void {
         abort_unless(
-            $this->access->canReview($request->user(), $application),
+            $this->access->canView($request->user(), $application),
+            403
+        );
+    }
+
+    private function ensureManage(
+        Request $request,
+        InvestmentApplication $application
+    ): void {
+        abort_unless(
+            $this->access->canManage($request->user(), $application),
+            403
+        );
+    }
+
+    private function ensureSectorReviewer(
+        Request $request,
+        InvestmentApplication $application
+    ): void {
+        abort_unless(
+            $this->access->canSectorReview($request->user(), $application),
             403
         );
     }

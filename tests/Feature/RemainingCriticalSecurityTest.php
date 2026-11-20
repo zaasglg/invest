@@ -7,6 +7,7 @@ use App\Models\Region;
 use App\Models\Role;
 use App\Models\SubsoilTask;
 use App\Models\SubsoilUser;
+use App\Models\TaskNotification;
 use App\Models\User;
 use App\Services\PrivateFileService;
 use Illuminate\Support\Facades\Storage;
@@ -193,6 +194,7 @@ test('bulk presentation rejects project ids outside the caller scope', function 
 test('task status and subsoil task assignment cannot bypass review rules', function () {
     $admin = createRemainingSecurityUser('superadmin');
     $executor = createRemainingSecurityUser('ispolnitel');
+    $nextExecutor = createRemainingSecurityUser('ispolnitel');
     $akim = createRemainingSecurityUser('akim');
     $region = createRemainingSecurityRegion('Task security region');
     $project = createRemainingSecurityProject(
@@ -232,6 +234,16 @@ test('task status and subsoil task assignment cannot bypass review rules', funct
     $subsoilTask = SubsoilTask::query()
         ->where('title', 'Valid subsoil task')
         ->sole();
+    $staleAssignment = TaskNotification::query()
+        ->where('subsoil_task_id', $subsoilTask->id)
+        ->where('user_id', $executor->id)
+        ->where('type', 'task_assigned')
+        ->sole();
+    $staleAssignment->forceFill([
+        'telegram_status' => 'retry',
+        'telegram_next_attempt_at' => now(),
+        'telegram_last_error' => 'retry',
+    ])->saveQuietly();
 
     $this->put(route(
         'investment-projects.tasks.update',
@@ -241,10 +253,37 @@ test('task status and subsoil task assignment cannot bypass review rules', funct
         'subsoil-users.tasks.update',
         [$subsoilUser, $subsoilTask]
     ), ['status' => 'done'])->assertSessionHasErrors('status');
+    $this->put(route(
+        'subsoil-users.tasks.update',
+        [$subsoilUser, $subsoilTask]
+    ), ['assigned_to' => $nextExecutor->id])->assertRedirect();
 
     expect($projectTask->fresh()->status)->toBe('in_progress')
         ->and($subsoilTask->fresh()->status)->toBe('new')
-        ->and(SubsoilTask::query()->count())->toBe(1);
+        ->and($subsoilTask->fresh()->assigned_to)->toBe($nextExecutor->id)
+        ->and(SubsoilTask::query()->count())->toBe(1)
+        ->and($staleAssignment->fresh()->is_read)->toBeTrue()
+        ->and($staleAssignment->fresh()->telegram_status)->toBe('skipped')
+        ->and(TaskNotification::query()
+            ->where('user_id', $executor->id)
+            ->where('type', 'task_assignment_removed')
+            ->count())->toBe(1)
+        ->and(TaskNotification::query()
+            ->where('subsoil_task_id', $subsoilTask->id)
+            ->where('user_id', $nextExecutor->id)
+            ->where('type', 'task_assigned')
+            ->count())->toBe(1);
+
+    $this->delete(route(
+        'subsoil-users.tasks.destroy',
+        [$subsoilUser, $subsoilTask]
+    ))->assertRedirect();
+    expect(SubsoilTask::query()->whereKey($subsoilTask->id)->exists())
+        ->toBeFalse()
+        ->and(TaskNotification::query()
+            ->where('user_id', $nextExecutor->id)
+            ->where('type', 'task_cancelled')
+            ->count())->toBe(1);
 });
 
 test('passport archive names cannot contain traversal segments', function () {

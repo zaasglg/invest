@@ -1,11 +1,18 @@
 import { Building2, Clock3, LandPlot, Sprout } from 'lucide-react';
 
+import { cn } from '@/lib/utils';
 import type { ZoneArea } from '@/types';
 
 const formatArea = (value: number) =>
     `${new Intl.NumberFormat('kk-KZ', { maximumFractionDigits: 2 }).format(value)} га`;
 
-export default function ZoneAreaSummary({ area }: { area: ZoneArea }) {
+export default function ZoneAreaSummary({
+    area,
+    variant = 'default',
+}: {
+    area: ZoneArea;
+    variant?: 'default' | 'project';
+}) {
     const items = [
         {
             label: 'Жалпы аумақ',
@@ -50,20 +57,35 @@ export default function ZoneAreaSummary({ area }: { area: ZoneArea }) {
             {items.map((item) => (
                 <div
                     key={item.label}
-                    className="group relative min-h-32 overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_18px_45px_-38px_rgba(15,27,61,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300 sm:p-5"
+                    className={cn(
+                        'group relative min-h-32 overflow-hidden bg-white p-4 sm:p-5',
+                        variant === 'project'
+                            ? 'metric-panel'
+                            : 'rounded-2xl border border-slate-200/80 shadow-[0_18px_45px_-38px_rgba(15,27,61,0.65)] transition-all duration-300 hover:-translate-y-0.5 hover:border-slate-300',
+                    )}
                 >
-                    <div
-                        className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${item.line}`}
-                    />
-                    <div
-                        className={`pointer-events-none absolute -right-8 -bottom-10 size-28 rounded-full transition-transform duration-500 group-hover:scale-110 ${item.glow}`}
-                    />
+                    {variant === 'default' && (
+                        <>
+                            <div
+                                className={`absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${item.line}`}
+                            />
+                            <div
+                                className={`pointer-events-none absolute -right-8 -bottom-10 size-28 rounded-full transition-transform duration-500 group-hover:scale-110 ${item.glow}`}
+                            />
+                        </>
+                    )}
                     <div className="relative flex items-start justify-between gap-3">
                         <p className="pt-1 text-[10px] font-bold tracking-[0.1em] text-slate-400 uppercase">
                             {item.label}
                         </p>
                         <span
-                            className={`flex size-9 shrink-0 items-center justify-center rounded-xl shadow-lg ${item.iconClass}`}
+                            className={cn(
+                                'flex size-9 shrink-0 items-center justify-center shadow-lg',
+                                variant === 'project'
+                                    ? 'rounded-md'
+                                    : 'rounded-xl',
+                                item.iconClass,
+                            )}
                         >
                             <item.icon className="size-4" />
                         </span>

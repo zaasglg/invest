@@ -98,6 +98,36 @@ class SubsoilTaskController extends Controller
         $before = $task->only($fields);
         $task->update($validated);
 
+        if ($task->wasChanged($fields)) {
+            $this->resolveAssignmentNotifications($task);
+
+            $oldAssigneeId = (int) ($before['assigned_to'] ?? 0);
+            if ($oldAssigneeId > 0
+                && $oldAssigneeId !== (int) $task->assigned_to
+                && $oldAssigneeId !== (int) Auth::id()) {
+                TaskNotification::create([
+                    'user_id' => $oldAssigneeId,
+                    'type' => 'task_assignment_removed',
+                    'message' => "Сізден тапсырма алынып, басқа орындаушыға берілді: \"{$task->title}\" (Жер қойнауын пайдаланушы: {$subsoilUser->name})",
+                    'action_url' => route(
+                        'notifications.index',
+                        absolute: false
+                    ),
+                    'action_label' => 'Хабарламаларды ашу',
+                ]);
+            }
+
+            if ($task->assigned_to
+                && (int) $task->assigned_to !== (int) Auth::id()) {
+                TaskNotification::create([
+                    'user_id' => $task->assigned_to,
+                    'subsoil_task_id' => $task->id,
+                    'type' => 'task_assigned',
+                    'message' => "Сізге тапсырманың жаңартылған нұсқасы берілді: \"{$task->title}\" (Жер қойнауын пайдаланушы: {$subsoilUser->name})",
+                ]);
+            }
+        }
+
         $activity->record(
             auditable: $subsoilUser,
             event: 'task.updated',
@@ -146,7 +176,22 @@ class SubsoilTaskController extends Controller
             ]
         );
 
+        $assignedTo = $task->assigned_to;
+        $taskTitle = $task->title;
         $task->delete();
+
+        if ($assignedTo && (int) $assignedTo !== (int) Auth::id()) {
+            TaskNotification::create([
+                'user_id' => $assignedTo,
+                'type' => 'task_cancelled',
+                'message' => "Сізге берілген тапсырма жойылды: \"{$taskTitle}\" (Жер қойнауын пайдаланушы: {$subsoilUser->name})",
+                'action_url' => route(
+                    'notifications.index',
+                    absolute: false
+                ),
+                'action_label' => 'Хабарламаларды ашу',
+            ]);
+        }
 
         return redirect()->back()->with('success', 'Кезең жойылды.');
     }
@@ -175,5 +220,23 @@ class SubsoilTaskController extends Controller
                 'assigned_to' => 'Тапсырманы тек орындаушыға беруге болады.',
             ]);
         }
+    }
+
+    private function resolveAssignmentNotifications(SubsoilTask $task): void
+    {
+        $notifications = TaskNotification::query()
+            ->where('subsoil_task_id', $task->id)
+            ->where('type', 'task_assigned');
+
+        (clone $notifications)
+            ->whereIn('telegram_status', ['pending', 'retry'])
+            ->update([
+                'telegram_status' => 'skipped',
+                'telegram_next_attempt_at' => null,
+                'telegram_last_error' => null,
+            ]);
+        $notifications
+            ->where('is_read', false)
+            ->update(['is_read' => true]);
     }
 }

@@ -278,6 +278,10 @@ export default function Edit({
         });
 
     const isPlanned = data.status === 'plan';
+    const canEditInvestorCountry = project.status === 'plan' && isPlanned;
+    const investorCountryCode = canEditInvestorCountry
+        ? data.investor_country_code
+        : (project.investor_country_code ?? '');
 
     const selectedCompany = useMemo(
         () =>
@@ -547,8 +551,9 @@ export default function Edit({
 
         transform((form) => ({
             ...form,
-            investor_country_code:
-                form.status === 'plan' ? form.investor_country_code : null,
+            investor_country_code: canEditInvestorCountry
+                ? form.investor_country_code || null
+                : (project.investor_country_code ?? null),
             attraction_stage:
                 form.status === 'plan' ? form.attraction_stage : null,
             infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
@@ -567,7 +572,7 @@ export default function Edit({
         if (!data.region_id) {
             errors.region_id = 'Ауданды таңдаңыз';
         }
-        if (isPlanned && !data.investor_country_code) {
+        if (canEditInvestorCountry && !data.investor_country_code) {
             errors.investor_country_code = 'Инвестор елін таңдаңыз';
         }
         if (!isPlanned && data.project_type_ids.length === 0) {
@@ -1034,9 +1039,10 @@ export default function Edit({
                                     </div>
                                 </div>
 
-                                {isPlanned && (
+                                {(isPlanned || investorCountryCode) && (
                                     <InvestorCountrySelect
-                                        value={data.investor_country_code}
+                                        value={investorCountryCode}
+                                        disabled={!canEditInvestorCountry}
                                         onChange={(value) => {
                                             setData(
                                                 'investor_country_code',
@@ -1050,7 +1056,7 @@ export default function Edit({
                                                 investor_country_code: '',
                                             }));
                                         }}
-                                        required
+                                        required={canEditInvestorCountry}
                                         error={
                                             errors.investor_country_code ||
                                             validationErrors.investor_country_code
@@ -1705,14 +1711,6 @@ export default function Edit({
                                                 data.attraction_stage,
                                             )}
                                         </p>
-                                        <p className="mt-2 text-sm text-gray-700">
-                                            Инвестор елі:{' '}
-                                            <span className="font-medium">
-                                                {investorCountryLabel(
-                                                    data.investor_country_code,
-                                                )}
-                                            </span>
-                                        </p>
                                     </div>
                                 )}
 
@@ -1721,6 +1719,18 @@ export default function Edit({
                                         Негізгі ақпарат
                                     </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
+                                        {(isPlanned || investorCountryCode) && (
+                                            <div>
+                                                <span className="text-gray-500">
+                                                    Инвестор елі:
+                                                </span>
+                                                <p className="font-medium">
+                                                    {investorCountryLabel(
+                                                        investorCountryCode,
+                                                    )}
+                                                </p>
+                                            </div>
+                                        )}
                                         <div>
                                             <span className="text-gray-500">
                                                 Жоба атауы:

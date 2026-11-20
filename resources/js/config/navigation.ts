@@ -288,7 +288,14 @@ export const filterNavItemsByRole = (
     const isSuperadmin =
         user?.role_model?.name === 'superadmin' || user?.role === 'superadmin';
 
-    if (!isSuperadmin && roleKey !== 'invest') {
+    const canViewInvestmentApplications =
+        isSuperadmin ||
+        (roleKey === 'invest' &&
+            ['turkistan_invest_attraction', 'aea', 'ia', 'prom_zone'].includes(
+                user?.invest_sub_role ?? '',
+            ));
+
+    if (!canViewInvestmentApplications) {
         filteredItems = filteredItems.filter(
             (item) => item.href !== investmentApplications.index.url(),
         );

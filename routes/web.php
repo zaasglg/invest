@@ -55,8 +55,16 @@ Route::middleware(['auth', 'role.application-reviewer'])
             ->name('index');
         Route::get('{investmentApplication}', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'show'])
             ->name('show');
+        Route::post('{investmentApplication}/assign-to-me', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'assignToMe'])
+            ->name('assign-to-me');
         Route::post('{investmentApplication}/start-review', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'startReview'])
             ->name('start-review');
+        Route::post('{investmentApplication}/request-sector-review', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'requestSectorReview'])
+            ->name('request-sector-review');
+        Route::post('{investmentApplication}/sector-approve', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'sectorApprove'])
+            ->name('sector-approve');
+        Route::post('{investmentApplication}/sector-reject', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'sectorReject'])
+            ->name('sector-reject');
         Route::post('{investmentApplication}/request-clarification', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'requestClarification'])
             ->name('request-clarification');
         Route::post('{investmentApplication}/approve', [\App\Http\Controllers\InvestmentApplicationReviewController::class, 'approve'])

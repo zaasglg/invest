@@ -1413,19 +1413,6 @@ export default function Show({
                                                         'Көрсетілмеген'}
                                                 </p>
                                             </div>
-                                            {project.status === 'plan' && (
-                                                <div className="rounded-lg border border-gray-200 p-4">
-                                                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
-                                                        <Flag className="h-3.5 w-3.5" />{' '}
-                                                        Инвестор елі
-                                                    </p>
-                                                    <p className="text-sm font-bold text-[#0f1b3d]">
-                                                        {investorCountryLabel(
-                                                            project.investor_country_code,
-                                                        )}
-                                                    </p>
-                                                </div>
-                                            )}
                                             <div className="rounded-lg border border-gray-200 p-4">
                                                 <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
                                                     <FileText className="h-3.5 w-3.5" />{' '}
@@ -1500,6 +1487,20 @@ export default function Show({
                                                           : 'Көрсетілмеген'}
                                                 </p>
                                             </div>
+                                            {(project.status === 'plan' ||
+                                                project.investor_country_code) && (
+                                                <div className="col-span-2 rounded-lg border border-gray-200 p-4">
+                                                    <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-gray-500">
+                                                        <Flag className="h-3.5 w-3.5" />{' '}
+                                                        Инвестор елі
+                                                    </p>
+                                                    <p className="text-sm font-bold text-[#0f1b3d]">
+                                                        {investorCountryLabel(
+                                                            project.investor_country_code,
+                                                        )}
+                                                    </p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </CardContent>

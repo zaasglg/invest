@@ -4,14 +4,11 @@ import {
     ArrowLeft,
     BadgeCheck,
     BriefcaseBusiness,
-    Building2,
     Download,
     FilePenLine,
     FileText,
-    Files,
     FolderKanban,
     Loader2,
-    Network,
     Save,
     Search,
     Send,
@@ -20,17 +17,13 @@ import {
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 
-import {
-    ApplicantHero,
-    ApplicantSectionCard,
-} from '@/components/applicant/applicant-ui';
 import InputError from '@/components/input-error';
 import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageContainer } from '@/components/ui/page';
+import { FormCard, PageHeader } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -358,14 +351,14 @@ export default function ApplicationForm({
             ]}
         >
             <Head title={application ? 'Өтінімді өңдеу' : 'Жаңа өтінім'} />
-            <PageContainer width="wide">
-                <ApplicantHero
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <PageHeader
                     eyebrow={`${zone.type_label} · ${zone.name}`}
                     title={
                         application ? 'Өтінімді өңдеу' : 'Жер аумағына өтінім'
                     }
                     subtitle="Деректерді толық толтырыңыз. Өтінім қабылданғаннан кейін жер уақытша резервке қойылады."
-                    icon={FilePenLine}
+                    icon={<FilePenLine className="size-5" />}
                     action={
                         <Link
                             href={
@@ -374,31 +367,26 @@ export default function ApplicationForm({
                                     : `/portal/zones/${zone.type}/${zone.id}`
                             }
                         >
-                            <Button
-                                variant="outline"
-                                className="border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
-                            >
+                            <Button variant="outline">
                                 <ArrowLeft /> Артқа
                             </Button>
                         </Link>
                     }
                 />
 
-                <ZoneAreaSummary area={zone.area} />
+                <ZoneAreaSummary area={zone.area} variant="project" />
 
                 <form className="space-y-5">
-                    <ApplicantSectionCard
+                    <FormCard
                         title="Жоба туралы"
                         description={
                             isExpansion
                                 ? 'Бар жобаға қосылатын инвестиция, жұмыс орны және жер көлемі'
                                 : 'Жобаның мақсаты мен негізгі көрсеткіштері'
                         }
-                        icon={BriefcaseBusiness}
-                        tone="navy"
                     >
                         {isInvestor && (
-                            <div className="mb-6 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                            <div className="mb-6 space-y-4 rounded-xl border border-slate-200 bg-slate-50/70 p-4">
                                 <div>
                                     <Label id="application-kind-label">
                                         Өтінім түрі
@@ -760,20 +748,18 @@ export default function ApplicationForm({
                                 </Field>
                             </div>
                         </div>
-                    </ApplicantSectionCard>
+                    </FormCard>
 
-                    <ApplicantSectionCard
+                    <FormCard
                         title="Компания реквизиттері"
                         description={
                             isInvestor
                                 ? 'CRM жүйесінде аккаунтыңызға байланыстырылған компания'
                                 : 'БСН бойынша компанияны тексеріп, заңды тұлға деректерін толтырыңыз'
                         }
-                        icon={Building2}
-                        tone="sky"
                     >
                         {isInvestor && company && (
-                            <div className="mb-5 flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                            <div className="mb-5 flex gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
                                 <BadgeCheck className="mt-0.5 size-5 shrink-0 text-emerald-600" />
                                 <div>
                                     <p className="font-bold">
@@ -1107,13 +1093,11 @@ export default function ApplicationForm({
                                 />
                             </Field>
                         </div>
-                    </ApplicantSectionCard>
+                    </FormCard>
 
-                    <ApplicantSectionCard
+                    <FormCard
                         title="Қажетті инфрақұрылым"
                         description="Тек қажет ресурстардың шамасын көрсетіңіз"
-                        icon={Network}
-                        tone="emerald"
                     >
                         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {infrastructureFields.map((field) => (
@@ -1153,7 +1137,7 @@ export default function ApplicationForm({
                                 </Field>
                             ))}
                         </div>
-                    </ApplicantSectionCard>
+                    </FormCard>
 
                     <div data-form-field="planned_production">
                         <PlannedProductionForm
@@ -1169,11 +1153,9 @@ export default function ApplicationForm({
                         />
                     </div>
 
-                    <ApplicantSectionCard
+                    <FormCard
                         title="Құжаттар"
                         description="PDF, Word, Excel немесе сурет; әр файл 10 МБ-тан аспайды"
-                        icon={Files}
-                        tone="violet"
                     >
                         <Label htmlFor="documents">Құжаттарды таңдаңыз</Label>
                         <Input
@@ -1252,9 +1234,9 @@ export default function ApplicationForm({
                                 ))}
                             </div>
                         ) : null}
-                    </ApplicantSectionCard>
+                    </FormCard>
 
-                    <div className="sticky bottom-4 z-20 flex flex-col-reverse gap-3 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-[0_24px_65px_-32px_rgba(15,27,61,0.45)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-end">
+                    <div className="sticky bottom-4 z-20 flex flex-col-reverse gap-3 rounded-xl border border-slate-200/90 bg-white/95 p-4 shadow-[0_24px_65px_-32px_rgba(15,27,61,0.45)] backdrop-blur-md sm:flex-row sm:items-center sm:justify-end">
                         <Button
                             type="button"
                             variant="outline"
@@ -1273,7 +1255,7 @@ export default function ApplicationForm({
                         </Button>
                     </div>
                 </form>
-            </PageContainer>
+            </div>
         </AppLayout>
     );
 }

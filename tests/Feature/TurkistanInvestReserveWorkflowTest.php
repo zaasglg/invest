@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Company;
 use App\Models\InvestmentProject;
 use App\Models\KpiLog;
 use App\Models\Region;
@@ -9,6 +10,7 @@ use App\Models\User;
 use App\Services\ProjectAttractionHandoverService;
 use Illuminate\Http\Client\Request as ClientRequest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -126,10 +128,54 @@ test('only accompaniment accounts see their regional reserve queue', function ()
     $this->get(route('investment-projects.show', $ownPending))
         ->assertOk();
 });
-test('accepting a reserve atomically moves it into accompaniment projects', function () {
-    $region = reserveFlowRegion('Қабылдау ауданы');
+test('linked companies serialize on handover reserve and receipt pages', function (string $view) {
+    $region = reserveFlowRegion('Компаниясы бар жоба ауданы');
     $attraction = reserveFlowUser('turkistan_invest_attraction', $region);
     $accompaniment = reserveFlowUser('turkistan_invest', $region);
+    $company = Company::factory()->create([
+        'name' => 'Сүйемелдеу компаниясы',
+        'region_id' => $region->id,
+        'created_by' => $attraction->id,
+        'status' => 'active',
+    ]);
+    $project = reserveFlowProject($attraction, $region, [
+        'company_id' => $company->id,
+    ]);
+    $viewer = $view === 'reserve' ? $accompaniment : $attraction;
+    $url = match ($view) {
+        'reserve' => route('project-reserves.index'),
+        'receipt' => URL::signedRoute('attraction-handovers.index', [
+            'project' => $project->id,
+            'recipient' => $attraction->id,
+        ], null, false),
+        default => route('attraction-handovers.index'),
+    };
+
+    $this->actingAs($viewer)
+        ->get($url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component($view === 'reserve'
+                ? 'investment-projects/reserves'
+                : 'investment-projects/handovers')
+            ->has('projects.data', 1)
+            ->where('projects.data.0.company.id', $company->id)
+            ->where('projects.data.0.company.display_name', $company->display_name)
+            ->where('projects.data.0.company.status_label', 'Белсенді'));
+})->with(['handover', 'reserve', 'receipt']);
+
+test('accepting a reserve atomically moves it into accompaniment projects', function () {
+    config()->set('services.telegram.bot_token', 'reserve-accept-test-token');
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+
+    $region = reserveFlowRegion('Қабылдау ауданы');
+    $attraction = reserveFlowUser('turkistan_invest_attraction', $region);
+    $attraction->update(['telegram_chat_id' => 'reserve-sender-chat']);
+    $accompaniment = reserveFlowUser('turkistan_invest', $region);
+    $secondAccompaniment = reserveFlowUser('turkistan_invest', $region);
     $project = reserveFlowProject($attraction, $region);
 
     $this->actingAs($accompaniment)
@@ -174,7 +220,45 @@ test('accepting a reserve atomically moves it into accompaniment projects', func
         ->sole();
     expect($acceptedNotification->project_id)->toBeNull()
         ->and($acceptedNotification->destination_url)
-        ->toBe(route('attraction-handovers.index', absolute: false));
+        ->toContain('project='.$project->id)
+        ->and($acceptedNotification->destination_url)
+        ->toContain('signature=');
+
+    $requestNotifications = TaskNotification::query()
+        ->where('type', 'attraction_handover_requested')
+        ->whereIn('user_id', [
+            $accompaniment->id,
+            $secondAccompaniment->id,
+        ])
+        ->get();
+    expect($requestNotifications)->toHaveCount(2)
+        ->and($requestNotifications->every->is_read)->toBeTrue();
+
+    $this->actingAs($attraction)
+        ->get($acceptedNotification->destination_url)
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('investment-projects/handovers')
+            ->where('receiptMode', true)
+            ->has('projects.data', 1)
+            ->where('projects.data.0.id', $project->id)
+            ->where('projects.data.0.can_view', false)
+            ->where('projects.data.0.can_manage', false));
+
+    $otherAttraction = reserveFlowUser(
+        'turkistan_invest_attraction',
+        $region
+    );
+    $this->actingAs($otherAttraction)
+        ->get($acceptedNotification->destination_url)
+        ->assertForbidden();
+
+    Http::assertSentCount(1);
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === 'reserve-sender-chat'
+        && str_contains(
+            $request['text'],
+            url($acceptedNotification->destination_url)
+        ));
 
     $this->actingAs($accompaniment)
         ->post(route('project-reserves.accept', $project))
@@ -472,7 +556,7 @@ test('a named attraction recipient can reject only with a reason', function () {
 
     $project->refresh();
     expect($project->status)->toBe('plan')
-        ->and($project->attraction_handover_to_id)->toBe($recipient->id)
+        ->and($project->attraction_handover_to_id)->toBe($sender->id)
         ->and($project->attraction_handover_requested_at)->toBeNull()
         ->and($project->attraction_handover_rejection_reason)->toBe($reason)
         ->and($project->attraction_handover_rejected_by)
@@ -486,10 +570,137 @@ test('a named attraction recipient can reject only with a reason', function () {
     expect($notification->project_id)->toBe($project->id)
         ->and($notification->message)->toContain($reason);
 
+    $this->actingAs($sender)
+        ->get(route('investment-projects.show', $project))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('canResubmitAttractionHandover', true));
+
+    $this->post(route(
+        'investment-projects.attraction-handover.resubmit',
+        $project
+    ))->assertSessionHasNoErrors();
+
+    $project->refresh();
+    expect($project->attraction_handover_to_id)->toBe($recipient->id)
+        ->and($project->attraction_handover_requested_by)->toBe($sender->id)
+        ->and($project->attraction_handover_requested_at)->not->toBeNull()
+        ->and($project->attraction_handover_rejection_reason)->toBeNull()
+        ->and(TaskNotification::query()
+            ->where('user_id', $recipient->id)
+            ->where('type', 'attraction_handover_requested')
+            ->count())->toBe(2);
+
     expect(KpiLog::query()
         ->where('project_id', $project->id)
         ->where('event', 'attraction.handover_rejected')
         ->exists())->toBeTrue();
+});
+
+test('reassigning a pending named handover resolves and notifies the previous receiver', function () {
+    config()->set('services.telegram.bot_token', 'handover-reassign-token');
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+
+    $region = reserveFlowRegion('Қабылдаушыны ауыстыру ауданы');
+    $sender = reserveFlowUser('turkistan_invest_attraction', $region);
+    $previousReceiver = reserveFlowUser(
+        'turkistan_invest_attraction',
+        $region
+    );
+    $previousReceiver->update(['telegram_chat_id' => 'previous-receiver']);
+    $newReceiver = reserveFlowUser('turkistan_invest_attraction', $region);
+    $project = reserveFlowProject($sender, $region, [
+        'attraction_stage' => 'negotiation',
+        'attraction_handover_to_id' => null,
+        'attraction_handover_requested_at' => null,
+        'attraction_handover_requested_by' => null,
+    ]);
+    $service = app(ProjectAttractionHandoverService::class);
+
+    $project->update($service->prepare([
+        'status' => 'plan',
+        'attraction_stage' => 'handover',
+        'attraction_handover_to_id' => $previousReceiver->id,
+    ], $sender, $project));
+    $firstRequest = TaskNotification::query()
+        ->where('user_id', $previousReceiver->id)
+        ->where('type', 'attraction_handover_requested')
+        ->sole();
+    expect($firstRequest->is_read)->toBeFalse();
+
+    $project->refresh();
+    $project->update($service->prepare([
+        'status' => 'plan',
+        'attraction_stage' => 'handover',
+        'attraction_handover_to_id' => $newReceiver->id,
+    ], $sender, $project));
+    expect($firstRequest->fresh()->is_read)->toBeTrue();
+    $cancelled = TaskNotification::query()
+        ->where('user_id', $previousReceiver->id)
+        ->where('type', 'attraction_handover_cancelled')
+        ->sole();
+    expect($cancelled->message)->toContain('басқа маманға берілді')
+        ->and(TaskNotification::query()
+            ->where('user_id', $newReceiver->id)
+            ->where('type', 'attraction_handover_requested')
+            ->count())->toBe(1);
+
+    Http::assertSentCount(2);
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === 'previous-receiver'
+        && str_contains($request['text'], 'басқа маманға берілді'));
+});
+
+test('resubmitting a returned reserve sends a fresh site and telegram request', function () {
+    config()->set('services.telegram.bot_token', 'reserve-resubmit-token');
+    Http::preventStrayRequests();
+    Http::fake([
+        'api.telegram.org/*' => Http::response(['ok' => true]),
+    ]);
+
+    $region = reserveFlowRegion('Резервті қайта жіберу ауданы');
+    $attraction = reserveFlowUser('turkistan_invest_attraction', $region);
+    $accompaniment = reserveFlowUser('turkistan_invest', $region);
+    $accompaniment->update(['telegram_chat_id' => 'reserve-reviewer']);
+    $project = reserveFlowProject($attraction, $region);
+
+    $firstRequest = TaskNotification::query()
+        ->where('user_id', $accompaniment->id)
+        ->where('type', 'attraction_handover_requested')
+        ->sole();
+    expect($firstRequest->is_read)->toBeFalse();
+
+    $this->actingAs($accompaniment)
+        ->post(route('project-reserves.reject', $project), [
+            'rejection_reason' => 'Құжаттарды қайта тексеру қажет.',
+        ])->assertSessionHasNoErrors();
+    expect($firstRequest->fresh()->is_read)->toBeTrue();
+
+    $this->actingAs($attraction)
+        ->post(route(
+            'investment-projects.attraction-handover.resubmit',
+            $project
+        ))->assertSessionHasNoErrors();
+
+    $requests = TaskNotification::query()
+        ->where('user_id', $accompaniment->id)
+        ->where('type', 'attraction_handover_requested')
+        ->orderBy('id')
+        ->get();
+    expect($requests)->toHaveCount(2)
+        ->and($requests->first()->is_read)->toBeTrue()
+        ->and($requests->last()->is_read)->toBeFalse()
+        ->and($requests->last()->destination_url)
+        ->toBe(route('investment-projects.show', $project, false));
+
+    Http::assertSentCount(2);
+    Http::assertSent(fn (ClientRequest $request) => $request['chat_id'] === 'reserve-reviewer'
+        && str_contains(
+            $request['text'],
+            url(route('investment-projects.show', $project, false))
+        ));
 });
 
 test('pending reserve projects cannot be deleted or archived', function () {

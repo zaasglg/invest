@@ -85,7 +85,12 @@ class UserController extends Controller
                 'in:'.implode(',', User::BASKARMA_TYPES),
             ],
             'position' => 'nullable|string|max:255',
-            'telegram_chat_id' => 'nullable|string|max:50',
+            'telegram_chat_id' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^-?\d+$/',
+            ],
             'invest_sub_role' => [
                 $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
                 'nullable',
@@ -180,7 +185,12 @@ class UserController extends Controller
                 'in:'.implode(',', User::BASKARMA_TYPES),
             ],
             'position' => 'nullable|string|max:255',
-            'telegram_chat_id' => 'nullable|string|max:50',
+            'telegram_chat_id' => [
+                'nullable',
+                'string',
+                'max:50',
+                'regex:/^-?\d+$/',
+            ],
             'invest_sub_role' => [
                 $investRoleId ? 'required_if:role_id,'.$investRoleId : 'nullable',
                 'nullable',

@@ -5,6 +5,8 @@ const styles: Record<string, string> = {
     draft: 'border-slate-200 bg-slate-100 text-slate-700',
     submitted: 'border-sky-200 bg-sky-50 text-sky-700',
     under_review: 'border-indigo-200 bg-indigo-50 text-indigo-700',
+    not_requested: 'border-slate-200 bg-slate-50 text-slate-600',
+    pending: 'border-amber-200 bg-amber-50 text-amber-800',
     needs_clarification: 'border-amber-200 bg-amber-50 text-amber-800',
     approved: 'border-emerald-200 bg-emerald-50 text-emerald-700',
     converted_to_project: 'border-violet-200 bg-violet-50 text-violet-700',

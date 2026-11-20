@@ -16,16 +16,12 @@ import {
 } from 'lucide-react';
 import type { FormEvent } from 'react';
 
-import {
-    ApplicantHero,
-    ApplicantMetricCard,
-} from '@/components/applicant/applicant-ui';
 import Pagination from '@/components/pagination';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PageContainer } from '@/components/ui/page';
+import { DataCard, PageHeader, StatCard } from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -63,19 +59,16 @@ const zonePresentation = {
         label: 'Арнайы экономикалық аймақ',
         icon: Landmark,
         iconClass: 'bg-violet-50 text-violet-700 ring-violet-100',
-        lineClass: 'from-violet-600 via-indigo-500 to-violet-300',
     },
     'industrial-zone': {
         label: 'Индустриялық аймақ',
         icon: Factory,
         iconClass: 'bg-amber-50 text-amber-700 ring-amber-100',
-        lineClass: 'from-amber-500 via-gold to-amber-300',
     },
     'prom-zone': {
         label: 'Өндірістік аймақ',
         icon: Warehouse,
         iconClass: 'bg-sky-50 text-sky-700 ring-sky-100',
-        lineClass: 'from-sky-600 via-cyan-500 to-sky-300',
     },
 } as const;
 
@@ -118,23 +111,19 @@ export default function ApplicantPortal({
             ]}
         >
             <Head title="Инвестициялық аймақтар" />
-            <PageContainer width="wide">
-                <ApplicantHero
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <PageHeader
                     eyebrow={
                         accountRole === 'investor'
-                            ? 'Investor порталы'
+                            ? 'Инвестор порталы'
                             : 'Өтінім беруші порталы'
                     }
                     title="Инвестициялық аймақты таңдаңыз"
                     subtitle="АЭА, индустриялық және өндірістік аймақтардың бос гектары мен қолжетімді инфрақұрылымын көріңіз. Жобалар туралы мәліметтер көрсетілмейді."
-                    icon={Landmark}
-                    className="pb-16"
+                    icon={<Landmark className="size-5" />}
                     action={
                         <Link href={applications.index.url()}>
-                            <Button
-                                variant="outline"
-                                className="border-white/20 bg-white/10 text-white backdrop-blur-sm hover:bg-white/20 hover:text-white"
-                            >
+                            <Button variant="outline">
                                 <ClipboardList data-icon="inline-start" />
                                 Менің өтінімдерім
                             </Button>
@@ -142,41 +131,37 @@ export default function ApplicantPortal({
                     }
                 />
 
-                <div className="relative z-10 mx-3 -mt-12 grid gap-3 sm:mx-6 sm:grid-cols-2 lg:grid-cols-4">
-                    <ApplicantMetricCard
+                <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                    <StatCard
                         label="Барлық өтінім"
                         value={applicationStats.total}
                         description="Барлық уақыттағы өтінімдер"
-                        icon={ClipboardList}
-                        tone="navy"
+                        icon={<ClipboardList className="size-5" />}
                     />
-                    <ApplicantMetricCard
+                    <StatCard
                         label="Қаралуда"
                         value={applicationStats.in_progress}
                         description="Сарапшы шешімін күтуде"
-                        icon={Clock3}
-                        tone="sky"
+                        icon={<Clock3 className="size-5" />}
                     />
-                    <ApplicantMetricCard
+                    <StatCard
                         label="Резервте"
                         value={applicationStats.approved}
                         description="Жер уақытша бекітілген"
-                        icon={BadgeCheck}
-                        tone="amber"
+                        icon={<BadgeCheck className="size-5" />}
                     />
-                    <ApplicantMetricCard
+                    <StatCard
                         label="Жобаға айналды"
                         value={applicationStats.converted}
                         description="CRM жүйесінде жоба құрылды"
-                        icon={Rocket}
-                        tone="emerald"
+                        icon={<Rocket className="size-5" />}
                     />
-                </div>
+                </section>
 
-                <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_18px_55px_-42px_rgba(15,27,61,0.75)]">
-                    <div className="flex flex-col gap-3 border-b border-slate-100 bg-gradient-to-r from-sand-light via-white to-white px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+                <DataCard noPadding>
+                    <div className="flex flex-col gap-3 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
                         <div className="flex items-center gap-3">
-                            <span className="flex size-10 items-center justify-center rounded-xl bg-navy text-white shadow-sm">
+                            <span className="flex size-10 items-center justify-center rounded-lg bg-navy text-white shadow-sm">
                                 <SlidersHorizontal className="size-[18px]" />
                             </span>
                             <div>
@@ -308,10 +293,10 @@ export default function ApplicantPortal({
                             <Button type="submit">Қолдану</Button>
                         </div>
                     </form>
-                </section>
+                </DataCard>
 
                 {zonePage.data.length === 0 ? (
-                    <div className="relative overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-white py-16 text-center shadow-sm">
+                    <div className="relative overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white py-16 text-center shadow-sm">
                         <div className="mx-auto flex size-16 items-center justify-center rounded-2xl bg-slate-50 ring-1 ring-slate-100">
                             <LandPlot className="size-8 text-slate-300" />
                         </div>
@@ -334,7 +319,7 @@ export default function ApplicantPortal({
                 )}
 
                 <Pagination paginator={zonePage} />
-            </PageContainer>
+            </div>
         </AppLayout>
     );
 }
@@ -348,19 +333,13 @@ function ZoneCard({ zone }: { zone: ApplicantZone }) {
             : 0;
 
     return (
-        <article className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white shadow-[0_18px_55px_-42px_rgba(15,27,61,0.8)] transition-all duration-300 hover:-translate-y-1 hover:border-slate-300 hover:shadow-[0_28px_65px_-38px_rgba(15,27,61,0.55)]">
-            <div
-                className={cn(
-                    'absolute inset-x-0 top-0 h-1 bg-gradient-to-r',
-                    presentation.lineClass,
-                )}
-            />
+        <article className="group relative overflow-hidden rounded-xl border border-slate-200/80 bg-white shadow-[0_1px_2px_rgba(15,27,61,0.03),0_18px_45px_-38px_rgba(15,27,61,0.5)] transition-colors hover:border-slate-300">
             <div className="p-5 sm:p-6">
                 <div className="flex items-start justify-between gap-4">
                     <div className="flex min-w-0 items-start gap-3.5">
                         <span
                             className={cn(
-                                'flex size-12 shrink-0 items-center justify-center rounded-2xl ring-1 transition-transform duration-300 group-hover:scale-105 group-hover:-rotate-3',
+                                'flex size-12 shrink-0 items-center justify-center rounded-lg ring-1',
                                 presentation.iconClass,
                             )}
                         >
@@ -399,7 +378,7 @@ function ZoneCard({ zone }: { zone: ApplicantZone }) {
                     </Badge>
                 </div>
 
-                <div className="mt-6 rounded-2xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-4">
+                <div className="mt-6 rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
                     <div className="flex items-end justify-between gap-4">
                         <div>
                             <p className="text-[10px] font-bold tracking-[0.12em] text-emerald-700 uppercase">
@@ -470,7 +449,7 @@ function AreaFact({ label, value }: { label: string; value: number }) {
 
 function SproutMark() {
     return (
-        <span className="flex size-11 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-lg shadow-emerald-600/20">
+        <span className="flex size-11 items-center justify-center rounded-lg bg-emerald-600 text-white shadow-lg shadow-emerald-600/20">
             <Sparkles className="size-5" />
         </span>
     );

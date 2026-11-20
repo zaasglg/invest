@@ -488,8 +488,7 @@ export default function Create({
 
         transform((form) => ({
             ...form,
-            investor_country_code:
-                form.status === 'plan' ? form.investor_country_code : null,
+            investor_country_code: form.investor_country_code || null,
             attraction_stage:
                 form.status === 'plan' ? form.attraction_stage : null,
             infrastructure: withDefaultProjectUsedCapacity(form.infrastructure),
@@ -973,9 +972,10 @@ export default function Create({
                                     </div>
                                 </div>
 
-                                {isPlanned && (
+                                {(isPlanned || data.investor_country_code) && (
                                     <InvestorCountrySelect
                                         value={data.investor_country_code}
+                                        disabled={!isPlanned}
                                         onChange={(value) => {
                                             setData(
                                                 'investor_country_code',
@@ -989,7 +989,7 @@ export default function Create({
                                                 investor_country_code: '',
                                             }));
                                         }}
-                                        required
+                                        required={isPlanned}
                                         error={
                                             errors.investor_country_code ||
                                             validationErrors.investor_country_code
@@ -1584,14 +1584,6 @@ export default function Create({
                                                 data.attraction_stage,
                                             )}
                                         </p>
-                                        <p className="mt-2 text-sm text-gray-700">
-                                            Инвестор елі:{' '}
-                                            <span className="font-medium">
-                                                {investorCountryLabel(
-                                                    data.investor_country_code,
-                                                )}
-                                            </span>
-                                        </p>
                                     </div>
                                 )}
 
@@ -1600,6 +1592,19 @@ export default function Create({
                                         Негізгі ақпарат
                                     </h4>
                                     <div className="grid grid-cols-2 gap-4 text-sm">
+                                        {(isPlanned ||
+                                            data.investor_country_code) && (
+                                            <div>
+                                                <span className="text-gray-500">
+                                                    Инвестор елі:
+                                                </span>
+                                                <p className="font-medium">
+                                                    {investorCountryLabel(
+                                                        data.investor_country_code,
+                                                    )}
+                                                </p>
+                                            </div>
+                                        )}
                                         <div>
                                             <span className="text-gray-500">
                                                 Жоба атауы:

@@ -1588,6 +1588,14 @@ class InvestmentProjectController extends Controller
             $lockedProject = InvestmentProject::query()->lockForUpdate()->findOrFail($investmentProject->id);
             $validated = app(ProjectAttractionHandoverService::class)->prepare($validated, auth()->user(), $lockedProject);
 
+            if (($lockedProject->status !== 'plan' || $validated['status'] !== 'plan')
+                && array_key_exists('investor_country_code', $validated)
+                && $validated['investor_country_code'] !== $lockedProject->investor_country_code) {
+                throw ValidationException::withMessages([
+                    'investor_country_code' => 'Инвестор елін тек жоспарлау мәртебесіндегі жобада өзгертуге болады.',
+                ]);
+            }
+
             ProjectParticipantRules::assertActiveAssignmentsRetained(
                 $lockedProject, $curatorIds, $validated['company_id']
             );

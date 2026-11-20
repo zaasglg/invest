@@ -8,13 +8,18 @@ import {
     LandPlot,
     MapPin,
     Plus,
+    UserRound,
 } from 'lucide-react';
 
-import { ApplicantHero } from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import Pagination from '@/components/pagination';
 import { Button } from '@/components/ui/button';
-import { EmptyState, PageContainer } from '@/components/ui/page';
+import {
+    DataCard,
+    EmptyState,
+    PageHeader,
+    StatCard,
+} from '@/components/ui/page';
 import {
     Select,
     SelectContent,
@@ -59,41 +64,63 @@ export default function ApplicationsIndex({
             ]}
         >
             <Head title="Менің өтінімдерім" />
-            <PageContainer width="wide">
-                <ApplicantHero
+            <div className="page-surface flex h-full flex-col gap-5 sm:gap-6">
+                <PageHeader
                     eyebrow={
                         accountRole === 'investor'
-                            ? 'Investor порталы'
+                            ? 'Инвестор порталы'
                             : 'Өтінім беруші порталы'
                     }
                     title="Менің өтінімдерім"
                     subtitle="Өтінімдердің қаралу күйін, ескертулерді және резерв мерзімін бақылаңыз."
-                    icon={FolderKanban}
-                    badge={
-                        <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-white/80">
-                            {applications.total} өтінім
-                        </span>
-                    }
+                    icon={<FolderKanban className="size-5" />}
                     action={
                         <Link href={applicant.portal.url()}>
-                            <Button className="bg-gold text-white shadow-[0_12px_28px_-14px_rgba(200,164,78,0.8)] hover:bg-gold-dark">
+                            <Button className="bg-gold text-white shadow-[0_10px_24px_-12px_rgba(154,125,53,0.9)] hover:bg-gold-dark">
                                 <Plus /> Жаңа өтінім
                             </Button>
                         </Link>
                     }
                 />
 
-                <div className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_16px_45px_-40px_rgba(15,27,61,0.7)] sm:flex-row sm:items-center sm:justify-between sm:p-5">
+                <section className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                    <StatCard
+                        label="Барлық өтінім"
+                        value={applications.total}
+                        description="Барлық уақыттағы өтінімдер"
+                        icon={<ClipboardList className="size-5" />}
+                    />
+                    <StatCard
+                        label="Осы бетте"
+                        value={applications.data.length}
+                        description="Көрсетіліп тұрған өтінімдер"
+                        icon={<FolderKanban className="size-5" />}
+                    />
+                    <StatCard
+                        label="Ағымдағы сүзгі"
+                        value={
+                            filter ? (statuses[filter] ?? filter) : 'Барлығы'
+                        }
+                        description={
+                            accountRole === 'investor'
+                                ? 'Инвестор кабинеті'
+                                : 'Өтінім беруші кабинеті'
+                        }
+                        icon={<UserRound className="size-5" />}
+                    />
+                </section>
+
+                <DataCard className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex items-center gap-3">
-                        <span className="flex size-10 items-center justify-center rounded-xl bg-sand-light text-gold-dark ring-1 ring-gold/15">
+                        <span className="flex size-10 items-center justify-center rounded-lg bg-navy/5 text-navy">
                             <Filter className="size-[18px]" />
                         </span>
                         <div>
                             <p className="text-sm font-bold text-navy">
-                                Өтінім күйі
+                                Өтінім мәртебесі
                             </p>
                             <p className="text-xs text-slate-500">
-                                Қажетті өтінімдерді мәртебесімен сүзу
+                                Тізімді қажетті мәртебе бойынша сүзу
                             </p>
                         </div>
                     </div>
@@ -108,10 +135,12 @@ export default function ApplicationsIndex({
                         }
                     >
                         <SelectTrigger className="h-11 w-full bg-slate-50/70 sm:w-72">
-                            <SelectValue placeholder="Барлық күйлер" />
+                            <SelectValue placeholder="Барлық мәртебелер" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">Барлық күйлер</SelectItem>
+                            <SelectItem value="all">
+                                Барлық мәртебелер
+                            </SelectItem>
                             {Object.entries(statuses).map(([value, label]) => (
                                 <SelectItem key={value} value={value}>
                                     {label}
@@ -119,9 +148,9 @@ export default function ApplicationsIndex({
                             ))}
                         </SelectContent>
                     </Select>
-                </div>
+                </DataCard>
 
-                <div className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_20px_55px_-44px_rgba(15,27,61,0.75)]">
+                <DataCard noPadding>
                     {applications.data.length === 0 ? (
                         <EmptyState
                             icon={<ClipboardList className="size-7" />}
@@ -242,7 +271,7 @@ export default function ApplicationsIndex({
                                 {applications.data.map((application) => (
                                     <article
                                         key={application.id}
-                                        className="p-5"
+                                        className="p-5 transition-colors hover:bg-slate-50"
                                     >
                                         <div className="flex items-start justify-between gap-3">
                                             <span className="rounded-md bg-slate-100 px-2 py-1 font-mono text-[11px] font-semibold text-slate-600">
@@ -292,9 +321,9 @@ export default function ApplicationsIndex({
                             </div>
                         </>
                     )}
-                </div>
+                </DataCard>
                 <Pagination paginator={applications} />
-            </PageContainer>
+            </div>
         </AppLayout>
     );
 }
