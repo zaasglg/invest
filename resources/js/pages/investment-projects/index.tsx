@@ -310,7 +310,9 @@ export default function Index({
             filters.search ||
             filters.region_id ||
             filters.project_type_id ||
-            (!isAttractionDirection && initialStatus) ||
+            (!isAttractionDirection &&
+                initialStatus &&
+                !filters.investor_country_code) ||
             filters.executor_id ||
             filters.sector_type ||
             filters.sector_id ||
@@ -762,7 +764,7 @@ export default function Index({
                             </SelectContent>
                         </Select>
                     </div>
-                    {isAttractionDirection && (
+                    {(isAttractionDirection || isSuperAdmin) && (
                         <div className="space-y-1.5">
                             <Label htmlFor="investor-country-filter">
                                 Елдер

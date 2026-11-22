@@ -10,9 +10,11 @@ use App\Models\SezIssue;
 use App\Models\SubsoilIssue;
 use App\Models\User;
 use App\Services\InvestmentProjectAccessService;
+use App\Support\InvestorCountries;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class IssuesController extends Controller
@@ -31,26 +33,59 @@ class IssuesController extends Controller
             : null;
         $isModerator = $roleName === 'moderator';
         $isInvestor = $roleName === 'investor';
-        $isAttraction = $user?->isTurkistanInvestAttraction() ?? false;
+        $isAttractionAccount = $user?->isTurkistanInvestAttraction() ?? false;
+        $canFilterByCountry = $roleName === 'superadmin' || $isAttractionAccount;
+
+        if ($canFilterByCountry && is_string($request->input('investor_country_code'))) {
+            $request->merge([
+                'investor_country_code' => strtoupper(trim($request->input('investor_country_code'))),
+            ]);
+        }
+
+        $validated = $request->validate([
+            'project_status' => [
+                Rule::excludeIf($roleName !== 'superadmin'),
+                'nullable',
+                Rule::in(['plan', 'non_plan', 'implementation', 'launched', 'suspended']),
+            ],
+            'investor_country_code' => [
+                Rule::excludeIf(! $canFilterByCountry),
+                'nullable',
+                'string',
+                'size:2',
+                Rule::in(InvestorCountries::codes()),
+            ],
+        ]);
+        $projectStatus = $validated['project_status'] ?? null;
+        $investorCountryCode = $validated['investor_country_code'] ?? null;
+
+        if ($investorCountryCode !== null) {
+            $projectStatus = 'plan';
+        }
+
+        $isAttraction = $isAttractionAccount || $projectStatus === 'plan';
+        $projectIssuesOnly = $isAttraction || $projectStatus !== null;
+        $projectLabel = match (true) {
+            $isAttraction => 'Тартылатын жобалар',
+            $projectStatus === 'non_plan' => 'Сүйемелдеудегі жобалар',
+            default => 'Барлық жобалар',
+        };
 
         // Determine which sections are accessible for this user.
-        $canSeeSez = ! $isInvestor && ! $isAttraction
+        $canSeeSez = ! $isInvestor && ! $projectIssuesOnly
             && (! $investSubRole || $investSubRole === 'aea'
                 || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
-        $canSeeIz = ! $isInvestor && ! $isAttraction
+        $canSeeIz = ! $isInvestor && ! $projectIssuesOnly
             && (! $investSubRole || $investSubRole === 'ia'
                 || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
-        $canSeeProm = ! $isInvestor && ! $isAttraction
+        $canSeeProm = ! $isInvestor && ! $projectIssuesOnly
             && (! $investSubRole || $investSubRole === 'prom_zone'
                 || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
-        $canSeeSubsoil = ! $isInvestor && ! $isAttraction
+        $canSeeSubsoil = ! $isInvestor && ! $projectIssuesOnly
             && (! $investSubRole
                 || in_array($investSubRole, User::TURKISTAN_INVEST_SUB_ROLES, true));
 
-        // Attraction accounts work only with planned projects. Keep the global
-        // issues page inside that same stream even if another sector is passed
-        // manually in the URL.
-        $sector = $isAttraction
+        $sector = $projectIssuesOnly
             ? 'all_projects'
             : $request->get('sector');
         $regionId = $request->get('region_id');
@@ -87,6 +122,23 @@ class IssuesController extends Controller
         // Get issues based on sector filter
         if ($sector === 'all_projects' || $sector === 'invest' || ! $sector) {
             $query = ProjectIssue::with(['project.region', 'creator:id,full_name']);
+            if ($projectStatus !== null) {
+                $query->whereHas(
+                    'project',
+                    fn (Builder $project) => $project->active()
+                        ->where(
+                            'status',
+                            $projectStatus === 'non_plan' ? '!=' : '=',
+                            $projectStatus === 'non_plan' ? 'plan' : $projectStatus
+                        )
+                );
+            }
+            if ($investorCountryCode !== null) {
+                $query->whereHas(
+                    'project',
+                    fn (Builder $project) => $project->where('investor_country_code', $investorCountryCode)
+                );
+            }
             if ($isInvestor) {
                 $query->whereHas(
                     'project',
@@ -123,13 +175,11 @@ class IssuesController extends Controller
                 );
             }
             $this->accumulateIssueStats($issueStats, $query);
-            $projectIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) use ($sector, $isAttraction) {
+            $projectIssues = $query->latest()->limit($fetchLimit)->get()->map(function ($issue) use ($sector, $projectLabel) {
                 return [
                     'id' => $issue->id,
                     'type' => $sector === 'invest' ? 'invest' : 'all_projects',
-                    'type_label' => $isAttraction
-                        ? 'Тартылатын жобалар'
-                        : ($sector === 'invest' ? 'Turkistan Invest' : 'Барлық жобалар'),
+                    'type_label' => $sector === 'invest' ? 'Turkistan Invest' : $projectLabel,
                     'title' => $issue->title,
                     'description' => $issue->description,
                     'category' => $issue->category,
@@ -304,11 +354,9 @@ class IssuesController extends Controller
 
         // Get sector labels — only for accessible sections.
         $sectorLabels = [
-            'all_projects' => $isAttraction
-                ? 'Тартылатын жобалар'
-                : 'Барлық жобалар',
+            'all_projects' => $projectLabel,
         ];
-        if (! $isInvestor && ! $isAttraction) {
+        if (! $isInvestor && ! $projectIssuesOnly) {
             $sectorLabels['invest'] = 'Turkistan Invest';
         }
         if ($canSeeSez) {
@@ -330,6 +378,8 @@ class IssuesController extends Controller
             'filters' => [
                 'sector' => $sector,
                 'region_id' => $regionId ? (int) $regionId : null,
+                'project_status' => $projectStatus,
+                'investor_country_code' => $investorCountryCode,
             ],
             'issueStats' => $issueStats,
             'sectorLabels' => $sectorLabels,

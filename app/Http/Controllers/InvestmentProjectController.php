@@ -66,8 +66,10 @@ class InvestmentProjectController extends Controller
         $user = $request->user()->loadMissing('roleModel');
         $isInvestor = $user->roleModel?->name === 'investor';
         $isAttraction = $user->isTurkistanInvestAttraction();
+        $canFilterByInvestorCountry = $isAttraction
+            || $user->roleModel?->name === 'superadmin';
 
-        if ($isAttraction && is_string($request->input('investor_country_code'))) {
+        if ($canFilterByInvestorCountry && is_string($request->input('investor_country_code'))) {
             $request->merge([
                 'investor_country_code' => strtoupper(trim(
                     $request->input('investor_country_code')
@@ -97,7 +99,7 @@ class InvestmentProjectController extends Controller
             'attraction_stage' => ['exclude_unless:status,plan', 'nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
             'investor_country_code' => [
-                Rule::excludeIf(! $isAttraction),
+                Rule::excludeIf(! $canFilterByInvestorCountry),
                 'nullable',
                 'string',
                 'size:2',
@@ -105,7 +107,7 @@ class InvestmentProjectController extends Controller
             ],
         ]);
 
-        if (! $isAttraction) {
+        if (! $canFilterByInvestorCountry) {
             unset($filters['investor_country_code']);
         }
 
@@ -145,7 +147,7 @@ class InvestmentProjectController extends Controller
         if ($isAttraction) {
             $projectsQuery->where('attraction_stage', '!=', 'handover');
         }
-        $investorCountries = $isAttraction
+        $investorCountries = $canFilterByInvestorCountry
             ? (clone $projectsQuery)
                 ->whereNotNull('investor_country_code')
                 ->select('investor_country_code')

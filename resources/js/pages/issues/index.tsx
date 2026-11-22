@@ -29,6 +29,7 @@ import {
     SelectValue,
 } from '@/components/ui/select';
 import AppLayout from '@/layouts/app-layout';
+import { investorCountryLabel } from '@/lib/investor-countries';
 import { dashboard } from '@/routes';
 import { index as issuesIndex } from '@/routes/issues';
 import { show as regionShow } from '@/routes/regions';
@@ -58,6 +59,8 @@ interface Issue {
 interface Filters {
     sector: string | null;
     region_id: number | null;
+    project_status?: string | null;
+    investor_country_code?: string | null;
 }
 
 interface IssueStats {
@@ -196,19 +199,29 @@ export default function IssuesIndex({
 }: Props) {
     const isAttractionIssues =
         sectorLabels.all_projects === 'Тартылатын жобалар';
+    const isSupportIssues = filters.project_status === 'non_plan';
+    const isProjectModeIssues = isAttractionIssues || isSupportIssues;
     const selectedRegion = filters.region_id
         ? regions.find((region) => region.id === filters.region_id)
         : null;
+    const dashboardUrl = dashboard({
+        query:
+            filters.project_status === 'plan'
+                ? { dashboard_mode: 'attraction' }
+                : isSupportIssues
+                  ? { dashboard_mode: 'support' }
+                  : undefined,
+    }).url;
     const backUrl =
-        selectedRegion && !isAttractionIssues
+        selectedRegion && !isProjectModeIssues
             ? regionShow(selectedRegion.id).url
-            : dashboard().url;
+            : dashboardUrl;
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Басқару тақтасы',
-            href: dashboard().url,
+            href: dashboardUrl,
         },
-        ...(selectedRegion && !isAttractionIssues
+        ...(selectedRegion && !isProjectModeIssues
             ? [
                   {
                       title: selectedRegion.name,
@@ -219,9 +232,12 @@ export default function IssuesIndex({
         {
             title: 'Проблемалық мәселелер',
             href: issuesIndex({
-                query: selectedRegion
-                    ? { region_id: selectedRegion.id }
-                    : undefined,
+                query: {
+                    sector: filters.sector,
+                    region_id: selectedRegion?.id,
+                    project_status: filters.project_status,
+                    investor_country_code: filters.investor_country_code,
+                },
             }).url,
         },
     ];
@@ -236,13 +252,15 @@ export default function IssuesIndex({
         {},
     );
     const hasActiveFilters = Boolean(
-        filters.region_id || (!isAttractionIssues && filters.sector),
+        filters.region_id || (!isProjectModeIssues && filters.sector),
     );
 
     const handleFilterChange = (key: string, value: string | null) => {
         const params: Record<string, string | null> = {
             sector: filters.sector,
             region_id: filters.region_id?.toString() ?? null,
+            project_status: filters.project_status ?? null,
+            investor_country_code: filters.investor_country_code ?? null,
         };
         params[key] = value;
 
@@ -257,7 +275,17 @@ export default function IssuesIndex({
     };
 
     const resetFilters = () => {
-        router.get(issuesIndex().url, {}, { preserveState: true });
+        router.get(
+            issuesIndex().url,
+            filters.project_status
+                ? {
+                      sector: 'all_projects',
+                      project_status: filters.project_status,
+                      investor_country_code: filters.investor_country_code,
+                  }
+                : {},
+            { preserveState: true },
+        );
     };
 
     return (
@@ -266,9 +294,11 @@ export default function IssuesIndex({
                 title={
                     isAttractionIssues
                         ? 'Тартылатын жобалардың мәселелері'
-                        : selectedRegion
-                          ? `${selectedRegion.name} — проблемалық мәселелер`
-                          : 'Түркістан облысы — проблемалық мәселелер'
+                        : isSupportIssues
+                          ? 'Сүйемелдеудегі жобалардың мәселелері'
+                          : selectedRegion
+                            ? `${selectedRegion.name} — проблемалық мәселелер`
+                            : 'Түркістан облысы — проблемалық мәселелер'
                 }
             />
 
@@ -292,15 +322,27 @@ export default function IssuesIndex({
                                 <h1 className="mt-2 text-2xl font-extrabold tracking-tight text-white sm:text-3xl">
                                     {isAttractionIssues
                                         ? 'Тартылатын жобалардың мәселелері'
-                                        : 'Проблемалық мәселелер'}
+                                        : isSupportIssues
+                                          ? 'Сүйемелдеудегі жобалардың мәселелері'
+                                          : 'Проблемалық мәселелер'}
                                 </h1>
                                 <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">
                                     {isAttractionIssues
                                         ? 'Жоспарлаудағы тартылатын жобалар бойынша тіркелген мәселелер'
-                                        : selectedRegion
-                                          ? `${selectedRegion.name} бойынша жобалар мен секторлардағы мәселелер`
-                                          : 'Түркістан облысының барлық аудандары, жобалары және секторлары бойынша жиынтық тізім'}
+                                        : isSupportIssues
+                                          ? 'Іске асырылудағы, іске қосылған және тоқтатылған жобалар бойынша тіркелген мәселелер'
+                                          : selectedRegion
+                                            ? `${selectedRegion.name} бойынша жобалар мен секторлардағы мәселелер`
+                                            : 'Түркістан облысының барлық аудандары, жобалары және секторлары бойынша жиынтық тізім'}
                                 </p>
+                                {filters.investor_country_code && (
+                                    <p className="mt-2 text-sm font-semibold text-cyan-200">
+                                        Инвестор елі:{' '}
+                                        {investorCountryLabel(
+                                            filters.investor_country_code,
+                                        )}
+                                    </p>
+                                )}
                             </div>
                         </div>
 
@@ -371,7 +413,7 @@ export default function IssuesIndex({
                                 Мәселелерді нақтылау
                             </p>
                             <p className="mt-1 text-xs text-slate-500">
-                                {isAttractionIssues
+                                {isProjectModeIssues
                                     ? 'Аудан немесе қала бойынша сүзуге болады'
                                     : 'Аудан/қала немесе сектор бойынша сүзуге болады'}
                             </p>
@@ -412,7 +454,7 @@ export default function IssuesIndex({
                                 </Select>
                             </div>
 
-                            {!isAttractionIssues && (
+                            {!isProjectModeIssues && (
                                 <div className="space-y-1.5 xl:w-60">
                                     <label className="text-[11px] font-bold tracking-wide text-slate-500 uppercase">
                                         Сектор
@@ -470,7 +512,7 @@ export default function IssuesIndex({
                                 Мәселелер тізімі
                             </h2>
                             <p className="mt-1 text-sm text-slate-500">
-                                {isAttractionIssues
+                                {isProjectModeIssues
                                     ? 'Әр мәселенің аймағы және тиісті жобасы көрсетілген'
                                     : 'Әр мәселенің аймағы, секторы және нақты объектісі көрсетілген'}
                             </p>
