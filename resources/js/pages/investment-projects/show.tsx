@@ -138,7 +138,6 @@ interface InvestmentProject {
     company_id?: number | null;
     company_name?: string;
     company?: CompanySummary | null;
-    description?: string;
     current_status?: string | null;
     region_id: number;
     region?: Region;
@@ -294,24 +293,17 @@ interface Props {
     }[];
 }
 
-function DescriptionTabs({
-    description,
+function CurrentStatus({
     currentStatus,
-    showCurrentStatus = true,
     canEditStatus = false,
     appendOnlyStatus = false,
     projectId,
 }: {
-    description?: string;
     currentStatus?: string | null;
-    showCurrentStatus?: boolean;
     canEditStatus?: boolean;
     appendOnlyStatus?: boolean;
     projectId?: number;
 }) {
-    const [activeTab, setActiveTab] = useState<
-        'description' | 'current_status'
-    >('description');
     const [isEditing, setIsEditing] = useState(false);
     const [editValue, setEditValue] = useState(
         appendOnlyStatus ? '' : currentStatus || '',
@@ -348,142 +340,113 @@ function DescriptionTabs({
 
     return (
         <div>
-            <div className="mb-4 inline-flex rounded-full bg-gray-100 p-1">
-                <button
-                    onClick={() => setActiveTab('description')}
-                    className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                        activeTab === 'description'
-                            ? 'bg-[#c8a44e] text-white shadow-sm'
-                            : 'text-gray-600 hover:text-gray-800'
-                    }`}
-                >
-                    Сипаттама
-                </button>
-                {showCurrentStatus && (
-                    <button
-                        onClick={() => setActiveTab('current_status')}
-                        className={`rounded-full px-5 py-2 text-sm font-semibold transition-colors ${
-                            activeTab === 'current_status'
-                                ? 'bg-[#c8a44e] text-white shadow-sm'
-                                : 'text-gray-600 hover:text-gray-800'
-                        }`}
-                    >
-                        Ағымдағы жағдайы
-                    </button>
+            <h2 className="mb-4 text-lg font-semibold text-[#0f1b3d]">
+                Ағымдағы жағдайы
+            </h2>
+            <div>
+                {isEditing ? (
+                    <div className="space-y-3">
+                        {appendOnlyStatus && statusEntries.length > 0 && (
+                            <div className="space-y-3 rounded-lg bg-gray-50 p-3">
+                                {statusEntries.map((status, index) => (
+                                    <div
+                                        key={`${status}-${index}`}
+                                        className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
+                                    >
+                                        {status}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                        {appendOnlyStatus && (
+                            <label className="block text-sm font-medium text-gray-700">
+                                Жаңа ағымдағы жағдай
+                            </label>
+                        )}
+                        <textarea
+                            aria-label="Ағымдағы жағдай"
+                            aria-invalid={Boolean(statusError)}
+                            aria-describedby={
+                                statusError ? 'current-status-error' : undefined
+                            }
+                            value={editValue}
+                            onChange={(e) => setEditValue(e.target.value)}
+                            placeholder={
+                                appendOnlyStatus
+                                    ? 'Жаңа ақпаратты жазыңыз. Бұрынғы жазбалар өзгеріссіз сақталады.'
+                                    : undefined
+                            }
+                            className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
+                            rows={4}
+                        />
+                        <InputError
+                            id="current-status-error"
+                            message={statusError}
+                        />
+                        <div className="flex gap-2">
+                            <button
+                                type="button"
+                                onClick={handleSaveStatus}
+                                disabled={
+                                    isSaving ||
+                                    (appendOnlyStatus && !editValue.trim())
+                                }
+                                className="rounded-md bg-[#c8a44e] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#b8943e] disabled:opacity-50"
+                            >
+                                {isSaving
+                                    ? 'Сақталуда...'
+                                    : appendOnlyStatus
+                                      ? 'Жаңа жазбаны қосу'
+                                      : 'Сақтау'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setIsEditing(false);
+                                    setEditValue(
+                                        appendOnlyStatus
+                                            ? ''
+                                            : currentStatus || '',
+                                    );
+                                }}
+                                className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                            >
+                                Болдырмау
+                            </button>
+                        </div>
+                    </div>
+                ) : (
+                    <div>
+                        {statusEntries.length > 0 ? (
+                            <div className="space-y-3">
+                                {statusEntries.map((status, index) => (
+                                    <div
+                                        key={`${status}-${index}`}
+                                        className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
+                                    >
+                                        {status}
+                                    </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-gray-500">
+                                Ағымдағы жағдайы жоқ.
+                            </div>
+                        )}
+                        {canEditStatus && (
+                            <button
+                                type="button"
+                                onClick={() => setIsEditing(true)}
+                                className="mt-2 text-sm font-medium text-[#c8a44e] hover:text-[#b8943e]"
+                            >
+                                {appendOnlyStatus
+                                    ? 'Жаңа жағдай қосу'
+                                    : 'Өзгерту'}
+                            </button>
+                        )}
+                    </div>
                 )}
             </div>
-            {activeTab === 'description' || !showCurrentStatus ? (
-                <div className="leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700">
-                    {description || 'Сипаттама жоқ.'}
-                </div>
-            ) : (
-                <div>
-                    {isEditing ? (
-                        <div className="space-y-3">
-                            {appendOnlyStatus && statusEntries.length > 0 && (
-                                <div className="space-y-3 rounded-lg bg-gray-50 p-3">
-                                    {statusEntries.map((status, index) => (
-                                        <div
-                                            key={`${status}-${index}`}
-                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
-                                        >
-                                            {status}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                            {appendOnlyStatus && (
-                                <label className="block text-sm font-medium text-gray-700">
-                                    Жаңа ағымдағы жағдай
-                                </label>
-                            )}
-                            <textarea
-                                aria-label="Ағымдағы жағдай"
-                                aria-invalid={Boolean(statusError)}
-                                aria-describedby={
-                                    statusError
-                                        ? 'current-status-error'
-                                        : undefined
-                                }
-                                value={editValue}
-                                onChange={(e) => setEditValue(e.target.value)}
-                                placeholder={
-                                    appendOnlyStatus
-                                        ? 'Жаңа ақпаратты жазыңыз. Бұрынғы жазбалар өзгеріссіз сақталады.'
-                                        : undefined
-                                }
-                                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-[#c8a44e] focus:ring-1 focus:ring-[#c8a44e] focus:outline-none"
-                                rows={4}
-                            />
-                            <InputError
-                                id="current-status-error"
-                                message={statusError}
-                            />
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleSaveStatus}
-                                    disabled={
-                                        isSaving ||
-                                        (appendOnlyStatus && !editValue.trim())
-                                    }
-                                    className="rounded-md bg-[#c8a44e] px-4 py-1.5 text-sm font-medium text-white hover:bg-[#b8943e] disabled:opacity-50"
-                                >
-                                    {isSaving
-                                        ? 'Сақталуда...'
-                                        : appendOnlyStatus
-                                          ? 'Жаңа жазбаны қосу'
-                                          : 'Сақтау'}
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setIsEditing(false);
-                                        setEditValue(
-                                            appendOnlyStatus
-                                                ? ''
-                                                : currentStatus || '',
-                                        );
-                                    }}
-                                    className="rounded-md border border-gray-300 px-4 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                                >
-                                    Болдырмау
-                                </button>
-                            </div>
-                        </div>
-                    ) : (
-                        <div>
-                            {statusEntries.length > 0 ? (
-                                <div className="space-y-3">
-                                    {statusEntries.map((status, index) => (
-                                        <div
-                                            key={`${status}-${index}`}
-                                            className="border-l-2 border-[#c8a44e]/50 pl-3 leading-relaxed [overflow-wrap:anywhere] break-words whitespace-pre-wrap text-gray-700"
-                                        >
-                                            {status}
-                                        </div>
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="text-gray-500">
-                                    Ағымдағы жағдайы жоқ.
-                                </div>
-                            )}
-                            {canEditStatus && (
-                                <button
-                                    type="button"
-                                    onClick={() => setIsEditing(true)}
-                                    className="mt-2 text-sm font-medium text-[#c8a44e] hover:text-[#b8943e]"
-                                >
-                                    {appendOnlyStatus
-                                        ? 'Жаңа жағдай қосу'
-                                        : 'Өзгерту'}
-                                </button>
-                            )}
-                        </div>
-                    )}
-                </div>
-            )}
         </div>
     );
 }
@@ -1645,6 +1608,7 @@ export default function Show({
                                                                         {formatInfrastructureValue(
                                                                             infra.required_capacity,
                                                                             item.key,
+                                                                            infra.unit,
                                                                         ) ||
                                                                             '—'}
                                                                     </p>
@@ -1657,6 +1621,7 @@ export default function Show({
                                                                         {formatInfrastructureValue(
                                                                             infra.used_capacity,
                                                                             item.key,
+                                                                            infra.unit,
                                                                         ) ||
                                                                             '—'}
                                                                     </p>
@@ -1670,21 +1635,22 @@ export default function Show({
                                     </div>
                                 )}
 
-                                {/* Description & Current Status Tabs */}
-                                <div className="border-t border-gray-200 px-6 py-5">
-                                    <DescriptionTabs
-                                        description={project.description}
-                                        currentStatus={project.current_status}
-                                        showCurrentStatus={!isRestrictedView}
-                                        canEditStatus={
-                                            canEditProject ||
-                                            (isIspolnitel &&
-                                                participantCanWrite)
-                                        }
-                                        appendOnlyStatus={isIspolnitel}
-                                        projectId={project.id}
-                                    />
-                                </div>
+                                {!isRestrictedView && (
+                                    <div className="border-t border-gray-200 px-6 py-5">
+                                        <CurrentStatus
+                                            currentStatus={
+                                                project.current_status
+                                            }
+                                            canEditStatus={
+                                                canEditProject ||
+                                                (isIspolnitel &&
+                                                    participantCanWrite)
+                                            }
+                                            appendOnlyStatus={isIspolnitel}
+                                            projectId={project.id}
+                                        />
+                                    </div>
+                                )}
 
                                 {/* Проблемалық мәселелер */}
                                 {!isRestrictedView &&

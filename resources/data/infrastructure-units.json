@@ -1,0 +1,149 @@
+{
+    "month_days": 30,
+    "year_days": 365,
+    "resources": {
+        "electricity": {
+            "base_unit": "kw",
+            "units": [
+                {
+                    "code": "kw",
+                    "label": "кВт",
+                    "numerator": 1,
+                    "denominator": 1
+                },
+                {
+                    "code": "mw",
+                    "label": "МВт",
+                    "numerator": 1000,
+                    "denominator": 1
+                }
+            ]
+        },
+        "water": {
+            "base_unit": "m3_day",
+            "units": [
+                {
+                    "code": "m3_hour",
+                    "label": "м³/сағ",
+                    "numerator": 24,
+                    "denominator": 1
+                },
+                {
+                    "code": "m3_day",
+                    "label": "м³/тәу",
+                    "numerator": 1,
+                    "denominator": 1
+                },
+                {
+                    "code": "m3_month",
+                    "label": "м³/ай",
+                    "numerator": 1,
+                    "denominator": 30
+                },
+                {
+                    "code": "m3_year",
+                    "label": "м³/жыл",
+                    "numerator": 1,
+                    "denominator": 365
+                }
+            ]
+        },
+        "gas": {
+            "base_unit": "m3_hour",
+            "units": [
+                {
+                    "code": "m3_hour",
+                    "label": "м³/сағ",
+                    "numerator": 1,
+                    "denominator": 1
+                },
+                {
+                    "code": "m3_day",
+                    "label": "м³/тәу",
+                    "numerator": 1,
+                    "denominator": 24
+                },
+                {
+                    "code": "m3_month",
+                    "label": "м³/ай",
+                    "numerator": 1,
+                    "denominator": 720
+                },
+                {
+                    "code": "m3_year",
+                    "label": "м³/жыл",
+                    "numerator": 1,
+                    "denominator": 8760
+                }
+            ]
+        },
+        "roads": {
+            "base_unit": "km",
+            "units": [
+                {
+                    "code": "m",
+                    "label": "м",
+                    "numerator": 1,
+                    "denominator": 1000
+                },
+                {
+                    "code": "km",
+                    "label": "км",
+                    "numerator": 1,
+                    "denominator": 1
+                }
+            ]
+        },
+        "railway": {
+            "base_unit": "km",
+            "units": [
+                {
+                    "code": "m",
+                    "label": "м",
+                    "numerator": 1,
+                    "denominator": 1000
+                },
+                {
+                    "code": "km",
+                    "label": "км",
+                    "numerator": 1,
+                    "denominator": 1
+                }
+            ]
+        },
+        "internet": {
+            "base_unit": "mbps",
+            "units": [
+                {
+                    "code": "mbps",
+                    "label": "Мбит/с",
+                    "numerator": 1,
+                    "denominator": 1
+                },
+                {
+                    "code": "gbps",
+                    "label": "Гбит/с",
+                    "numerator": 1000,
+                    "denominator": 1
+                }
+            ]
+        },
+        "land": {
+            "base_unit": "ha",
+            "units": [
+                {
+                    "code": "m2",
+                    "label": "м²",
+                    "numerator": 1,
+                    "denominator": 10000
+                },
+                {
+                    "code": "ha",
+                    "label": "га",
+                    "numerator": 1,
+                    "denominator": 1
+                }
+            ]
+        }
+    }
+}

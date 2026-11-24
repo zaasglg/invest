@@ -197,6 +197,7 @@ interface Props {
     promZones: PromZone[];
     subsoilUsers: SubsoilUser[];
     investorCountries: InvestorCountryOption[];
+    canFilterByInvestorCountry: boolean;
     filters: Partial<Filters>;
 }
 
@@ -258,6 +259,7 @@ export default function Index({
     promZones,
     subsoilUsers,
     investorCountries,
+    canFilterByInvestorCountry,
     filters,
 }: Props) {
     const canModify = useCanModify();
@@ -310,7 +312,9 @@ export default function Index({
             filters.search ||
             filters.region_id ||
             filters.project_type_id ||
-            (!isAttractionDirection && initialStatus) ||
+            (!isAttractionDirection &&
+                initialStatus &&
+                !filters.investor_country_code) ||
             filters.executor_id ||
             filters.sector_type ||
             filters.sector_id ||
@@ -762,7 +766,7 @@ export default function Index({
                             </SelectContent>
                         </Select>
                     </div>
-                    {isAttractionDirection && (
+                    {canFilterByInvestorCountry && (
                         <div className="space-y-1.5">
                             <Label htmlFor="investor-country-filter">
                                 Елдер

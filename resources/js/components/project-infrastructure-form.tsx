@@ -9,11 +9,16 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
+import InfrastructureUnitSelect from '@/components/infrastructure-unit-select';
 import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { PROJECT_INFRASTRUCTURE_FIELDS } from '@/lib/infrastructure';
+import {
+    convertInfrastructureValue,
+    INFRASTRUCTURE_PERIOD_NOTE,
+    PROJECT_INFRASTRUCTURE_FIELDS,
+} from '@/lib/infrastructure';
 import type {
     ProjectInfrastructureData,
     ProjectInfrastructureKey,
@@ -58,12 +63,30 @@ export default function ProjectInfrastructureForm({
             [key]: {
                 ...value[key],
                 [field]: capacity,
-                ...(field === 'required_capacity' &&
-                value[key].use_required_capacity
-                    ? { used_capacity: capacity }
-                    : field === 'used_capacity'
-                      ? { use_required_capacity: false }
-                      : {}),
+            },
+        });
+    };
+
+    const updateUnit = (key: ProjectInfrastructureKey, unit: string) => {
+        const details = value[key];
+
+        onChange({
+            ...value,
+            [key]: {
+                ...details,
+                unit,
+                required_capacity: convertInfrastructureValue(
+                    details.required_capacity,
+                    key,
+                    details.unit,
+                    unit,
+                ),
+                used_capacity: convertInfrastructureValue(
+                    details.used_capacity,
+                    key,
+                    details.unit,
+                    unit,
+                ),
             },
         });
     };
@@ -71,9 +94,9 @@ export default function ProjectInfrastructureForm({
     return (
         <div className="divide-y divide-gray-100 rounded-lg border border-gray-200">
             <p className="p-4 text-xs text-gray-500">
-                «Пайдалануда» — нақты пайдаланылып жатқан көлем. Екі көлем
-                бірдей болса, «Қажетті көлемге тең» белгісін қалдырыңыз. Өзге
-                жағдайда белгіні алып, нақты мәнді енгізіңіз.
+                «Қажетті» — жобаға керек көлем. Зонаның қалдығынан тек
+                «Пайдалануда» көрсетілген нақты көлем шегеріледі.
+                Пайдаланылмаса, 0 енгізіңіз. {INFRASTRUCTURE_PERIOD_NOTE}
             </p>
             <InputError message={errors.infrastructure} className="p-4" />
             {PROJECT_INFRASTRUCTURE_FIELDS.map((field) => {
@@ -83,9 +106,9 @@ export default function ProjectInfrastructureForm({
                 return (
                     <div
                         key={field.key}
-                        className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center"
+                        className="flex flex-wrap items-center gap-3 p-4"
                     >
-                        <div className="flex min-w-56 flex-wrap items-center gap-3">
+                        <div className="flex min-w-0 flex-[1_1_14rem] flex-wrap items-center gap-3">
                             <span className="flex size-8 items-center justify-center rounded-md bg-gray-50 text-gray-500">
                                 <Icon className="size-4" />
                             </span>
@@ -121,7 +144,7 @@ export default function ProjectInfrastructureForm({
                         </div>
 
                         {details.needed && (
-                            <div className="grid flex-1 gap-3 sm:grid-cols-2">
+                            <div className="grid min-w-0 flex-[2_1_24rem] grid-cols-[repeat(auto-fit,minmax(min(100%,10rem),1fr))] gap-3">
                                 <CapacityInput
                                     id={`infra-${field.key}-required-capacity`}
                                     error={
@@ -137,7 +160,6 @@ export default function ProjectInfrastructureForm({
                                             capacity,
                                         )
                                     }
-                                    unit={field.unit}
                                     value={details.required_capacity}
                                 />
                                 <CapacityInput
@@ -155,42 +177,21 @@ export default function ProjectInfrastructureForm({
                                             capacity,
                                         )
                                     }
-                                    unit={field.unit}
-                                    value={
-                                        details.use_required_capacity
-                                            ? details.required_capacity
-                                            : details.used_capacity
+                                    value={details.used_capacity}
+                                />
+                                <InfrastructureUnitSelect
+                                    id={`infra-${field.key}-unit`}
+                                    resource={field.key}
+                                    value={details.unit}
+                                    onValueChange={(unit) =>
+                                        updateUnit(field.key, unit)
+                                    }
+                                    error={
+                                        errors[
+                                            `infrastructure.${field.key}.unit`
+                                        ]
                                     }
                                 />
-                                <div className="flex items-center gap-2 sm:col-start-2">
-                                    <Checkbox
-                                        id={`infra-${field.key}-same`}
-                                        checked={
-                                            details.use_required_capacity ??
-                                            false
-                                        }
-                                        onCheckedChange={(checked) =>
-                                            onChange({
-                                                ...value,
-                                                [field.key]: {
-                                                    ...details,
-                                                    use_required_capacity:
-                                                        checked === true,
-                                                    used_capacity:
-                                                        checked === true
-                                                            ? details.required_capacity
-                                                            : '',
-                                                },
-                                            })
-                                        }
-                                    />
-                                    <Label
-                                        htmlFor={`infra-${field.key}-same`}
-                                        className="text-xs font-normal text-slate-600"
-                                    >
-                                        Қажетті көлемге тең
-                                    </Label>
-                                </div>
                             </div>
                         )}
                     </div>
@@ -204,32 +205,30 @@ function CapacityInput({
     id,
     error,
     label,
-    unit,
     value,
     onChange,
 }: {
     id: string;
     error?: string;
     label: string;
-    unit: string;
     value: string;
     onChange: (value: string) => void;
 }) {
     return (
-        <div>
+        <div className="min-w-0">
             <Label
                 htmlFor={id}
                 className="mb-1.5 block text-xs font-medium text-gray-500"
             >
                 {label}
             </Label>
-            <div className="relative">
+            <div>
                 <Input
                     id={id}
                     aria-invalid={Boolean(error)}
                     aria-describedby={error ? `${id}-error` : undefined}
                     aria-label={label}
-                    className="h-9 border-gray-200 bg-transparent pr-20 shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
+                    className="h-9 border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
                     inputMode="decimal"
                     min="0"
                     onChange={(event) => onChange(event.target.value)}
@@ -238,9 +237,6 @@ function CapacityInput({
                     type="number"
                     value={value}
                 />
-                <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-medium text-gray-500">
-                    {unit}
-                </span>
             </div>
             <InputError id={`${id}-error`} message={error} className="mt-1" />
         </div>

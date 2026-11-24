@@ -14,7 +14,6 @@ class InvestmentProject extends Model
         'name',
         'company_name',
         'company_id',
-        'description',
         'current_status',
         'region_id',
         'project_type_id',
@@ -47,6 +46,8 @@ class InvestmentProject extends Model
         'deleted_by',
         'deleted_at',
     ];
+
+    protected $hidden = ['description'];
 
     protected function casts(): array
     {

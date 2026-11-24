@@ -14,6 +14,7 @@ use App\Models\Role;
 use App\Models\Sez;
 use App\Models\TaskNotification;
 use App\Models\User;
+use App\Support\InfrastructureUnits;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -859,7 +860,6 @@ class InvestmentApplicationWorkflowService
                     'project_type_id' => $projectTypeIds[0] ?? null,
                     'company_id' => $company->id,
                     'company_name' => $company->display_name,
-                    'description' => $locked->project_description,
                     'current_status' => 'Өтінім қабылданып, жоба құрылды.',
                     'region_id' => $zone->region_id,
                     'jobs_count' => $locked->jobs_count,
@@ -924,7 +924,6 @@ class InvestmentApplicationWorkflowService
                     'approved_area' => (float) $locked->approved_area,
                     'investment_amount' => (float) $locked->investment_amount,
                     'jobs_count' => (int) $locked->jobs_count,
-                    'description' => $locked->project_description,
                 ],
                 actor: $reviewer
             );
@@ -1002,39 +1001,52 @@ class InvestmentApplicationWorkflowService
         $requirements = $application->infrastructure_requirements ?? [];
 
         foreach (['electricity', 'water', 'gas', 'roads', 'railway', 'internet'] as $key) {
-            $additional = (float) ($requirements[$key] ?? 0);
-            $currentRequired = (float) data_get(
-                $result,
-                "{$key}.required_capacity",
-                data_get($result, "{$key}.capacity", 0)
+            $requirement = $requirements[$key] ?? 0;
+            $additional = InfrastructureUnits::toBase(
+                is_array($requirement) ? ($requirement['value'] ?? 0) : $requirement,
+                $key,
+                is_array($requirement) ? ($requirement['unit'] ?? null) : null
             );
-            $currentUsed = (float) data_get(
-                $result,
-                "{$key}.used_capacity",
-                0
+            $unit = data_get($result, "{$key}.unit");
+            $currentRequired = InfrastructureUnits::toBase(
+                data_get($result, "{$key}.required_capacity", data_get($result, "{$key}.capacity", 0)),
+                $key,
+                $unit
+            );
+            $currentUsed = InfrastructureUnits::toBase(
+                data_get($result, "{$key}.used_capacity", 0),
+                $key,
+                $unit
             );
             $result[$key] = [
                 ...(is_array($result[$key] ?? null) ? $result[$key] : []),
                 'needed' => (bool) data_get($result, "{$key}.needed", false)
                     || $additional > 0,
-                'required_capacity' => $currentRequired + $additional,
-                'used_capacity' => $currentUsed,
+                'unit' => $unit ?? InfrastructureUnits::defaultCode($key),
+                'required_capacity' => InfrastructureUnits::fromBase($currentRequired + $additional, $key, $unit),
+                'used_capacity' => InfrastructureUnits::fromBase($currentUsed, $key, $unit),
             ];
         }
 
         $additionalRequiredArea = (float) $application->requested_area;
         $additionalUsedArea = (float) $application->approved_area;
-        $currentLandRequired = (float) data_get(
-            $result,
-            'land.required_capacity',
-            0
+        $landUnit = data_get($result, 'land.unit');
+        $currentLandRequired = InfrastructureUnits::toBase(
+            data_get($result, 'land.required_capacity', 0),
+            'land',
+            $landUnit
         );
-        $currentLandUsed = (float) data_get($result, 'land.used_capacity', 0);
+        $currentLandUsed = InfrastructureUnits::toBase(
+            data_get($result, 'land.used_capacity', 0),
+            'land',
+            $landUnit
+        );
         $result['land'] = [
             ...(is_array($result['land'] ?? null) ? $result['land'] : []),
             'needed' => true,
-            'required_capacity' => $currentLandRequired + $additionalRequiredArea,
-            'used_capacity' => $currentLandUsed + $additionalUsedArea,
+            'unit' => $landUnit ?? InfrastructureUnits::defaultCode('land'),
+            'required_capacity' => InfrastructureUnits::fromBase($currentLandRequired + $additionalRequiredArea, 'land', $landUnit),
+            'used_capacity' => InfrastructureUnits::fromBase($currentLandUsed + $additionalUsedArea, 'land', $landUnit),
         ];
 
         return $result;
@@ -1527,7 +1539,7 @@ class InvestmentApplicationWorkflowService
         ]);
     }
 
-    /** @return array<string, array<string, int|float|bool>> */
+    /** @return array<string, array<string, int|float|bool|string>> */
     private function projectInfrastructure(
         InvestmentApplication $application
     ): array {
@@ -1535,9 +1547,14 @@ class InvestmentApplicationWorkflowService
         $result = [];
 
         foreach (['electricity', 'water', 'gas', 'roads', 'railway', 'internet'] as $key) {
-            $value = (float) ($requirements[$key] ?? 0);
+            $requirement = $requirements[$key] ?? 0;
+            $value = (float) (is_array($requirement) ? ($requirement['value'] ?? 0) : $requirement);
+            $unit = is_array($requirement)
+                ? ($requirement['unit'] ?? InfrastructureUnits::defaultCode($key))
+                : InfrastructureUnits::defaultCode($key);
             $result[$key] = [
                 'needed' => $value > 0,
+                'unit' => $unit,
                 'required_capacity' => $value,
                 'used_capacity' => 0,
             ];
@@ -1545,6 +1562,7 @@ class InvestmentApplicationWorkflowService
 
         $result['land'] = [
             'needed' => true,
+            'unit' => InfrastructureUnits::defaultCode('land'),
             'required_capacity' => (float) $application->requested_area,
             'used_capacity' => (float) $application->approved_area,
         ];

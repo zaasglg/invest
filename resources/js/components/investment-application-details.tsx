@@ -16,6 +16,9 @@ import { ApplicantSectionCard } from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import { Button } from '@/components/ui/button';
 import { FormCard } from '@/components/ui/page';
+import { normalizeApplicationRequirement } from '@/lib/application-infrastructure';
+import { formatInfrastructureValue } from '@/lib/infrastructure';
+import type { ZoneInfrastructureKey } from '@/lib/infrastructure';
 import { productionPeriodLabel, productionUnitLabel } from '@/lib/production';
 import * as documentRoutes from '@/routes/investment-applications/documents';
 import type { InvestmentApplication } from '@/types';
@@ -106,7 +109,14 @@ export default function InvestmentApplicationDetails({
     const requirements = Object.entries(
         application.infrastructure_requirements ?? {},
     ).filter(
-        ([, value]) => value !== null && value !== '' && Number(value) > 0,
+        ([key, value]) =>
+            key in infrastructureLabels &&
+            Number(
+                normalizeApplicationRequirement(
+                    value,
+                    key as ZoneInfrastructureKey,
+                ).value,
+            ) > 0,
     );
     const statusHistories = [...(application.status_histories ?? [])].sort(
         (first, second) =>
@@ -306,7 +316,17 @@ export default function InvestmentApplicationDetails({
                             <Detail
                                 key={key}
                                 label={infrastructureLabels[key]?.label ?? key}
-                                value={`${value} ${infrastructureLabels[key]?.unit ?? ''}`}
+                                value={formatInfrastructureValue(
+                                    normalizeApplicationRequirement(
+                                        value,
+                                        key as ZoneInfrastructureKey,
+                                    ).value,
+                                    key as ZoneInfrastructureKey,
+                                    normalizeApplicationRequirement(
+                                        value,
+                                        key as ZoneInfrastructureKey,
+                                    ).unit,
+                                )}
                             />
                         ))}
                     </dl>
@@ -327,7 +347,7 @@ export default function InvestmentApplicationDetails({
                     <div className="divide-y divide-slate-100">
                         {application.planned_production.map((plan, index) => (
                             <div
-                                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-4"
+                                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-3"
                                 key={plan.client_key ?? index}
                             >
                                 <Detail
@@ -339,15 +359,6 @@ export default function InvestmentApplicationDetails({
                                     value={
                                         plan.planned_quantity
                                             ? `${plan.planned_quantity} ${productionUnitLabel(plan)}`
-                                            : '—'
-                                    }
-                                />
-                                <Detail
-                                    label="Жоспарлы сома"
-                                    value={
-                                        plan.planned_amount !== '' &&
-                                        plan.planned_amount != null
-                                            ? `${money(plan.planned_amount)} ₸`
                                             : '—'
                                     }
                                 />

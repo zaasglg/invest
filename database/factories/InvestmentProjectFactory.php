@@ -31,7 +31,6 @@ class InvestmentProjectFactory extends Factory
         return [
             'name' => fake()->catchPhrase(),
             'company_name' => fake()->company(),
-            'description' => fake()->realText(500),
             'region_id' => \App\Models\Region::inRandomOrder()->first()->id ?? \App\Models\Region::factory(),
             'project_type_id' => \App\Models\ProjectType::first()->id ?? \App\Models\ProjectType::factory(),
             'sector' => fake()->randomElement(['sez', 'industrial_zone', 'subsoil']),

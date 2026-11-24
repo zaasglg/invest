@@ -10,8 +10,12 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import {
+    convertInfrastructureValue,
     formatInfrastructureValue,
+    getDefaultInfrastructureUnit,
+    getInfrastructureUnit,
     normalizeStandardNumber,
+    toBaseInfrastructureValue,
     ZONE_INFRASTRUCTURE_FIELDS,
 } from '@/lib/infrastructure';
 import type {
@@ -70,15 +74,6 @@ const METERED_KEYS: MeteredResource[] = ZONE_INFRASTRUCTURE_FIELDS.map(
     ({ key }) => key,
 );
 
-const RESOURCE_UNITS: Record<MeteredResource, string> = {
-    electricity: 'кВт',
-    gas: 'м³/сағ',
-    water: 'м³/тәу',
-    roads: 'км',
-    railway: 'км',
-    internet: 'Мбит/с',
-};
-
 const RESOURCE_STYLES: Record<MeteredResource, { line: string; icon: string }> =
     {
         electricity: {
@@ -107,12 +102,34 @@ const RESOURCE_STYLES: Record<MeteredResource, { line: string; icon: string }> =
         },
     };
 
-function parseCapacity(capacity: string | undefined, key: MeteredResource) {
-    return Number(normalizeStandardNumber(capacity, key)) || 0;
+function parseCapacity(
+    capacity: string | undefined,
+    key: MeteredResource,
+    unit?: string,
+) {
+    return toBaseInfrastructureValue(capacity, key, unit);
 }
 
 function formatAmount(value: number, unit: string) {
-    return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 2 }).format(value)} ${unit}`;
+    return `${new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 6 }).format(value)} ${unit}`;
+}
+
+function displayBaseAmount(value: number, key: MeteredResource, unit?: string) {
+    return Number(
+        convertInfrastructureValue(
+            String(value),
+            key,
+            getDefaultInfrastructureUnit(key),
+            unit ?? getDefaultInfrastructureUnit(key),
+        ),
+    );
+}
+
+function formatBaseAmount(value: number, key: MeteredResource, unit?: string) {
+    return formatAmount(
+        displayBaseAmount(value, key, unit),
+        getInfrastructureUnit(key, unit).label,
+    );
 }
 
 function UsageLineChart({
@@ -224,8 +241,12 @@ function CapacityMeter({
     details: InfrastructureDetails;
     usage?: UsageEntry;
 }) {
-    const unit = RESOURCE_UNITS[resourceKey];
-    const parsedTotal = parseCapacity(details.capacity, resourceKey);
+    const unit = getInfrastructureUnit(resourceKey, details.unit).label;
+    const parsedTotal = parseCapacity(
+        details.capacity,
+        resourceKey,
+        details.unit,
+    );
     const total = Math.max(0, usage?.total ?? parsedTotal);
     const used = Math.max(
         0,
@@ -247,7 +268,7 @@ function CapacityMeter({
                 color={styles.line}
                 resourceKey={resourceKey}
                 unit={unit}
-                used={used}
+                used={displayBaseAmount(used, resourceKey, details.unit)}
             />
             <div className="mt-4 border-t border-slate-100 pt-4">
                 <div className="flex h-1.5 overflow-hidden rounded-full bg-slate-100">
@@ -283,9 +304,10 @@ function CapacityMeter({
                                 overused > 0 ? 'text-red-600' : 'text-navy',
                             )}
                         >
-                            {formatAmount(
+                            {formatBaseAmount(
                                 overused > 0 ? overused : remaining,
-                                unit,
+                                resourceKey,
+                                details.unit,
                             )}
                         </p>
                     </div>
@@ -357,9 +379,10 @@ function InfrastructureConsumersDialog({
                             Пайдалануда
                         </p>
                         <p className="mt-2 truncate text-lg font-extrabold tracking-tight text-navy">
-                            {formatAmount(
+                            {formatBaseAmount(
                                 usage?.used ?? 0,
-                                RESOURCE_UNITS[resourceKey],
+                                resourceKey,
+                                item.details.unit,
                             )}
                         </p>
                     </div>
@@ -375,11 +398,12 @@ function InfrastructureConsumersDialog({
                                     : 'text-emerald-700',
                             )}
                         >
-                            {formatAmount(
+                            {formatBaseAmount(
                                 overused > 0
                                     ? overused
                                     : (usage?.remaining ?? 0),
-                                RESOURCE_UNITS[resourceKey],
+                                resourceKey,
+                                item.details.unit,
                             )}
                         </p>
                     </div>
@@ -438,16 +462,27 @@ function InfrastructureConsumersDialog({
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
-                                                    {formatInfrastructureValue(
-                                                        consumer.required_capacity,
-                                                        resourceKey,
-                                                    ) || '—'}
+                                                    {consumer.required_capacity !=
+                                                    null
+                                                        ? formatBaseAmount(
+                                                              Number(
+                                                                  consumer.required_capacity,
+                                                              ),
+                                                              resourceKey,
+                                                              item.details.unit,
+                                                          )
+                                                        : '—'}
                                                 </td>
                                                 <td className="px-6 py-5 text-sm font-semibold whitespace-nowrap text-slate-700 tabular-nums">
-                                                    {formatInfrastructureValue(
-                                                        consumer.capacity,
-                                                        resourceKey,
-                                                    ) || '—'}
+                                                    {consumer.capacity != null
+                                                        ? formatBaseAmount(
+                                                              Number(
+                                                                  consumer.capacity,
+                                                              ),
+                                                              resourceKey,
+                                                              item.details.unit,
+                                                          )
+                                                        : '—'}
                                                 </td>
                                                 <td className="px-6 py-5 text-right">
                                                     {percentage !== null ? (
@@ -553,7 +588,11 @@ export default function InfrastructureList({
                     const total = Math.max(
                         0,
                         usage[item.key]?.total ??
-                            parseCapacity(item.details.capacity, resourceKey),
+                            parseCapacity(
+                                item.details.capacity,
+                                resourceKey,
+                                item.details.unit,
+                            ),
                     );
 
                     return (
@@ -569,9 +608,10 @@ export default function InfrastructureList({
                                     <p className="text-xs font-medium text-slate-500">
                                         Жалпы қуат ·{' '}
                                         <span className="font-semibold text-slate-700 tabular-nums">
-                                            {formatAmount(
+                                            {formatBaseAmount(
                                                 total,
-                                                RESOURCE_UNITS[resourceKey],
+                                                resourceKey,
+                                                item.details.unit,
                                             )}
                                         </span>
                                     </p>
@@ -611,7 +651,11 @@ export default function InfrastructureList({
                         '';
                     const styles = RESOURCE_STYLES[item.key];
                     const formattedDetail =
-                        formatInfrastructureValue(detail, item.key) || detail;
+                        formatInfrastructureValue(
+                            detail,
+                            item.key,
+                            item.details.unit,
+                        ) || detail;
 
                     return (
                         <button

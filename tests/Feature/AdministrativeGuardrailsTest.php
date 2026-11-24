@@ -100,7 +100,7 @@ test('regions cannot be deleted through the management endpoint', function () {
     $this->assertDatabaseHas('regions', ['id' => $region->id]);
 });
 
-test('district akim dashboard only contains their district data', function () {
+test('district akim attraction dashboard only contains their district data', function () {
     $oblast = createGuardrailRegion('Test oblast', 'oblast');
     $ownDistrict = createGuardrailRegion(
         'Own district',
@@ -119,7 +119,7 @@ test('district akim dashboard only contains their district data', function () {
     createGuardrailProject('Other project', $otherDistrict, $superadmin, 875);
 
     $this->actingAs($akim)
-        ->get(route('dashboard'))
+        ->get(route('dashboard', ['dashboard_mode' => 'attraction']))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('dashboard')

@@ -324,7 +324,6 @@ class InvestmentProjectSeeder extends Seeder
                     'status' => $data['status'],
                     'start_date' => $data['start_date'],
                     'end_date' => $data['end_date'],
-                    'description' => $data['description'],
                     'geometry' => $data['geometry'],
                     'created_by' => $creator->id,
                     'executor_id' => null,

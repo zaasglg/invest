@@ -15,7 +15,6 @@ import {
     Database,
     Factory,
     FileCheck2,
-    Gauge,
     Landmark,
     Layers3,
     MapPin,
@@ -136,10 +135,7 @@ interface ProductionSummary {
     launched_without_reports: number;
     reported_periods: number;
     distinct_reported_periods: number;
-    planned_amount_for_reported_periods: number;
     actual_amount: number;
-    raw_amount_completion_rate: number | null;
-    amount_completion_rate: number | null;
     average_volume_completion_rate: number | null;
     anomaly_projects: number;
 }
@@ -152,10 +148,7 @@ interface ProductionPerformanceItem {
     products: string[];
     products_count: number;
     reported_periods: number;
-    planned_amount_for_reported_periods: number;
     actual_amount: number;
-    raw_amount_completion_rate: number | null;
-    amount_completion_rate: number | null;
     volume_completion_rate: number | null;
     has_anomaly: boolean;
     anomalies: string[];
@@ -682,17 +675,10 @@ export default function AkimAnalytics({ analytics }: Props) {
             icon: CheckCircle2,
         },
         {
-            label: 'Сома орындалуы',
-            value:
-                production.amount_completion_rate === null
-                    ? 'Тексеру'
-                    : formatPercent(production.amount_completion_rate),
-            note:
-                production.raw_amount_completion_rate !== null &&
-                production.amount_completion_rate === null
-                    ? `Шикі мән: ${formatPercent(production.raw_amount_completion_rate)}`
-                    : `Нақты: ${formatCompactMoney(production.actual_amount)}`,
-            icon: Gauge,
+            label: 'Нақты өндіріс сомасы',
+            value: formatCompactMoney(production.actual_amount),
+            note: 'Есеп берілген кезеңдер бойынша',
+            icon: CircleDollarSign,
         },
     ];
     const freshnessItems: FooterFreshness[] = [
@@ -1500,7 +1486,7 @@ export default function AkimAnalytics({ analytics }: Props) {
                         <SectionHeading
                             eyebrow="Plan / fact"
                             title="Өндірістік орындау"
-                            description="Толық жоспар, нақты есеп және аномалиялар бөлек көрсетіледі. 200%-дан жоғары қатынас сенімді KPI-дан алынып тасталады."
+                            description="Жоспарлы және нақты көлем, нақты өндіріс сомасы көрсетіледі. Көлем бойынша 200%-дан жоғары қатынас сенімді KPI-дан алынып тасталады."
                             icon={Factory}
                             action={
                                 production.anomaly_projects > 0 ? (
@@ -1550,13 +1536,10 @@ export default function AkimAnalytics({ analytics }: Props) {
                                                 Өнім
                                             </th>
                                             <th className="px-4 py-3.5 text-right">
-                                                Жоспар
-                                            </th>
-                                            <th className="px-4 py-3.5 text-right">
-                                                Нақты
+                                                Нақты сома
                                             </th>
                                             <th className="px-4 py-3.5 text-center">
-                                                Орындалу
+                                                Көлемнің орындалуы
                                             </th>
                                             <th className="px-6 py-3.5 text-right">
                                                 Сапа
@@ -1598,11 +1581,6 @@ export default function AkimAnalytics({ analytics }: Props) {
                                                             есеп жазбасы
                                                         </p>
                                                     </td>
-                                                    <td className="px-4 py-4 text-right text-sm text-slate-400 tabular-nums">
-                                                        {formatMoney(
-                                                            item.planned_amount_for_reported_periods,
-                                                        )}
-                                                    </td>
                                                     <td className="px-4 py-4 text-right text-sm font-bold text-[#0f1b3d] tabular-nums">
                                                         {formatMoney(
                                                             item.actual_amount,
@@ -1611,7 +1589,7 @@ export default function AkimAnalytics({ analytics }: Props) {
                                                     <td className="px-4 py-4 text-center">
                                                         <ScorePill
                                                             value={
-                                                                item.amount_completion_rate
+                                                                item.volume_completion_rate
                                                             }
                                                         />
                                                     </td>

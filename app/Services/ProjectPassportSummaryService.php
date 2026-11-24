@@ -250,7 +250,6 @@ class ProjectPassportSummaryService
                 'Жоба түрі' => ($project->relationLoaded('projectTypes')
                     && $project->projectTypes->isNotEmpty())
                     || $project->projectType !== null,
-                'Жоба сипаттамасы' => filled($project->description),
                 'Ағымдағы жағдай' => filled($project->current_status),
                 'Инвестиция сомасы' => (float) $project->total_investment > 0,
                 'Жұмыс орындары' => $project->jobs_count !== null,
@@ -261,7 +260,6 @@ class ProjectPassportSummaryService
                         )
                         : $project->productionPlans()
                             ->whereNotNull('planned_quantity')
-                            ->whereNotNull('planned_amount')
                             ->exists()),
                 'Басталу мерзімі' => $project->start_date !== null,
                 'Аяқталу мерзімі' => $project->end_date !== null,

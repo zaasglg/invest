@@ -178,7 +178,7 @@ export default function PlannedProductionForm({
                                     </div>
                                 )}
 
-                                <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-5">
+                                <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
                                     <Field label="Өнім немесе нәтиже атауы">
                                         <Input
                                             onChange={(event) =>
@@ -269,30 +269,6 @@ export default function PlannedProductionForm({
                                                 fieldError(index, 'unit') ||
                                                 fieldError(index, 'custom_unit')
                                             }
-                                        />
-                                    </Field>
-
-                                    <Field label="Жоспарлы сома, ₸">
-                                        <Input
-                                            inputMode="decimal"
-                                            min="0"
-                                            onChange={(event) =>
-                                                update(
-                                                    index,
-                                                    'planned_amount',
-                                                    event.target.value,
-                                                )
-                                            }
-                                            placeholder="0"
-                                            step="0.01"
-                                            type="number"
-                                            value={item.planned_amount}
-                                        />
-                                        <ErrorText
-                                            value={fieldError(
-                                                index,
-                                                'planned_amount',
-                                            )}
                                         />
                                     </Field>
 

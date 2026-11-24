@@ -39,7 +39,6 @@ class InvestmentProjectResource extends JsonResource
                         : null,
                 ]
                 : null),
-            'description' => $this->description,
             'current_status' => $this->when($internal, $this->current_status),
             'region' => $this->whenLoaded('region', fn () => $this->region
                 ? [
@@ -136,7 +135,6 @@ class InvestmentProjectResource extends JsonResource
                 'unit' => $plan->unit,
                 'unit_label' => $plan->unit_label,
                 'custom_unit' => $plan->custom_unit,
-                'planned_amount' => $plan->planned_amount,
                 'period' => $plan->period,
                 'period_label' => $plan->period_label,
                 'legacy_value' => $plan->legacy_value,

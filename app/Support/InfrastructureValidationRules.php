@@ -32,7 +32,7 @@ final class InfrastructureValidationRules
             $path = "infrastructure.{$resource}";
             $rules[$path] = [
                 'required_with:infrastructure',
-                'array:available,capacity',
+                'array:available,capacity,unit',
             ];
             $rules["{$path}.available"] = [
                 "required_with:{$path}",
@@ -44,6 +44,7 @@ final class InfrastructureValidationRules
                 'numeric',
                 'min:0',
             ];
+            $rules["{$path}.unit"] = ['sometimes', 'string', 'in:'.implode(',', InfrastructureUnits::codes($resource))];
         }
 
         return $rules;
@@ -63,9 +64,10 @@ final class InfrastructureValidationRules
             $path = "infrastructure.{$resource}";
             $rules[$path] = [
                 'required_with:infrastructure',
-                'array:needed,required_capacity,used_capacity,use_required_capacity',
+                'array:needed,required_capacity,used_capacity,use_required_capacity,unit',
             ];
-            $rules["{$path}.use_required_capacity"] = ['sometimes', 'boolean'];
+            $rules["{$path}.use_required_capacity"] = ['exclude'];
+            $rules["{$path}.unit"] = ['sometimes', 'string', 'in:'.implode(',', InfrastructureUnits::codes($resource))];
             $rules["{$path}.needed"] = [
                 "required_with:{$path}",
                 'boolean',

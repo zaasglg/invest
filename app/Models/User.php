@@ -268,6 +268,24 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->region && $this->region->type === 'oblast';
     }
 
+    public function canSwitchDashboardMode(): bool
+    {
+        $this->loadMissing('roleModel');
+        $roleName = $this->roleModel?->name;
+
+        if (in_array($roleName, ['superadmin', 'prokuror'], true)) {
+            return true;
+        }
+
+        if (! in_array($roleName, ['akim', 'zamakim'], true)) {
+            return false;
+        }
+
+        $this->loadMissing('region');
+
+        return $this->region !== null;
+    }
+
     /**
      * Determine if the user is Regional Management (any ispolnitel).
      * All ispolnitel types can see everything.

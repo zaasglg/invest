@@ -24,7 +24,6 @@ test('passport summary calculates progress timeline risks and next milestone', f
     $project = new InvestmentProject([
         'name' => 'Өндірістік кешен',
         'company_name' => 'Тест компаниясы',
-        'description' => 'Жобаның толық сипаттамасы',
         'current_status' => 'Құрылыс жүргізілуде',
         'total_investment' => 250000000,
         'jobs_count' => 100,
@@ -51,7 +50,6 @@ test('passport summary calculates progress timeline risks and next milestone', f
                 'product_name' => 'Өнім',
                 'planned_quantity' => 20000,
                 'unit' => 'ton',
-                'planned_amount' => 500000000,
                 'period' => 'year',
             ]),
         ])

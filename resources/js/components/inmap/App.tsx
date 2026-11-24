@@ -94,6 +94,7 @@ export interface InMapAppProps {
   regionYearly: RegionYearly
   canOpenIssues?: boolean
   showSubsoil?: boolean
+  projectIssueStatus?: 'non_plan'
   /** Landing hero: full-bleed map without analytics chrome. */
   variant?: 'dashboard' | 'landing'
 }
@@ -918,6 +919,7 @@ function DistrictExplorer({
   regionYearly,
   canOpenIssues = true,
   showSubsoil = true,
+  projectIssueStatus,
   variant = 'dashboard',
 }: InMapAppProps) {
   const isLanding = variant === 'landing'
@@ -964,9 +966,14 @@ function DistrictExplorer({
     districtMapModels.find((district) => district.id === selectedDistrictId) ??
     null
   const regionId = selectedDistrict?.regionId ?? null
-  const regionIssuesUrl = issuesIndex(
-    regionId === null ? undefined : { query: { region_id: regionId } },
-  ).url
+  const regionIssuesUrl = issuesIndex({
+    query: {
+      region_id: regionId ?? undefined,
+      ...(projectIssueStatus
+        ? { sector: 'all_projects', project_status: projectIssueStatus }
+        : {}),
+    },
+  }).url
   const hasSelectedRegion =
     selectedDistrict === null || selectedDistrict.regionId !== null
   const sectorRow = hasSelectedRegion
@@ -975,15 +982,18 @@ function DistrictExplorer({
   const sectorData = hasSelectedRegion
     ? getSectorData(sectorSummary, regionId)
     : emptySectorData
-  const totalProblemCount =
-    sectorRow.problemCount +
-    sectorData.sez.problemCount +
-    sectorData.iz.problemCount +
-    sectorData.prom.problemCount +
-    (showSubsoil ? sectorData.nedro.problemCount : 0)
-  const visibleProblemSectorLabels = showSubsoil
-    ? problemSectorLabels
-    : problemSectorLabels.filter((sector) => sector.key !== 'nedro')
+  const totalProblemCount = projectIssueStatus
+    ? sectorRow.problemCount
+    : sectorRow.problemCount +
+      sectorData.sez.problemCount +
+      sectorData.iz.problemCount +
+      sectorData.prom.problemCount +
+      (showSubsoil ? sectorData.nedro.problemCount : 0)
+  const visibleProblemSectorLabels = projectIssueStatus
+    ? problemSectorLabels.filter((sector) => sector.key === 'all_projects')
+    : showSubsoil
+      ? problemSectorLabels
+      : problemSectorLabels.filter((sector) => sector.key !== 'nedro')
   const yearly = hasSelectedRegion
     ? getYearlySeries(regionYearly, regionId)
     : {
@@ -1180,7 +1190,7 @@ function DistrictExplorer({
                     </strong>
                     {indicator.key === 'problems' ? (
                       <p>
-                        {showSubsoil
+                        {showSubsoil && !projectIssueStatus
                           ? 'Жоба + 4 сектор →'
                           : 'Жоба мәселелері →'}
                       </p>
@@ -1279,6 +1289,7 @@ function App({
   regionYearly,
   canOpenIssues = true,
   showSubsoil = true,
+  projectIssueStatus,
   variant = 'dashboard',
 }: InMapAppProps) {
   const isLanding = variant === 'landing'
@@ -1295,6 +1306,7 @@ function App({
         regionYearly={regionYearly}
         canOpenIssues={canOpenIssues}
         showSubsoil={showSubsoil}
+        projectIssueStatus={projectIssueStatus}
         variant={variant}
       />
     </div>

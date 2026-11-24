@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Support\InfrastructureUnits;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Support\Collection;
 
@@ -23,7 +24,7 @@ class InfrastructureUsageService
      *     }>
      * }
      */
-    public function summarizeArea(mixed $totalArea, Collection $projects): array
+    public function summarizeArea(mixed $totalArea, Collection $projects, ?array $visibleProjectIds = null): array
     {
         $total = $this->parseCapacity($totalArea, 'land');
         $consumers = $projects
@@ -38,11 +39,9 @@ class InfrastructureUsageService
                 return [
                     'id' => isset($project->id) ? (int) $project->id : null,
                     'name' => (string) ($project->name ?? 'Атаусыз жоба'),
-                    'area' => $this->parseCapacity($usedCapacity, 'land'),
-                    'capacity' => $this->scalarString($usedCapacity),
-                    'required_capacity' => $this->scalarString(
-                        $requiredCapacity
-                    ),
+                    'area' => InfrastructureUnits::toBase($usedCapacity, 'land', $this->projectUnit($project, 'land')),
+                    'capacity' => $this->baseString($usedCapacity, 'land', $this->projectUnit($project, 'land')),
+                    'required_capacity' => $this->baseString($requiredCapacity, 'land', $this->projectUnit($project, 'land')),
                 ];
             })
             ->filter(fn (array $consumer): bool => $consumer['area'] > 0)
@@ -55,7 +54,7 @@ class InfrastructureUsageService
             'occupied' => $occupied,
             'available' => max(0.0, $total - $occupied),
             'overused' => max(0.0, $occupied - $total),
-            'consumers' => $consumers->all(),
+            'consumers' => $this->visibleConsumers($consumers, $visibleProjectIds),
         ];
     }
 
@@ -79,7 +78,8 @@ class InfrastructureUsageService
      */
     public function summarize(
         ?array $infrastructure,
-        Collection $projects
+        Collection $projects,
+        ?array $visibleProjectIds = null
     ): array {
         $summary = [];
 
@@ -87,6 +87,7 @@ class InfrastructureUsageService
             $total = $this->parseCapacity(
                 $this->zoneCapacity($infrastructure, $resource),
                 $resource,
+                data_get($infrastructure, "{$resource}.unit"),
             );
             $consumers = $projects
                 ->filter(
@@ -110,13 +111,12 @@ class InfrastructureUsageService
                             ? (int) $project->id
                             : null,
                         'name' => (string) ($project->name ?? 'Атаусыз жоба'),
-                        'capacity' => $this->scalarString($usedCapacity),
-                        'required_capacity' => $this->scalarString(
-                            $requiredCapacity
-                        ),
+                        'capacity' => $this->baseString($usedCapacity, $resource, $this->projectUnit($project, $resource)),
+                        'required_capacity' => $this->baseString($requiredCapacity, $resource, $this->projectUnit($project, $resource)),
                         'value' => $this->parseCapacity(
                             $usedCapacity,
-                            $resource
+                            $resource,
+                            $this->projectUnit($project, $resource)
                         ),
                         'status' => isset($project->status)
                             ? (string) $project->status
@@ -131,7 +131,7 @@ class InfrastructureUsageService
                 'used' => $used,
                 'remaining' => max(0.0, $total - $used),
                 'overused' => max(0.0, $used - $total),
-                'consumers' => $consumers->all(),
+                'consumers' => $this->visibleConsumers($consumers, $visibleProjectIds),
             ];
         }
 
@@ -170,30 +170,26 @@ class InfrastructureUsageService
         );
     }
 
-    private function scalarString(mixed $value): ?string
+    private function baseString(mixed $value, string $resource, ?string $unit): ?string
     {
-        return is_scalar($value) ? (string) $value : null;
+        return is_scalar($value)
+            ? InfrastructureUnits::numericString(InfrastructureUnits::toBase($value, $resource, $unit))
+            : null;
     }
 
-    private function parseCapacity(mixed $capacity, string $resource): float
+    private function projectUnit(object $project, string $resource): ?string
     {
-        if (! is_string($capacity) && ! is_numeric($capacity)) {
-            return 0;
-        }
+        return data_get($project->infrastructure, "{$resource}.unit");
+    }
 
-        $value = (string) $capacity;
-        preg_match('/[\d\s.,]+/u', $value, $matches);
-        $number = str_replace([' ', ','], ['', '.'], $matches[0] ?? '0');
-        $parsed = (float) $number;
+    private function visibleConsumers(Collection $consumers, ?array $visibleProjectIds): array
+    {
+        return ($visibleProjectIds === null ? $consumers : $consumers->whereIn('id', $visibleProjectIds))
+            ->values()->all();
+    }
 
-        if ($resource === 'electricity' && preg_match('/мвт/iu', $value)) {
-            return $parsed * 1000;
-        }
-
-        if ($resource === 'internet' && preg_match('/(гбит|gbps)/iu', $value)) {
-            return $parsed * 1000;
-        }
-
-        return $parsed;
+    private function parseCapacity(mixed $capacity, string $resource, ?string $unit = null): float
+    {
+        return InfrastructureUnits::toBase($capacity, $resource, $unit);
     }
 }

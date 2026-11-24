@@ -100,8 +100,8 @@ export default function ProductionMonitoringCard({
                             Өндіріс жоспары және нақты көрсеткіш
                         </CardTitle>
                         <p className="mt-1 text-sm text-gray-500">
-                            Әр есептік кезеңде жоспар мен нақты көлем және сома
-                            автоматты салыстырылады.
+                            Әр есептік кезеңде жоспарлы және нақты көлем
+                            салыстырылады, нақты сома бөлек көрсетіледі.
                         </p>
                     </div>
                     {reportingAllowed && completePlans.length > 0 && (
@@ -185,9 +185,6 @@ function ProductionPlanComparison({ plan }: { plan: ProductionPlanInput }) {
                         <Badge variant="outline">
                             Жоспар: {formatNumber(plan.planned_quantity)} {unit}
                         </Badge>
-                        <Badge variant="outline">
-                            {formatMoney(plan.planned_amount)}
-                        </Badge>
                         <Badge variant="secondary">
                             {productionPeriodLabel(plan.period)}
                         </Badge>
@@ -198,7 +195,7 @@ function ProductionPlanComparison({ plan }: { plan: ProductionPlanInput }) {
             {!plan.is_complete ? (
                 <p className="px-4 py-5 text-sm text-gray-500">
                     Салыстыруды бастау үшін жоба өңдеу бетінде өнім көлемін,
-                    өлшемін және жоспарлы соманы толықтырыңыз.
+                    өлшемін және есептеу кезеңін толықтырыңыз.
                 </p>
             ) : facts.length === 0 ? (
                 <p className="px-4 py-5 text-sm text-gray-500">
@@ -212,10 +209,10 @@ function ProductionPlanComparison({ plan }: { plan: ProductionPlanInput }) {
                                 <th className="px-4 py-3">Кезең</th>
                                 <th className="px-4 py-3">Жоспар көлем</th>
                                 <th className="px-4 py-3">Нақты көлем</th>
-                                <th className="px-4 py-3">Орындалуы</th>
-                                <th className="px-4 py-3">Жоспар сома</th>
+                                <th className="px-4 py-3">
+                                    Көлемнің орындалуы
+                                </th>
                                 <th className="px-4 py-3">Нақты сома</th>
-                                <th className="px-4 py-3">Орындалуы</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100">
@@ -239,16 +236,7 @@ function ProductionPlanComparison({ plan }: { plan: ProductionPlanInput }) {
                                         />
                                     </td>
                                     <td className="px-4 py-3 text-gray-600">
-                                        {formatMoney(plan.planned_amount)}
-                                    </td>
-                                    <td className="px-4 py-3 text-gray-600">
                                         {formatMoney(fact.actual_amount)}
-                                    </td>
-                                    <td className="px-4 py-3">
-                                        <CompletionBadge
-                                            actual={fact.actual_amount}
-                                            planned={plan.planned_amount}
-                                        />
                                     </td>
                                 </tr>
                             ))}

@@ -442,15 +442,20 @@ export default function AttractionWorldMap({
         issues: panelIssues,
     };
     const issuesUrl = issuesIndex({
-        query: { sector: 'all_projects' },
+        query: {
+            sector: 'all_projects',
+            project_status: 'plan',
+            investor_country_code: selectedCountry?.country_code,
+        },
     }).url;
     const selectedCountryProjectsUrl = selectedCountry
         ? investmentProjectsIndex({
               query: {
+                  status: 'plan',
                   investor_country_code: selectedCountry.country_code,
               },
           }).url
-        : investmentProjectsIndex().url;
+        : investmentProjectsIndex({ query: { status: 'plan' } }).url;
 
     return (
         <section className="inmap-embed inmap-embed--districts">
@@ -513,6 +518,10 @@ export default function AttractionWorldMap({
                 .attraction-analytics-panel .analytics-detail {
                     flex: none;
                     min-height: auto;
+                }
+
+                .attraction-analytics-panel > * {
+                    flex-shrink: 0;
                 }
 
                 .attraction-analytics-panel .analytics-chart {

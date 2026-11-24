@@ -25,6 +25,7 @@ use App\Services\ProjectProductionService;
 use App\Services\ProjectTaskAssigneeService;
 use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
+use App\Support\InfrastructureUnits;
 use App\Support\InfrastructureValidationRules;
 use App\Support\InvestorCountries;
 use App\Support\ProductionPlanValidationRules;
@@ -66,8 +67,10 @@ class InvestmentProjectController extends Controller
         $user = $request->user()->loadMissing('roleModel');
         $isInvestor = $user->roleModel?->name === 'investor';
         $isAttraction = $user->isTurkistanInvestAttraction();
+        $canFilterByInvestorCountry = $isAttraction
+            || $user->canSwitchDashboardMode();
 
-        if ($isAttraction && is_string($request->input('investor_country_code'))) {
+        if ($canFilterByInvestorCountry && is_string($request->input('investor_country_code'))) {
             $request->merge([
                 'investor_country_code' => strtoupper(trim(
                     $request->input('investor_country_code')
@@ -97,7 +100,7 @@ class InvestmentProjectController extends Controller
             'attraction_stage' => ['exclude_unless:status,plan', 'nullable', Rule::in(array_keys(ProjectAttractionStages::LABELS))],
             'work_filter' => ['nullable', Rule::in(['my', 'pending_review', 'overdue'])],
             'investor_country_code' => [
-                Rule::excludeIf(! $isAttraction),
+                Rule::excludeIf(! $canFilterByInvestorCountry),
                 'nullable',
                 'string',
                 'size:2',
@@ -105,7 +108,7 @@ class InvestmentProjectController extends Controller
             ],
         ]);
 
-        if (! $isAttraction) {
+        if (! $canFilterByInvestorCountry) {
             unset($filters['investor_country_code']);
         }
 
@@ -145,7 +148,7 @@ class InvestmentProjectController extends Controller
         if ($isAttraction) {
             $projectsQuery->where('attraction_stage', '!=', 'handover');
         }
-        $investorCountries = $isAttraction
+        $investorCountries = $canFilterByInvestorCountry
             ? (clone $projectsQuery)
                 ->whereNotNull('investor_country_code')
                 ->select('investor_country_code')
@@ -328,6 +331,7 @@ class InvestmentProjectController extends Controller
                     ->orderBy('name')
                     ->get(),
             'investorCountries' => $investorCountries,
+            'canFilterByInvestorCountry' => $canFilterByInvestorCountry,
             'filters' => $filters,
         ]);
     }
@@ -573,7 +577,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
@@ -897,7 +900,6 @@ class InvestmentProjectController extends Controller
                 'company_id' => null,
                 'company_name' => 'Demo Company Ltd.',
                 'company' => null,
-                'description' => 'Бұл дерекқорда жазба табылмағандықтан автоматты түрде жасалған демонстрациялық жоба. Мұнда инвестициялық жобаның толық сипаттамасы, мақсаттары, міндеттері және күтілетін нәтижелері болады.',
                 'region' => ['name' => 'Түркістан облысы'],
                 'project_type' => ['name' => 'Өндіріс'],
                 'sector' => 'industrial_zone',
@@ -1397,7 +1399,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
@@ -1689,7 +1690,6 @@ class InvestmentProjectController extends Controller
         return [
             'name' => $project->name,
             'company_name' => $project->company_name,
-            'description' => $project->description,
             'current_status' => $project->current_status,
             'jobs_count' => $project->jobs_count,
             'planned_production' => $this->production
@@ -1744,7 +1744,6 @@ class InvestmentProjectController extends Controller
         return [
             'name' => 'Жоба атауы',
             'company_name' => 'Компания',
-            'description' => 'Сипаттама',
             'current_status' => 'Ағымдағы жағдай',
             'jobs_count' => 'Жұмыс орындары',
             'planned_production' => 'Жоспарлы өндіріс',
@@ -2443,11 +2442,9 @@ class InvestmentProjectController extends Controller
                     ?? $val['capacity']
                     ?? '';
                 $used = $val['used_capacity'] ?? '';
-                $formatValue = fn ($value) => $value === ''
+                $formatValue = fn ($value) => $value === '' || $value === null
                     ? '—'
-                    : (is_numeric($value)
-                        ? $value.' '.$item['unit']
-                        : $value);
+                    : InfrastructureUnits::format($value, $item['key'], $val['unit'] ?? null);
                 $addText(
                     $valueCell,
                     'Қ: '.$formatValue($required)

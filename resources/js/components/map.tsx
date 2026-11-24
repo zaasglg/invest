@@ -57,7 +57,6 @@ interface InvestmentProject {
     id: number;
     name: string;
     company_name?: string;
-    description?: string;
     status?: string;
     geometry?: { lat: number; lng: number }[];
     total_investment?: number | string | null;
@@ -218,7 +217,6 @@ interface Plot {
     status: 'free' | 'occupied';
     statusRaw?: string;
     companyName?: string;
-    description?: string;
     totalInvestment?: number | string | null;
     startDate?: string;
     endDate?: string;
@@ -906,7 +904,6 @@ export default function Map({
                     status,
                     statusRaw: project.status,
                     companyName: project.company_name,
-                    description: project.description,
                     totalInvestment: project.total_investment ?? null,
                     startDate: project.start_date,
                     endDate: project.end_date,
@@ -1959,18 +1956,6 @@ export default function Map({
                                                 ),
                                             )}
                                     </div>
-                                </div>
-                            )}
-
-                            {/* Сипаттама */}
-                            {activePlot.description && (
-                                <div className="px-5 py-3">
-                                    <p className="mb-0.5 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
-                                        Сипаттама
-                                    </p>
-                                    <p className="line-clamp-3 text-sm leading-snug text-gray-600">
-                                        {activePlot.description}
-                                    </p>
                                 </div>
                             )}
                         </div>

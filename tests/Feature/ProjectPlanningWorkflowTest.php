@@ -100,12 +100,12 @@ test('planned projects keep optional company data but require a single investmen
     $this->put(route('investment-projects.update', $project), [
         ...$payload,
         'name' => 'Updated early investor lead',
-        'description' => 'Алғашқы келіссөз жоспарланған',
+        'current_status' => 'Алғашқы келіссөз жоспарланған',
     ])->assertSessionHasNoErrors()->assertRedirect();
 
     expect($project->fresh()->name)->toBe('Updated early investor lead')
         ->and($project->fresh()->total_investment)->toBe('2500000.75')
-        ->and($project->fresh()->description)->toBe('Алғашқы келіссөз жоспарланған');
+        ->and($project->fresh()->current_status)->toBe('Алғашқы келіссөз жоспарланған');
 
     $this->get(route('investment-projects.edit', $project))->assertOk()
         ->assertInertia(fn (Assert $page) => $page
