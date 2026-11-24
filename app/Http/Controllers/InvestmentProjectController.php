@@ -67,7 +67,7 @@ class InvestmentProjectController extends Controller
         $isInvestor = $user->roleModel?->name === 'investor';
         $isAttraction = $user->isTurkistanInvestAttraction();
         $canFilterByInvestorCountry = $isAttraction
-            || $user->roleModel?->name === 'superadmin';
+            || $user->canSwitchDashboardMode();
 
         if ($canFilterByInvestorCountry && is_string($request->input('investor_country_code'))) {
             $request->merge([
@@ -330,6 +330,7 @@ class InvestmentProjectController extends Controller
                     ->orderBy('name')
                     ->get(),
             'investorCountries' => $investorCountries,
+            'canFilterByInvestorCountry' => $canFilterByInvestorCountry,
             'filters' => $filters,
         ]);
     }
@@ -575,7 +576,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
@@ -899,7 +899,6 @@ class InvestmentProjectController extends Controller
                 'company_id' => null,
                 'company_name' => 'Demo Company Ltd.',
                 'company' => null,
-                'description' => 'Бұл дерекқорда жазба табылмағандықтан автоматты түрде жасалған демонстрациялық жоба. Мұнда инвестициялық жобаның толық сипаттамасы, мақсаттары, міндеттері және күтілетін нәтижелері болады.',
                 'region' => ['name' => 'Түркістан облысы'],
                 'project_type' => ['name' => 'Өндіріс'],
                 'sector' => 'industrial_zone',
@@ -1399,7 +1398,6 @@ class InvestmentProjectController extends Controller
 
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
             'current_status' => 'nullable|string',
             'jobs_count' => 'nullable|integer|min:0|max:2000000000',
             'region_id' => [
@@ -1691,7 +1689,6 @@ class InvestmentProjectController extends Controller
         return [
             'name' => $project->name,
             'company_name' => $project->company_name,
-            'description' => $project->description,
             'current_status' => $project->current_status,
             'jobs_count' => $project->jobs_count,
             'planned_production' => $this->production
@@ -1746,7 +1743,6 @@ class InvestmentProjectController extends Controller
         return [
             'name' => 'Жоба атауы',
             'company_name' => 'Компания',
-            'description' => 'Сипаттама',
             'current_status' => 'Ағымдағы жағдай',
             'jobs_count' => 'Жұмыс орындары',
             'planned_production' => 'Жоспарлы өндіріс',

@@ -468,10 +468,8 @@ PROMPT;
                     $lines[] = ($lang === 'ru' ? 'Отчитались: ' : 'Есеп берген жоба: ')
                         .($production['reporting_projects'] ?? 0)
                         .' / '.($production['projects_with_plans'] ?? 0)
-                        .' | '.($lang === 'ru' ? 'по сумме: ' : 'сома бойынша: ')
-                        .(($production['amount_completion_rate'] ?? null) !== null
-                            ? $production['amount_completion_rate'].'%'
-                            : '—')
+                        .' | '.($lang === 'ru' ? 'фактическая сумма: ' : 'нақты сома: ')
+                        .number_format((float) ($production['actual_amount'] ?? 0), 0, '.', ' ').' ₸'
                         .' | '.($lang === 'ru' ? 'по объёму: ' : 'көлем бойынша: ')
                         .(($production['average_volume_completion_rate'] ?? null) !== null
                             ? $production['average_volume_completion_rate'].'%'

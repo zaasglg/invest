@@ -58,7 +58,6 @@ export interface ProductionPlanInput {
     planned_quantity: string;
     unit: ProductionUnit;
     custom_unit: string;
-    planned_amount: string;
     period: ProductionPeriod;
     legacy_value?: string | null;
     facts_count?: number;
@@ -75,7 +74,6 @@ export function emptyProductionPlan(): ProductionPlanInput {
         planned_quantity: '',
         unit: 'piece',
         custom_unit: '',
-        planned_amount: '',
         period: 'year',
     };
 }
@@ -92,7 +90,6 @@ export function normalizeProductionPlans(
         planned_quantity: plan.planned_quantity ?? '',
         unit: plan.unit ?? 'piece',
         custom_unit: plan.custom_unit ?? '',
-        planned_amount: plan.planned_amount ?? '',
         period: plan.period ?? 'year',
         legacy_value: plan.legacy_value,
         facts_count: plan.facts_count ?? plan.facts?.length ?? 0,

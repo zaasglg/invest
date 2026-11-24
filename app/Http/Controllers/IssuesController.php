@@ -33,8 +33,22 @@ class IssuesController extends Controller
             : null;
         $isModerator = $roleName === 'moderator';
         $isInvestor = $roleName === 'investor';
+        $isLeadership = in_array($roleName, ['akim', 'zamakim', 'prokuror'], true);
+        $canSwitchDashboardMode = $user?->canSwitchDashboardMode() ?? false;
         $isAttractionAccount = $user?->isTurkistanInvestAttraction() ?? false;
-        $canFilterByCountry = $roleName === 'superadmin' || $isAttractionAccount;
+        $canFilterByCountry = $canSwitchDashboardMode || $isAttractionAccount;
+        $leadershipRegionIds = null;
+
+        if (in_array($roleName, ['akim', 'zamakim'], true)) {
+            if ($user->isOblastScopedAkim()) {
+                $leadershipRegionIds = Region::query()
+                    ->whereKey($user->region_id)
+                    ->orWhere('parent_id', $user->region_id)
+                    ->pluck('id');
+            } elseif ($user->isDistrictScoped()) {
+                $leadershipRegionIds = collect([$user->region_id]);
+            }
+        }
 
         if ($canFilterByCountry && is_string($request->input('investor_country_code'))) {
             $request->merge([
@@ -44,7 +58,7 @@ class IssuesController extends Controller
 
         $validated = $request->validate([
             'project_status' => [
-                Rule::excludeIf($roleName !== 'superadmin'),
+                Rule::excludeIf(! $canSwitchDashboardMode),
                 'nullable',
                 Rule::in(['plan', 'non_plan', 'implementation', 'launched', 'suspended']),
             ],
@@ -146,6 +160,13 @@ class IssuesController extends Controller
                         ->scopeVisible($project, $user)
                 );
             }
+            if ($isLeadership) {
+                $query->whereHas(
+                    'project',
+                    fn (Builder $project) => $this->projectAccess
+                        ->scopeVisible($project->active(), $user)
+                );
+            }
             if ($isModerator) {
                 $query->whereHas(
                     'project',
@@ -202,6 +223,10 @@ class IssuesController extends Controller
 
         if (($sector === 'sez' || ! $sector) && $canSeeSez) {
             $query = SezIssue::with(['sez.region', 'creator:id,full_name']);
+            if ($leadershipRegionIds !== null) {
+                $query->whereHas('sez', fn (Builder $zone) => $zone
+                    ->whereIn('region_id', $leadershipRegionIds));
+            }
             if ($regionId) {
                 $query->whereHas('sez', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -235,6 +260,10 @@ class IssuesController extends Controller
 
         if (($sector === 'iz' || ! $sector) && $canSeeIz) {
             $query = IndustrialZoneIssue::with(['industrialZone.region', 'creator:id,full_name']);
+            if ($leadershipRegionIds !== null) {
+                $query->whereHas('industrialZone', fn (Builder $zone) => $zone
+                    ->whereIn('region_id', $leadershipRegionIds));
+            }
             if ($regionId) {
                 $query->whereHas('industrialZone', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -268,6 +297,10 @@ class IssuesController extends Controller
 
         if (($sector === 'prom' || ! $sector) && $canSeeProm) {
             $query = PromZoneIssue::with(['promZone.region', 'creator:id,full_name']);
+            if ($leadershipRegionIds !== null) {
+                $query->whereHas('promZone', fn (Builder $zone) => $zone
+                    ->whereIn('region_id', $leadershipRegionIds));
+            }
             if ($regionId) {
                 $query->whereHas('promZone', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -301,6 +334,10 @@ class IssuesController extends Controller
 
         if (($sector === 'nedro' || ! $sector) && $canSeeSubsoil) {
             $query = SubsoilIssue::with(['subsoilUser.region', 'creator:id,full_name']);
+            if ($leadershipRegionIds !== null) {
+                $query->whereHas('subsoilUser', fn (Builder $zone) => $zone
+                    ->whereIn('region_id', $leadershipRegionIds));
+            }
             if ($regionId) {
                 $query->whereHas('subsoilUser', function ($q) use ($regionId) {
                     $q->where('region_id', $regionId);
@@ -349,6 +386,8 @@ class IssuesController extends Controller
         // Get regions for filter
         $regions = Region::where('type', 'district')
             ->select('id', 'name')
+            ->when($leadershipRegionIds !== null, fn (Builder $regions) => $regions
+                ->whereIn('id', $leadershipRegionIds))
             ->orderBy('name')
             ->get();
 

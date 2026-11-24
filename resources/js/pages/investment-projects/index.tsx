@@ -197,6 +197,7 @@ interface Props {
     promZones: PromZone[];
     subsoilUsers: SubsoilUser[];
     investorCountries: InvestorCountryOption[];
+    canFilterByInvestorCountry: boolean;
     filters: Partial<Filters>;
 }
 
@@ -258,6 +259,7 @@ export default function Index({
     promZones,
     subsoilUsers,
     investorCountries,
+    canFilterByInvestorCountry,
     filters,
 }: Props) {
     const canModify = useCanModify();
@@ -764,7 +766,7 @@ export default function Index({
                             </SelectContent>
                         </Select>
                     </div>
-                    {(isAttractionDirection || isSuperAdmin) && (
+                    {canFilterByInvestorCountry && (
                         <div className="space-y-1.5">
                             <Label htmlFor="investor-country-filter">
                                 Елдер

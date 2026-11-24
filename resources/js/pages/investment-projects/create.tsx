@@ -147,7 +147,6 @@ const PROJECT_FORM_ERROR_FIELDS = [
     { field: 'attraction_handover_to_id', step: 2 },
     { field: 'attraction_decline_reason', step: 2 },
     { field: 'attraction_resume_on', step: 2 },
-    { field: 'description', step: 2 },
     { field: 'current_status', step: 2 },
     { field: 'infrastructure', step: 2 },
     { field: 'geometry', step: 2 },
@@ -202,7 +201,6 @@ export default function Create({
         useForm({
             name: '',
             company_id: '',
-            description: '',
             current_status: '',
             region_id: userRegionId ? userRegionId.toString() : '',
             project_type_ids: [] as string[],
@@ -1369,7 +1367,7 @@ export default function Create({
                                     }
                                 />
                             )}
-                            {/* Сол жақ: Сипаттама және Инфрақұрылым */}
+                            {/* Сол жақ: Ағымдағы жағдайы және Инфрақұрылым */}
                             {data.status === 'plan' && (
                                 <AttractionStageDetailsForm
                                     stage={data.attraction_stage}
@@ -1387,44 +1385,16 @@ export default function Create({
                                 />
                             )}
                             <div className="space-y-6">
-                                {/* Сипаттама */}
+                                {/* Ағымдағы жағдайы */}
                                 <div className="rounded-lg border border-gray-200 bg-white p-6">
                                     <div className="mb-4 flex items-center gap-2">
                                         <FileText className="h-5 w-5 text-[#0f1b3d]" />
                                         <h3 className="font-semibold text-[#0f1b3d]">
-                                            Сипаттама және жағдайы
+                                            Ағымдағы жағдайы
                                         </h3>
                                     </div>
 
                                     <div className="space-y-4">
-                                        <div className="flex flex-col gap-2">
-                                            <Label
-                                                htmlFor="description"
-                                                className="text-xs font-medium tracking-wide text-gray-500 uppercase"
-                                            >
-                                                Жоба сипаттамасы
-                                            </Label>
-                                            <Textarea
-                                                id="description"
-                                                value={data.description}
-                                                onChange={(
-                                                    e: React.ChangeEvent<HTMLTextAreaElement>,
-                                                ) =>
-                                                    setData(
-                                                        'description',
-                                                        e.target.value,
-                                                    )
-                                                }
-                                                className="min-h-[100px] border-gray-200 bg-transparent shadow-none focus:border-[#0f1b3d] focus-visible:ring-0"
-                                                placeholder="Жобаның негізгі мақсаттары мен ауқымын сипаттаңыз..."
-                                            />
-                                            {errors.description && (
-                                                <span className="text-sm text-red-500">
-                                                    {errors.description}
-                                                </span>
-                                            )}
-                                        </div>
-
                                         <div className="flex flex-col gap-2">
                                             <Label
                                                 htmlFor="current_status"
@@ -1717,15 +1687,7 @@ export default function Create({
                                                             </span>
                                                             :{' '}
                                                             {plan.planned_quantity ||
-                                                                '—'}{' '}
-                                                            ·{' '}
-                                                            {plan.planned_amount
-                                                                ? formatMoneyCompact(
-                                                                      Number(
-                                                                          plan.planned_amount,
-                                                                      ),
-                                                                  )
-                                                                : '—'}
+                                                                '—'}
                                                         </div>
                                                     ),
                                                 )}
@@ -1737,18 +1699,6 @@ export default function Create({
                                         )}
                                     </div>
                                 </OptionalProjectSection>
-
-                                {/* Сипаттама */}
-                                {data.description && (
-                                    <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-                                        <h4 className="mb-2 font-medium text-[#0f1b3d]">
-                                            Сипаттама
-                                        </h4>
-                                        <p className="text-sm text-gray-600">
-                                            {data.description}
-                                        </p>
-                                    </div>
-                                )}
 
                                 {/* Инфрақұрылым */}
                                 <OptionalProjectSection

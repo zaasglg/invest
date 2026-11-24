@@ -375,7 +375,8 @@ class OblastAkimAnalyticsService
     }
 
     /**
-     * Compare every actual report with the plan for the same reporting period.
+     * Compare actual quantities with the plan for the same reporting period.
+     * Monetary values are reported as actual totals without a planned target.
      * Product quantities are not summed because their units may differ.
      *
      * @return array{summary: array<string, int|float|null>, projects: array<int, array<string, mixed>>}
@@ -419,10 +420,6 @@ class OblastAkimAnalyticsService
                 $reportedPeriods = $plans->sum(
                     fn ($plan): int => $plan->facts->count()
                 );
-                $plannedAmount = (float) $plans->sum(
-                    fn ($plan): float => (float) $plan->planned_amount
-                        * $plan->facts->count()
-                );
                 $actualAmount = (float) $plans->sum(
                     fn ($plan): float => (float) $plan->facts
                         ->sum('actual_amount')
@@ -435,11 +432,6 @@ class OblastAkimAnalyticsService
                         )
                     )
                 );
-                $rawAmountRate = $reportedPeriods > 0 && $plannedAmount > 0
-                    ? $this->ratio($actualAmount, $plannedAmount)
-                    : null;
-                $hasAmountAnomaly = $rawAmountRate !== null
-                    && ($rawAmountRate < 0 || $rawAmountRate > 200);
                 $hasVolumeAnomaly = $rawVolumeRates->contains(
                     fn (float $rate): bool => $rate < 0 || $rate > 200
                 );
@@ -447,9 +439,6 @@ class OblastAkimAnalyticsService
                     fn (float $rate): bool => $rate >= 0 && $rate <= 200
                 );
                 $anomalies = collect([
-                    $hasAmountAnomaly
-                        ? 'Сома бойынша жоспар/факт қатынасы 200%-дан жоғары'
-                        : null,
                     $hasVolumeAnomaly
                         ? 'Өнім көлемінің өлшем бірлігін тексеру қажет'
                         : null,
@@ -463,12 +452,7 @@ class OblastAkimAnalyticsService
                     'products' => $plans->pluck('product_name')->values()->all(),
                     'products_count' => $plans->count(),
                     'reported_periods' => $reportedPeriods,
-                    'planned_amount_for_reported_periods' => $plannedAmount,
                     'actual_amount' => $actualAmount,
-                    'raw_amount_completion_rate' => $rawAmountRate,
-                    'amount_completion_rate' => $hasAmountAnomaly
-                        ? null
-                        : $rawAmountRate,
                     'volume_completion_rate' => $validatedVolumeRates
                         ->isNotEmpty()
                         ? round((float) $validatedVolumeRates->average(), 1)
@@ -496,17 +480,7 @@ class OblastAkimAnalyticsService
             ->values();
 
         $reportedRows = $rows->where('reported_periods', '>', 0);
-        $reportedPlanAmount = (float) $reportedRows->sum(
-            'planned_amount_for_reported_periods'
-        );
         $actualAmount = (float) $reportedRows->sum('actual_amount');
-        $rawAmountCompletionRate = $reportedRows->isNotEmpty()
-            && $reportedPlanAmount > 0
-            ? $this->ratio($actualAmount, $reportedPlanAmount)
-            : null;
-        $hasAmountAnomaly = $rawAmountCompletionRate !== null
-            && ($rawAmountCompletionRate < 0
-                || $rawAmountCompletionRate > 200);
         $volumeRates = $reportedRows
             ->pluck('volume_completion_rate')
             ->filter(fn ($rate): bool => $rate !== null);
@@ -543,12 +517,7 @@ class OblastAkimAnalyticsService
                 'reported_periods' => (int) $reportedRows
                     ->sum('reported_periods'),
                 'distinct_reported_periods' => $reportedPeriodKeys->count(),
-                'planned_amount_for_reported_periods' => $reportedPlanAmount,
                 'actual_amount' => $actualAmount,
-                'raw_amount_completion_rate' => $rawAmountCompletionRate,
-                'amount_completion_rate' => $hasAmountAnomaly
-                    ? null
-                    : $rawAmountCompletionRate,
                 'average_volume_completion_rate' => $volumeRates->isNotEmpty()
                     ? round((float) $volumeRates->average(), 1)
                     : null,

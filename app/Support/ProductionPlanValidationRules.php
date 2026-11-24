@@ -41,12 +41,7 @@ final class ProductionPlanValidationRules
                 'string',
                 'max:50',
             ],
-            'planned_production.*.planned_amount' => [
-                'nullable',
-                'numeric',
-                'min:0',
-                'max:2000000000',
-            ],
+            'planned_production.*.planned_amount' => ['exclude'],
             'planned_production.*.period' => [
                 $rowRequirement,
                 'string',

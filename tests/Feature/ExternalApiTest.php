@@ -144,7 +144,6 @@ test('projects API returns analytics data without operational content', function
         'name' => 'API инвестициялық жобасы',
         'company_id' => $company->id,
         'company_name' => $company->display_name,
-        'description' => 'API арқылы берілетін жоба',
         'current_status' => 'Құрылыс жүргізілуде',
         'region_id' => $region->id,
         'project_type_id' => $projectType->id,
@@ -162,6 +161,7 @@ test('projects API returns analytics data without operational content', function
             ],
         ],
     ]);
+    $project->forceFill(['description' => 'Бұрын сақталған жоба сипаттамасы'])->save();
     $project->projectTypes()->sync([$projectType->id]);
     $productionPlan = ProjectProductionPlan::create([
         'project_id' => $project->id,
@@ -240,6 +240,7 @@ test('projects API returns analytics data without operational content', function
         )
         ->assertJsonPath('data.0.project_types.0.id', $projectType->id)
         ->assertJsonPath('data.0.production_plans.0.product_name', 'Кірпіш')
+        ->assertJsonMissingPath('data.0.production_plans.0.planned_amount')
         ->assertJsonPath(
             'data.0.production_plans.0.facts.0.actual_quantity',
             '900.000'
@@ -249,6 +250,7 @@ test('projects API returns analytics data without operational content', function
             'Инфрақұрылым тәуекелі'
         )
         ->assertJsonPath('data.0.current_status', 'Құрылыс жүргізілуде')
+        ->assertJsonMissingPath('data.0.description')
         ->assertJsonPath(
             'data.0.infrastructure.electricity.required_capacity',
             100

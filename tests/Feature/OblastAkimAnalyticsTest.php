@@ -8,6 +8,7 @@ use App\Models\ProjectType;
 use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use Inertia\Testing\AssertableInertia as Assert;
 
 function createOblastAnalyticsRole(string $name): Role
@@ -146,7 +147,6 @@ function seedOblastAnalyticsScenario(): array
         'product_name' => 'Сүт өнімі',
         'planned_quantity' => 500,
         'unit' => 'ton',
-        'planned_amount' => 500000000,
         'period' => 'year',
     ]);
     $implementationProject->productionPlans()->create([
@@ -159,7 +159,6 @@ function seedOblastAnalyticsScenario(): array
         'product_name' => 'Дайын өнім',
         'planned_quantity' => 1000,
         'unit' => 'piece',
-        'planned_amount' => 1000000000,
         'period' => 'year',
     ]);
     $launchedPlan->facts()->create([
@@ -173,7 +172,6 @@ function seedOblastAnalyticsScenario(): array
         'product_name' => 'Сыртқы өнім',
         'planned_quantity' => 100000,
         'unit' => 'ton',
-        'planned_amount' => 9000000000,
         'period' => 'year',
     ]);
     $outsidePlan->facts()->create([
@@ -274,12 +272,10 @@ test('oblast akim receives scoped management and niche analytics', function () {
             ->where('analytics.production_summary.incomplete_plans', 1)
             ->where('analytics.production_summary.reporting_projects', 1)
             ->where('analytics.production_summary.reported_periods', 1)
-            ->where(
-                'analytics.production_summary.planned_amount_for_reported_periods',
-                1000000000
-            )
             ->where('analytics.production_summary.actual_amount', 800000000)
-            ->where('analytics.production_summary.amount_completion_rate', 80)
+            ->missing('analytics.production_summary.planned_amount_for_reported_periods')
+            ->missing('analytics.production_summary.amount_completion_rate')
+            ->missing('analytics.production_summary.raw_amount_completion_rate')
             ->where(
                 'analytics.production_summary.average_volume_completion_rate',
                 80
@@ -289,6 +285,11 @@ test('oblast akim receives scoped management and niche analytics', function () {
                 'analytics.production_performance.0.id',
                 $data['launchedProject']->id
             )
+            ->where('analytics.production_performance.0.actual_amount', 800000000)
+            ->where('analytics.production_performance.0.volume_completion_rate', 80)
+            ->missing('analytics.production_performance.0.planned_amount_for_reported_periods')
+            ->missing('analytics.production_performance.0.amount_completion_rate')
+            ->missing('analytics.production_performance.0.raw_amount_completion_rate')
             ->has('analytics.district_quality', 2)
             ->has('analytics.management_quality', 1)
             ->where(
@@ -303,6 +304,26 @@ test('oblast akim receives scoped management and niche analytics', function () {
                 'analytics.niche_analytics.0.name',
                 'Агроөнеркәсіп'
             )
+        );
+});
+
+test('legacy planned production money does not affect analytics quality', function () {
+    $data = seedOblastAnalyticsScenario();
+
+    DB::table('project_production_plans')
+        ->where('project_id', $data['launchedProject']->id)
+        ->update(['planned_amount' => 1]);
+
+    $this->actingAs($data['oblastAkim'])
+        ->get(route('akim.analytics'))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('analytics.production_summary.actual_amount', 800000000)
+            ->where('analytics.production_summary.anomaly_projects', 0)
+            ->where('analytics.production_performance.0.id', $data['launchedProject']->id)
+            ->where('analytics.production_performance.0.has_anomaly', false)
+            ->where('analytics.production_performance.0.volume_completion_rate', 80)
+            ->missing('analytics.production_performance.0.amount_completion_rate')
         );
 });
 
@@ -363,7 +384,8 @@ test('oblast akim AI generates a scoped management report', function () {
 
     expect($productionMessage)
         ->toContain('Өндіріс жоспарының орындалуы')
-        ->toContain('сома бойынша: 80%')
+        ->toContain('нақты сома: 800 000 000 ₸')
+        ->not->toContain('сома бойынша:')
         ->toContain('көлем бойынша: 80%');
 
     $briefing = $this->actingAs($data['oblastAkim'])
@@ -396,7 +418,8 @@ test('oblast akim AI generates a scoped management report', function () {
 
     expect($exactProductionPrompt)
         ->toContain('Өндіріс жоспарының орындалуы')
-        ->toContain('сома бойынша: 80%');
+        ->toContain('нақты сома: 800 000 000 ₸')
+        ->not->toContain('сома бойынша:');
 });
 
 test('district akim cannot force oblast analytics AI context', function () {

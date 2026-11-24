@@ -117,7 +117,6 @@ class ProjectProductionService
                 'planned_quantity',
                 'unit',
                 'custom_unit',
-                'planned_amount',
                 'period',
             ]);
             $attributes['custom_unit'] = $attributes['unit'] === 'other'
@@ -160,7 +159,6 @@ class ProjectProductionService
                 'planned_quantity',
                 'unit',
                 'custom_unit',
-                'planned_amount',
                 'period',
             ]);
             $attributes['custom_unit'] = $attributes['unit'] === 'other'
@@ -222,7 +220,6 @@ class ProjectProductionService
                 'product_name' => $plan->product_name,
                 'planned_quantity' => $plan->planned_quantity,
                 'unit' => $plan->unit_label,
-                'planned_amount' => $plan->planned_amount,
                 'period' => $plan->period_label,
                 'legacy_value' => $plan->legacy_value,
             ])
@@ -233,9 +230,6 @@ class ProjectProductionService
     private function isCompleteRow(array $row): bool
     {
         return filled($row['planned_quantity'] ?? null)
-            && array_key_exists('planned_amount', $row)
-            && $row['planned_amount'] !== null
-            && $row['planned_amount'] !== ''
             && (($row['unit'] ?? null) !== 'other'
                 || filled($row['custom_unit'] ?? null));
     }
@@ -248,12 +242,6 @@ class ProjectProductionService
 
         if (! filled($row['planned_quantity'] ?? null)) {
             $errors["{$prefix}.planned_quantity"] = 'Жоспарлы көлемді енгізіңіз.';
-        }
-
-        if (! array_key_exists('planned_amount', $row)
-            || $row['planned_amount'] === null
-            || $row['planned_amount'] === '') {
-            $errors["{$prefix}.planned_amount"] = 'Жоспарлы соманы енгізіңіз.';
         }
 
         if (($row['unit'] ?? null) === 'other'

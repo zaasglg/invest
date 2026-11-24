@@ -859,7 +859,6 @@ class InvestmentApplicationWorkflowService
                     'project_type_id' => $projectTypeIds[0] ?? null,
                     'company_id' => $company->id,
                     'company_name' => $company->display_name,
-                    'description' => $locked->project_description,
                     'current_status' => 'Өтінім қабылданып, жоба құрылды.',
                     'region_id' => $zone->region_id,
                     'jobs_count' => $locked->jobs_count,
@@ -924,7 +923,6 @@ class InvestmentApplicationWorkflowService
                     'approved_area' => (float) $locked->approved_area,
                     'investment_amount' => (float) $locked->investment_amount,
                     'jobs_count' => (int) $locked->jobs_count,
-                    'description' => $locked->project_description,
                 ],
                 actor: $reviewer
             );

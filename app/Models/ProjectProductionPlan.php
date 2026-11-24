@@ -16,7 +16,6 @@ class ProjectProductionPlan extends Model
         'planned_quantity',
         'unit',
         'custom_unit',
-        'planned_amount',
         'period',
         'legacy_value',
         'sort_order',
@@ -26,6 +25,10 @@ class ProjectProductionPlan extends Model
         'unit_label',
         'period_label',
         'is_complete',
+    ];
+
+    protected $hidden = [
+        'planned_amount',
     ];
 
     protected function casts(): array
@@ -63,7 +66,6 @@ class ProjectProductionPlan extends Model
     public function getIsCompleteAttribute(): bool
     {
         return $this->planned_quantity !== null
-            && $this->planned_amount !== null
             && ($this->unit !== 'other' || filled($this->custom_unit));
     }
 }

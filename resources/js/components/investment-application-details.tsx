@@ -327,7 +327,7 @@ export default function InvestmentApplicationDetails({
                     <div className="divide-y divide-slate-100">
                         {application.planned_production.map((plan, index) => (
                             <div
-                                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-4"
+                                className="grid gap-3 py-3 first:pt-0 last:pb-0 sm:grid-cols-3"
                                 key={plan.client_key ?? index}
                             >
                                 <Detail
@@ -339,15 +339,6 @@ export default function InvestmentApplicationDetails({
                                     value={
                                         plan.planned_quantity
                                             ? `${plan.planned_quantity} ${productionUnitLabel(plan)}`
-                                            : '—'
-                                    }
-                                />
-                                <Detail
-                                    label="Жоспарлы сома"
-                                    value={
-                                        plan.planned_amount !== '' &&
-                                        plan.planned_amount != null
-                                            ? `${money(plan.planned_amount)} ₸`
                                             : '—'
                                     }
                                 />

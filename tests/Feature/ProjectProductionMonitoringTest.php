@@ -8,6 +8,8 @@ use App\Models\Region;
 use App\Models\Role;
 use App\Models\User;
 use App\Services\ProjectProductionService;
+use App\Support\ProductionPlanValidationRules;
+use Illuminate\Support\Facades\Validator;
 use Inertia\Testing\AssertableInertia as Assert;
 
 uses(Illuminate\Foundation\Testing\RefreshDatabase::class);
@@ -57,7 +59,6 @@ function productionTestProject(string $status = 'launched'): array
         'product_name' => 'Керамикалық кірпіш',
         'planned_quantity' => 60000000,
         'unit' => 'piece',
-        'planned_amount' => 4500000000,
         'period' => 'year',
     ]);
 
@@ -74,7 +75,6 @@ test('a project supports several structured production plans', function () {
             'planned_quantity' => 65000000,
             'unit' => 'piece',
             'custom_unit' => null,
-            'planned_amount' => 4800000000,
             'period' => 'year',
         ],
         [
@@ -82,7 +82,6 @@ test('a project supports several structured production plans', function () {
             'planned_quantity' => 20000,
             'unit' => 'ton',
             'custom_unit' => null,
-            'planned_amount' => 2000000000,
             'period' => 'year',
         ],
     ];
@@ -96,7 +95,57 @@ test('a project supports several structured production plans', function () {
         ->and($data['project']->productionPlans()
             ->where('product_name', 'Құрғақ қоспа')
             ->first()
-            ->unit_label)->toBe('тонна');
+            ->unit_label)->toBe('тонна')
+        ->and($data['plan']->fresh()->is_complete)->toBeTrue();
+});
+
+test('obsolete planned production amounts are excluded from validated input', function () {
+    $row = [
+        'product_name' => 'Тас',
+        'planned_quantity' => 200,
+        'unit' => 'ton',
+        'period' => 'year',
+        'planned_amount' => 'obsolete amount is ignored',
+    ];
+
+    $validated = Validator::make(
+        ['planned_production' => [$row]],
+        ProductionPlanValidationRules::rules()
+    )->validate();
+
+    expect($validated['planned_production'][0])
+        ->not->toHaveKey('planned_amount');
+
+    app(ProjectProductionService::class)->assertNewPlansAreComplete(
+        $validated['planned_production']
+    );
+});
+
+test('sync and append ignore obsolete amounts and preserve legacy database values', function () {
+    $data = productionTestProject();
+    $data['plan']->forceFill(['planned_amount' => 4500000000])->save();
+    $service = app(ProjectProductionService::class);
+    $row = [
+        'product_name' => 'Керамикалық кірпіш',
+        'planned_quantity' => 65000000,
+        'unit' => 'piece',
+        'planned_amount' => 999,
+        'period' => 'year',
+    ];
+
+    $service->syncPlans($data['project'], [[
+        'id' => $data['plan']->id,
+        ...$row,
+    ]]);
+    $service->appendPlans($data['project'], [$row]);
+
+    $plans = $data['project']->productionPlans()->orderBy('id')->get();
+    expect($plans)->toHaveCount(2)
+        ->and($plans[0]->planned_amount)->toBe('4500000000.00')
+        ->and($plans[1]->planned_amount)->toBeNull()
+        ->and($plans[0]->toArray())->not->toHaveKey('planned_amount')
+        ->and($service->activitySnapshot($data['project'])[0])
+        ->not->toHaveKey('planned_amount');
 });
 
 test('investor saves and updates an annual actual production report', function () {
@@ -140,6 +189,7 @@ test('investor saves and updates an annual actual production report', function (
         ->assertInertia(fn (Assert $page) => $page
             ->where('canReportProduction', true)
             ->has('project.production_plans', 1)
+            ->missing('project.production_plans.0.planned_amount')
             ->where(
                 'project.production_plans.0.product_name',
                 'Керамикалық кірпіш'

@@ -25,7 +25,7 @@ class DashboardController extends Controller
 {
     private bool $moderatorProjectScope = false;
 
-    private ?string $adminDashboardMode = null;
+    private ?string $projectDashboardMode = null;
 
     /** @var list<int> */
     private array $regionScopeIds = [];
@@ -42,7 +42,7 @@ class DashboardController extends Controller
             return redirect()->route('applicant.portal');
         }
 
-        $canSwitchDashboardMode = $roleName === 'superadmin';
+        $canSwitchDashboardMode = $user?->canSwitchDashboardMode() ?? false;
         $dashboardMode = $user?->isTurkistanInvestAttraction()
             ? 'attraction'
             : 'support';
@@ -54,7 +54,7 @@ class DashboardController extends Controller
             $dashboardMode = $validated['dashboard_mode'] ?? 'support';
         }
 
-        $this->adminDashboardMode = $canSwitchDashboardMode
+        $this->projectDashboardMode = $canSwitchDashboardMode
             ? $dashboardMode
             : null;
         $investSubRole = ($roleName === 'invest'
@@ -69,7 +69,7 @@ class DashboardController extends Controller
             || $investorId
             || $this->moderatorProjectScope
             || $this->hasRegionScope()
-            || $this->adminDashboardMode !== null
+            || $this->projectDashboardMode !== null
         );
 
         // Scoped roles must never consume or populate the shared global cache.
@@ -250,7 +250,7 @@ class DashboardController extends Controller
         $years = range($currentYear - 4, $currentYear);
 
         return $this->projects(
-            $this->adminDashboardMode === 'attraction'
+            $this->projectDashboardMode === 'attraction'
                 ? null
                 : User::INVEST_SUB_ROLE_TURKISTAN_ATTRACTION
         )
@@ -339,10 +339,10 @@ class DashboardController extends Controller
     ): Builder {
         return InvestmentProject::active()
             ->when(
-                $this->adminDashboardMode !== null,
+                $this->projectDashboardMode !== null,
                 fn ($query) => $query->where(
                     'investment_projects.status',
-                    $this->adminDashboardMode === 'attraction' ? '=' : '!=',
+                    $this->projectDashboardMode === 'attraction' ? '=' : '!=',
                     'plan'
                 )
             )
@@ -504,7 +504,7 @@ class DashboardController extends Controller
 
     /**
      * Investment / project / jobs series grouped by project start year or
-     * attraction registration year in the administrator attraction mode.
+     * attraction registration year in the attraction dashboard mode.
      *
      * @return array{
      *     years: list<int>,
@@ -518,7 +518,7 @@ class DashboardController extends Controller
     ): array {
         $currentYear = (int) now()->year;
         $years = range($currentYear - 4, $currentYear);
-        $dateExpression = $this->adminDashboardMode === 'attraction'
+        $dateExpression = $this->projectDashboardMode === 'attraction'
             ? 'COALESCE(investment_projects.planning_started_at, investment_projects.created_at)'
             : 'investment_projects.start_date';
         $yearExpr = match (DB::getDriverName()) {
@@ -606,7 +606,7 @@ class DashboardController extends Controller
             || $investorId
             || $this->moderatorProjectScope
             || $this->hasRegionScope()
-            || $this->adminDashboardMode !== null) {
+            || $this->projectDashboardMode !== null) {
             return $this->computeSectorSummary($subRole, $investorId);
         }
 
