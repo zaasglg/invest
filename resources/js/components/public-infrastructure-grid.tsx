@@ -1,13 +1,19 @@
 import type { LucideIcon } from 'lucide-react';
 import { Car, Droplets, Flame, TrainFront, Wifi, Zap } from 'lucide-react';
 
+import {
+    convertInfrastructureValue,
+    getDefaultInfrastructureUnit,
+    getInfrastructureUnit,
+    toBaseInfrastructureValue,
+} from '@/lib/infrastructure';
+import type { ZoneInfrastructureKey } from '@/lib/infrastructure';
 import { cn } from '@/lib/utils';
 import type { PublicInfrastructureItem } from '@/types';
 
 type InfrastructureItem = {
-    key: string;
+    key: ZoneInfrastructureKey;
     label: string;
-    unit: string;
     icon: LucideIcon;
     accent: string;
     iconClassName: string;
@@ -17,7 +23,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'electricity',
         label: 'Электрмен жабдықтау',
-        unit: 'кВт',
         icon: Zap,
         accent: '#d8b84e',
         iconClassName: 'bg-amber-50 text-amber-700',
@@ -25,7 +30,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'gas',
         label: 'Газбен жабдықтау',
-        unit: 'м³/сағ',
         icon: Flame,
         accent: '#71c98d',
         iconClassName: 'bg-emerald-50 text-emerald-700',
@@ -33,7 +37,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'water',
         label: 'Сумен жабдықтау',
-        unit: 'м³/тәу',
         icon: Droplets,
         accent: '#63b8e8',
         iconClassName: 'bg-sky-50 text-sky-700',
@@ -41,7 +44,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'roads',
         label: 'Автомобиль жолы',
-        unit: 'км',
         icon: Car,
         accent: '#aeb8c7',
         iconClassName: 'bg-slate-200 text-slate-600',
@@ -49,7 +51,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'railway',
         label: 'Теміржол тұйығы',
-        unit: 'км',
         icon: TrainFront,
         accent: '#8f87ef',
         iconClassName: 'bg-indigo-100 text-indigo-700',
@@ -57,7 +58,6 @@ const items: InfrastructureItem[] = [
     {
         key: 'internet',
         label: 'Интернет',
-        unit: 'Мбит/с',
         icon: Wifi,
         accent: '#65c8db',
         iconClassName: 'bg-cyan-100 text-cyan-700',
@@ -65,7 +65,7 @@ const items: InfrastructureItem[] = [
 ];
 
 const formatter = new Intl.NumberFormat('kk-KZ', {
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 6,
 });
 
 const format = (value: number, unit: string) =>
@@ -103,7 +103,14 @@ export default function PublicInfrastructureGrid({
                     const available = Boolean(details?.available);
                     const total = Math.max(
                         0,
-                        Number(details?.total ?? details?.capacity ?? 0),
+                        Number(
+                            details?.total ??
+                                toBaseInfrastructureValue(
+                                    details?.capacity,
+                                    item.key,
+                                    details?.unit,
+                                ),
+                        ),
                     );
                     const used = Math.max(0, Number(details?.used ?? 0));
                     const remaining = Math.max(
@@ -114,6 +121,19 @@ export default function PublicInfrastructureGrid({
                         total > 0
                             ? Math.min(100, Math.round((used / total) * 100))
                             : 0;
+                    const unit = getInfrastructureUnit(item.key, details?.unit);
+                    const display = (value: number) =>
+                        format(
+                            Number(
+                                convertInfrastructureValue(
+                                    String(value),
+                                    item.key,
+                                    getDefaultInfrastructureUnit(item.key),
+                                    unit.code,
+                                ),
+                            ),
+                            unit.label,
+                        );
 
                     return (
                         <article
@@ -129,7 +149,7 @@ export default function PublicInfrastructureGrid({
                                 <div className="min-w-0">
                                     <p className="text-xs font-medium text-slate-500">
                                         {available
-                                            ? `Жалпы қуат · ${format(total, item.unit)}`
+                                            ? `Жалпы қуат · ${display(total)}`
                                             : 'Желі күйі'}
                                     </p>
                                     <h3 className="mt-1.5 text-lg leading-snug font-bold tracking-[-0.025em] text-navy">
@@ -186,7 +206,7 @@ export default function PublicInfrastructureGrid({
                                                 Пайдалануда
                                             </p>
                                             <p className="mt-1 text-sm font-bold text-navy tabular-nums">
-                                                {format(used, item.unit)}
+                                                {display(used)}
                                             </p>
                                         </div>
                                         <div className="border-l border-slate-100 pt-4 pl-4">
@@ -197,7 +217,7 @@ export default function PublicInfrastructureGrid({
                                                 className="mt-1 text-sm font-bold tabular-nums"
                                                 style={{ color: item.accent }}
                                             >
-                                                {format(remaining, item.unit)}
+                                                {display(remaining)}
                                             </p>
                                         </div>
                                     </div>

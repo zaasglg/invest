@@ -111,6 +111,10 @@ class IndustrialZoneController extends Controller
             }
         }])->loadCount('photos');
 
+        $allUsageProjects = $industrialZone->investmentProjects()->active()
+            ->get(['investment_projects.id', 'name', 'infrastructure', 'status']);
+        $visibleProjectIds = $industrialZone->investmentProjects->pluck('id')->all();
+
         $mainGalleryPhotos = $industrialZone->photos()
             ->where('photo_type', 'gallery')
             ->latest()
@@ -121,11 +125,13 @@ class IndustrialZoneController extends Controller
             'industrialZone' => $industrialZone,
             'infrastructureUsage' => $usageService->summarize(
                 $industrialZone->infrastructure,
-                $industrialZone->investmentProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'areaUsage' => $usageService->summarizeArea(
                 $industrialZone->total_area,
-                $industrialZone->investmentProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,

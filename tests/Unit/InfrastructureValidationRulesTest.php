@@ -60,7 +60,7 @@ it('requires project required and used values for selected resources', function 
     )->fails())->toBeTrue();
 });
 
-it('defaults blank used capacities to required values for every selected resource', function ($blankValue) {
+it('defaults blank used capacities to zero without consuming the required amount', function ($blankValue) {
     $infrastructure = [];
 
     foreach (InfrastructureValidationRules::PROJECT_RESOURCES as $resource) {
@@ -74,7 +74,7 @@ it('defaults blank used capacities to required values for every selected resourc
     $prepared = ProjectInfrastructureInput::withDefaultUsedCapacity($infrastructure);
 
     foreach (InfrastructureValidationRules::PROJECT_RESOURCES as $resource) {
-        expect($prepared[$resource]['used_capacity'])->toBe('60.5');
+        expect($prepared[$resource]['used_capacity'])->toBe(0);
     }
 
     expect(Validator::make(
@@ -97,7 +97,7 @@ it('preserves explicit used capacities including zero', function ($usedCapacity)
     expect($prepared['electricity']['used_capacity'])->toBe($usedCapacity);
 })->with([0, '0', '25.5']);
 
-it('keeps both capacities required when a resource is selected without values', function () {
+it('requires the necessary amount while defaulting an omitted actual amount to zero', function () {
     $infrastructure = [];
 
     foreach (InfrastructureValidationRules::PROJECT_RESOURCES as $resource) {
@@ -117,7 +117,6 @@ it('keeps both capacities required when a resource is selected without values', 
     expect($validator->fails())->toBeTrue()
         ->and($validator->errors()->keys())->toBe([
             'infrastructure.electricity.required_capacity',
-            'infrastructure.electricity.used_capacity',
         ]);
 });
 
@@ -127,8 +126,8 @@ it('defaults an omitted used capacity and accepts a zero required capacity', fun
         'land' => ['needed' => 1, 'required_capacity' => '5'],
     ]);
 
-    expect($prepared['electricity']['used_capacity'])->toBe('0')
-        ->and($prepared['land']['used_capacity'])->toBe('5');
+    expect($prepared['electricity']['used_capacity'])->toBe(0)
+        ->and($prepared['land']['used_capacity'])->toBe(0);
 });
 
 it('does not change unselected resources or malformed infrastructure', function () {
@@ -147,9 +146,54 @@ it('does not change unselected resources or malformed infrastructure', function 
         ->and(ProjectInfrastructureInput::withDefaultUsedCapacity('invalid'))->toBe('invalid');
 });
 
-it('does not invent actual usage when the equal-capacity checkbox is explicitly cleared', function () {
+it('ignores the retired equal-capacity flag when preparing actual usage', function () {
     $prepared = ProjectInfrastructureInput::withDefaultUsedCapacity([
         'electricity' => ['needed' => true, 'required_capacity' => '60', 'used_capacity' => '', 'use_required_capacity' => false],
     ]);
-    expect($prepared['electricity']['used_capacity'])->toBe('');
+    expect($prepared['electricity']['used_capacity'])->toBe(0);
+});
+
+it('accepts resource-specific units and excludes the retired equal-capacity flag', function () {
+    $infrastructure = [];
+    foreach (InfrastructureValidationRules::PROJECT_RESOURCES as $resource) {
+        $infrastructure[$resource] = [
+            'needed' => true,
+            'required_capacity' => 100,
+            'used_capacity' => 0,
+            'unit' => \App\Support\InfrastructureUnits::codes($resource)[0],
+            'use_required_capacity' => true,
+        ];
+    }
+
+    $validator = Validator::make(['infrastructure' => $infrastructure], InfrastructureValidationRules::project());
+
+    expect($validator->passes())->toBeTrue()
+        ->and($validator->validated()['infrastructure']['electricity'])->not->toHaveKey('use_required_capacity');
+
+    $infrastructure['roads']['unit'] = 'm3_month';
+    expect(Validator::make(['infrastructure' => $infrastructure], InfrastructureValidationRules::project())->errors()->has('infrastructure.roads.unit'))->toBeTrue();
+});
+
+it('validates zone units without reinterpreting numeric capacities', function () {
+    $infrastructure = [];
+    foreach (InfrastructureValidationRules::ZONE_RESOURCES as $resource) {
+        $infrastructure[$resource] = [
+            'available' => true,
+            'capacity' => 100,
+            'unit' => \App\Support\InfrastructureUnits::codes($resource)[0],
+        ];
+    }
+    $infrastructure['water']['capacity'] = 3000;
+    $infrastructure['water']['unit'] = 'm3_month';
+    $validator = Validator::make(['infrastructure' => $infrastructure], InfrastructureValidationRules::zone());
+
+    expect($validator->passes())->toBeTrue()
+        ->and($validator->validated()['infrastructure']['water'])->toBe([
+            'available' => true,
+            'capacity' => 3000,
+            'unit' => 'm3_month',
+        ]);
+
+    $infrastructure['water']['unit'] = 'km';
+    expect(Validator::make(['infrastructure' => $infrastructure], InfrastructureValidationRules::zone())->errors()->has('infrastructure.water.unit'))->toBeTrue();
 });

@@ -17,7 +17,7 @@ export type AreaUsage = {
 
 function formatArea(value: number) {
     return `${new Intl.NumberFormat('ru-RU', {
-        maximumFractionDigits: 2,
+        maximumFractionDigits: 6,
     }).format(value)} га`;
 }
 

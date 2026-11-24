@@ -16,6 +16,9 @@ import { ApplicantSectionCard } from '@/components/applicant/applicant-ui';
 import ApplicationStatusBadge from '@/components/application-status-badge';
 import { Button } from '@/components/ui/button';
 import { FormCard } from '@/components/ui/page';
+import { normalizeApplicationRequirement } from '@/lib/application-infrastructure';
+import { formatInfrastructureValue } from '@/lib/infrastructure';
+import type { ZoneInfrastructureKey } from '@/lib/infrastructure';
 import { productionPeriodLabel, productionUnitLabel } from '@/lib/production';
 import * as documentRoutes from '@/routes/investment-applications/documents';
 import type { InvestmentApplication } from '@/types';
@@ -106,7 +109,14 @@ export default function InvestmentApplicationDetails({
     const requirements = Object.entries(
         application.infrastructure_requirements ?? {},
     ).filter(
-        ([, value]) => value !== null && value !== '' && Number(value) > 0,
+        ([key, value]) =>
+            key in infrastructureLabels &&
+            Number(
+                normalizeApplicationRequirement(
+                    value,
+                    key as ZoneInfrastructureKey,
+                ).value,
+            ) > 0,
     );
     const statusHistories = [...(application.status_histories ?? [])].sort(
         (first, second) =>
@@ -306,7 +316,17 @@ export default function InvestmentApplicationDetails({
                             <Detail
                                 key={key}
                                 label={infrastructureLabels[key]?.label ?? key}
-                                value={`${value} ${infrastructureLabels[key]?.unit ?? ''}`}
+                                value={formatInfrastructureValue(
+                                    normalizeApplicationRequirement(
+                                        value,
+                                        key as ZoneInfrastructureKey,
+                                    ).value,
+                                    key as ZoneInfrastructureKey,
+                                    normalizeApplicationRequirement(
+                                        value,
+                                        key as ZoneInfrastructureKey,
+                                    ).unit,
+                                )}
                             />
                         ))}
                     </dl>

@@ -25,6 +25,7 @@ use App\Services\ProjectProductionService;
 use App\Services\ProjectTaskAssigneeService;
 use App\Services\SectorActivityLogService;
 use App\Services\SortOrderService;
+use App\Support\InfrastructureUnits;
 use App\Support\InfrastructureValidationRules;
 use App\Support\InvestorCountries;
 use App\Support\ProductionPlanValidationRules;
@@ -2441,11 +2442,9 @@ class InvestmentProjectController extends Controller
                     ?? $val['capacity']
                     ?? '';
                 $used = $val['used_capacity'] ?? '';
-                $formatValue = fn ($value) => $value === ''
+                $formatValue = fn ($value) => $value === '' || $value === null
                     ? '—'
-                    : (is_numeric($value)
-                        ? $value.' '.$item['unit']
-                        : $value);
+                    : InfrastructureUnits::format($value, $item['key'], $val['unit'] ?? null);
                 $addText(
                     $valueCell,
                     'Қ: '.$formatValue($required)

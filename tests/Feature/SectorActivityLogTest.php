@@ -122,7 +122,7 @@ test('sector archive and restore actions are visible only to superadmin', functi
 
     $this->actingAs($prokuror)
         ->get(route($logsRoute, $entityId))
-        ->assertForbidden();
+        ->assertNotFound();
 
     $this->actingAs($admin)
         ->get(route($logsRoute, $entityId))
@@ -141,6 +141,9 @@ test('sector archive and restore actions are visible only to superadmin', functi
         ->assertInertia(fn (Assert $page) => $page
             ->has('logs.data', 2)
             ->where('logs.data.0.event', 'entity.restored'));
+
+    $this->actingAs($prokuror)->get(route($logsRoute, $entityId))
+        ->assertForbidden();
 })->with('sector activity routes');
 
 test('gallery and issue actions are recorded with details', function () {

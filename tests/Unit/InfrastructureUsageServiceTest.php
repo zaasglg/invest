@@ -2,6 +2,9 @@
 
 use App\Services\InfrastructureUsageService;
 use Illuminate\Support\Collection;
+use Tests\TestCase;
+
+uses(TestCase::class);
 
 it('calculates every infrastructure resource from used capacity', function () {
     $projects = new Collection([
@@ -199,4 +202,60 @@ it('calculates occupied land from used area and reports overuse', function () {
             ],
         ],
     ]);
+});
+
+it('subtracts only normalized actual usage across different lengths and flow periods', function () {
+    $projects = collect([
+        (object) ['id' => 1, 'name' => 'Метрмен енгізілген', 'infrastructure' => [
+            'roads' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 500, 'unit' => 'm'],
+            'water' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 3000, 'unit' => 'm3_month'],
+            'gas' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 876000, 'unit' => 'm3_year'],
+        ]],
+        (object) ['id' => 2, 'name' => 'Километрмен енгізілген', 'infrastructure' => [
+            'roads' => ['needed' => true, 'required_capacity' => 100, 'used_capacity' => 1.2, 'unit' => 'km'],
+            'water' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 10, 'unit' => 'm3_day'],
+        ]],
+        (object) ['id' => 3, 'name' => 'Әлі пайдаланылмайды', 'infrastructure' => [
+            'roads' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 0, 'unit' => 'm'],
+            'water' => ['needed' => true, 'required_capacity' => 999999, 'used_capacity' => 0, 'unit' => 'm3_year'],
+        ]],
+    ]);
+
+    $summary = app(InfrastructureUsageService::class)->summarize([
+        'roads' => ['capacity' => 10, 'unit' => 'km'],
+        'water' => ['capacity' => 73000, 'unit' => 'm3_year'],
+        'gas' => ['capacity' => 720000, 'unit' => 'm3_month'],
+    ], $projects);
+
+    expect($summary['roads']['used'])->toBe(1.7)
+        ->and($summary['roads']['remaining'])->toBe(8.3)
+        ->and($summary['roads']['consumers'][0]['capacity'])->toBe('0.5')
+        ->and($summary['roads']['consumers'][0]['required_capacity'])->toBe('999.999')
+        ->and($summary['water']['used'])->toBe(110.0)
+        ->and($summary['water']['remaining'])->toBe(90.0)
+        ->and($summary['gas']['used'])->toBe(100.0)
+        ->and($summary['gas']['remaining'])->toBe(900.0);
+});
+
+it('keeps physical totals for hidden project consumers without exposing their details', function () {
+    $projects = collect([
+        (object) ['id' => 1, 'name' => 'Көрінетін', 'infrastructure' => [
+            'electricity' => ['needed' => true, 'required_capacity' => 500, 'used_capacity' => 250, 'unit' => 'kw'],
+            'land' => ['needed' => true, 'required_capacity' => 10000, 'used_capacity' => 5000, 'unit' => 'm2'],
+        ]],
+        (object) ['id' => 2, 'name' => 'Жасырын', 'infrastructure' => [
+            'electricity' => ['needed' => true, 'required_capacity' => 1, 'used_capacity' => 0.5, 'unit' => 'mw'],
+            'land' => ['needed' => true, 'required_capacity' => 10, 'used_capacity' => 1, 'unit' => 'ha'],
+        ]],
+    ]);
+    $service = app(InfrastructureUsageService::class);
+    $infrastructure = $service->summarize(['electricity' => ['capacity' => 1, 'unit' => 'mw']], $projects, [1]);
+    $area = $service->summarizeArea(10, $projects, [1]);
+
+    expect($infrastructure['electricity']['used'])->toBe(750.0)
+        ->and($infrastructure['electricity']['remaining'])->toBe(250.0)
+        ->and(collect($infrastructure['electricity']['consumers'])->pluck('name')->all())->toBe(['Көрінетін'])
+        ->and($area['occupied'])->toBe(1.5)
+        ->and($area['available'])->toBe(8.5)
+        ->and(collect($area['consumers'])->pluck('name')->all())->toBe(['Көрінетін']);
 });

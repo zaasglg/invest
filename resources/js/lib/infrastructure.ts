@@ -1,3 +1,5 @@
+import unitsConfigRaw from '../../data/infrastructure-units.json?raw';
+
 export const ZONE_INFRASTRUCTURE_FIELDS = [
     {
         key: 'electricity',
@@ -62,6 +64,7 @@ export type ProjectInfrastructureKey =
 export interface InfrastructureDetails {
     available?: boolean;
     capacity?: string;
+    unit?: string;
     distance?: string;
     type?: string;
 }
@@ -75,6 +78,7 @@ export interface ProjectInfrastructureDetails {
     use_required_capacity?: boolean;
     required_capacity: string;
     used_capacity: string;
+    unit?: string;
     capacity?: string;
 }
 
@@ -83,11 +87,106 @@ export type ProjectInfrastructureData = Record<
     ProjectInfrastructureDetails
 >;
 
+export interface InfrastructureUnit {
+    code: string;
+    label: string;
+    numerator: number;
+    denominator: number;
+}
+
+interface InfrastructureUnitConfig {
+    month_days: number;
+    year_days: number;
+    resources: Record<
+        ProjectInfrastructureKey,
+        { base_unit: string; units: InfrastructureUnit[] }
+    >;
+}
+
+const unitsConfig: InfrastructureUnitConfig = JSON.parse(unitsConfigRaw);
+
+export const INFRASTRUCTURE_PERIOD_NOTE = `Есептік ай — ${unitsConfig.month_days} тәулік, жыл — ${unitsConfig.year_days} тәулік.`;
+
+export function getInfrastructureUnits(
+    key: ProjectInfrastructureKey,
+): InfrastructureUnit[] {
+    return unitsConfig.resources[key].units;
+}
+
+export function getDefaultInfrastructureUnit(
+    key: ProjectInfrastructureKey,
+): string {
+    return unitsConfig.resources[key].base_unit;
+}
+
+export function getInfrastructureUnit(
+    key: ProjectInfrastructureKey,
+    unit?: string | null,
+): InfrastructureUnit {
+    const resource = unitsConfig.resources[key];
+
+    return (
+        resource.units.find((item) => item.code === unit) ??
+        resource.units.find((item) => item.code === resource.base_unit)!
+    );
+}
+
+function rawNumericValue(value: unknown): string {
+    if (typeof value === 'number') return formatNumericValue(value);
+    if (typeof value !== 'string' || value.trim() === '') return '';
+
+    const compact = value.replace(/\s/g, '').replace(',', '.');
+    if (Number.isFinite(Number(compact))) {
+        return formatNumericValue(Number(compact));
+    }
+
+    const match = value.match(/[+-]?(?:\d[\d\s.,]*|\.\d+)(?:[eE][+-]?\d+)?/u);
+    if (!match) return '';
+
+    const number = Number(match[0].replace(/\s/g, '').replace(',', '.'));
+
+    return Number.isFinite(number) ? formatNumericValue(number) : '';
+}
+
+export function toBaseInfrastructureValue(
+    value: unknown,
+    key: ProjectInfrastructureKey,
+    unit?: string | null,
+): number {
+    const normalized = unit
+        ? rawNumericValue(value)
+        : normalizeStandardNumber(value, key);
+    const selected = getInfrastructureUnit(key, unit);
+
+    return normalized === ''
+        ? 0
+        : (Number(normalized) * selected.numerator) / selected.denominator;
+}
+
+export function convertInfrastructureValue(
+    value: unknown,
+    key: ProjectInfrastructureKey,
+    from: string | null | undefined,
+    to: string,
+): string {
+    if (rawNumericValue(value) === '') return '';
+    const selected = getInfrastructureUnit(key, to);
+
+    return formatNumericValue(
+        (toBaseInfrastructureValue(value, key, from) * selected.denominator) /
+            selected.numerator,
+    );
+}
+
 export function getEmptyInfrastructure(): InfrastructureData {
     return Object.fromEntries(
         ZONE_INFRASTRUCTURE_FIELDS.map(({ key }) => [
             key,
-            { available: false, capacity: '' },
+            {
+                available: false,
+                capacity: '',
+                unit: getDefaultInfrastructureUnit(key),
+            },
         ]),
     ) as InfrastructureData;
 }
@@ -98,9 +197,9 @@ export function getEmptyProjectInfrastructure(): ProjectInfrastructureData {
             key,
             {
                 needed: false,
-                use_required_capacity: true,
                 required_capacity: '',
-                used_capacity: '',
+                used_capacity: '0',
+                unit: getDefaultInfrastructureUnit(key),
             },
         ]),
     ) as ProjectInfrastructureData;
@@ -114,15 +213,10 @@ export function withDefaultProjectUsedCapacity(
     for (const { key } of PROJECT_INFRASTRUCTURE_FIELDS) {
         const details = infrastructure[key];
 
-        if (
-            details.needed &&
-            details.use_required_capacity !== false &&
-            details.used_capacity.trim() === '' &&
-            details.required_capacity.trim() !== ''
-        ) {
+        if (details.needed && details.used_capacity.trim() === '') {
             result[key] = {
                 ...details,
-                used_capacity: details.required_capacity,
+                used_capacity: '0',
             };
         }
     }
@@ -165,27 +259,30 @@ function formatNumericValue(value: number): string {
 
     return Number.isInteger(value)
         ? String(value)
-        : String(Number(value.toFixed(6)));
+        : String(Number(value.toPrecision(15)));
 }
 
 export function normalizeStandardNumber(
     value: unknown,
     key: ProjectInfrastructureKey,
 ): string {
-    if (typeof value === 'number') return formatNumericValue(value);
-    if (typeof value !== 'string' || value.trim() === '') return '';
+    const normalized = rawNumericValue(value);
+    if (normalized === '') return '';
+    const parsed = Number(normalized);
 
-    const match = value.match(/[\d\s.,]+/u);
-    if (!match) return '';
-
-    const parsed = Number(match[0].replace(/\s/g, '').replace(',', '.'));
-    if (!Number.isFinite(parsed)) return '';
-
-    if (key === 'electricity' && /мвт/iu.test(value)) {
+    if (
+        key === 'electricity' &&
+        typeof value === 'string' &&
+        /мвт/iu.test(value)
+    ) {
         return formatNumericValue(parsed * 1000);
     }
 
-    if (key === 'internet' && /(гбит|gbps)/iu.test(value)) {
+    if (
+        key === 'internet' &&
+        typeof value === 'string' &&
+        /(гбит|gbps)/iu.test(value)
+    ) {
         return formatNumericValue(parsed * 1000);
     }
 
@@ -206,7 +303,10 @@ export function normalizeZoneInfrastructure(
 
         empty[key] = {
             available: Boolean(details.available),
-            capacity: normalizeStandardNumber(legacyValue, key),
+            capacity: details.unit
+                ? rawNumericValue(legacyValue)
+                : normalizeStandardNumber(legacyValue, key),
+            unit: getInfrastructureUnit(key, details.unit).code,
         };
     }
 
@@ -231,16 +331,24 @@ export function normalizeProjectInfrastructure(
 
         empty[key] = {
             needed: Boolean(details.needed),
-            use_required_capacity:
-                typeof details.use_required_capacity === 'boolean'
-                    ? details.use_required_capacity
-                    : details.used_capacity == null ||
-                      details.used_capacity === '',
-            required_capacity: normalizeStandardNumber(
-                details.required_capacity ?? details.capacity,
+            required_capacity:
+                typeof details.unit === 'string'
+                    ? rawNumericValue(
+                          details.required_capacity ?? details.capacity,
+                      )
+                    : normalizeStandardNumber(
+                          details.required_capacity ?? details.capacity,
+                          key,
+                      ),
+            used_capacity:
+                (typeof details.unit === 'string'
+                    ? rawNumericValue(details.used_capacity)
+                    : normalizeStandardNumber(details.used_capacity, key)) ||
+                '0',
+            unit: getInfrastructureUnit(
                 key,
-            ),
-            used_capacity: normalizeStandardNumber(details.used_capacity, key),
+                typeof details.unit === 'string' ? details.unit : null,
+            ).code,
         };
     }
 
@@ -254,13 +362,16 @@ export function getInfrastructureField(key: ProjectInfrastructureKey) {
 export function formatInfrastructureValue(
     value: unknown,
     key: ProjectInfrastructureKey,
+    unit?: string | null,
 ): string {
     const field = getInfrastructureField(key);
-    const normalized = normalizeStandardNumber(value, key);
+    const normalized = unit
+        ? rawNumericValue(value)
+        : normalizeStandardNumber(value, key);
 
     if (!field || !normalized) return '';
 
     return `${new Intl.NumberFormat('ru-RU', {
         maximumFractionDigits: 6,
-    }).format(Number(normalized))} ${field.unit}`;
+    }).format(Number(normalized))} ${getInfrastructureUnit(key, unit).label}`;
 }

@@ -111,6 +111,10 @@ class PromZoneController extends Controller
             }
         }])->loadCount('photos');
 
+        $allUsageProjects = $promZone->investmentProjects()->active()
+            ->get(['investment_projects.id', 'name', 'infrastructure', 'status']);
+        $visibleProjectIds = $promZone->investmentProjects->pluck('id')->all();
+
         $mainGalleryPhotos = $promZone->photos()
             ->where('photo_type', 'gallery')
             ->latest()
@@ -121,11 +125,13 @@ class PromZoneController extends Controller
             'promZone' => $promZone,
             'infrastructureUsage' => $usageService->summarize(
                 $promZone->infrastructure,
-                $promZone->investmentProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'areaUsage' => $usageService->summarizeArea(
                 $promZone->total_area,
-                $promZone->investmentProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'mainGallery' => $mainGalleryPhotos,
             'renderPhotos' => $renderPhotos,

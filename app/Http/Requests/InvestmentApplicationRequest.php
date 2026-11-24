@@ -10,6 +10,7 @@ use App\Models\PromZone;
 use App\Models\Sez;
 use App\Services\PrivateFileService;
 use App\Services\ProjectProductionService;
+use App\Support\InfrastructureUnits;
 use App\Support\ProductionPlanValidationRules;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -216,7 +217,15 @@ class InvestmentApplicationRequest extends FormRequest
         ];
 
         foreach (['electricity', 'water', 'gas', 'roads', 'railway', 'internet'] as $resource) {
-            $rules["infrastructure_requirements.{$resource}"] = 'nullable|numeric|min:0|max:2000000000';
+            $path = "infrastructure_requirements.{$resource}";
+
+            if (is_array($this->input($path))) {
+                $rules[$path] = ['nullable', 'array:value,unit'];
+                $rules["{$path}.value"] = ['nullable', 'numeric', 'min:0', 'max:2000000000'];
+                $rules["{$path}.unit"] = ['required', 'string', Rule::in(InfrastructureUnits::codes($resource))];
+            } else {
+                $rules[$path] = 'nullable|numeric|min:0|max:2000000000';
+            }
         }
 
         return $rules;

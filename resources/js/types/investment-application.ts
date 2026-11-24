@@ -10,10 +10,17 @@ export type ZoneArea = {
 export type PublicInfrastructureItem = {
     available: boolean;
     capacity: string | number | null;
+    unit?: string;
     total: number;
     used: number;
     remaining: number;
 };
+
+export type InfrastructureRequirement =
+    | string
+    | number
+    | null
+    | { value: string | number | null; unit?: string };
 
 export type PublicZonePhoto = {
     id: number;
@@ -120,7 +127,7 @@ export type InvestmentApplication = {
     jobs_count: number | null;
     planned_start_year?: number | null;
     planned_end_year?: number | null;
-    infrastructure_requirements?: Record<string, string | number | null>;
+    infrastructure_requirements?: Record<string, InfrastructureRequirement>;
     production_not_applicable?: boolean;
     planned_production?: ProductionPlanInput[];
     company_legal_form: string | null;

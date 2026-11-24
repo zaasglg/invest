@@ -120,6 +120,9 @@ class SezController extends Controller
             $projectAccess->scopeVisible($projectsQuery, $user);
         }
         $usageProjects = (clone $projectsQuery)->get();
+        $allUsageProjects = $sez->investmentProjects()->active()
+            ->get(['investment_projects.id', 'name', 'infrastructure', 'status']);
+        $visibleProjectIds = $usageProjects->pluck('id')->all();
         $investmentProjects = $projectsQuery
             ->latest()
             ->paginate(10)
@@ -145,11 +148,13 @@ class SezController extends Controller
                 ]),
             'infrastructureUsage' => $usageService->summarize(
                 $sez->infrastructure,
-                $usageProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'areaUsage' => $usageService->summarizeArea(
                 $sez->total_area,
-                $usageProjects,
+                $allUsageProjects,
+                $visibleProjectIds,
             ),
             'investmentProjects' => $investmentProjects,
             'mainGallery' => $mainGalleryPhotos,

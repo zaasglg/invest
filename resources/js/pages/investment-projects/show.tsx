@@ -1608,6 +1608,7 @@ export default function Show({
                                                                         {formatInfrastructureValue(
                                                                             infra.required_capacity,
                                                                             item.key,
+                                                                            infra.unit,
                                                                         ) ||
                                                                             '—'}
                                                                     </p>
@@ -1620,6 +1621,7 @@ export default function Show({
                                                                         {formatInfrastructureValue(
                                                                             infra.used_capacity,
                                                                             item.key,
+                                                                            infra.unit,
                                                                         ) ||
                                                                             '—'}
                                                                     </p>

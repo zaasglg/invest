@@ -115,7 +115,10 @@ class ZoneIndexAnalyticsService
         $projects = $zone->investmentProjects;
         $issues = $zone->issues;
         $applications = $zone->investmentApplications;
-        $area = $this->usage->summarizeArea($zone->total_area, $projects);
+        $allUsageProjects = $zone->investmentProjects()->active()
+            ->get(['investment_projects.id', 'name', 'infrastructure', 'status']);
+        $visibleProjectIds = $projects->pluck('id')->all();
+        $area = $this->usage->summarizeArea($zone->total_area, $allUsageProjects, $visibleProjectIds);
         $reserved = (float) $applications
             ->filter(fn (InvestmentApplication $application): bool => $application->status === 'approved'
                 && $application->reserved_until?->isFuture()
@@ -127,7 +130,8 @@ class ZoneIndexAnalyticsService
         );
         $infrastructure = collect($this->usage->summarize(
             $zone->infrastructure,
-            $projects
+            $allUsageProjects,
+            $visibleProjectIds
         ));
         $overloadedResources = $infrastructure
             ->filter(fn (array $item): bool => $item['overused'] > 0)

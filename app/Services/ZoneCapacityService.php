@@ -6,6 +6,7 @@ use App\Models\IndustrialZone;
 use App\Models\InvestmentApplication;
 use App\Models\PromZone;
 use App\Models\Sez;
+use App\Support\InfrastructureUnits;
 use App\Support\InfrastructureValidationRules;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -157,6 +158,7 @@ class ZoneCapacityService
             $result[$resource] = [
                 'available' => (bool) ($details['available'] ?? false),
                 'capacity' => $details['capacity'] ?? null,
+                'unit' => $details['unit'] ?? InfrastructureUnits::defaultCode($resource),
                 'total' => $usage[$resource]['total'] ?? 0.0,
                 'used' => $usage[$resource]['used'] ?? 0.0,
                 'remaining' => $usage[$resource]['remaining'] ?? 0.0,

@@ -53,6 +53,8 @@ import {
 } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
+import { formatInfrastructureValue } from '@/lib/infrastructure';
+import type { ZoneInfrastructureKey } from '@/lib/infrastructure';
 import { persistOrder } from '@/lib/persist-order';
 import { formatProjectTypeNames } from '@/lib/project-types';
 import { formatMoneyCompact } from '@/lib/utils';
@@ -67,6 +69,7 @@ interface InfrastructureDetails {
     capacity?: string;
     type?: string;
     distance?: string;
+    unit?: string;
 }
 
 interface InfrastructureData {
@@ -717,42 +720,36 @@ export default function Show({
                 name: 'Электрмен жабдықтау',
                 icon: Zap,
                 val: data.electricity,
-                unit: 'МВт',
             },
             {
                 key: 'gas',
                 name: 'Газ',
                 icon: Flame,
                 val: data.gas,
-                unit: 'м³/сағ',
             },
             {
                 key: 'water',
                 name: 'Сумен жабдықтау',
                 icon: Droplets,
                 val: data.water,
-                unit: 'м³/тәу',
             },
             {
                 key: 'roads',
                 name: 'Жолдар',
                 icon: Car,
                 val: data.roads,
-                unit: 'км',
             },
             {
                 key: 'railway',
                 name: 'Теміржол тұйығы',
                 icon: TrainFront,
                 val: data.railway,
-                unit: 'км',
             },
             {
                 key: 'internet',
                 name: 'Интернет',
                 icon: Wifi,
                 val: data.internet,
-                unit: '',
             },
         ].filter((i) => i.val && i.val.available !== undefined);
 
@@ -797,7 +794,11 @@ export default function Show({
                                         </Badge>
                                         {detail && (
                                             <div className="mt-0.5 text-[10px] font-medium text-gray-400">
-                                                {detail}
+                                                {formatInfrastructureValue(
+                                                    detail,
+                                                    item.key as ZoneInfrastructureKey,
+                                                    item.val?.unit,
+                                                ) || detail}
                                             </div>
                                         )}
                                     </div>

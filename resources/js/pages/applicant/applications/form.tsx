@@ -17,6 +17,7 @@ import {
 import type { FormEvent } from 'react';
 import { useState } from 'react';
 
+import InfrastructureUnitSelect from '@/components/infrastructure-unit-select';
 import InputError from '@/components/input-error';
 import PlannedProductionForm from '@/components/investment-projects/planned-production-form';
 import ProjectTypeMultiSelect from '@/components/investment-projects/project-type-multi-select';
@@ -34,6 +35,12 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import ZoneAreaSummary from '@/components/zone-area-summary';
 import AppLayout from '@/layouts/app-layout';
+import { normalizeApplicationRequirement } from '@/lib/application-infrastructure';
+import {
+    convertInfrastructureValue,
+    formatInfrastructureValue,
+    INFRASTRUCTURE_PERIOD_NOTE,
+} from '@/lib/infrastructure';
 import { normalizeProductionPlans } from '@/lib/production';
 import type { ProductionPlanInput } from '@/lib/production';
 import * as applicant from '@/routes/applicant';
@@ -141,9 +148,12 @@ export default function ApplicationForm({
         infrastructure_requirements: Object.fromEntries(
             infrastructureFields.map(({ key }) => [
                 key,
-                String(application?.infrastructure_requirements?.[key] ?? ''),
+                normalizeApplicationRequirement(
+                    application?.infrastructure_requirements?.[key],
+                    key,
+                ),
             ]),
-        ) as Record<string, string>,
+        ) as Record<string, { value: string; unit: string }>,
         production_not_applicable:
             application?.production_not_applicable ?? false,
         planned_production: normalizeProductionPlans(
@@ -523,7 +533,7 @@ export default function ApplicationForm({
                                                 Қазіргі жер
                                             </p>
                                             <p className="font-bold text-navy">
-                                                {String(
+                                                {formatInfrastructureValue(
                                                     (
                                                         selectedSource.infrastructure as Record<
                                                             string,
@@ -533,8 +543,14 @@ export default function ApplicationForm({
                                                             >
                                                         > | null
                                                     )?.land?.used_capacity ?? 0,
-                                                )}{' '}
-                                                га
+                                                    'land',
+                                                    (
+                                                        selectedSource.infrastructure as Record<
+                                                            string,
+                                                            { unit?: string }
+                                                        > | null
+                                                    )?.land?.unit,
+                                                )}
                                             </p>
                                         </div>
                                     </div>
@@ -1097,31 +1113,34 @@ export default function ApplicationForm({
 
                     <FormCard
                         title="Қажетті инфрақұрылым"
-                        description="Тек қажет ресурстардың шамасын көрсетіңіз"
+                        description={`Тек қажет ресурстардың шамасын көрсетіңіз. ${INFRASTRUCTURE_PERIOD_NOTE}`}
                     >
                         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                             {infrastructureFields.map((field) => (
                                 <Field
                                     key={field.key}
                                     htmlFor={`infrastructure_requirements_${field.key}`}
-                                    label={`${field.label} (${field.unit})`}
+                                    label={field.label}
                                     error={
                                         form.errors[
                                             `infrastructure_requirements.${field.key}`
+                                        ] ??
+                                        form.errors[
+                                            `infrastructure_requirements.${field.key}.value`
                                         ]
                                     }
                                 >
                                     <Input
                                         id={`infrastructure_requirements_${field.key}`}
-                                        name={`infrastructure_requirements[${field.key}]`}
+                                        name={`infrastructure_requirements[${field.key}][value]`}
                                         type="number"
                                         min="0"
-                                        step="0.01"
+                                        step="any"
                                         value={
                                             form.data
                                                 .infrastructure_requirements[
                                                 field.key
-                                            ]
+                                            ].value
                                         }
                                         onChange={(e) =>
                                             form.setData(
@@ -1129,10 +1148,54 @@ export default function ApplicationForm({
                                                 {
                                                     ...form.data
                                                         .infrastructure_requirements,
-                                                    [field.key]: e.target.value,
+                                                    [field.key]: {
+                                                        ...form.data
+                                                            .infrastructure_requirements[
+                                                            field.key
+                                                        ],
+                                                        value: e.target.value,
+                                                    },
                                                 },
                                             )
                                         }
+                                    />
+                                    <InfrastructureUnitSelect
+                                        id={`infrastructure_requirements_${field.key}_unit`}
+                                        resource={field.key}
+                                        value={
+                                            form.data
+                                                .infrastructure_requirements[
+                                                field.key
+                                            ].unit
+                                        }
+                                        error={
+                                            form.errors[
+                                                `infrastructure_requirements.${field.key}.unit`
+                                            ]
+                                        }
+                                        onValueChange={(unit) => {
+                                            const current =
+                                                form.data
+                                                    .infrastructure_requirements[
+                                                    field.key
+                                                ];
+                                            form.setData(
+                                                'infrastructure_requirements',
+                                                {
+                                                    ...form.data
+                                                        .infrastructure_requirements,
+                                                    [field.key]: {
+                                                        value: convertInfrastructureValue(
+                                                            current.value,
+                                                            field.key,
+                                                            current.unit,
+                                                            unit,
+                                                        ),
+                                                        unit,
+                                                    },
+                                                },
+                                            );
+                                        }}
                                     />
                                 </Field>
                             ))}
